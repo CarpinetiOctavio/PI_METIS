@@ -8,9 +8,9 @@ Nunca merge directo de feature a main.
 
 ### Orden de implementación
 1. feature/db-models     — modelos SQLAlchemy + sesión  ✓ mergeado a staging
-2. feature/schemas       — modelos Pydantic de request/response  ✓ completado
-3. feature/auth          — OAuth Google + JWT en HttpOnly Cookie  ← EN CURSO
-4. feature/core-etapa1   — motor estadístico Etapa 1 completo
+2. feature/schemas       — modelos Pydantic de request/response  ✓ mergeado a staging
+3. feature/auth          — OAuth Google + JWT en HttpOnly Cookie  ✓ completado
+4. feature/core-etapa1   — motor estadístico Etapa 1 completo  ← EN CURSO
 5. feature/api-etapa1    — endpoints de Etapa 1 + auth
 6. feature/services-sse  — orquestación stream SSE hasta resultado Etapa 1
 
@@ -25,3 +25,5 @@ Nunca merge directo de feature a main.
 ### Completado
 - Scaffolding inicial (feature/project-scaffolding — en GitHub, inactiva)
 - feature/db-models — mergeado a staging
+- feature/schemas — mergeado a staging
+- feature/auth — completado, PR pendiente
