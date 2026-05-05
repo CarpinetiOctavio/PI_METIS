@@ -28,6 +28,30 @@ grep -r "from metis.api\|from metis.services\|from metis.db\|from metis.auth" me
 ## α fijo
 0.05 — no es parámetro configurable en V1.0
 
+## Separación de responsabilidades — flujo de datos
+
+El flujo de datos desde el request hasta el core sigue
+este orden estricto. Cada capa tiene una única responsabilidad:
+
+api/        → recibe el request HTTP, valida con Pydantic,
+              genera session_id, delega a services/
+              NO parsea archivos, NO ejecuta lógica de negocio
+
+core/parser.py → extrae serie, timestamps y resolucion_temporal
+                 del UploadFile. Devuelve tipos Python puros.
+                 NO sabe que existe HTTP ni BD
+
+services/   → orquesta el pipeline: llama a core/parser.py,
+              llama a core/pipeline.py, emite eventos SSE,
+              persiste en BD si hay user_id
+              NO recibe UploadFile, NO define endpoints
+
+core/       → ejecuta pruebas estadísticas sobre tipos Python puros
+              NO sabe que existe HTTP, BD, archivos ni sesiones
+
+Cualquier lógica que no encaje claramente en una de estas
+capas es señal de que falta un módulo nuevo.
+
 ## Decisiones de implementación tomadas
 
 ### Helmert — valor crítico
