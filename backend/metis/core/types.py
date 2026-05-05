@@ -53,3 +53,10 @@ class Etapa1Result:
     )  # "homogeneidad_ok" | "homogeneidad_warning" | "homogeneidad_critica"
     nivel_confianza: str  # "validado" | "con_warnings" | "rechazado"
     warnings: list[WarningItem] = field(default_factory=list)
+
+
+@dataclass
+class ParsedData:
+    serie: list[float]
+    timestamps: list | None
+    resolucion_temporal: str | None  # "anual" | "mensual" | None

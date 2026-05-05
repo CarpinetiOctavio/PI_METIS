@@ -11,8 +11,8 @@ Nunca merge directo de feature a main.
 2. feature/schemas       — modelos Pydantic de request/response  ✓ mergeado a staging
 3. feature/auth          — OAuth Google + JWT en HttpOnly Cookie  ✓ completado
 4. feature/core-etapa1   — motor estadístico Etapa 1 completo  ✓ completado
-5. feature/api-etapa1    — endpoints de Etapa 1 + auth  ← EN CURSO
-6. feature/services-sse  — orquestación stream SSE hasta resultado Etapa 1
+5. feature/api-etapa1    — endpoints de Etapa 1 + auth  ✓ completado
+6. feature/services-sse  — orquestación stream SSE hasta resultado Etapa 1  ← EN CURSO
 
 ### Fuera de alcance en este sprint
 - Etapa 2 (distribuciones, ranking EEA, eventos de diseño)
@@ -27,4 +27,5 @@ Nunca merge directo de feature a main.
 - feature/db-models — mergeado a staging
 - feature/schemas — mergeado a staging
 - feature/auth — mergeado a staging
-- feature/core-etapa1 — completado, PR pendiente
+- feature/core-etapa1 — mergeado a staging
+- feature/api-etapa1 — completado, PR pendiente
