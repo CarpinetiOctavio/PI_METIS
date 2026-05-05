@@ -10,8 +10,8 @@ Nunca merge directo de feature a main.
 1. feature/db-models     — modelos SQLAlchemy + sesión  ✓ mergeado a staging
 2. feature/schemas       — modelos Pydantic de request/response  ✓ mergeado a staging
 3. feature/auth          — OAuth Google + JWT en HttpOnly Cookie  ✓ completado
-4. feature/core-etapa1   — motor estadístico Etapa 1 completo  ← EN CURSO
-5. feature/api-etapa1    — endpoints de Etapa 1 + auth
+4. feature/core-etapa1   — motor estadístico Etapa 1 completo  ✓ completado
+5. feature/api-etapa1    — endpoints de Etapa 1 + auth  ← EN CURSO
 6. feature/services-sse  — orquestación stream SSE hasta resultado Etapa 1
 
 ### Fuera de alcance en este sprint
@@ -26,4 +26,5 @@ Nunca merge directo de feature a main.
 - Scaffolding inicial (feature/project-scaffolding — en GitHub, inactiva)
 - feature/db-models — mergeado a staging
 - feature/schemas — mergeado a staging
-- feature/auth — completado, PR pendiente
+- feature/auth — mergeado a staging
+- feature/core-etapa1 — completado, PR pendiente
