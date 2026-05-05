@@ -3,7 +3,8 @@
 ## Sprint 1 — Etapa 1 completa
 
 ### Estrategia de ramas
-Una rama por funcionalidad (no por sprint). Cada rama sale de main y vuelve a main via PR.
+Una rama por funcionalidad. Flujo de tres niveles: feature/xxx → staging → main.
+Nunca merge directo de feature a main.
 
 ### Orden de implementación
 1. feature/db-models     — modelos SQLAlchemy + sesión  ← EN CURSO
