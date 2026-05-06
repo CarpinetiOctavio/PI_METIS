@@ -20,7 +20,7 @@ jobs:
           path: ~/.cache/pip
           key: pip-${{ hashFiles('backend/requirements.txt') }}
           restore-keys: pip-
-      - run: pip install ruff==0.4.4
+      - run: pip install ruff==0.15.12
       - run: ruff check metis/
         working-directory: backend
       - run: ruff format --check metis/
@@ -46,6 +46,8 @@ jobs:
         env:
           PYTHONPATH: .
         run: |
+          set +e
           pytest -m "unit or integration" --tb=short
           EXIT=$?
-          [ $EXIT -eq 0 ] || [ $EXIT -eq 5 ] && exit 0 || exit $EXIT
+          set -e
+          [ $EXIT -eq 0 ] || [ $EXIT -eq 5 ]
