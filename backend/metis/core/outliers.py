@@ -51,6 +51,12 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
     warning_codigo = "TEST_WARNING_OUTLIER_DETECTED" if atipico_detectado else None
     warning_nivel = "normal" if atipico_detectado else None
 
+    # Valor original de la serie (no el log) correspondiente al z-score máximo
+    valor_atipico: float | None = None
+    if atipico_detectado:
+        idx = int(np.argmax(z_scores))
+        valor_atipico = float(arr[idx])
+
     return TestResult(
         prueba="chow",
         estadistico=estadistico,
@@ -58,4 +64,5 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
         veredicto=veredicto,
         warning_codigo=warning_codigo,
         warning_nivel=warning_nivel,
+        valor_atipico=valor_atipico,
     )

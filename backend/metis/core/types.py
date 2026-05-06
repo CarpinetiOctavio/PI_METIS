@@ -18,6 +18,7 @@ class TestResult:
     warning_nivel: str | None = None  # "critico" | "normal"
     n1: int | None = None
     n2: int | None = None
+    valor_atipico: float | None = None
 
 
 @dataclass
