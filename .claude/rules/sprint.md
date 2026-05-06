@@ -30,6 +30,10 @@ Nunca merge directo de feature a main.
 - feature/core-etapa1 — mergeado a staging
 - feature/api-etapa1 — mergeado a staging
 - feature/services-sse — mergeado a staging
+- feature/github-actions — CI pipeline con ruff + pytest  ✓ completado
+
+### Archivos creados en feature/github-actions
+- `.github/workflows/ci.yml` — jobs lint (ruff check + format --check) y test (pytest unit+integration, exit code 5 tolerado)
 
 ### Archivos creados en feature/services-sse
 - `metis/services/session_store.py` — dict en memoria de sesiones activas con asyncio.Event y timeout 300s
