@@ -12,6 +12,8 @@
 - API Keys almacenadas como hash bcrypt — nunca texto plano en BD
 - Variables de entorno en .env — nunca credenciales en código
 - .env nunca se commitea — está en .gitignore desde el inicio
+> ⚠️ IMPORTANTE: auth/ está pendiente de reimplementación. Ver decisions-log.md — DECISIÓN 001.
+> NO tocar auth/ hasta que Octavio confirme con IT.
 
 ### Lógica de negocio
 - α = 5% fijo — no es configurable por el usuario en V1.0

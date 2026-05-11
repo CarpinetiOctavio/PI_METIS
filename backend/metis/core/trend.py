@@ -33,7 +33,7 @@ def calcular_mann_kendall(serie: list[float]) -> TestResult:
         resultado = mk.original_test(arr, alpha=ALPHA)
         estadistico = float(resultado.z)
         valor_critico = float(Z_CRIT)
-        aprobada = resultado.h is False
+        aprobada = not bool(resultado.h)
     else:
         s_crit = MANN_KENDALL_TABLA_A4.get(n)
         if s_crit is None:
