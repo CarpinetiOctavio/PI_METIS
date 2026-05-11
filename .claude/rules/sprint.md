@@ -35,11 +35,94 @@ Nunca merge directo de feature a main.
 ### Archivos creados en feature/github-actions
 - `.github/workflows/ci.yml` — jobs lint (ruff check + format --check) y test (pytest unit+integration, exit code 5 tolerado)
 
+### feature/tests-unitarios — EN CURSO
+
+#### Bugs corregidos como parte de esta rama
+- independence.py — eliminado WarningItem con código
+  TEST_WARNING_INDEPENDENCE (no existía en el catálogo)
+- trend.py — corregido `resultado.h is False` por
+  `not bool(resultado.h)` — Mann-Kendall reportaba tendencia
+  en el 100% de las series por comparación de identidad
+  con numpy.bool_
+- pytest.ini — agregado pythonpath = . para resolución
+  de imports en desarrollo local
+
+#### Archivos completados
+- tests/unit/core/conftest.py — fixtures: serie_facundo
+  (40 valores reales 1980-2019, Anderson rechaza, pendiente
+  validación con Excel de Facundo) y serie_corta_15
+- tests/unit/core/test_contract.py — 14/14 tests pasando.
+  Cubre 2 bloqueantes y 7 warnings del catálogo.
+- tests/unit/core/test_independence.py — 8/8 tests pasando.
+  Cubre jerarquía Anderson manda, propagación de TEST_WARNING_SMALL_SAMPLE,
+  y caso borde de Wald con todos los valores iguales.
+  Fix documentado: test protege contra reintroducción de
+  TEST_WARNING_INDEPENDENCE (código inexistente en el catálogo).
+- tests/unit/core/test_homogeneity.py — 6/6 tests pasando.
+  Cubre jerarquía Cramer manda, los tres niveles de homogeneidad,
+  presencia de n1 y n2 en Cramer, y partición custom con cálculo
+  inline de valores esperados.
+- pytest.ini — agregado filterwarnings para suprimir
+  PytestCollectionWarning de TestResult (dataclass de producción
+  con nombre que pytest intenta colectar como clase de test).
+  Decisión documentada: suprimir es correcto, no tocar el dataclass.
+
+#### Decisión de implementación — serie_facundo no produce nivel_confianza="validado"
+El smoke test confirmó que serie_facundo tiene Anderson rechazando
+(dependiente). No sirve como fixture base para tests que requieren
+nivel_confianza="validado". Para test_pipeline.py caso 4, se construye
+una serie inline con nota explicativa. Esta decisión aplica al resto
+de los archivos pendientes.
+
+- tests/unit/core/test_trend.py — 8/8 tests pasando.
+  Cubre Mann-Kendall (n=7 no ejecutada, aprueba, rechaza),
+  KS (aprueba, rechaza), y lógica OR de determinar_warnings_tendencia.
+  Series de rechazo verificadas con smoke test antes de escribir.
+  Documenta pendiente: valor crítico n=7 Tabla A.4 sin confirmar con Facundo.
+
+- tests/unit/core/test_outliers.py — 7/7 tests pasando.
+  Cubre las tres rutas del código: TEST_NOT_EXECUTED_ZEROS (cero en caudal),
+  TEST_NOT_EXECUTED_CONDITION (cero o negativo en cualquier tipo),
+  sin atípico, y con atípico. Tests separados verifican que
+  warning_nivel es siempre "normal" y que valor_atipico es el
+  valor original de la serie, no su logaritmo.
+  Serie con atípico verificada con smoke test antes de escribir.
+
+- tests/unit/core/test_pipeline.py — 8/8 tests pasando.
+  Cubre pipeline bloqueante (serie corta, sin resolución temporal,
+  strings sin suficientes numéricos), nivel_confianza="validado"
+  con serie numpy seed=1 n=50 (seed=42 descartada — Anderson rechaza),
+  nivel_confianza="con_warnings" con serie_facundo, Chow no_ejecutada
+  sin detener el pipeline, filtrado de strings antes de pruebas,
+  y presencia de n1/n2 en Cramer.
+
+#### Estado final — feature/tests-unitarios COMPLETA (comportamiento)
+51/51 tests pasando. Ruff limpio. Sin warnings en pytest.
+Sin importaciones prohibidas en core/.
+Tests de regresión matemática bloqueados — esperando series
+reales de Facundo en formato digital.
+
 ### Archivos creados en feature/services-sse
 - `metis/services/session_store.py` — dict en memoria de sesiones activas con asyncio.Event y timeout 300s
 - `metis/services/analysis_service.py` — orquestación SSE: parseo → pipeline → pausa Chow → re-ejecución → persistencia
 - `metis/core/types.py` — agregado campo `valor_atipico: float | None` a TestResult
 - `metis/core/outliers.py` — calcular_chow llena valor_atipico con el valor original de la serie
+
+## Decisiones pendientes — no implementar hasta confirmar
+
+### Autenticación CU-01 — en pausa
+La implementación actual de auth/ usa Google OAuth, que no funciona
+en intranet. Se reemplazará por usuario/contraseña con verificación
+por mail (@ucc.edu.ar). Ver @decisions-log.md — DECISIÓN 001 y DECISIÓN 002.
+
+Pendiente confirmar con IT:
+- ¿El servidor puede conectarse a smtp.gmail.com puerto 587?
+- ¿Hay servidor SMTP disponible en la intranet?
+
+Si IT confirma SMTP disponible → Opción A con verificación por mail.
+Si IT dice no → Opción A sin verificación, solo validación de formato.
+
+NO tocar auth/ hasta tener esta respuesta.
 
 ---
 

@@ -117,14 +117,6 @@ def determinar_nivel_independencia(
 
     if anderson.veredicto == "aprobada":
         nivel = "independiente"
-        if wald.veredicto == "rechazada":
-            warnings.append(
-                WarningItem(
-                    codigo="TEST_WARNING_INDEPENDENCE",
-                    nivel="normal",
-                    descripcion="Wald-Wolfowitz rechazó independencia, pero Anderson aprobó — resultado: INDEPENDIENTE",
-                )
-            )
     else:
         nivel = "dependiente"
         warnings.append(
