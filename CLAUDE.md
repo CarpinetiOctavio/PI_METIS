@@ -7,7 +7,7 @@ Software estadístico con enfoque docente para análisis de frecuencia de evento
 **Proyecto Integrador de grado** — Ingeniería en Sistemas de Información, UCC 2026.
 **Autores:** Octavio Carpineti, Kevin Massholder.
 **Directores:** Dr. Ing. Carlos Catalini, Mgter. Ing. Facundo Ganancias.
-**Repositorio:** https://github.com/Kevinmass/METIS
+**Repositorio:** https://github.com/CarpinetiOctavio/PI_METIS
 
 Se defenderá ante un tribunal de ISI — todas las decisiones técnicas deben poder justificarse desde ingeniería de software, no desde el dominio hidráulico.
 

@@ -27,8 +27,48 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
 
 ## Contratos por endpoint
 
-> ⚠️ IMPORTANTE: Endpoints de auth pendientes de cambio. Ver decisions-log.md — DECISIÓN 001.
+### POST /api/v1/auth/register
 
+**Request:** `{"email": "legajo@ucc.edu.ar", "password": "...", "nombre": "..."}`
+**Validaciones:** email debe terminar en @ucc.edu.ar, password mínimo 8 caracteres
+**Auth:** Sin auth
+**Response 201:** `{"ok": true, "mensaje": "Cuenta creada. Revisá tu mail para verificar la dirección."}`
+**Errores:** 400 AUTH_EMAIL_ALREADY_REGISTERED, 422 validación Pydantic
+
+---
+
+### POST /api/v1/auth/verify
+
+**Request:** `{"token": "..."}`
+**Auth:** Sin auth
+**Response 200:** `{"ok": true}`
+**Errores:** 400 AUTH_INVALID_TOKEN, 404 AUTH_USER_NOT_FOUND
+
+---
+
+### POST /api/v1/auth/login
+
+**Request:** `{"email": "...", "password": "..."}`
+**Auth:** Sin auth
+**Response 200:** `{"ok": true}` + HttpOnly Cookie `access_token`
+**Errores:** 401 AUTH_INVALID_CREDENTIALS, 403 AUTH_EMAIL_NOT_VERIFIED
+
+---
+
+### POST /api/v1/auth/logout
+
+**Auth:** Sin auth (borra la cookie aunque no haya sesión activa)
+**Response 200:** `{"ok": true}` + borra Cookie `access_token`
+
+---
+
+### GET /api/v1/auth/me
+
+**Auth:** JWT en HttpOnly Cookie (requerido)
+**Response 200:** `{"id": "uuid", "email": "...", "nombre": "...", "email_verified": true}`
+**Errores:** 401 sin auth
+
+---
 
 ### POST /api/v1/analysis/stream
 

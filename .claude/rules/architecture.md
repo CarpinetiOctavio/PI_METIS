@@ -58,11 +58,13 @@ Nginx es el único servicio expuesto al exterior. FastAPI y React nunca se expon
 
 ### Tabla: users
 ```sql
-id           UUID PRIMARY KEY DEFAULT gen_random_uuid()
-email        VARCHAR(255) UNIQUE NOT NULL  -- siempre @ucc.edu.ar
-nombre       VARCHAR(255)
-created_at   TIMESTAMP DEFAULT NOW()
-last_login   TIMESTAMP
+id             UUID PRIMARY KEY DEFAULT gen_random_uuid()
+email          VARCHAR(255) UNIQUE NOT NULL  -- siempre @ucc.edu.ar
+nombre         VARCHAR(255)
+password_hash  VARCHAR(255) NOT NULL         -- bcrypt hash
+email_verified BOOLEAN NOT NULL DEFAULT false
+created_at     TIMESTAMP DEFAULT NOW()
+last_login     TIMESTAMP
 ```
 
 ### Tabla: analyses

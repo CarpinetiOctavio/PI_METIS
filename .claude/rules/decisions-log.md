@@ -11,8 +11,8 @@ camino recorrido para llegar a él.
 ---
 
 ## DECISIÓN 001 — Autenticación CU-01
-**Fecha:** Mayo 2026
-**Estado:** DESCARTADA — pendiente de reimplementación
+**Fecha:** 10 de Mayo de 2026
+**Estado:** PARCIALMENTE IMPLEMENTADO — Parte 1 completa, Parte 2 pendiente de credenciales SMTP de IT
 
 ### Decisión original
 Autenticación mediante Google OAuth 2.0 con verificación de dominio @ucc.edu.ar.
@@ -87,8 +87,8 @@ NO tocar auth/ hasta que Octavio confirme la decisión de IT.
 ---
 
 ## DECISIÓN 002 — Esquema tabla users y refactor de auth/
-**Fecha:** Mayo 2026
-**Estado:** PENDIENTE DE IMPLEMENTACIÓN
+**Fecha:** 10 de Mayo de 2026
+**Estado:** IMPLEMENTADO — password_hash y email_verified agregados a users via migración 002 de Alembic
 
 ### Contexto
 Consecuencia directa de DECISIÓN 001. El reemplazo de Google OAuth por
@@ -136,3 +136,127 @@ JWT_SECRET_KEY, JWT_EXPIRE_MINUTES, FRONTEND_URL, ENV se mantienen igual.
 ### Estado actual del código
 Ninguno de estos cambios está implementado todavía.
 NO tocar auth/ hasta confirmar con IT disponibilidad de SMTP.
+
+---
+
+## DECISIÓN 003 — Gestión de migraciones de esquema: Alembic
+**Fecha:** 14 de Mayo de 2026
+**Estado:** PARCIALMENTE IMPLEMENTADO — Alembic configurado y migraciones generadas. Pendiente: ejecutar contra BD activa cuando Docker esté disponible
+
+### Contexto
+Al implementar feature/auth-refactor, la tabla users requiere dos columnas
+nuevas (password_hash, email_verified — ver DECISIÓN 002). La tabla ya existe
+en PostgreSQL con el esquema original. SQLAlchemy no modifica tablas existentes
+automáticamente — hay que decirle explícitamente a PostgreSQL qué cambió.
+
+### Opciones evaluadas
+
+OPCIÓN DESCARTADA — Dropear y recrear la tabla:
+Funciona cuando no hay datos reales. Pero es una solución manual sin memoria:
+cada cambio de esquema futuro requiere recordar qué se hizo antes, aplicarlo
+a mano en cada entorno, y coordinar con Kevin. En producción con datos reales
+de docentes y alumnos, esta opción no existe. Introducirla ahora crearía una
+deuda técnica que se pagaría cara más adelante.
+
+OPCIÓN ELEGIDA — Alembic:
+Sistema de migraciones estándar para SQLAlchemy. Cada cambio de esquema genera
+un script versionado que describe exactamente qué cambió. Alembic mantiene
+registro de qué migraciones están aplicadas en cada entorno y aplica solo las
+que faltan. Es el equivalente a Git pero para la base de datos — trazabilidad
+completa del historial de esquema.
+
+### Por qué Alembic aunque no haya datos todavía
+No es por los datos — es por el proceso. Este es el proceso correcto que se
+va a usar en producción, y establecerlo ahora tiene costo bajo. Si se dropea
+ahora, cuando llegue producción con datos reales hay que introducir Alembic
+de todas formas, pero sobre una base que nunca lo usó y con migraciones que
+reconstruir desde cero. Hacerlo ahora, sin presión, con un esquema simple,
+es el momento correcto.
+
+### Justificación ante tribunal de ISI
+"Usamos Alembic para gestionar cambios de esquema" es una respuesta técnica
+sólida con justificación clara. Cada migración es un archivo versionado con
+ID único y descripción — historial completo de cómo evolucionó el esquema.
+
+### Lo que se implementa
+Paso 0 de feature/auth-refactor:
+- alembic init en backend/
+- Configurar alembic.ini y env.py para usar los modelos de METIS
+- Migración 001: esquema inicial (tablas existentes)
+- Migración 002: agregar password_hash y email_verified a users
+
+Todas las migraciones futuras siguen el mismo patrón:
+cambiar el modelo → alembic revision --autogenerate → alembic upgrade head
+
+---
+
+## DECISIÓN 004 — Mecanismo de envío de mail para verificación de cuenta
+**Fecha:** 14 de Mayo de 2026
+**Estado:** PARCIALMENTE IMPLEMENTADO — mock SMTP en desarrollo (auth/email.py), aiosmtplib pendiente de credenciales IT (cuenta metis-noreply@ucc.edu.ar + App Password)
+
+### Contexto
+Con la autenticación propia usuario/contraseña confirmada (DECISIÓN 001),
+el sistema necesita verificar que el mail @ucc.edu.ar ingresado al registrarse
+existe realmente. Esto requiere enviar un mail de verificación desde el servidor.
+El servidor tiene acceso saliente a internet confirmado por IT (puerto 587 disponible).
+Google deprecó la autenticación SMTP con usuario/contraseña simple — se requiere
+uno de los dos métodos actuales.
+
+### Opciones evaluadas
+
+OPCIÓN A — OAuth2 con Google Cloud Console:
+IT crea un proyecto en Google Cloud Console bajo el tenant de la UCC.
+Se generan Client ID y Client Secret para la aplicación.
+El servidor obtiene un Refresh Token y lo usa para cada envío.
+Ventaja: estándar de seguridad más alto de Google actualmente.
+Desventaja: requiere configuración de proyecto en Google Cloud — más complejo
+para IT y para la implementación.
+
+OPCIÓN B — App Password (contraseña de aplicación):
+IT crea una cuenta emisora institucional (ej. metis-noreply@ucc.edu.ar)
+con verificación en dos pasos activada.
+Se genera un App Password de 16 dígitos exclusivo para el servidor.
+El servidor se conecta a smtp.gmail.com:587 con esa cuenta y ese password.
+Ventaja: implementación directa con aiosmtplib, sin proyectos en la nube.
+Desventaja: ninguna relevante para el volumen de mails de METIS.
+
+### Decisión tomada
+Opción B — App Password. Confirmado por IT de la UCC en Mayo 2026.
+IT indicó que es la opción más conveniente para este caso.
+
+### Estado de implementación
+- Parte 1 (sin credenciales): auth/email.py implementado con mock en desarrollo.
+  En lugar de enviar, loggea el token de verificación en consola con comentario
+  explícito de pendiente.
+- Parte 2 (con credenciales): pendiente de que IT provea la cuenta emisora
+  metis-noreply@ucc.edu.ar y el App Password de 16 dígitos.
+
+### Variables de entorno cuando IT provea las credenciales
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=metis-noreply@ucc.edu.ar
+SMTP_PASSWORD=xxxx xxxx xxxx xxxx
+
+### Librería de implementación
+aiosmtplib — cliente SMTP async compatible con FastAPI.
+Agregar a requirements.txt cuando se implemente Parte 2.
+
+---
+
+## DECISIÓN 005 — Almacenamiento de tokens de verificación en memoria
+**Fecha:** 14 de Mayo de 2026
+**Estado:** ACEPTADO para V1.0 — revisión post-M5
+
+### Contexto
+Los tokens de verificación de mail se almacenan en un dict en memoria
+del proceso (_pending_tokens en auth/router.py). Es simple y suficiente
+para V1.0 con un solo worker en intranet.
+
+### Limitación conocida
+En producción con múltiples workers (uvicorn workers o Docker replicas),
+cada worker tiene su propio dict. El token generado en worker A no lo
+encuentra worker B — el usuario no puede verificar su cuenta.
+
+### Decisión
+Aceptado para V1.0 — METIS corre con un solo worker en intranet.
+Solución futura (post-M5): mover tokens a tabla BD o Redis.
