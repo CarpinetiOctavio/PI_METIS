@@ -108,21 +108,42 @@ reales de Facundo en formato digital.
 - `metis/core/types.py` — agregado campo `valor_atipico: float | None` a TestResult
 - `metis/core/outliers.py` — calcular_chow llena valor_atipico con el valor original de la serie
 
+### feature/auth-refactor — EN CURSO
+
+#### Decisión implementada
+Autenticación usuario/contraseña + bcrypt + JWT HttpOnly Cookie con verificación de cuenta por mail @ucc.edu.ar.
+Mecanismo SMTP: App Password via smtp.gmail.com:587 (Opción B — confirmada por IT).
+Ver decisions-log.md — DECISIÓN 001, 002, 003, 004, 005.
+
+#### División en dos partes
+Parte 1 — COMPLETADA
+Parte 2 — BLOQUEADA esperando IT (cuenta metis-noreply@ucc.edu.ar + App Password de 16 dígitos)
+
+#### Paso 0 completado — Alembic configurado
+- alembic/env.py — psycopg2 síncrono para migraciones,
+  asyncpg sigue para la app. Base.metadata conectada.
+- alembic/versions/001_baseline_schema.py — esquema inicial,
+  generada manualmente, verificar con BD activa
+- alembic/versions/002_add_password_hash_email_verified.py —
+  agrega password_hash y email_verified a users,
+  generada manualmente, verificar con BD activa
+- Pendiente ejecutar: alembic stamp head (BD existente)
+  o alembic upgrade head (BD vacía) cuando Docker esté activo
+
+#### Parte 1 completada
+- Paso 1: architecture.md actualizado (columnas password_hash y email_verified en tabla users)
+- Paso 2: auth/google.py eliminado
+- Paso 3: db/models/user.py — agregados password_hash (String 255) y email_verified (Boolean)
+- Paso 4: schemas/auth.py — RegisterRequest, LoginRequest, VerifyRequest, UserMe extendido
+- Paso 5: auth/email.py creado con mock SMTP (loggea token, pendiente aiosmtplib)
+- Paso 6: auth/router.py reescrito — /register, /verify, /login, /logout, /me
+- Paso 7: auth/__init__.py sin cambios (exports no cambian)
+- Paso 8: .env.example actualizado — eliminadas vars Google OAuth, SMTP comentado
+- requirements.txt — agregados bcrypt==4.1.3, psycopg2-binary==2.9.9, alembic==1.13.1
+
+---
+
 ## Decisiones pendientes — no implementar hasta confirmar
-
-### Autenticación CU-01 — en pausa
-La implementación actual de auth/ usa Google OAuth, que no funciona
-en intranet. Se reemplazará por usuario/contraseña con verificación
-por mail (@ucc.edu.ar). Ver @decisions-log.md — DECISIÓN 001 y DECISIÓN 002.
-
-Pendiente confirmar con IT:
-- ¿El servidor puede conectarse a smtp.gmail.com puerto 587?
-- ¿Hay servidor SMTP disponible en la intranet?
-
-Si IT confirma SMTP disponible → Opción A con verificación por mail.
-Si IT dice no → Opción A sin verificación, solo validación de formato.
-
-NO tocar auth/ hasta tener esta respuesta.
 
 ---
 
