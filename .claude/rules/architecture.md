@@ -38,6 +38,12 @@ services:
     build: ./frontend
     depends_on: [backend]
 
+  backend:
+    build: ./backend
+    depends_on: [postgres]
+    env_file: .env
+    ports: ["8000:8000"]   # mapeo al host — necesario para smoke tests y desarrollo local sin nginx
+
   postgres:
     image: postgres:15
     env_file: .env
@@ -51,28 +57,67 @@ services:
     depends_on: [backend, frontend]
 ```
 
-### Exposición de puertos — postgres
+### Exposición de puertos en desarrollo — backend y postgres
 
 `expose` y `ports` no son equivalentes:
 
-- **`expose: ["5432"]`** — publica el puerto solo dentro de la red Docker interna.
-  Los contenedores (backend) pueden conectarse entre sí por nombre de servicio
-  (`postgres:5432`), pero el host no puede alcanzar `localhost:5432`.
+- **`expose: ["N"]`** — publica el puerto solo dentro de la red Docker interna.
+  Los contenedores se conectan entre sí por nombre de servicio (ej. `backend:8000`,
+  `postgres:5432`), pero el host no puede alcanzar `localhost:N`.
 
-- **`ports: ["5432:5432"]`** — mapea el puerto del contenedor al host.
-  Permite conectarse desde la terminal local con `localhost:5432`.
+- **`ports: ["N:N"]`** — mapea el puerto del contenedor al host.
+  Permite conectarse desde la terminal local con `localhost:N`.
 
-El mapeo `ports: ["5432:5432"]` es necesario para:
+**`ports: ["8000:8000"]` en backend** es necesario para:
+- Smoke tests manuales desde el host sin levantar nginx ni el frontend
+- Desarrollo local directo contra la API (`curl`, httpie, Postman)
+- El frontend en desarrollo (`npm run dev` en el host) que hace requests a `localhost:8000`
+- Mientras el frontend no esté implementado, nginx no puede levantarse — este
+  mapeo permite verificar la API sin depender del stack completo
+
+**`ports: ["5432:5432"]` en postgres** es necesario para:
 - `alembic upgrade head` / `alembic check` desde la terminal del host
 - `psql` u otros clientes de BD en desarrollo
 - Tests de integración que corren fuera de Docker
 
-En producción en la intranet de la UCC esto no representa riesgo adicional:
-el firewall perimetral de la UCC controla el acceso externo. El puerto 5432
-solo es alcanzable desde dentro de la red institucional.
+En producción en la intranet de la UCC estos mapeos no representan riesgo
+adicional: el firewall perimetral de la UCC controla el acceso externo.
+Ambos puertos solo son alcanzables desde dentro de la red institucional.
 
 Nginx es el único servicio expuesto al exterior para tráfico HTTP/HTTPS.
 FastAPI y React nunca se exponen directamente.
+
+### DATABASE_URL — diferencia entre Docker y host
+
+Esta es la fuente de confusión más común al configurar el entorno por primera vez.
+
+El `.env` contiene una sola `DATABASE_URL`, pero el host correcto de PostgreSQL
+depende de **dónde corre el código que la usa**:
+
+| Contexto | Host en la URL | Por qué |
+|---|---|---|
+| Backend dentro de Docker | `postgres` | nombre del servicio en la red Docker interna |
+| Alembic / psql desde el host | `localhost` | puerto 5432 mapeado via `ports: ["5432:5432"]` |
+
+**Regla:** el `.env` siempre debe tener `postgres` como host — es el valor correcto
+para el runtime principal (backend Docker). Nunca cambiar el `.env` a `localhost`.
+
+**Override para herramientas desde el host:**
+Sobreescribir `DATABASE_URL` en la línea de comando, sin tocar el `.env`:
+
+```bash
+# Alembic desde el host
+DATABASE_URL=postgresql+asyncpg://metis_user:metis_pass@localhost:5432/metis \
+  alembic upgrade head
+
+DATABASE_URL=postgresql+asyncpg://metis_user:metis_pass@localhost:5432/metis \
+  alembic check
+
+# psql desde el host (usa psycopg2, no asyncpg)
+psql postgresql://metis_user:metis_pass@localhost:5432/metis
+```
+
+El override solo existe en la sesión de terminal. No se commitea. El `.env` no se toca.
 
 ---
 

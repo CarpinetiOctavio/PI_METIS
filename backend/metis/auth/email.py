@@ -7,11 +7,8 @@ reemplazar send_verification_email por implementación real con aiosmtplib.
 Ver decisions-log.md — DECISIÓN 004.
 """
 
-import logging
 import os
 import secrets
-
-logger = logging.getLogger(__name__)
 
 _FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
@@ -21,11 +18,11 @@ def generate_verification_token() -> str:
 
 
 async def send_verification_email(email: str, token: str) -> None:
-    # TODO: reemplazar con aiosmtplib cuando IT provea credenciales SMTP.
-    # Variables requeridas: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD.
+    # TODO: eliminar este print y reemplazar con envío real
+    # via aiosmtplib cuando IT provea credenciales SMTP.
+    # Ver decisions-log.md — DECISIÓN 004.
     verify_url = f"{_FRONTEND_URL}/auth/verify?token={token}"
-    logger.info(
-        "[MOCK SMTP] Token de verificación para %s — URL: %s",
-        email,
-        verify_url,
+    print(
+        f"[MOCK SMTP] Token de verificación para {email} — URL: {verify_url}",
+        flush=True,
     )

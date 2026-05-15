@@ -108,7 +108,7 @@ reales de Facundo en formato digital.
 - `metis/core/types.py` — agregado campo `valor_atipico: float | None` a TestResult
 - `metis/core/outliers.py` — calcular_chow llena valor_atipico con el valor original de la serie
 
-### feature/auth-refactor — EN CURSO
+### feature/auth-refactor — mergeado a staging ✓
 
 #### Decisión implementada
 Autenticación usuario/contraseña + bcrypt + JWT HttpOnly Cookie con verificación de cuenta por mail @ucc.edu.ar.
@@ -141,9 +141,80 @@ Parte 2 — BLOQUEADA esperando IT (cuenta metis-noreply@ucc.edu.ar + App Passwo
 - Paso 8: .env.example actualizado — eliminadas vars Google OAuth, SMTP comentado
 - requirements.txt — agregados bcrypt==4.1.3, psycopg2-binary==2.9.9, alembic==1.13.1
 
+#### Smoke test de auth — COMPLETADO ✓
+
+7 pasos ejecutados contra Docker local. Resultado: todos pasaron.
+
+Bugs encontrados y corregidos durante el smoke test:
+- auth/email.py: `logger.info()` → `print(flush=True)` — el root logger suprime
+  INFO de loggers de aplicación; print garantiza visibilidad en Docker logs
+- auth/router.py: `datetime.now(timezone.utc)` → `datetime.utcnow()` en la
+  actualización de `last_login` — TIMESTAMP WITHOUT TIME ZONE no acepta
+  datetime timezone-aware; el error era un 500 silencioso en POST /login
+- decisions-log.md, sprint.md: corregido el usuario psql en comandos de
+  limpieza (`metis_user` → `metis`, que es el POSTGRES_USER real del .env)
+- .env.example: reescrito con reglas explícitas de consistencia (ver DECISIÓN 008)
+
+Pasos verificados:
+1. POST /register → 201 + mensaje de verificación
+2. Logs Docker → token MOCK SMTP visible con print()
+2.5. POST /login antes de verificar → 403 AUTH_EMAIL_NOT_VERIFIED
+3. POST /verify con token → 200
+4. POST /login después de verificar → 200 + HttpOnly cookie
+5. GET /me con cookie → 200 + email_verified: true
+6. POST /logout → 200 + cookie eliminada (Max-Age=0)
+7. GET /me sin cookie → 401
+
 ---
 
 ## Decisiones pendientes — no implementar hasta confirmar
+
+---
+
+## Entorno de desarrollo — datos de prueba
+
+### Usuario de prueba para smoke tests de auth
+
+Creado durante el smoke test de feature/auth-refactor en staging local.
+No usar este mail en producción ni en entornos compartidos.
+
+```
+email:    2200631@ucc.edu.ar
+password: test1234
+nombre:   Octavio
+```
+
+**Cómo obtener el token de verificación (mock SMTP):**
+Con el backend corriendo, después de POST /register:
+```bash
+docker-compose logs backend | grep "MOCK SMTP" | tail -1
+```
+El token aparece en la URL: `.../auth/verify?token=<TOKEN>`
+
+**Cómo limpiar el usuario después del smoke test:**
+El usuario de psql es el valor de `POSTGRES_USER` en el `.env` (actualmente `metis`):
+```bash
+docker exec pi-postgres-1 bash -c \
+  "psql -U metis -d metis -c \"DELETE FROM users WHERE email = '2200631@ucc.edu.ar';\""
+```
+Verificar que no quedó:
+```bash
+docker exec pi-postgres-1 bash -c \
+  "psql -U metis -d metis -c \"SELECT email FROM users;\""
+```
+
+**Cookie de sesión durante el smoke test:**
+Se guarda en `/tmp/metis_smoke_cookies.txt` — archivo temporal, no commitear.
+Se destruye al hacer POST /logout o al borrar el archivo.
+
+### Regla general para datos de prueba
+
+- Nunca commitear datos de prueba (usuarios, tokens, cookies) al repositorio
+- Siempre limpiar la BD de staging local después de smoke tests manuales
+- Si se necesita un fixture de BD persistente, documentarlo aquí con el
+  script SQL de creación y el procedimiento de limpieza
+- Preferir emails con formato de legajo (7 dígitos + @ucc.edu.ar) para
+  pruebas — son inválidos en producción real y fáciles de identificar
 
 ---
 
