@@ -224,6 +224,26 @@ M1 — SSE operativo en staging
      CI verde, ruff limpio, pipeline emite eventos reales,
      tests unitarios core pasando
 
+### M1 — Estado actual: EN CURSO
+
+Criterios completados al 15 de Mayo de 2026:
+- CI verde ✓
+- ruff limpio ✓
+- Pipeline emite eventos reales ✓
+- Tests unitarios comportamiento 51/51 ✓
+- Auth refactorizada y verificada end-to-end ✓
+
+Criterios pendientes — bloqueados por factores externos:
+- Tests de regresión matemática: esperando series reales
+  de Facundo en formato digital
+- Auth Parte 2 (SMTP real): esperando credenciales IT
+  (cuenta metis-noreply@ucc.edu.ar + App Password)
+- Verificación end-to-end del pipeline con CSV real:
+  pendiente hasta tener frontend o cliente HTTP configurado
+
+M1 no se cierra hasta que los tres criterios pendientes estén resueltos.
+El desarrollo continúa hacia M2 en paralelo.
+
 M2 — Etapa 2 operativa en staging
      M1 completo + distribuciones ajustando correctamente,
      tests de regresión matemática pasando contra tesis Facundo
