@@ -43,6 +43,7 @@ services:
     env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports: ["5432:5432"]   # mapeo al host — necesario para Alembic y psql desde la terminal local
 
   nginx:
     image: nginx:alpine
@@ -50,7 +51,28 @@ services:
     depends_on: [backend, frontend]
 ```
 
-Nginx es el único servicio expuesto al exterior. FastAPI y React nunca se exponen directamente.
+### Exposición de puertos — postgres
+
+`expose` y `ports` no son equivalentes:
+
+- **`expose: ["5432"]`** — publica el puerto solo dentro de la red Docker interna.
+  Los contenedores (backend) pueden conectarse entre sí por nombre de servicio
+  (`postgres:5432`), pero el host no puede alcanzar `localhost:5432`.
+
+- **`ports: ["5432:5432"]`** — mapea el puerto del contenedor al host.
+  Permite conectarse desde la terminal local con `localhost:5432`.
+
+El mapeo `ports: ["5432:5432"]` es necesario para:
+- `alembic upgrade head` / `alembic check` desde la terminal del host
+- `psql` u otros clientes de BD en desarrollo
+- Tests de integración que corren fuera de Docker
+
+En producción en la intranet de la UCC esto no representa riesgo adicional:
+el firewall perimetral de la UCC controla el acceso externo. El puerto 5432
+solo es alcanzable desde dentro de la red institucional.
+
+Nginx es el único servicio expuesto al exterior para tráfico HTTP/HTTPS.
+FastAPI y React nunca se exponen directamente.
 
 ---
 
