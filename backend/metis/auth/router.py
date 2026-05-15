@@ -126,7 +126,7 @@ async def login(
             },
         )
 
-    user.last_login = datetime.now(timezone.utc)
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
 
     token = create_access_token({"sub": user.email})
