@@ -2,9 +2,9 @@
 # Fuente: Tesis Facundo + confirmación de Octavio.
 DISABLED_WITH_ZEROS: frozenset[str] = frozenset(
     {
-        "log_normal_2p",
-        "log_pearson_3",
-        "gamma_2p",
+        "lognormal2p",
+        "logpearson3",
+        "gamma2p",
         "exponencial_beta",
     }
 )
@@ -14,10 +14,10 @@ DISABLED_WITH_ZEROS: frozenset[str] = frozenset(
 # Ver core-etapa2-implementation.md — pendientes ítem 2 y 3.
 PENDING_ZEROS_CONFIRMATION: frozenset[str] = frozenset(
     {
-        "gamma_3p",
+        "gamma3p",
         "exponencial_x0_beta",
         "gen_pareto",
-        "log_normal_3p",
+        "lognormal3p",
         "gen_exponencial",
     }
 )

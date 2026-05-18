@@ -141,6 +141,13 @@ Patrón de stubs: ajustar() retorna STATUS_NO_APLICABLE (pipeline2.py puede ejec
 a punta antes de implementar ninguna distribución); cuantil() levanta NotImplementedError.
 Cada archivo incluye referencias a ecuaciones de la tesis como documentación ejecutable.
 
+#### pipeline2.py — línea base del smoke test (Fase 1)
+Smoke test con serie_facundo (n=40, sin ceros): 13 distribuciones, 30 llamadas
+a ajustar(), todas retornan no_aplicable, 0 crashes, 0 warnings.
+Con tiene_ceros=True: 4 distribuciones correctamente disabled_zeros
+(exponencial_beta, lognormal2p, gamma2p, logpearson3).
+A medida que avance Fase 2, el número de status=ok crecerá desde 0.
+
 #### Fases siguientes
 - Fase 2: distribuciones prioritarias — Normal, Gumbel, Log-Normal 2p, Log-Pearson III, GVE
 - Fase 3: distribuciones secundarias confirmadas — Gamma 2p, Exponencial (β), Gamma 3p
