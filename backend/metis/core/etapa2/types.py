@@ -1,0 +1,43 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from metis.core.types import WarningItem
+
+CONVERGENCIA: float = 1e-7  # criterio fijo para métodos iterativos — no configurable
+
+# Status de cada ajuste distribución+método
+STATUS_OK = "ok"
+STATUS_NO_CONVERGE = "no_converge"
+STATUS_NO_APLICABLE = "no_aplicable"
+STATUS_DISABLED_ZEROS = "disabled_zeros"
+
+
+@dataclass
+class MetodoResult:
+    metodo: str  # "momentos" | "mv" | "ml" | "mpp" | "me" | "mc"
+    parametros: dict | None  # None si el ajuste falló
+    eea: float | None  # None si el ajuste falló
+    status: str  # STATUS_* constants
+
+
+@dataclass
+class DistResult:
+    distribucion: str
+    n_parametros: int  # criterio de desempate: menor gana
+    metodos: list[MetodoResult] = field(default_factory=list)
+    mejor_eea: float | None = None  # EEA del mejor método; None si todos fallaron
+    mejor_metodo: str | None = None
+
+
+@dataclass
+class EventoDiseno:
+    periodo_retorno: float
+    valor: float
+
+
+@dataclass
+class Etapa2Result:
+    # Ordenado por mejor_eea ASC; empate desempatado por n_parametros ASC
+    ranking: list[DistResult]
+    warnings: list[WarningItem] = field(default_factory=list)

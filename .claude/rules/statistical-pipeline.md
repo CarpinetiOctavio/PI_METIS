@@ -200,21 +200,32 @@ El ajuste es **automático y exhaustivo** — sin intervención del usuario.
 
 | Distribución | Métodos aplicables |
 |---|---|
-| Normal | Momentos, MV, ME, ML, MPP, MC |
-| Gumbel | Momentos, MV, ME, ML, MPP, MC |
-| GVE | Momentos, MV, ME, ML, MPP, MC |
-| Log-Normal 2p | Momentos, MV, ME, ML, MPP, MC |
-| Log-Normal 3p | Momentos, MV, ME, ML, MPP, MC |
-| Log-Pearson III | Momentos, MV, ME, ML, MPP, MC |
-| Gamma 2p | Momentos, MV, ME, ML, MPP, MC |
-| Gamma 3p | Momentos, MV, ME, ML, MPP, MC |
-| Exponencial (β) | Momentos, MV, ME, ML, MPP, MC |
-| Exponencial (x₀, β) | Momentos, MV, ME, ML, MPP, MC |
-| Generalizada de Pareto | Momentos, MV, ME, ML, MPP, MC |
-| Generalizada Exponencial | Momentos, MV, ME, ML, MPP, MC |
-| Pearson III | Momentos, MV, ME, ML, MPP, MC |
+| Uniforme | Momentos, MV |
+| Normal | Momentos, MV, ML |
+| Gumbel | Momentos, MV, ML, ME |
+| GVE | Momentos, MV, ML |
+| Log-Normal 2p | Momentos, MV |
+| Log-Normal 3p | Momentos, MV |
+| Log-Pearson III | Momentos (directo e indirecto), MV |
+| Gamma 2p | Momentos, MV, ML |
+| Gamma 3p | Momentos, MV |
+| Exponencial (β) | Momentos, MV |
+| Exponencial (x₀, β) | Momentos, MV |
+| Generalizada de Pareto | Momentos, MV, MC |
+| Generalizada Exponencial | Momentos, MV, ML |
 
-**GVE con Momentos L:** usar aproximación de Hosking (1985) para estimar κ.
+> **Nota sobre Pearson III:** no existe como distribución independiente en la tesis
+> de Facundo — no tiene sección propia ni fórmulas propias. La distribución Gamma 3p
+> (β, α, x₀) es matemáticamente equivalente a Pearson III en escala original.
+> Log-Pearson III aplica la misma lógica sobre yi = ln(xi).
+> Fuente: confirmado por Octavio — Tesis Facundo Cap. IV.
+
+> **Nota sobre métodos ME y MC:** ME = Máxima Entropía, MC = Mínimos Cuadrados.
+> Confirmados solo para las distribuciones donde aparecen en la tabla.
+> Pendiente confirmar con Facundo si aplican a otras distribuciones.
+> Fuente: formulas-etapa2.md — Gumbel IV-190/IV-198, Gen. Pareto IV-153/IV-155.
+
+**GVE con Momentos-L:** usar aproximación de Hosking (1985) para estimar κ (IV-234 a IV-242).
 
 ### Casos especiales de Etapa 2
 

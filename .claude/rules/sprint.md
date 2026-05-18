@@ -108,6 +108,46 @@ reales de Facundo en formato digital.
 - `metis/core/types.py` — agregado campo `valor_atipico: float | None` a TestResult
 - `metis/core/outliers.py` — calcular_chow llena valor_atipico con el valor original de la serie
 
+### feature/core-etapa2 — EN CURSO
+
+Motor de análisis de frecuencia: 13 distribuciones con métodos por distribución según tesis.
+Pendientes de confirmación con Facundo: ME/MC en otras distribuciones, ceros en 5 distribuciones.
+Ver .claude/rules/core-etapa2-implementation.md y .claude/rules/formulas-etapa2.md.
+
+#### Fase 1 — Scaffold y tipos base ✓ COMPLETA
+
+Archivos creados:
+- metis/core/etapa2/__init__.py — exports públicos del subpaquete
+- metis/core/etapa2/types.py — MetodoResult, DistResult, Etapa2Result, EventoDiseno,
+  CONVERGENCIA=1e-7, STATUS_OK/NO_CONVERGE/NO_APLICABLE/DISABLED_ZEROS
+- metis/core/etapa2/empirical.py — probabilidades_weibull (T=(n+1)/m, P=1-1/T — Tesis Cap. IV sec. IV.1)
+- metis/core/etapa2/eea.py — calcular_eea (Ec. IV-263), es_high_eea (umbral 5% — decisión METIS)
+- metis/core/etapa2/distributions/__init__.py — DISABLED_WITH_ZEROS y PENDING_ZEROS_CONFIRMATION como frozenset
+- metis/core/etapa2/distributions/uniforme.py        — N_PAR=2, momentos/mv, IV-58 a IV-62
+- metis/core/etapa2/distributions/normal.py          — N_PAR=2, momentos/mv/ml, IV-92 a IV-105
+- metis/core/etapa2/distributions/gumbel.py          — N_PAR=2, momentos/mv/ml/me, IV-177 a IV-199
+- metis/core/etapa2/distributions/gve.py             — N_PAR=3, momentos/mv/ml, IV-203 a IV-245
+- metis/core/etapa2/distributions/lognormal2p.py     — N_PAR=2, momentos/mv, DISABLED_WITH_ZEROS, IV-107 a IV-109
+- metis/core/etapa2/distributions/lognormal3p.py     — N_PAR=3, momentos/mv, PENDING_ZEROS, IV-111 a IV-120
+- metis/core/etapa2/distributions/logpearson3.py     — N_PAR=3, momentos_directo/momentos_indirecto/mv, DISABLED_WITH_ZEROS, IV-247 a IV-260
+- metis/core/etapa2/distributions/gamma2p.py         — N_PAR=2, momentos/mv/ml, DISABLED_WITH_ZEROS, IV-123 a IV-135
+- metis/core/etapa2/distributions/gamma3p.py         — N_PAR=3, momentos/mv, PENDING_ZEROS, IV-137 a IV-144
+- metis/core/etapa2/distributions/exponencial_beta.py    — N_PAR=1, momentos/mv, DISABLED_WITH_ZEROS, IV-65 a IV-67
+- metis/core/etapa2/distributions/exponencial_x0_beta.py — N_PAR=2, momentos/mv, PENDING_ZEROS, IV-70 a IV-74
+- metis/core/etapa2/distributions/gen_pareto.py      — N_PAR=3, momentos/mv/mc, PENDING_ZEROS, IV-145 a IV-156
+- metis/core/etapa2/distributions/gen_exponencial.py — N_PAR=2, momentos/mv/ml, PENDING_ZEROS, IV-77 a IV-89
+
+Patrón de stubs: ajustar() retorna STATUS_NO_APLICABLE (pipeline2.py puede ejecutarse de punta
+a punta antes de implementar ninguna distribución); cuantil() levanta NotImplementedError.
+Cada archivo incluye referencias a ecuaciones de la tesis como documentación ejecutable.
+
+#### Fases siguientes
+- Fase 2: distribuciones prioritarias — Normal, Gumbel, Log-Normal 2p, Log-Pearson III, GVE
+- Fase 3: distribuciones secundarias confirmadas — Gamma 2p, Exponencial (β), Gamma 3p
+- Fase 4: distribuciones con ceros pendientes — Log-Normal 3p, Exp (x₀,β), Gen. Pareto, Gen. Exponencial
+- Fase 5: pipeline2.py — orquestación exhaustiva
+- Fase 6: tests de comportamiento
+
 ### feature/auth-refactor — mergeado a staging ✓
 
 #### Decisión implementada

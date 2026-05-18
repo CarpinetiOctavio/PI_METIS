@@ -141,3 +141,5 @@ METIS detecta y advierte, pero **no bloquea** — excepto el único caso absolut
 - `.claude/rules/sprint.md` — estado actual del sprint, qué está en curso y qué está fuera de alcance
 - `.claude/rules/core-implementation.md` — librerías permitidas, fuentes por prueba, restricciones del motor estadístico
 - `.claude/rules/decisions-log.md` — historial de decisiones descartadas y reemplazadas. Leer cuando algo en el código no coincida con los archivos de decisiones vigentes.
+- `.claude/rules/core-etapa2-implementation.md` — librerías, fuentes y restricciones del motor de Etapa 2
+- `.claude/rules/formulas-etapa2.md` — referencias bibliográficas de todas las fórmulas de Etapa 2 mapeadas a ecuaciones de la tesis de Facundo. Ninguna fórmula se implementa sin referencia explícita en este archivo.
