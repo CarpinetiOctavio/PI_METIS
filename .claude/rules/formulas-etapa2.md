@@ -145,12 +145,12 @@ RESTRICCIÓN: No Aplicable si algún xi ≤ 0 (confirmado con Facundo)
 Parámetros: x0, µy, σy
 
 Momentos: sistema IV-111 a IV-116
-  nx̂ = x̄/S                                   (IV-112)
-  w = (g²/4 + 1)^(1/2) - g/2               (IV-113)
-  ẑ = w^(1/3) - w^(-1/3)                    (IV-114)
-  µ̂y = ln(Sy/nz) - (1/2)·ln(ẑ²+1)         (IV-115)
-  σ̂²y = ln(ẑ²+1)                            (IV-116)
-  x̂0 = x̄ - (nx̂/ẑ)                          (IV-111)
+  n̂x = S/x̄                                   (IV-112)
+  w = ((g² + 4)^(1/2) - g) / 2               (IV-113)
+  n̂z = (1 - w^(2/3)) / w^(1/3)              (IV-114)
+  µ̂y = ln(S/n̂z) - (1/2)·ln(n̂z²+1)          (IV-115)
+  σ̂y = [ln(n̂z²+1)]^(1/2)                    (IV-116)
+  x̂0 = x̄·(1 - n̂x/n̂z)                        (IV-111)
 
 MV: sistema iterativo IV-117 a IV-119
   µ̂y = (1/n)·sum(ln(xi - x0))              (IV-117)
@@ -188,8 +188,7 @@ ML (Momentos L):
   α̂ = x̄/β̂          (IV-134)
 
 Cuantil: IV-135
-  xT = α̂·β̂·(1 - UT/(9β̂) + 1/(9β̂))³... (ver IV-135 para forma exacta)
-
+xT = α̂·β̂·(1 - 1/(9·β̂) + UT·sqrt(1/(9·β̂)))³    (IV-135)
 RESTRICCIÓN: deshabilitada si algún xi = 0 (confirmado con Facundo)
 
 ---
@@ -217,7 +216,7 @@ MPP (Momentos de Probabilidad Pesada):
   están en IV-43 a IV-47.
 
 Cuantil: IV-144
-  xT = x0 + α̂·β̂·(1 - UT/(9β̂) + 1/(9β̂))³
+xT = x0 + α̂·β̂·(1 - 1/(9·β̂) + UT·sqrt(1/(9·β̂)))³    (IV-144)
 
 RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
 
@@ -233,24 +232,73 @@ Momentos: sistema IV-147 a IV-149
 
 MV: sistema iterativo IV-150 a IV-152
   LL = -n·ln(σ) - (1/ε+1)·sum(ln(1-(xi-µ)·ε/σ))    (IV-150)
-  Resolver IV-151 y IV-152 simultáneamente
-  µ̂ = mínimo de la muestra
 
-MC (Mínimos Cuadrados): sistema IV-153 a IV-155
-  ε por resolución de IV-153 (polinomio en z)
+  Resolver simultáneamente IV-151 y IV-152:
+
+  IV-151 (∂L/∂ε = 0):
+    sum[ (1/ε²)·ln(1-(xi-µ)·ε/σ)
+         - (1/ε+1)·(xi-µ)/σ · 1/(1-(xi-µ)·ε/σ) ] = 0
+
+  IV-152 (∂L/∂σ = 0):
+    -n/σ + (1/ε+1)·sum[ (xi-µ)·ε/σ² · 1/(1-(xi-µ)·ε/σ) ] = 0
+
+  µ̂ = mínimo de la muestra (fijo antes de resolver IV-151/IV-152)
+
+MC (Mínimos Cuadrados): sistema IV-153 a IV-166
+  Serie ordenada de menor a mayor.
+
+  Posición de ploteo Cunnane (IV-165):
+    fi = (i - 0.4) / (n + 0.2)
+
+  Variables auxiliares (IV-163/IV-164):
+    zi = (1 - fi)^ε
+    yi = ln(1 - fi)
+
+  Promedios (IV-156 a IV-162):
+    x̄   = (1/n)·sum(xi)          (IV-156)
+    z̄   = (1/n)·sum(zi)          (IV-157)
+    z̄2  = (1/n)·sum(zi²)         (IV-158)
+    xz̄  = (1/n)·sum(xi·zi)       (IV-159)
+    zȳ  = (1/n)·sum(zi·yi)       (IV-160)
+    z2ȳ = (1/n)·sum(zi²·yi)      (IV-161)
+    xyz̄ = (1/n)·sum(xi·yi·zi)    (IV-162)
+
+  ε por resolución numérica de IV-153
   σ̂ por IV-154
   µ̂ por IV-155
-  Variables auxiliares x̄, ȳ, z̄ por IV-156 y siguientes
 
-MPP (Momentos de Probabilidad Pesada):
-  PENDIENTE — ubicar ecuaciones específicas en tesis
-  (sección IV.3.10 continúa más allá de lo disponible)
+  Valor inicial de µ según asimetría (IV-166):
+    g > 0 → µ = 0.3
+    g < 0 → µ = 0.6
 
-Cuantil:
-  xT = µ + (σ/ε)·(1 - (1-F(x))^ε)    (de IV-145/IV-146 invertida)
+  NOTA: zi depende de ε — el sistema es implícito.
+  Resolver iterativamente: dado ε inicial, calcular zi,
+  luego los promedios, luego ε nuevo por IV-153.
+
+MPP (Momentos de Probabilidad Pesada): IV-167 a IV-173
+  Serie ordenada de menor a mayor. x1 = mínimo de la serie.
+
+  Pi = (i - 0.35) / n                             (IV-173)
+  M̂(0) = (1/n)·sum(xi) = x̄                      (IV-172, k=0)
+  M̂(1) = (1/n)·sum((1-Pi)·xi)                    (IV-172, k=1)
+
+  I1 = M̂(0) - x1                                 (IV-170)
+  I2 = M̂(0) - 2·M̂(1)                            (IV-171)
+
+  ε̂ = (n·I1 + 2·I2·(n-1)) / (I2·(n-1) - I1)    (IV-167)
+  σ̂ = (1 + ε̂)·(2 + ε̂)·I2                      (IV-168)
+  µ̂ = x1 - σ̂/(n + ε̂)                            (IV-169)
+
+  Guard: denominador de IV-167 = 0 → STATUS_NO_APLICABLE
+
+Cuantil: IV-174
+  xT = ((1/(1-F(x)))^ε - 1)·(σ/ε) + µ
+
+  Guard: |ε| < _DENOM_GUARD → límite ε→0:
+    xT = µ - σ·ln(1-F(x))
 
 RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
-NOTA: frecuentemente No Converge según resultados de la tesis
+NOTA: MV y MC frecuentemente No Converge según resultados de la tesis
 
 ---
 
@@ -263,11 +311,11 @@ Momentos:
 
 MV: sistema iterativo IV-179 a IV-187
   yi = (xi - µ̂) / α̂                              (IV-181)
-  P = (1/n)·sum(e^(-yi))                          (IV-179 adaptado)
-  R = (1/n)·sum(yi·e^(-yi))                       (IV-180 adaptado)
+  P = n - sum(e^(-yi))                             (IV-179)
+  R = n - sum(yi) + sum(yi·e^(-yi))               (IV-180)
   Criterios: P/α̂ ≈ 0, R/α̂ - 1 ≈ 0              (IV-182, IV-183)
-  δµ = α̂·(1.1·P - 0.26·R·α̂) / n               (IV-184)
-  δα = α̂·(0.26·P - 0.61·R·α̂) / n              (IV-185)
+  δµ = α̂j·(1.1·P - 0.26·R) / n                  (IV-184)
+  δα = α̂j·(0.26·P - 0.61·R) / n                 (IV-185)
   µ̂j+1 = µ̂j + δµj                               (IV-186)
   α̂j+1 = α̂j + δαj                               (IV-187)
 
@@ -291,46 +339,87 @@ Cuantil:
 ---
 
 ## 12. GVE — General de Valores Extremos
-Parámetros: α, β, ν
+Parámetros: α (escala), β (forma), ν (posición)
 
-Momentos:
-  β̂ por polinomios según rango de g (asimetría):
-    Si -11.35 < g < 11.396:
-      β̂ = -0.279434 + 0.333535·g - 0.048306·g² + 0.023314·g³ - 0.000376·g⁴ - 0.000263·g⁵    (IV-203)
-    Si 11.4 < g < 18.95:
-      β̂ = -0.25031 + 0.29219·g - 0.075357·g² + 0.010883·g³ - 0.000904·g⁴ - 0.000043·g⁵    (IV-204)
-  A = x̄ + B·E[y],  µ̂ = A - B·E[y]    (IV-205)
-  B = sqrt(Var(x)/Var(y))               (IV-206)
-  Var(x) = Sx²                          (IV-207)
+Momentos: IV-203 a IV-215
+  g = asimetría no sesgada de la serie
 
-MV: sistema iterativo IV-220 a IV-233
-  Funciones auxiliares a, b, c, f, gs, h como polinomios en β̂:
+  β̂ por polinomios según rango de g:
+    Si -11.35 < g < 1.1396:
+      β̂ = 0.279434 - 0.333535·g + 0.048306·g² - 0.023314·g³ + 0.00376·g⁴ - 0.000263·g⁵    (IV-203)
+    Si 1.14 < g < 18.95:
+      β̂ = 0.25031 - 0.29219·g + 0.075357·g² - 0.010883·g³ + 0.000904·g⁴ - 0.000043·g⁵    (IV-204)
+    Fuera de esos rangos → STATUS_NO_APLICABLE
+
+  Â = x̄ + B̂·E[y]                              (IV-205)
+  B̂ = [Var(x)/Var(y)]^(1/2)                    (IV-206)
+  Var(x) = Sx²                                  (IV-207)
+  E[y] = Γ(1 + β̂)                              (IV-208)
+  Var(y) = Γ(1 + 2·β̂) - Γ²(1 + β̂)            (IV-209)
+
+  Según signo de β̂:
+    Si β̂ < 0 (tipo II):
+      α̂ = -β̂·B̂    (IV-210)
+      ν̂ = Â + B̂    (IV-211)
+    Si β̂ > 0 (tipo III):
+      α̂ = β̂·B̂     (IV-212)
+      ν̂ = Â - B̂    (IV-213)
+    Si β̂ = 0 (tipo I — Gumbel):
+      α̂ = (√6/π)·S = 0.78·S    (IV-214)
+      ν̂ = x̄ - 0.45·S           (IV-215)
+
+MV: sistema iterativo IV-216 a IV-233
+  Variable reducida: yi = -(1/β̂)·ln(1 - (xi-ν̂)/α̂·β̂)    (IV-202)
+  Guard: 1 - (xi-ν̂)/α̂·β̂ > 0 para todo xi → si falla STATUS_NO_CONVERGE
+
+  Auxiliares en cada iteración:
+    P = n - sum(e^(-yi))                                    (IV-216)
+    Q = sum(e^((β-1)·yi)) - (1-β)·sum(e^(β·yi))           (IV-217)
+    R = n - sum(yi) + sum(yi·e^(-yi))                      (IV-218)
+
+  Criterios de convergencia:
+    Q/α̂ = 0                                                (IV-219)
+    (1/α̂)·(P+Q)/β̂ = 0                                    (IV-220)
+    (1/β̂)·[R - (P+Q)/β̂] = 0                              (IV-221)
+
+  Funciones auxiliares polinomios en β̂:
     a = 0.661437 - 0.562798·β̂ + 0.985803·β̂² - 0.059011·β̂³    (IV-225)
     b = 1.235356 - 0.162161·β̂ - 0.115137·β̂² + 0.009577·β̂³    (IV-226)
     c = 0.4711 - 0.77627·β̂ + 0.295825·β̂² - 0.009645·β̂³       (IV-227)
     f = 0.244435 - 0.10287·β̂ - 0.19583·β̂² - 0.016837·β̂³      (IV-228)
     gs = 0.15373 - 0.411923·β̂ - 0.479209·β̂² - 0.075004·β̂³    (IV-229)
     h = 0.338937 - 1.209555·β̂ - 0.109822·β̂² - 0.019801·β̂³    (IV-230)
-  Incrementos δν, δα, δβ por IV-222 a IV-224
-  Actualización: ν̂j+1, α̂j+1, β̂j+1 por IV-231, IV-232, IV-233
 
-ML (Momentos L): IV-234 a IV-242
-  E = (2·M0 - M1) / (3·M0 - M2)    (IV-234)
-  β̂ = 7.859·E + 2.9554·E²          (IV-235)
-  A = Γ(1 + β̂)                      (IV-236)
-  B = 2^(-β̂) - 1                    (IV-237)
-  C = (2·M1 - M0)·β̂                (IV-238)
-  D = A^(-1)                         (IV-239)
-  α̂ = C/(A·B)                       (IV-240)
-  ν̂ = M0 + D·α̂                      (IV-241)
-  M0 = (1/n)·sum(xi)                (IV-242)
-  M1 por IV-243, M2 por IV-244
+  Incrementos (IV-222 a IV-224):
+    δν = -(α̂/n)·{b·Q + h·(P+Q)/β̂ + (f/β̂)·[R - (P+Q)/β̂]}
+    δα = -(α̂/n)·{h·Q + a·(P+Q)/β̂ + (gs/β̂)·[R - (P+Q)/β̂]}
+    δβ = -(1/n)·{f·Q + gs·(P+Q)/β̂ + (c/β̂)·[R - (P+Q)/β̂]}
+
+  Actualización:
+    ν̂j+1 = ν̂j + δνj    (IV-231)
+    α̂j+1 = α̂j + δαj    (IV-232)
+    β̂j+1 = β̂j + δβj    (IV-233)
+
+  Convergencia: max(|δν|, |δα|, |δβ|) < CONVERGENCIA = 1×10⁻⁷
+
+ML (Momentos L): IV-234 a IV-244
+  E = {(2·M̂(1) - M̂(0)) / (3·M̂(2) - M̂(0))} - ln(2)/ln(3)    (IV-234)
+  β̂ = 7.859·E + 2.9554·E²                                       (IV-235)
+  A = Γ(1 + β̂)                                                   (IV-236)
+  B = 1 - 2^(-β̂)                                                 (IV-237)
+  C = (2·M̂(1) - M̂(0))·β̂                                        (IV-238)
+  D = (A - 1) / β̂                                                (IV-239)
+  α̂ = C / (A·B)                                                  (IV-240)
+  ν̂ = M̂(0) + D·α̂                                               (IV-241)
+  M̂(0) = (1/n)·sum(xi)                                          (IV-242)
+  M̂(1) = (1/(n·(n-1)))·sum(xi·(n-i))  para i=1..n-1            (IV-243)
+  M̂(2) = (1/(n·(n-1)·(n-2)))·sum(xi·(n-i)·(n-i-1))  i=1..n-2  (IV-244)
 
 Cuantil: IV-245
-  xT = ν + α·{1 - [-ln F(x)]^β} / β
+  xT = ν + (α/β)·{1 - [-ln(F(x))]^β}
 
-NOTA: GVE Momentos frecuentemente No Converge según resultados de la tesis
-
+NOTA: GVE Momentos frecuentemente No Converge según resultados de la tesis.
+NOTA: GVE MV también puede No Converge — comportamiento esperado.
 ---
 
 ## 13. Log-Pearson III
@@ -345,6 +434,9 @@ Momentos Método Directo: IV-247 a IV-254
   α̂ = (A+1)^(1/3)    (IV-247)
   β̂ = (ln(µ2) - 2·ln(µ1)) / (ln(µ1·(α-1)) - ln(µ2·(α-2)))    (IV-253)
   ŷ0 = ln(µ1) + β̂·ln(1 - α̂)    (IV-254)
+  NOTA: aplica solo cuando B ∈ (3,6]. Para series con B fuera de ese rango
+  el método retorna STATUS_NO_APLICABLE. El método indirecto (IV-255/256)
+  no tiene esta restricción y es el preferido en la práctica según la tesis.
 
 Momentos Método Indirecto: IV-255 a IV-256
   Trabajar sobre serie transformada yi = ln(xi)
@@ -359,7 +451,7 @@ MV: sistema iterativo IV-257 a IV-259
   NOTA: frecuentemente No Converge — es el comportamiento esperado
 
 Cuantil: IV-260
-  xT = exp( y0 + α̂·β̂·(1 - UT/(9β̂) + 1/(9β̂))^3 )
+  xT = exp( Y0 + β·α·(1 - 1/(9·β) + UT·sqrt(1/(9·β)))³ )
 
 RESTRICCIÓN: No Aplicable si algún xi ≤ 0 (confirmado con Facundo)
 NOTA: Método Indirecto produce mejores resultados en la práctica (tesis)

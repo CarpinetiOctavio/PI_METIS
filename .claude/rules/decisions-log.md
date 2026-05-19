@@ -500,7 +500,7 @@ docker exec pi-postgres-1 bash -c \
 ---
 
 ## DECISIÓN 009 — Convención de nombres de distribuciones en el pipeline
-**Fecha:** Mayo 2026
+**Fecha:** 17 de Mayo de 2026
 **Estado:** IMPLEMENTADO
 
 Las claves que identifican distribuciones en `DISABLED_WITH_ZEROS` y
@@ -518,3 +518,91 @@ ante series con ceros. Detectado al verificar el output del smoke test con
 ### Regla
 Cualquier cambio en nombres de módulo de distribuciones requiere verificar
 consistencia con estas constantes en `distributions/__init__.py`.
+
+---
+
+## DECISIÓN 010 — Estrategia de root-finding para métodos iterativos
+**Fecha:** 19 de Mayo de 2026
+**Estado:** ESTABLECIDA — aplicar en todas las distribuciones
+
+### Contexto
+Durante el smoke test de Gen. Pareto MC (Fase 4 de feature/core-etapa2) se detectó
+que `fsolve` reportaba `ier=1` ("solución convergida") con residual=0.007 — sin moverse
+del valor inicial ε=0.3. El verdadero root de IV-153 estaba en ε≈0.51.
+
+`fsolve` declara convergencia cuando el **paso de Newton es pequeño**, no cuando el
+**residual es pequeño**. Para funciones casi planas cerca del punto inicial puede
+reportar convergencia falsa con residual alto. No es un bug de scipy — es el criterio
+de convergencia por defecto de MINPACK.
+
+### Estrategia adoptada en METIS
+
+**Para ecuaciones unidimensionales: scan + brentq**
+
+Evaluar la función en N puntos del dominio para detectar cambios de signo,
+luego aplicar `brentq` en el intervalo con cambio de signo.
+Garantiza residual ≤ CONVERGENCIA = 1e-7.
+
+```python
+_scan = np.linspace(lo, hi, N)
+_vals = np.array([f(e) for e in _scan])
+_idx = np.where(np.diff(np.sign(_vals)) != 0)[0]
+eps = float(brentq(f, float(_scan[_idx[0]]), float(_scan[_idx[0]+1]), xtol=CONVERGENCIA))
+```
+
+Puede haber múltiples raíces (incluso espurias). En ese caso, iterar sobre todos
+los brackets hasta encontrar parámetros que pasen todos los guards de validez.
+Ejemplo en `gen_pareto.py` método MC: la ecuación IV-153 tiene una raíz espuria
+cerca de ε=0 (produce denom_b≈0) y la raíz válida en ε≈0.51. Se itera hasta
+encontrar la primera que da sigma > 0.
+
+**Para sistemas multidimensionales (MV): fsolve con verificación explícita de residual**
+
+`fsolve` es necesario para sistemas (N ecuaciones, N incógnitas). Después de
+obtener la solución, verificar el residual explícitamente antes de aceptarla.
+Si residual > umbral → STATUS_NO_CONVERGE.
+
+```python
+sol, info, ier, _ = fsolve(system, x0, full_output=True)
+if ier != 1 or np.max(np.abs(info["fvec"])) > RESIDUAL_UMBRAL:
+    return MetodoResult(..., status=STATUS_NO_CONVERGE)
+```
+
+### Alcance
+Revisar todos los usos de `fsolve` en el codebase y agregar verificación de residual
+donde corresponda. Distribuciones afectadas: gen_pareto MV, gen_exponencial MV,
+logpearson3 MV, lognormal3p MV, gamma3p MV, gve MV.
+
+---
+
+## PENDIENTE — GVE ML: Inconsistencia IV-238 vs IV-243/244
+**Fecha:** 18 de Mayo de 2026
+**Estado:** PENDIENTE — consulta enviada a Facundo
+
+Las ecuaciones IV-243/244 definen M̂(1) y M̂(2) con pesos descendentes (n-i),
+siguiendo la convención de la tesis. Con esa convención, el término (2·M̂(1) - M̂(0))
+en IV-234 e IV-238 resulta negativo para series hidrológicas típicas, porque
+M̂(1) < M̂(0)/2 cuando los valores más pequeños reciben los pesos más altos.
+Esto produce C < 0 en IV-238 y α̂ < 0 en IV-240 — parámetro de escala negativo,
+matemáticamente inválido.
+
+La convención de Hosking (pesos ascendentes i-1) produciría M̂(1) > M̂(0)/2,
+(2·M̂(1) - M̂(0)) > 0, y α̂ > 0. No implementar con esa convención sin confirmar
+con Facundo, porque IV-243/244 en la tesis (p.81) usan explícitamente pesos (n-i).
+
+GVE ML retorna STATUS_NO_APLICABLE hasta recibir respuesta de Facundo.
+Archivo: `metis/core/etapa2/distributions/gve.py` — rama feature/core-etapa2.
+
+---
+
+## PENDIENTE — Tabla IV-1: Momentos vs MV en Normal y Log-Normal 2p
+**Fecha:** Mayo 2026
+**Estado:** PENDIENTE — confirmar con Facundo
+
+Tabla IV-1 de la tesis lista Normal y Log-Normal 2p solo bajo MV, no bajo Momentos.
+Pendiente confirmar con Facundo si es porque Momentos y MV coinciden (y por eso
+se listan como uno solo) o si Momentos no debe implementarse como método separado.
+
+Actualmente ambas distribuciones tienen `METODOS_APLICABLES = ("momentos", "mv")`
+con estimadores idénticos. Si Facundo confirma que deben listarse como un solo
+método, eliminar "momentos" del tuple y dejar solo "mv".

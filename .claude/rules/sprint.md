@@ -148,10 +148,115 @@ Con tiene_ceros=True: 4 distribuciones correctamente disabled_zeros
 (exponencial_beta, lognormal2p, gamma2p, logpearson3).
 A medida que avance Fase 2, el número de status=ok crecerá desde 0.
 
+#### Fase 2 — EN CURSO
+
+##### Distribuciones implementadas
+- Normal — momentos, mv, ml — smoke test OK
+- Gumbel — momentos, mv, ml, me — smoke test OK
+  Bugs encontrados y corregidos: IV-179/IV-180 mal
+  transcriptas en formulas-etapa2.md (sumas, no medias)
+- Log-Normal 2p — momentos, mv — smoke test OK
+  Refactor: _ut extraída a utils.py (compartida por
+  Normal, Log-Normal 2p, 3p, Log-Pearson III)
+- Log-Pearson III — momentos_directo, momentos_indirecto, mv — smoke test OK
+  momentos_directo no_aplicable para serie_facundo (B=2.63, fuera del rango
+  (3,6]) — comportamiento correcto según tesis. momentos_indirecto y mv
+  convergen correctamente.
+- GVE — momentos, mv, ml — smoke test OK
+  momentos: converge. mv: no_converge (esperado según tesis).
+  ml: no_aplicable — pendiente respuesta de Facundo sobre
+  inconsistencia IV-238 vs IV-243/244 (ver decisions-log.md)
+
+##### Errores corregidos en formulas-etapa2.md
+- Gumbel MV IV-179/IV-180: eran medias, son sumas con n
+- Log-Normal 3p IV-113: exponente incorrecto en g
+- Log-Normal 3p IV-114: signo invertido en ẑ
+- Log-Normal 3p IV-116: era σ̂²y, es σ̂y directamente
+- Log-Pearson III IV-260: cuantil con WH correcto
+- GVE — IV-203/204 signos invertidos y coeficiente g⁴ incorrecto,
+  rangos de g incorrectos, IV-208/209/210-215 ausentes,
+  IV-216-218 P/Q/R ausentes, IV-234 faltaba -ln(2)/ln(3),
+  IV-237 signo, IV-239 fórmula incorrecta
+
+- Log-Normal 3p — momentos, mv — smoke test OK
+  Fórmulas IV-111 a IV-116 corregidas en formulas-etapa2.md.
+  momentos y mv convergen. x0 negativo es válido (umbral
+  muy por debajo del mínimo observado).
+
+##### Fase 2 COMPLETA
+
+#### Fase 3 — COMPLETA
+
+##### Distribuciones implementadas
+- Exponencial β — momentos, mv — smoke test OK
+  momentos y MV coinciden (β=1/x̄). DISABLED_WITH_ZEROS=True.
+  EEA alta (~95) para serie_facundo — esperado, ajuste pobre.
+
+- Gamma 2p — momentos, mv, ml — smoke test OK
+  momentos: alpha=22.81, beta=3.90, Q100=137.8, EEA=36.3
+  mv: alpha=23.00, beta=3.86, Q100=137.6, EEA=36.2
+  ml: polinomio IV-130 produce EEA alta (~118) para esta serie —
+  el ranking lo deprioritiza automáticamente. DISABLED_WITH_ZEROS=True.
+  NOTA nomenclatura: la tesis usa β̂ como forma en MV/ML (IV-126) y
+  α̂ como forma en Momentos (IV-123). El módulo unifica: alpha=forma, beta=escala.
+
+- Gamma 3p — momentos, mv — smoke test OK
+  momentos: con g=0.19, β̂=110, x0=-1963, Q100=-1940, EEA=2114 —
+  matemáticamente correcto según IV-137/138/139, ranking lo deprioritiza.
+  La tesis no define umbral mínimo de g — solo guard g≈0 implementado.
+  mv: beta=24.4, alpha=3.75, x0=-2.67, Q100=137.4, EEA=36.7 — converge.
+  PENDING_ZEROS_CONFIRMATION=True.
+
+#### Fase 4 — COMPLETA
+
+##### Distribuciones implementadas
+- Uniforme — momentos, mv — smoke test OK
+  momentos: alpha=56.66, beta=121.14, Q100=120.50, EEA=37.40
+  mv: alpha=54.10, beta=130.40, Q100=129.64, EEA=40.95
+
+- Exponencial (x₀, β) — momentos, mv — smoke test OK
+  momentos: x0=70.28, beta=18.62, Q100=156.01, EEA=34.52
+  mv: x0=54.08, beta=0.89, Q100=58.19, EEA=39.97
+  PENDING_ZEROS_CONFIRMATION=True.
+
+- Generalizada Exponencial — momentos, mv, ml — smoke test OK
+  momentos: alpha=79.34, lambda=0.0512, Q100=175.23, EEA=47.47
+  mv: no_converge — sistema IV-80/IV-81 no converge para serie_facundo (comportamiento esperado)
+  ml: alpha=0.81, lambda=0.009, Q100=488.72, EEA=115.90 (EEA alta, ranking deprioritiza)
+  PENDING_ZEROS_CONFIRMATION=True.
+  NOTA IV-77: la ecuación como escrita tiene -1/α = x̄/S sin solución válida.
+  Se implementa CV-matching con momentos teóricos de la GE. Pendiente confirmar con Facundo.
+  NOTA IV-84: la tesis escribe "+ψ(1)" — se implementa "-ψ(1)" (forma correcta). Pendiente Facundo.
+
+- Generalizada de Pareto — momentos, mv, mc, mpp — smoke test OK
+  momentos: eps=0.553, mu=65.70, sigma=53.32, Q100=154.60, EEA=47.30
+  mv: no_converge — esperado según tesis
+  mc: eps=0.508, mu=66.97, sigma=49.99, Q100=155.94, EEA=46.88
+  mpp: eps=5.362, mu=45.70, sigma=648.84, Q100=166.71, EEA=72.51
+  PENDING_ZEROS_CONFIRMATION=True.
+
+##### Bugs corregidos en Fase 4
+1. gen_pareto MC — fsolve reportaba convergencia falsa (residual=0.007 en valor inicial
+   ε=0.3). El root real estaba en ε≈0.51. Fix: scan + brentq sobre (-0.49, 50.0),
+   iterando sobre todos los brackets para evitar raíz espuria cerca de ε=0
+   (denom_b≈0 → B_hat→∞). Ver DECISIÓN 010 en decisions-log.md.
+2. ValueError guard propagado a cuantil() en gen_exponencial y gen_pareto —
+   p debe estar en (0,1). Propagación al resto de distribuciones pendiente (ver abajo).
+
+##### Pendientes con Facundo — surgidos en Fase 4
+- gen_pareto MPP: guard denominador IV-167 = 0 puede dispararse para ciertas series
+  (I2*(n-1) - I1 = 0) → STATUS_NO_APLICABLE. Confirmar si hay restricción adicional en tesis.
+- gen_pareto MC: confirmar rango válido de ε en la tesis (implementado -0.49 a 50.0
+  con justificación teórica en límite inferior, conservador en superior).
+
+#### Guard p ∈ (0,1) en cuantil() — PENDIENTE PROPAGACIÓN
+Propagado en: gen_exponencial, gen_pareto.
+Pendiente en: uniforme, normal, gumbel, gve, lognormal2p, lognormal3p, logpearson3,
+gamma2p, gamma3p, exponencial_beta, exponencial_x0_beta.
+Los asserts se deshabilitan con python -O — usar siempre if/raise.
+
 #### Fases siguientes
-- Fase 2: distribuciones prioritarias — Normal, Gumbel, Log-Normal 2p, Log-Pearson III, GVE
-- Fase 3: distribuciones secundarias confirmadas — Gamma 2p, Exponencial (β), Gamma 3p
-- Fase 4: distribuciones con ceros pendientes — Log-Normal 3p, Exp (x₀,β), Gen. Pareto, Gen. Exponencial
+- Fase 4.5: propagar guard p∈(0,1) a todas las cuantil() pendientes
 - Fase 5: pipeline2.py — orquestación exhaustiva
 - Fase 6: tests de comportamiento
 
