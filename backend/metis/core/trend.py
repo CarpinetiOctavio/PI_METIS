@@ -8,19 +8,6 @@ ALPHA = 0.05
 Z_CRIT = norm.ppf(1 - ALPHA / 2)  # 1.96
 KS_Z_CRIT = 1.358  # Tabla A.5, α=0.05
 
-# Tabla A.4 — Mann-Kendall para n ≤ 10, valores críticos de S (α=0.05, two-tailed)
-# Fuente: Tabla A.4 tesis Facundo
-# n=7: pendiente confirmar con Facundo — ver core-implementation.md
-MANN_KENDALL_TABLA_A4 = {
-    4: 4,
-    5: 6,
-    6: 7,
-    7: None,  # pendiente confirmar con Facundo
-    8: 11,
-    9: 12,
-    10: 13,
-}
-
 
 # ── Mann-Kendall ──────────────────────────────────────────────────────────────
 
@@ -29,30 +16,31 @@ def calcular_mann_kendall(serie: list[float]) -> TestResult:
     arr = np.array(serie, dtype=float)
     n = len(arr)
 
-    if n > 10:
-        resultado = mk.original_test(arr, alpha=ALPHA)
-        estadistico = float(resultado.z)
-        valor_critico = float(Z_CRIT)
-        aprobada = not bool(resultado.h)
-    else:
-        s_crit = MANN_KENDALL_TABLA_A4.get(n)
-        if s_crit is None:
-            return TestResult(
-                prueba="mann_kendall",
-                estadistico=None,
-                valor_critico=None,
-                veredicto="no_ejecutada",
-                warning_codigo="TEST_NOT_EXECUTED_CONDITION",
-                warning_nivel="normal",
-            )
-        s = _calcular_s(arr)
-        estadistico = float(abs(s))
-        valor_critico = float(s_crit)
-        aprobada = abs(s) <= s_crit
+    if n < 10:
+        return TestResult(
+            prueba="mann_kendall",
+            estadistico=None,
+            valor_critico=None,
+            veredicto="no_ejecutada",
+            warning_codigo="TEST_NOT_EXECUTED_MIN_SAMPLES",
+            warning_nivel="normal",
+        )
 
+    resultado = mk.original_test(arr, alpha=ALPHA)
+    estadistico = float(resultado.z)
+    valor_critico = float(Z_CRIT)
+    aprobada = not bool(resultado.h)
     veredicto = "aprobada" if aprobada else "rechazada"
-    warning_codigo = "TEST_WARNING_TREND" if not aprobada else None
-    warning_nivel = "normal" if not aprobada else None
+
+    if not aprobada:
+        warning_codigo = "TEST_WARNING_TREND"
+        warning_nivel = "normal"
+    elif 10 <= n <= 30:
+        warning_codigo = "TEST_WARNING_SMALL_SAMPLE"
+        warning_nivel = "normal"
+    else:
+        warning_codigo = None
+        warning_nivel = None
 
     return TestResult(
         prueba="mann_kendall",
@@ -62,19 +50,6 @@ def calcular_mann_kendall(serie: list[float]) -> TestResult:
         warning_codigo=warning_codigo,
         warning_nivel=warning_nivel,
     )
-
-
-def _calcular_s(arr: np.ndarray) -> int:
-    n = len(arr)
-    s = 0
-    for i in range(n - 1):
-        for j in range(i + 1, n):
-            diff = arr[j] - arr[i]
-            if diff > 0:
-                s += 1
-            elif diff < 0:
-                s -= 1
-    return s
 
 
 # ── Kolmogorov-Smirnov (tendencia) ───────────────────────────────────────────
@@ -87,24 +62,21 @@ def calcular_ks_tendencia(serie: list[float]) -> TestResult:
     mitad = n_total // 2
     primera = arr[:mitad]
     segunda = arr[mitad:]
-    n = len(primera)
-    m = len(segunda)
 
-    # D: máxima diferencia entre CDFs empíricas de cada mitad
-    d_stat, _ = ks_2samp(primera, segunda)
+    # D: máxima diferencia entre CDFs empíricas (Ec. A.56–A.57)
+    d_stat, p_valor = ks_2samp(primera, segunda)
 
-    # Z = D * sqrt(n*m / (n+m)) — fórmula Tabla A.5
-    z_stat = float(d_stat * np.sqrt((n * m) / (n + m)))
-    valor_critico = KS_Z_CRIT  # 1.358
+    estadistico = float(d_stat)
+    valor_critico = KS_Z_CRIT  # 1.358 — Tabla A.5, α=0.05 (referencia bibliográfica)
+    aprobada = p_valor > 0.05  # equivalente a Z = D·√(nm/(n+m)) ≤ 1.358
 
-    aprobada = z_stat <= valor_critico
     veredicto = "aprobada" if aprobada else "rechazada"
     warning_codigo = "TEST_WARNING_TREND" if not aprobada else None
     warning_nivel = "normal" if not aprobada else None
 
     return TestResult(
         prueba="kolmogorov_smirnov",
-        estadistico=z_stat,
+        estadistico=estadistico,
         valor_critico=float(valor_critico),
         veredicto=veredicto,
         warning_codigo=warning_codigo,

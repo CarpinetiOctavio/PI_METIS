@@ -16,14 +16,14 @@ def calcular_helmert(serie: list[float]) -> TestResult:
 
     signos = arr > media
     cambios = int(np.sum(signos[1:] != signos[:-1]))
+    secuencias = (n - 1) - cambios
 
-    mu = (n - 1) / 2
-    sigma = np.sqrt((n - 1) / 4)
+    diferencia = secuencias - cambios
+    limite = float(np.sqrt(n - 1))
 
-    estadistico = (cambios - mu) / sigma if sigma != 0 else 0.0
-    valor_critico = 1.96  # normal estándar, α=5% — ver core-implementation.md
-
-    aprobada = abs(estadistico) <= valor_critico
+    estadistico = float(diferencia)
+    valor_critico = limite
+    aprobada = abs(diferencia) <= limite
     veredicto = "aprobada" if aprobada else "rechazada"
 
     return TestResult(
@@ -78,6 +78,22 @@ def calcular_t_student(
 # ── Cramer ────────────────────────────────────────────────────────────────────
 
 
+def _cramer_bloque(
+    arr: np.ndarray,
+    n_w: int,
+    media_global: float,
+    s_global: float,
+) -> tuple[float, float] | None:
+    """(tau_w, t_w) para los últimos n_w datos de arr (Ec. III-13/14/15), o None si denom ≤ 0."""
+    n = len(arr)
+    tau_w = (float(np.mean(arr[-n_w:])) - media_global) / s_global
+    denom = n - n_w * (1 + tau_w**2)
+    if denom <= 0:
+        return None
+    t_w = float(np.sqrt((n_w * (n - 2)) / denom) * abs(tau_w))
+    return tau_w, t_w
+
+
 def calcular_cramer(
     serie: list[float],
     particion: dict | str = "default",
@@ -86,39 +102,71 @@ def calcular_cramer(
     n = len(arr)
 
     if particion == "default":
-        n1 = int(np.ceil(n * 0.60))
-        n2 = int(np.ceil(n * 0.30))
+        n_w1 = int(np.ceil(n * 0.60))
+        n_w2 = int(np.ceil(n * 0.30))
     else:
-        n1 = int(np.ceil(n * particion["n1_pct"] / 100))
-        n2 = int(np.ceil(n * particion["n2_pct"] / 100))
+        n_w1 = int(np.ceil(n * particion["n1_pct"] / 100))
+        n_w2 = int(np.ceil(n * particion["n2_pct"] / 100))
 
-    n2 = min(n2, n - n1)
+    n_w2 = min(n_w2, n - n_w1)
 
-    s1 = arr[:n1]
-    s2 = arr[n1 : n1 + n2]
+    media_global = float(np.mean(arr))
+    s_global = float(np.std(arr, ddof=1))
 
-    media1, media2 = np.mean(s1), np.mean(s2)
-    var1, var2 = np.var(s1, ddof=1), np.var(s2, ddof=1)
+    if s_global == 0:
+        return TestResult(
+            prueba="cramer",
+            estadistico=None,
+            valor_critico=None,
+            veredicto="no_ejecutada",
+            warning_codigo="TEST_NOT_EXECUTED_CONDITION",
+            warning_nivel="normal",
+            n1=n_w1,
+            n2=n_w2,
+        )
 
-    nu = n1 + n2 - 2
-    sp2 = ((n1 - 1) * var1 + (n2 - 1) * var2) / nu
-    sp = np.sqrt(sp2)
+    bloque1 = _cramer_bloque(arr, n_w1, media_global, s_global)
+    bloque2 = _cramer_bloque(arr, n_w2, media_global, s_global)
 
-    tau = (media1 - media2) / (sp * np.sqrt(1 / n1 + 1 / n2)) if sp != 0 else 0.0
-    valor_critico = float(t_dist.ppf(1 - ALPHA / 2, df=nu))
+    if bloque1 is None or bloque2 is None:
+        return TestResult(
+            prueba="cramer",
+            estadistico=None,
+            valor_critico=None,
+            veredicto="no_ejecutada",
+            warning_codigo="TEST_NOT_EXECUTED_CONDITION",
+            warning_nivel="normal",
+            n1=n_w1,
+            n2=n_w2,
+        )
 
-    aprobada = abs(tau) <= valor_critico
+    tau_w1, t_w1 = bloque1
+    tau_w2, t_w2 = bloque2
+
+    nu_w1 = n + n_w1 - 2
+    nu_w2 = n + n_w2 - 2
+
+    vc_w1 = float(t_dist.ppf(1 - ALPHA / 2, df=nu_w1))
+    vc_w2 = float(t_dist.ppf(1 - ALPHA / 2, df=nu_w2))
+
+    aprobada = (t_w1 <= vc_w1) and (t_w2 <= vc_w2)
     veredicto = "aprobada" if aprobada else "rechazada"
+
+    # Reportar el estadístico binding (el de mayor ratio t/vc)
+    if (t_w1 / vc_w1) >= (t_w2 / vc_w2):
+        estadistico_rep, vc_rep = t_w1, vc_w1
+    else:
+        estadistico_rep, vc_rep = t_w2, vc_w2
 
     return TestResult(
         prueba="cramer",
-        estadistico=float(tau),
-        valor_critico=valor_critico,
+        estadistico=estadistico_rep,
+        valor_critico=vc_rep,
         veredicto=veredicto,
         warning_codigo="TEST_CRITICAL_HOMOGENEITY" if not aprobada else None,
         warning_nivel="critico" if not aprobada else None,
-        n1=n1,
-        n2=n2,
+        n1=n_w1,
+        n2=n_w2,
     )
 
 

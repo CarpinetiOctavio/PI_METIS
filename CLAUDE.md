@@ -143,3 +143,4 @@ METIS detecta y advierte, pero **no bloquea** — excepto el único caso absolut
 - `.claude/rules/decisions-log.md` — historial de decisiones descartadas y reemplazadas. Leer cuando algo en el código no coincida con los archivos de decisiones vigentes.
 - `.claude/rules/core-etapa2-implementation.md` — librerías, fuentes y restricciones del motor de Etapa 2
 - `.claude/rules/formulas-etapa2.md` — referencias bibliográficas de todas las fórmulas de Etapa 2 mapeadas a ecuaciones de la tesis de Facundo. Ninguna fórmula se implementa sin referencia explícita en este archivo.
+- `.claude/rules/formulas-etapa1.md` — referencias bibliográficas de todas las fórmulas de Etapa 1 mapeadas a ecuaciones de la tesis de Facundo, y demas referencias bibliograficas. Ninguna fórmula se implementa sin referencia explícita en este archivo.

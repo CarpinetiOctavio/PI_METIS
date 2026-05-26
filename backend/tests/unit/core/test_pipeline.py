@@ -5,10 +5,11 @@ from metis.core.pipeline import ejecutar_etapa1
 
 
 # Serie que produce nivel_confianza="validado" — todas las pruebas aprueban.
-# numpy seed=1, uniform(10, 100), n=50. Seed 42 fue descartada (Anderson rechaza).
+# numpy seed=9, uniform(10, 100), n=50. Seed 1 fue descartada (Helmert rechaza
+# con criterio directo |S-C| ≤ √(n-1): margen=0). Seed 9: margen=6 (holgado).
 # n=50 > 40 evita TEST_WARNING_SMALL_SAMPLE de Wald-Wolfowitz.
 # Verificada con smoke test antes de incorporar como constante.
-_rng = np.random.default_rng(seed=1)
+_rng = np.random.default_rng(seed=9)
 SERIE_VALIDADA = _rng.uniform(10, 100, size=50).tolist()
 
 
@@ -56,16 +57,20 @@ def test_serie_valida_nivel_confianza_validado():
     # serie_facundo no sirve para este caso: Anderson rechaza (dependiente).
     resultado = ejecutar_etapa1(SERIE_VALIDADA, "otro", "anual")
     assert resultado.nivel_confianza == "validado"
-    assert resultado.independencia != []
-    assert resultado.homogeneidad != []
-    assert resultado.tendencia != []
-    assert resultado.atipicos != []
+    assert resultado.independencia[0].prueba == "anderson"
+    assert resultado.independencia[0].veredicto == "aprobada"
+    assert resultado.homogeneidad[0].prueba == "helmert"
+    assert resultado.homogeneidad[0].veredicto == "aprobada"
+    assert resultado.tendencia[0].prueba == "mann_kendall"
+    assert resultado.tendencia[0].veredicto == "aprobada"
+    assert resultado.atipicos[0].prueba == "chow"
+    assert resultado.atipicos[0].veredicto == "aprobada"
     assert resultado.descriptive is not None
 
 
 @pytest.mark.unit
 def test_warning_critico_produce_con_warnings(serie_facundo):
-    # serie_facundo: Anderson rechaza → TEST_CRITICAL_INDEPENDENCE → con_warnings.
+    # serie_facundo: Wald n=40 ≤ 40 → TEST_WARNING_SMALL_SAMPLE → con_warnings.
     resultado = ejecutar_etapa1(serie_facundo, "caudal_precipitacion", "anual")
     assert resultado.nivel_confianza == "con_warnings"
 
@@ -78,7 +83,7 @@ def test_ceros_en_caudal_chow_no_ejecutada_pipeline_continua():
     # Ceros en caudal_precipitacion → Chow no ejecutada, pero el pipeline continúa.
     serie = [0.0, 5.0] + [float(i) for i in range(10, 59)]
     resultado = ejecutar_etapa1(serie, "caudal_precipitacion", "anual")
-    assert resultado.nivel_confianza != "rechazado"
+    assert resultado.nivel_confianza == "con_warnings"
     assert len(resultado.atipicos) == 1
     assert resultado.atipicos[0].veredicto == "no_ejecutada"
     assert resultado.atipicos[0].warning_codigo == "TEST_NOT_EXECUTED_ZEROS"
@@ -91,8 +96,10 @@ def test_strings_filtrados_antes_de_pruebas():
     resultado = ejecutar_etapa1(serie, "otro", "anual")
     codigos = [w.codigo for w in resultado.warnings]
     assert "CONTRACT_NON_NUMERIC_VALUES" in codigos
-    assert resultado.independencia != []
-    assert resultado.homogeneidad != []
+    assert resultado.independencia[0].prueba == "anderson"
+    assert resultado.independencia[0].estadistico is not None
+    assert resultado.homogeneidad[0].prueba == "helmert"
+    assert resultado.homogeneidad[0].estadistico is not None
 
 
 @pytest.mark.unit

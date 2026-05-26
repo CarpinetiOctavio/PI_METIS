@@ -1,8 +1,10 @@
 import math
 
+import numpy as np
 import pytest
 
 from metis.core.homogeneity import (
+    _cramer_bloque,
     calcular_cramer,
     determinar_nivel_homogeneidad,
 )
@@ -107,3 +109,41 @@ def test_cramer_particion_custom(serie_facundo):
 
     assert resultado.n1 == n1_esperado
     assert resultado.n2 == n2_esperado
+
+
+@pytest.mark.unit
+def test_cramer_tau_y_t_intermedios_ec_iii15(serie_facundo):
+    # Verifica valores intermedios contra cálculo manual con serie_facundo (n=40).
+    # n_w1=ceil(40*0.60)=24, n_w2=min(ceil(40*0.30),16)=12.
+    # tau_w = (x̄_w - x̄_global) / S_global  (Ec. III-13/14)
+    # t_w = sqrt(n_w*(n-2)/denom) * |tau_w|  (Ec. III-15), denom = n - n_w*(1+tau_w²)
+    arr = np.array(serie_facundo, dtype=float)
+    n = len(arr)
+    media_global = float(np.mean(arr))
+    s_global = float(np.std(arr, ddof=1))
+
+    n_w1, n_w2 = 24, 12
+    bloque1 = _cramer_bloque(arr, n_w1, media_global, s_global)
+    bloque2 = _cramer_bloque(arr, n_w2, media_global, s_global)
+
+    assert bloque1 is not None
+    assert bloque2 is not None
+
+    tau_w1, t_w1 = bloque1
+    tau_w2, t_w2 = bloque2
+
+    assert tau_w1 == pytest.approx(0.031216, abs=1e-4)
+    assert tau_w2 == pytest.approx(0.193171, abs=1e-4)
+    assert t_w1 == pytest.approx(0.2358, abs=1e-3)
+    assert t_w2 == pytest.approx(0.7859, abs=1e-3)
+
+
+@pytest.mark.unit
+def test_cramer_estadistico_es_t_w2_binding(serie_facundo):
+    # t_w2 > t_w1 en términos de ratio t/vc → t_w2 es el estadístico reportado.
+    resultado = calcular_cramer(serie_facundo)
+
+    assert resultado.estadistico == pytest.approx(0.7859, abs=1e-3)
+    assert resultado.veredicto == "aprobada"
+    assert resultado.n1 == 24
+    assert resultado.n2 == 12

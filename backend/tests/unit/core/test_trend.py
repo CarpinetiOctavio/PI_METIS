@@ -23,12 +23,12 @@ def _make_trend_result(veredicto: str) -> TestResult:
 
 
 @pytest.mark.unit
-def test_mann_kendall_n7_no_ejecutada():
-    # n=7 — valor crítico de Tabla A.4 pendiente de confirmar con Facundo.
+def test_mann_kendall_n_menor_10_no_ejecutada():
+    # n < 10 → no_ejecutada con TEST_NOT_EXECUTED_MIN_SAMPLES (Ec. formulas-etapa1 §7)
     serie = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0]
     resultado = calcular_mann_kendall(serie)
     assert resultado.veredicto == "no_ejecutada"
-    assert resultado.warning_codigo == "TEST_NOT_EXECUTED_CONDITION"
+    assert resultado.warning_codigo == "TEST_NOT_EXECUTED_MIN_SAMPLES"
     assert resultado.estadistico is None
 
 

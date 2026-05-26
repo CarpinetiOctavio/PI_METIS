@@ -1,6 +1,8 @@
+import numpy as np
 import pytest
 
 from metis.core.independence import (
+    calcular_anderson,
     calcular_wald_wolfowitz,
     determinar_nivel_independencia,
 )
@@ -60,9 +62,7 @@ def test_anderson_aprueba_wald_rechaza_sin_warning_independence():
     nivel, warnings = determinar_nivel_independencia(
         _make_anderson("aprobada"), _make_wald("rechazada")
     )
-    codigos = [w.codigo for w in warnings]
-    assert "TEST_WARNING_INDEPENDENCE" not in codigos
-    assert "TEST_CRITICAL_INDEPENDENCE" not in codigos
+    assert warnings == []
 
 
 @pytest.mark.unit
@@ -113,3 +113,48 @@ def test_wald_valores_iguales_no_ejecutada():
     assert resultado.veredicto == "no_ejecutada"
     assert resultado.warning_codigo == "TEST_NOT_EXECUTED_CONDITION"
     assert resultado.estadistico is None
+
+
+# ── calcular_anderson ────────────────────────────────────────────────────────
+
+
+@pytest.mark.unit
+def test_anderson_un_lag_fuera_aprueba_tolerancia_10pct(serie_facundo):
+    # Para serie_facundo (n=40): k_max=13, lags_fuera=1 → 1/13=7.69% ≤ 10% → aprobada.
+    # Se verifican lags_fuera y estadístico de forma independiente al código.
+    arr = np.array(serie_facundo, dtype=float)
+    n = len(arr)
+    media = np.mean(arr)
+    k_max = n // 3
+    Z_CRIT = 1.96
+
+    var = np.sum((arr - media) ** 2)
+    r_values = [
+        np.sum((arr[: n - k] - media) * (arr[k:] - media)) / var
+        for k in range(1, k_max + 1)
+    ]
+    lags_fuera = sum(
+        1
+        for k, r_k in enumerate(r_values, start=1)
+        if r_k > (-1 + Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
+        or r_k < (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
+    )
+
+    assert lags_fuera == 1
+
+    resultado = calcular_anderson(serie_facundo)
+
+    assert resultado.veredicto == "aprobada"
+    assert resultado.estadistico == pytest.approx(
+        max(abs(r) for r in r_values), abs=1e-4
+    )
+
+
+@pytest.mark.unit
+def test_anderson_mayoria_lags_fuera_rechazada():
+    # Serie creciente — autocorrelación ≈ 1 en todos los lags → k_max lags fuera → rechazada.
+    serie = [float(i) for i in range(1, 51)]
+    resultado = calcular_anderson(serie)
+    assert resultado.veredicto == "rechazada"
+    assert resultado.warning_codigo == "TEST_CRITICAL_INDEPENDENCE"
+    assert resultado.warning_nivel == "critico"

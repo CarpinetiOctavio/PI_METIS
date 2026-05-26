@@ -31,12 +31,13 @@ def calcular_anderson(serie: list[float]) -> TestResult:
     estadistico = float(r_values[idx_max])
     valor_critico = float(min(r_crit_upper_values))
 
-    aprobada = all(
-        (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
-        <= r_values[k - 1]
-        <= r_crit_upper_values[k - 1]
+    lags_fuera = sum(
+        1
         for k in range(1, k_max + 1)
+        if r_values[k - 1] > r_crit_upper_values[k - 1]
+        or r_values[k - 1] < (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
     )
+    aprobada = (lags_fuera / k_max) <= 0.10
 
     veredicto = "aprobada" if aprobada else "rechazada"
     warning_codigo = None

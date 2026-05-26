@@ -40,8 +40,8 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
     z_scores = np.abs((log_serie - media) / s) if s != 0 else np.zeros(n)
     estadistico = float(np.max(z_scores))
 
-    # Valor crítico con corrección de Bonferroni — ver core-implementation.md
-    nu = n - 2
+    # Valor crítico con corrección de Bonferroni — ν = n-1 (Ec. 7/8a, Chow)
+    nu = n - 1
     valor_critico = float(t_dist.ppf(1 - ALPHA / (2 * n), df=nu))
 
     atipico_detectado = estadistico > valor_critico
