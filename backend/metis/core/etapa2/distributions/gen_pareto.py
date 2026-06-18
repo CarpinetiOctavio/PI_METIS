@@ -15,33 +15,34 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-147 a IV-174
   MV: sistema IV-150 a IV-152
     µ̂ = min(xi) (fijo antes de resolver)
     IV-151 (∂L/∂ε = 0) y IV-152 (∂L/∂σ = 0) simultáneamente via fsolve
+    Residual verificado post-fsolve (DECISIÓN 010)
 
-  MC: sistema IV-153 a IV-165
-    fi = (i-0.4)/(n+0.2)    (IV-165, Cunnane)
-    zi = (1-fi)^ε            (IV-163)
-    yi = ln(1-fi)            (IV-164)
-    IV-153: condición de optimalidad en ε del sistema LS —
-      (x̄·zȳ - xyz̄)·(z̄2 - z̄²) = (xz̄ - x̄·z̄)·(z̄·zȳ - z2ȳ)
-    σ̂ = -B̂·ε   donde B̂ = (xz̄ - x̄·z̄)/(z̄2 - z̄²)    (IV-154)
-    µ̂ = x̄ + B̂·(1 - z̄)                                  (IV-155)
-    Valor inicial de ε: g≥0 → 0.3, g<0 → 0.6            (IV-166)
+  MC: sistema IV-153 a IV-166
+    fi = (i-0.4)/(n+0.2)     (IV-165, Cunnane)
+    zi = (1-fi)^ε             (IV-163)
+    yi = ln(1-fi)             (IV-164)
+    IV-153: condición de optimalidad en ε — sistema trascendental porque
+      zi depende de ε. Resolver con scan+brentq sobre IV-153 completo.
+    σ̂ = ε·(x̄-xz̄+x1·(z̄-1)) / (z̄2-z̄-z1·(z̄-1))   (IV-154)
+    µ̂ = x1 - (ε/µ_k)·(1-z1)   (IV-155, punto fijo en µ — µ en denom es iteración anterior)
+    Valor inicial ε y µ: g≥0 → 0.3, g<0 → 0.6          (IV-166)
 
   MPP: IV-167 a IV-173
-    Pi = (i-0.35)/n                                       (IV-173)
-    M̂(0) = (1/n)·sum(xi) = x̄                            (IV-172, k=0)
-    M̂(1) = (1/n)·sum((1-Pi)·xi_ord)                     (IV-172, k=1)
-    I1 = M̂(0) - x1   (x1 = mínimo)                      (IV-170)
-    I2 = M̂(0) - 2·M̂(1)                                  (IV-171)
-    ε̂ = (n·I1 + 2·I2·(n-1)) / (I2·(n-1) - I1)           (IV-167)
-    σ̂ = (1+ε̂)·(2+ε̂)·I2                                  (IV-168)
-    µ̂ = x1 - σ̂/(n+ε̂)                                    (IV-169)
+    Pi = (i-0.35)/n                                      (IV-173)
+    M̂(0) = (1/n)·sum(xi) = x̄                           (IV-172, k=0)
+    M̂(1) = (1/n)·sum((1-Pi)·xi_ord)                    (IV-172, k=1)
+    I1 = M̂(0) - x1   (x1 = mínimo)                     (IV-170)
+    I2 = M̂(0) - 2·M̂(1)                                 (IV-171)
+    ε̂ = (n·I1 + 2·I2·(n-1)) / (I2·(n-1) - I1)          (IV-167)
+    σ̂ = (1+ε̂)·(2+ε̂)·I2                                 (IV-168)
+    µ̂ = x1 - σ̂/(n+ε̂)                                   (IV-169)
 
-  Cuantil:
-    xT = µ + (σ/ε)·[1 - (1-F(x))^ε]    (IV-174)
-    Límite ε→0: xT = µ - σ·ln(1-F(x))  [L'Hopital]
+  Cuantil: IV-174
+    xT = ((1/(1-F(x)))^ε - 1)·(σ/ε) + µ
+    Límite ε→0: xT = µ - σ·ln(1-F(x))    [L'Hôpital]
 
 RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo.
-NOTA: frecuentemente No Converge según resultados de la tesis.
+NOTA: MV y MC frecuentemente No Converge según resultados de la tesis.
 """
 
 import numpy as np
@@ -58,20 +59,24 @@ from metis.core.etapa2.types import (
 
 N_PARAMETROS: int = 3
 METODOS_APLICABLES: tuple[str, ...] = ("momentos", "mv", "mc", "mpp")
-PENDING_ZEROS_CONFIRMATION: bool = True  # pendiente Facundo — ver constraints.md
+PENDING_ZEROS_CONFIRMATION: bool = True
 
 _DENOM_GUARD = 1e-10
+_RESIDUAL_TOL = 1e-4
 
 
 def _skewness(x: np.ndarray) -> float:
+    # IV-4: g_sesg = mean((xi-xbar)³) / (var_sesgada)^(3/2)
+    # IV-5: g_insesg = n²/((n-1)(n-2)) * g_sesg
     n = len(x)
     if n < 3:
         return 0.0
     xbar = float(np.mean(x))
-    sx = float(np.std(x, ddof=1))
-    if sx == 0.0:
+    var_sesgada = float(np.var(x, ddof=0))
+    if var_sesgada == 0.0:
         return 0.0
-    return float(n * np.sum((x - xbar) ** 3) / ((n - 1) * (n - 2) * sx**3))
+    g_sesg = float(np.mean((x - xbar) ** 3) / var_sesgada**1.5)
+    return float((n**2 / ((n - 1) * (n - 2))) * g_sesg)
 
 
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
@@ -96,7 +101,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             )
 
         def _eq_momentos(eps: float) -> float:
-            # IV-148: g = 2(1-ε)·√(1+2ε) / (1+3ε)
+            # IV-148: g = 2·(1-ε)·√(1+2ε) / (1+3ε)
             denom = 1.0 + 3.0 * eps
             inner = 1.0 + 2.0 * eps
             if abs(denom) < _DENOM_GUARD or inner < 0:
@@ -104,7 +109,6 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             return 2.0 * (1.0 - eps) * np.sqrt(inner) / denom - g
 
         try:
-            # g es monótona decreciente en (-1/3, +∞): +∞ en el extremo inferior, -∞ en el superior
             eps = float(brentq(_eq_momentos, -1.0 / 3.0 + 1e-9, 1e6, xtol=CONVERGENCIA))
         except Exception:
             return MetodoResult(
@@ -137,26 +141,24 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 return [1e10, 1e10]
             # IV-151: ∂L/∂ε = 0
             f1 = float(
-                np.sum(
-                    (1.0 / eps**2) * np.log(ti)
-                    - (1.0 / eps + 1.0) * (serie - mu) / (sigma * ti)
-                )
+                np.sum(np.log(ti)) / eps**2
+                + ((1.0 - eps) / eps) * np.sum((serie - mu) / (sigma * ti))
             )
-            # IV-152: ∂L/∂σ = 0
+            # IV-152: ∂L/∂σ = 0  (primer término +n/σ, no -n/σ)
             f2 = float(
-                -n / sigma
-                + (1.0 / eps + 1.0) * (eps / sigma) * np.sum((serie - mu) / ti)
+                n / sigma
+                + ((1.0 - eps) / eps) * (eps / sigma**2) * np.sum((serie - mu) / ti)
             )
             return [f1, f2]
 
         try:
-            sol, _, ier, _ = fsolve(_system_mv, [0.1, S], full_output=True)
+            sol, info, ier, _ = fsolve(_system_mv, [0.1, S], full_output=True)
         except Exception:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
-        if ier != 1:
+        if ier != 1 or float(np.max(np.abs(info["fvec"]))) > _RESIDUAL_TOL:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
@@ -175,45 +177,53 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "mc":
-        xi = np.sort(serie)
+        g = _skewness(serie)
+        xi = np.sort(serie)  # ascendente: xi[0] = mínimo
+        x1 = float(xi[0])
         i_idx = np.arange(1, n + 1, dtype=float)
-        fi = (i_idx - 0.4) / (n + 0.2)  # IV-165 — Cunnane
-        yi = np.log(1.0 - fi)  # IV-164 — constante en ε
+        fi = (i_idx - 0.4) / (n + 0.2)  # IV-165, Cunnane
+        yi = np.log(1.0 - fi)  # IV-164, constante en ε
 
-        def _avgs(eps: float):
-            zi = (1.0 - fi) ** eps  # IV-163
-            zbar = float(np.mean(zi))
-            z2bar = float(np.mean(zi**2))
-            xzbar = float(np.mean(xi * zi))
-            zybar = float(np.mean(zi * yi))
-            z2ybar = float(np.mean(zi**2 * yi))
-            xyzbar = float(np.mean(xi * yi * zi))
-            return zbar, z2bar, xzbar, zybar, z2ybar, xyzbar
+        def _avgs(eps_val: float):
+            zi = (1.0 - fi) ** eps_val  # IV-163: zi depende de ε
+            z1 = float(zi[0])
+            zbar = float(np.mean(zi))  # IV-157
+            z2bar = float(np.mean(zi**2))  # IV-158
+            xzbar = float(np.mean(xi * zi))  # IV-159
+            zybar = float(np.mean(zi * yi))  # IV-160
+            z2ybar = float(np.mean(zi**2 * yi))  # IV-161
+            xyzbar = float(np.mean(xi * yi * zi))  # IV-162
+            return z1, zbar, z2bar, xzbar, zybar, z2ybar, xyzbar
 
-        def _iv153(eps: float) -> float:
+        def _iv153(eps_val: float) -> float:
             # IV-153: (x̄·zȳ - xyz̄)·(z̄2 - z̄²) = (xz̄ - x̄·z̄)·(z̄·zȳ - z2ȳ)
-            if abs(eps) < _DENOM_GUARD:
+            # Sistema trascendental: zi=(1-fi)^ε entra en todos los promedios
+            if abs(eps_val) < _DENOM_GUARD:
                 return 1e10
-            zbar, z2bar, xzbar, zybar, z2ybar, xyzbar = _avgs(eps)
+            z1, zbar, z2bar, xzbar, zybar, z2ybar, xyzbar = _avgs(eps_val)
             lhs = (xbar * zybar - xyzbar) * (z2bar - zbar**2)
             rhs = (xzbar - xbar * zbar) * (zbar * zybar - z2ybar)
             return lhs - rhs
 
-        # Rango de búsqueda: ε > -0.5 es límite teórico de GPD.
-        # Límite superior 50.0 es conservador — la tesis no define
-        # restricción explícita en el valor máximo de ε.
+        # IV-166: valor inicial de ε y µ según asimetría
+        eps_init = 0.3 if g >= 0.0 else 0.6
+        mu_init = eps_init  # mismo valor inicial para µ
+
+        # Scan + brentq sobre IV-153 completo (DECISIÓN 010)
         _scan = np.linspace(-0.49, 50.0, 300)
         _vals = np.array([_iv153(float(e)) for e in _scan])
-        _signs = np.sign(_vals)
-        _idx = np.where(np.diff(_signs) != 0)[0]
+        _finite = np.isfinite(_vals)
+        _signs = np.where(_finite, np.sign(_vals), 0)
+        _idx = np.where((_finite[:-1] & _finite[1:]) & (np.diff(_signs) != 0))[0]
+
         if len(_idx) == 0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
-        # Puede haber múltiples raíces (incluso espurias cerca de ε=0).
+        # Puede haber múltiples raíces (incluidas espurias cerca de ε=0).
         # Iterar sobre todos los brackets hasta encontrar parámetros válidos.
-        eps = mu = sigma = None
+        eps_hat = sigma_hat = mu_hat = None
         for _i in _idx:
             try:
                 _eps = float(
@@ -228,33 +238,53 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 continue
             if abs(_eps) < _DENOM_GUARD:
                 continue
-            _zbar, _z2bar, _xzbar, _zybar, _z2ybar, _xyzbar = _avgs(_eps)
-            _denom_b = _z2bar - _zbar**2
-            if abs(_denom_b) < _DENOM_GUARD:
+
+            z1, zbar, z2bar, xzbar, zybar, z2ybar, xyzbar = _avgs(_eps)
+
+            # IV-154: σ̂ = ε·(x̄-xz̄+x1·(z̄-1)) / (z̄2-z̄-z1·(z̄-1))
+            denom_sigma = z2bar - zbar - z1 * (zbar - 1.0)
+            if abs(denom_sigma) < _DENOM_GUARD:
                 continue
-            _B_hat = (_xzbar - xbar * _zbar) / _denom_b
-            _sigma = -_B_hat * _eps  # IV-154
-            _mu = xbar + _B_hat * (1.0 - _zbar)  # IV-155
+            _sigma = _eps * (xbar - xzbar + x1 * (zbar - 1.0)) / denom_sigma
             if _sigma <= 0:
                 continue
-            eps, sigma, mu = _eps, _sigma, _mu
+
+            # IV-155: µ̂ = x1 - (ε/µ_k)·(1-z1) — punto fijo en µ
+            # µ en el denominador es el valor de la iteración anterior
+            _mu = mu_init
+            converged_mu = False
+            for _ in range(1000):
+                if abs(_mu) < _DENOM_GUARD:
+                    break
+                _mu_next = x1 - (_eps / _mu) * (1.0 - z1)
+                if abs(_mu_next - _mu) < CONVERGENCIA:
+                    _mu = _mu_next
+                    converged_mu = True
+                    break
+                _mu = _mu_next
+            if not converged_mu:
+                continue
+
+            eps_hat = _eps
+            sigma_hat = _sigma
+            mu_hat = _mu
             break
 
-        if eps is None:
+        if eps_hat is None:
             return MetodoResult(
-                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
         return MetodoResult(
             metodo=metodo,
-            parametros={"mu": mu, "sigma": sigma, "epsilon": eps},
+            parametros={"mu": mu_hat, "sigma": sigma_hat, "epsilon": eps_hat},
             eea=None,
             status=STATUS_OK,
         )
 
     if metodo == "mpp":
         xi = np.sort(serie)
-        x1 = float(xi[0])  # mínimo de la serie
+        x1 = float(xi[0])
         Pi = (np.arange(1, n + 1, dtype=float) - 0.35) / n  # IV-173
 
         M0 = xbar  # IV-172 k=0: (1/n)·Σxi = x̄
@@ -298,10 +328,10 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
 
 def cuantil(p: float, parametros: dict) -> float:
     """
-    xT = µ + (σ/ε)·[1 - (1-F(x))^ε]    (IV-174)
-    Límite ε→0: xT = µ - σ·ln(1-F(x))   [L'Hopital]
+    xT = ((1/(1-F(x)))^ε - 1)·(σ/ε) + µ    (IV-174)
+    Límite ε→0: xT = µ - σ·ln(1-F(x))       [L'Hôpital]
 
-    p:          probabilidad de no excedencia F(x) ∈ (0, 1)  ← REQUERIDO
+    p:          probabilidad de no excedencia F(x) ∈ (0, 1)
     parametros: {"mu": float, "sigma": float, "epsilon": float}
     """
     if not (0.0 < p < 1.0):
@@ -311,4 +341,4 @@ def cuantil(p: float, parametros: dict) -> float:
     eps = parametros["epsilon"]
     if abs(eps) < _DENOM_GUARD:
         return float(mu - sigma * np.log(1.0 - p))  # límite ε→0
-    return float(mu + (sigma / eps) * (1.0 - (1.0 - p) ** eps))  # IV-174
+    return float(((1.0 / (1.0 - p)) ** eps - 1.0) * (sigma / eps) + mu)  # IV-174

@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from scipy.stats import norm
 
@@ -37,7 +39,7 @@ def calcular_anderson(serie: list[float]) -> TestResult:
         if r_values[k - 1] > r_crit_upper_values[k - 1]
         or r_values[k - 1] < (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
     )
-    aprobada = (lags_fuera / k_max) <= 0.10
+    aprobada = lags_fuera <= math.ceil(k_max * 0.10)
 
     veredicto = "aprobada" if aprobada else "rechazada"
     warning_codigo = None

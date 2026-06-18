@@ -97,7 +97,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             yi = (serie - mu) / alpha  # IV-181
             P = float(n - np.sum(np.exp(-yi)))  # IV-179
             R = float(n - np.sum(yi) + np.sum(yi * np.exp(-yi)))  # IV-180
-            delta_mu = alpha * (1.1 * P - 0.26 * R) / n  # IV-184
+            delta_mu = alpha * (1.11 * P - 0.26 * R) / n  # IV-184
             delta_alpha = alpha * (0.26 * P - 0.61 * R) / n  # IV-185
             if max(abs(delta_mu), abs(delta_alpha)) < CONVERGENCIA:
                 return MetodoResult(

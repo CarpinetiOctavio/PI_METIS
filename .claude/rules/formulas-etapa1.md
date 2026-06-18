@@ -200,7 +200,8 @@ s2 = serie[n1:n1+n2]  (siguientes n2 datos)
 x̄1, x̄2     = medias de s1 y s2
 Var1, Var2  = varianzas muestrales (ddof=1)
 ν           = n1 + n2 - 2                        # [Ec. III-8] (Grados de libertad)
-Sp²         = [(n1-1)·Var1 + (n2-1)·Var2] / ν    # [Ec. III-8] (Varianza ponderada conjunta)
+Sp²         = [n1·Var1 + n2·Var2] / ν             # [Ec. III-8] exacta — confirmado Facundo est_02
+                                                   # NOTA: usa n·Var, no (n-1)·Var
 t           = (x̄1 - x̄2) / (Sp · √(1/n1 + 1/n2))  # [Ec. III-8] (Estadístico t)
 ```
 
@@ -223,11 +224,12 @@ Fuente: Tesis Facundo — Sección III.4.3, Ecuaciones III-9 a III-15.
 x̄_global  = media de la serie completa
 S_global  = desvío estándar de la serie completa (np.std, ddof=1)
 
-# Lógica de tamaños: default de Facundo o personalización del usuario
-n_w1      = ceil(n · longitud_bloque_1)  [Default: longitud_bloque_1 = 0.60]
-n_w2      = ceil(n · longitud_bloque_2)  [Default: longitud_bloque_2 = 0.30]
+# Lógica de tamaños — verificado numéricamente contra tesis Facundo est_02 (n=24)
+n_w1      = ceil(n · 0.60)   → para n=24: n_w1=15  (reproduce tau_w1=0.18289)
+n_w2      = floor(n · 0.30)  → para n=24: n_w2=7   (reproduce tau_w2=0.35206)
+# ceil para n_w2 da n_w2=8 → tau_w2=0.67071 (incorrecto). Ver DECISIÓN 011.
 
-# Slicing indexado desde el final de la serie (últimos datos del registro)
+# Slicing: últimos n_w datos cronológicos del registro
 s_w1      = serie[-n_w1:]
 s_w2      = serie[-n_w2:]
 
@@ -243,18 +245,27 @@ tau_w1 = (x̄_w1 - x̄_global) / S_global                     # [Ec. III-13] (Su
 tau_w2 = (x̄_w2 - x̄_global) / S_global                     # [Ec. III-14] (Submuestra de 30%)
 ```
 
-### Indicadores de Prueba t_w (Estadístico Final)
+### Indicadores de Prueba t_w (Estadístico Final) — Ec. III-15
 ```
-t_w1   = √[ (n_w1 · (n - 2)) / (n - n_w1 · (1 + tau_w1²)) ] · |tau_w1|   # [Ec. III-15]
-t_w2   = √[ (n_w2 · (n - 2)) / (n - n_w2 · (1 + tau_w2²)) ] · |tau_w2|   # [Ec. III-15]
+t_w = √[ (n_w · (n - 2)) / (n - n_w · (1 + tau_w²)) ] · |tau_w|
 
-ν_w1 = n + n_w1 - 2             # Pagina 51 de la tesis:
-ν_w2 = n + n_w2 - 2             # El estadístico tw tiene distribución t de Student de dos colas con ν = n1 + n2 − 2
-                                # grados de libertad y para un nivel de significancia α = 0,05 . Si y solo si el valor absoluto de
-                                # tw para w = 60 y w =30, es mayor que el de la distribución t de Student se concluye que la
-                                # diferencia entre las medias es evidencia de inconsistencia y por lo tanto la serie Q j se i
-                                # considera no homogénea. En caso contrario la serie es Homogénea.
+t_w1   verificado: √[(15·22)/(24-15·(1+0.18289²))]·0.18289 = 1.13970  ✓
+t_w2   verificado: √[(7·22) /(24-7 ·(1+0.35206²))]·0.35206 = 1.08774  ✓
 ```
+
+### Grados de libertad y valor crítico
+```
+ν = n - 2    (para n=24: ν=22, crit=2.0739)
+
+DECISIÓN: ν = n - 2, no ν = n + n_w - 2.
+Justificación: reproduce exactamente los resultados numéricos de Facundo.
+La tesis escribe "ν = n₁ + n₂ - 2" en p.51 pero la práctica numérica
+del autor es consistente con ν = n - 2 para ambos subgrupos.
+Ante discrepancia texto/práctica, se prioriza la práctica numérica
+de la fuente bibliográfica primaria. PENDIENTE confirmación formal Facundo.
+Ver decisions-log.md — DECISIÓN 011.
+```
+
 Nota: Cada bloque se compara individualmente contra la media macro (x̄_global) y el desvío macro (S_global) de toda la serie, nunca entre sí.
 
 ### Veredicto

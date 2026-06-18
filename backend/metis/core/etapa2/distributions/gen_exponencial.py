@@ -8,40 +8,24 @@ Métodos aplicables: momentos, mv, ml
 Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-77 a IV-89
 
   Momentos:
-    α̂ por resolución de IV-77:
-      (ψ'(α+1) - ψ'(α)) / (ψ(α+1) - ψ(α)) = x̄/S
-    λ̂ por IV-78:
-      µ = [ψ(α+1) - ψ(1)] / λ
+    α̂ por IV-77: S/x̄ = √(ψ'(1) - ψ'(α+1)) / (ψ(α+1) - ψ(1))
+    ψ = digamma, ψ' = trigamma. Raíz cuadrada solo en numerador.
+    λ̂ por IV-78: µ = (ψ(α+1) - ψ(1)) / λ  →  λ̂ = (ψ(α+1) - ψ(1)) / x̄
 
-    NOTA IV-77: la ecuación como está reduce a -1/α = x̄/S (sin solución
-    válida para x̄ > 0). Por recurrencia: ψ(α+1)-ψ(α)=1/α y
-    ψ'(α+1)-ψ'(α)=-1/α², por lo que el cociente es -1/α < 0 siempre.
-    Se implementa la ecuación de CV-matching que surge de los momentos
-    teóricos de la GE (media e varianza conocidas):
-      sqrt(ψ'(1) - ψ'(α+1)) / (ψ(α+1) - ψ(1)) = S/x̄
-    Pendiente confirmar IV-77 con Facundo.
-
-  MV: sistema de primeras condiciones de IV-79 a IV-82
-    LL = n·ln(α) + n·ln(λ) + (α-1)·sum(ln(1-e^(-λ·xi))) - λ·sum(xi)  (IV-79)
-    Condiciones de primer orden simultáneas:
-      n/α + sum(ln(1 - e^(-λ·xi))) = 0          (∂LL/∂α = 0, IV-80)
-      n/λ + (α-1)·sum(xi·e^(-λ·xi)/(1-e^(-λ·xi))) - sum(xi) = 0  (∂LL/∂λ = 0, IV-81)
-    α̂(λ) = -n / sum(ln(1 - e^(-λ·xi)))          (IV-82)
-    Resuelto con scipy.optimize.fsolve sobre IV-80/IV-81.
+  MV: IV-79 a IV-82
+    IV-80: n/α + Σln(1 - e^(-λ·xi)) = 0
+    IV-81: n/λ + (α-1)·Σ xi·e^(-λ·xi)/(1-e^(-λ·xi)) - Σxi = 0
+    α̂(λ) = -n / Σln(1 - e^(-λ·xi))    (IV-82)
+    Resuelto vía fsolve sobre IV-80/IV-81. Residual verificado (DECISIÓN 010).
 
   ML (Momentos L): IV-83 a IV-88
-    β2/β1 = (ψ(α+1)-ψ(1)) / (ψ'(α)-ψ'(α+1))    (IV-83)
-    Por recurrencia ψ'(α)-ψ'(α+1) = 1/α², por lo que IV-83 = α²·(ψ(α+1)-ψ(1))
-    λ̂ = (ψ(α̂+1) - ψ(1)) / β1                     (IV-84)
-    β1 = M1 (IV-85), β2 = M2 (IV-86): PWMs ascendentes (convención Hosking)
+    α̂ de: β2/β1 = (ψ(2α+1) - ψ(α+1)) / (ψ(α+1) - ψ(1))    (IV-83)
+    λ̂ = (ψ(α̂+1) + ψ(1)) / β1                                 (IV-84)
+    β1 = M1 (IV-85) = x̄
+    β2 = M2 (IV-86/87) = [1/(n(n-1))]·Σ_{i=1}^{n-1}(n-i)·x_{(i)}  (descendente)
 
-    NOTA IV-84: la tesis escribe "(ψ(1)+ψ(α̂+1))/β1", lo que da ψ(α+1)−γ.
-    La media teórica de la GE es µ = (ψ(α+1)−ψ(1))/λ = (ψ(α+1)+γ)/λ,
-    por lo que la forma correcta es (ψ(α+1)−ψ(1))/β1. Se implementa
-    la forma correcta. Pendiente confirmar IV-84 con Facundo.
-
-  Cuantil:
-    xT = -ln[1 - F(x)^(1/α)] / λ    (IV-89)
+  Cuantil: IV-89
+    xT = -ln[1 - F(x)^(1/α)] / λ
 
 RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo.
 """
@@ -61,9 +45,10 @@ from metis.core.etapa2.types import (
 
 N_PARAMETROS: int = 2
 METODOS_APLICABLES: tuple[str, ...] = ("momentos", "mv", "ml")
-PENDING_ZEROS_CONFIRMATION: bool = True  # pendiente Facundo — ver constraints.md
+PENDING_ZEROS_CONFIRMATION: bool = True
 
 _DENOM_GUARD = 1e-10
+_RESIDUAL_TOL = 1e-4
 
 
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
@@ -86,41 +71,41 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "momentos":
-        # IV-77 (ver NOTA): CV-matching con momentos teóricos de la GE
-        # solve: sqrt(ψ'(1) - ψ'(α+1)) / (ψ(α+1) - ψ(1)) = S/x̄
+        # IV-77: S/x̄ = √(ψ'(1) - ψ'(α+1)) / (ψ(α+1) - ψ(1))
         cv = S / xbar
         psi_1 = float(digamma(1.0))
-        dpsi_1 = float(polygamma(1, 1.0))  # ψ'(1) = π²/6
+        dpsi_1 = float(polygamma(1, 1.0))
 
-        def _eq_momentos(alpha: float) -> float:
+        def _eq77(alpha: float) -> float:
+            if alpha <= 0:
+                return 1e10
             psi_a1 = float(digamma(alpha + 1.0))
             dpsi_a1 = float(polygamma(1, alpha + 1.0))
-            num = dpsi_1 - dpsi_a1
-            den = psi_a1 - psi_1
-            if num <= 0 or den <= 0:
-                return -cv
+            num = dpsi_1 - dpsi_a1  # ψ'(1) - ψ'(α+1)
+            den = psi_a1 - psi_1  # ψ(α+1) - ψ(1)
+            if num <= 0 or abs(den) < _DENOM_GUARD:
+                return 1e10
             return float(np.sqrt(num) / den) - cv
 
         try:
-            alpha = float(brentq(_eq_momentos, 1e-3, 1e6, xtol=CONVERGENCIA))
+            alpha = float(brentq(_eq77, 1e-3, 1e6, xtol=CONVERGENCIA))
         except Exception:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
-        # IV-78: µ = [ψ(α+1) - ψ(1)] / λ → λ = [ψ(α+1) - ψ(1)] / x̄
+        # IV-78: λ̂ = (ψ(α+1) - ψ(1)) / x̄
         psi_a1 = float(digamma(alpha + 1.0))
-        denom_lam = psi_a1 - psi_1
-        if abs(denom_lam) < _DENOM_GUARD:
+        den_lam = psi_a1 - psi_1
+        if abs(den_lam) < _DENOM_GUARD:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
-        lam = denom_lam / xbar  # IV-78
+        lam = den_lam / xbar
         if lam <= 0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
-
         return MetodoResult(
             metodo=metodo,
             parametros={"alpha": alpha, "lambda": lam},
@@ -129,32 +114,30 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "mv":
-        # Sistema IV-80/IV-81 resuelto con fsolve
+        # IV-80/IV-81 vía fsolve. Residual verificado (DECISIÓN 010).
         def _system(params: list) -> list:
             alpha, lam = params
             if alpha <= 0 or lam <= 0:
                 return [1e10, 1e10]
-            evals = np.exp(-lam * serie)
-            one_minus = 1.0 - evals
-            if np.any(one_minus <= 0):
+            ev = np.exp(-lam * serie)
+            one_ev = 1.0 - ev
+            if np.any(one_ev <= 0):
                 return [1e10, 1e10]
-            log_terms = np.log(one_minus)
-            f1 = float(n / alpha + np.sum(log_terms))  # IV-80
-            ratio = evals / one_minus
+            log_t = np.log(one_ev)
+            f1 = float(n / alpha + np.sum(log_t))  # IV-80
             f2 = float(
-                n / lam + (alpha - 1.0) * np.sum(serie * ratio) - np.sum(serie)
+                n / lam + (alpha - 1.0) * np.sum(serie * ev / one_ev) - np.sum(serie)
             )  # IV-81
             return [f1, f2]
 
-        x0 = [1.0, 1.0 / xbar]
         try:
-            sol, _, ier, _ = fsolve(_system, x0, full_output=True)
+            sol, info, ier, _ = fsolve(_system, [1.0, 1.0 / xbar], full_output=True)
         except Exception:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
-        if ier != 1:
+        if ier != 1 or float(np.max(np.abs(info["fvec"]))) > _RESIDUAL_TOL:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
@@ -164,7 +147,6 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
-
         return MetodoResult(
             metodo=metodo,
             parametros={"alpha": alpha, "lambda": lam},
@@ -173,29 +155,35 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "ml":
-        # PWMs ascendentes — convención Hosking
-        xi = np.sort(serie)
-        beta0 = float(np.mean(xi))  # M1 en numeración de la tesis (IV-85)
-        beta1 = float(np.sum(xi * np.arange(n)) / (n * (n - 1)))  # M2 en tesis (IV-86)
+        # β1 = M1 (IV-85) = x̄
+        # β2 = M2 (IV-86/87): [1/(n(n-1))]·Σ_{i=1}^{n-1}(n-i)·x_{(i)}  (descendente)
+        xs = np.sort(serie)[::-1]
+        beta1 = float(np.mean(xs))
+        weights = np.arange(n - 1, 0, -1, dtype=float)  # [n-1, n-2, …, 1]
+        beta2 = float(np.dot(xs[: n - 1], weights) / (n * (n - 1)))
 
-        if abs(beta0) < _DENOM_GUARD or beta1 <= 0:
+        if abs(beta1) < _DENOM_GUARD or beta2 <= 0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
 
-        ratio_sample = beta1 / beta0  # β2/β1 en numeración de la tesis
+        ratio = beta2 / beta1
 
-        # IV-83: β2/β1 = (ψ(α+1)-ψ(1)) / (ψ'(α)-ψ'(α+1))
-        # Por recurrencia ψ'(α)-ψ'(α+1) = 1/α² → RHS = α²·(ψ(α+1)-ψ(1))
+        # IV-83: β2/β1 = (ψ(2α+1) - ψ(α+1)) / (ψ(α+1) - ψ(1))
         psi_1 = float(digamma(1.0))
 
-        def _eq_ml(alpha: float) -> float:
+        def _eq83(alpha: float) -> float:
+            if alpha <= 0:
+                return -ratio
+            psi_2a1 = float(digamma(2.0 * alpha + 1.0))
             psi_a1 = float(digamma(alpha + 1.0))
-            rhs = alpha**2 * (psi_a1 - psi_1)  # IV-83 simplificado por recurrencia
-            return rhs - ratio_sample
+            den = psi_a1 - psi_1  # ψ(α+1) - ψ(1)
+            if abs(den) < _DENOM_GUARD:
+                return 1e10
+            return (psi_2a1 - psi_a1) / den - ratio
 
         try:
-            alpha = float(brentq(_eq_ml, 1e-4, 1e4, xtol=CONVERGENCIA))
+            alpha = float(brentq(_eq83, 1e-4, 1e4, xtol=CONVERGENCIA))
         except Exception:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
@@ -206,19 +194,17 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
 
-        # IV-84: λ = (ψ(α+1) - ψ(1)) / β1 (ver NOTA en docstring)
+        # IV-84: λ̂ = (ψ(α̂+1) + ψ(1)) / β1
+        # PENDIENTE Facundo: confirmar comportamiento con lambda < 0.
+        # La tesis produce lambda negativo en ML (est_02: lambda=-0.0033) — se permite por ahora.
+        # Lambda=0 sí es inválido (división por cero en cuantil IV-89).
         psi_a1 = float(digamma(alpha + 1.0))
-        denom_lam = psi_a1 - psi_1
-        if abs(denom_lam) < _DENOM_GUARD:
+        num_lam = psi_a1 + psi_1
+        lam = num_lam / beta1
+        if lam == 0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
-        lam = denom_lam / beta0  # IV-84
-        if lam <= 0:
-            return MetodoResult(
-                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
-            )
-
         return MetodoResult(
             metodo=metodo,
             parametros={"alpha": alpha, "lambda": lam},
@@ -235,7 +221,7 @@ def cuantil(p: float, parametros: dict) -> float:
     """
     xT = -ln[1 - F(x)^(1/α)] / λ    (IV-89)
 
-    p:          probabilidad de no excedencia F(x) ∈ (0, 1)  ← REQUERIDO
+    p:          probabilidad de no excedencia F(x) ∈ (0, 1)
     parametros: {"alpha": float, "lambda": float}
     """
     if not (0.0 < p < 1.0):

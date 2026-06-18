@@ -49,15 +49,17 @@ _DENOM_GUARD = 1e-10
 
 
 def _skewness(x: np.ndarray) -> float:
-    """Asimetría no sesgada."""
+    # IV-4: g_sesg = mean((xi-xbar)³) / (var_sesgada)^(3/2)
+    # IV-5: g_insesg = n²/((n-1)(n-2)) * g_sesg
     n = len(x)
     if n < 3:
         return 0.0
     xbar = float(np.mean(x))
-    sx = float(np.std(x, ddof=1))
-    if sx == 0.0:
+    var_sesgada = float(np.var(x, ddof=0))
+    if var_sesgada == 0.0:
         return 0.0
-    return float(n * np.sum((x - xbar) ** 3) / ((n - 1) * (n - 2) * sx**3))
+    g_sesg = float(np.mean((x - xbar) ** 3) / var_sesgada**1.5)
+    return float((n**2 / ((n - 1) * (n - 2))) * g_sesg)
 
 
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
@@ -95,8 +97,8 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             )
         mu_y = float(np.log(arg_log) - 0.5 * np.log(nz**2 + 1.0))  # IV-115
 
-        # IV-116
-        sigma_y = float(np.sqrt(np.log(nz**2 + 1.0)))
+        # IV-116: σ̂²y = [ln(nz²+1)]^(1/2) → σ̂y = [ln(nz²+1)]^(1/4)
+        sigma_y = float(np.log(nz**2 + 1.0) ** 0.25)
 
         # IV-111
         x0 = float(xbar * (1.0 - nx / nz))

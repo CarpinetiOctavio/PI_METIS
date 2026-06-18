@@ -27,7 +27,7 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-202 a IV-245
     δν, δα, δβ por IV-222–224 — convergencia max(|δ|) < 1×10⁻⁷
     NOTA: frecuentemente No Converge — comportamiento esperado según tesis
   ML (Momentos-L): IV-234 a IV-244 — cerrado, sin iteración
-    M0, M1, M2 por IV-242–244 (serie ordenada ascendente)
+    M0, M1, M2 por IV-242–244 (serie ordenada descendente — ver NOTA)
     E = (2M̂(1)-M̂(0))/(3M̂(2)-M̂(0)) - ln(2)/ln(3)    (IV-234)
     β̂ = 7.859·E + 2.9554·E²                             (IV-235)
     A = Γ(1+β̂), B = 1-2^(-β̂), C = (2M̂(1)-M̂(0))·β̂   (IV-236/237/238)
@@ -57,20 +57,22 @@ _SMALL_BETA = 1e-9
 
 
 def _skewness(x: np.ndarray) -> float:
-    """Asimetría no sesgada."""
+    # IV-4: g_sesg = mean((xi-xbar)³) / (var_sesgada)^(3/2)
+    # IV-5: g_insesg = n²/((n-1)(n-2)) * g_sesg
     n = len(x)
     if n < 3:
         return 0.0
     xbar = float(np.mean(x))
-    sx = float(np.std(x, ddof=1))
-    if sx == 0.0:
+    var_sesgada = float(np.var(x, ddof=0))
+    if var_sesgada == 0.0:
         return 0.0
-    return float(n * np.sum((x - xbar) ** 3) / ((n - 1) * (n - 2) * sx**3))
+    g_sesg = float(np.mean((x - xbar) ** 3) / var_sesgada**1.5)
+    return float((n**2 / ((n - 1) * (n - 2))) * g_sesg)
 
 
 def _momentos_L(x: np.ndarray) -> tuple[float, float, float]:
-    """M̂(0), M̂(1), M̂(2) con x ordenado ascendente (IV-242 a IV-244)."""
-    xs = np.sort(x)
+    """M̂(0), M̂(1), M̂(2) con x ordenado descendente (IV-242 a IV-244)."""
+    xs = np.sort(x)[::-1]
     n = len(xs)
     M0 = float(np.mean(xs))  # IV-242
     # IV-243: (1/(n*(n-1))) * sum_{i=1}^{n-1} x_i*(n-i)  [1-indexed]
@@ -86,7 +88,7 @@ def _momentos_L(x: np.ndarray) -> tuple[float, float, float]:
 
 def _beta_from_g(g: float) -> float | None:
     """β̂ por polinomio en g (IV-203/204). None si g fuera de rango."""
-    if -11.35 < g < 11.396:  # IV-203 — toma prioridad en el overlap (1.14, 11.396)
+    if -11.35 < g < 1.1396:  # IV-203
         return (
             0.279434
             - 0.333535 * g
@@ -95,7 +97,7 @@ def _beta_from_g(g: float) -> float | None:
             + 0.00376 * g**4
             - 0.000263 * g**5
         )
-    if 11.396 <= g < 18.95:  # IV-204 — solo fuera del rango IV-203
+    if 1.14 < g < 18.95:  # IV-204
         return (
             0.25031
             - 0.29219 * g
@@ -240,15 +242,48 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "ml":
-        # PENDIENTE — inconsistencia interna en la tesis de Facundo.
-        # IV-238 usa (2·M̂(1) - M̂(0)) pero IV-243/244 definen M̂(1)
-        # con pesos descendentes (n-i), produciendo C < 0 y α̂ < 0.
-        # Parámetro de escala negativo es matemáticamente inválido.
-        # Consulta enviada a Facundo para confirmar cómo resolvió
-        # esta inconsistencia en su implementación.
-        # Ver decisions-log.md — pendiente GVE ML.
+        M0, M1, M2 = _momentos_L(serie)  # serie desc. — IV-242/243/244
+
+        denom_234 = 3.0 * M2 - M0
+        if abs(denom_234) < 1e-10:
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            )
+
+        E = (2.0 * M1 - M0) / denom_234 - np.log(2.0) / np.log(3.0)  # IV-234
+        beta = 7.859 * E + 2.9554 * E**2  # IV-235
+
+        if abs(beta) < 1e-10:
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            )
+
+        from scipy.special import gamma as _gfn
+
+        A = float(_gfn(1.0 + beta))  # IV-236
+        B = 1.0 - 2.0 ** (-beta)  # IV-237
+        C = (2.0 * M1 - M0) * beta  # IV-238
+        D = (A - 1.0) / beta  # IV-239
+
+        denom_AB = A * B
+        if abs(denom_AB) < 1e-10:
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            )
+
+        alpha = C / denom_AB  # IV-240
+        nu = M0 + D * alpha  # IV-241
+
+        if alpha <= 0:
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            )
+
         return MetodoResult(
-            metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            metodo=metodo,
+            parametros={"nu": nu, "alpha": alpha, "beta": beta},
+            eea=None,
+            status=STATUS_OK,
         )
 
     return MetodoResult(
@@ -269,5 +304,5 @@ def cuantil(p: float, parametros: dict) -> float:
     alpha = parametros["alpha"]
     beta = parametros["beta"]
     if abs(beta) < _SMALL_BETA:
-        raise ValueError("beta ≈ 0: usar cuantil de Gumbel")
+        return float(nu - alpha * np.log(-np.log(p)))  # límite β→0: Gumbel (L'Hôpital)
     return float(nu + (alpha / beta) * (1.0 - (-np.log(p)) ** beta))

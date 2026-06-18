@@ -499,6 +499,121 @@ docker exec pi-postgres-1 bash -c \
 
 ---
 
+## DECISIÓN 011 — Fórmula de Cramer: partición y grados de libertad
+**Fecha:** 16 de Junio de 2026
+**Estado:** IMPLEMENTADO — verificado numéricamente contra tesis Facundo est_02
+
+### Contexto
+Durante los tests de regresión de est_02 (Vado de Río Seco, n=24) se detectaron
+dos divergencias en la prueba de Cramer respecto de los resultados del sheet de Facundo.
+
+### Divergencia 1 — Tamaño del subgrupo n_w2
+
+**Comportamiento anterior:** `n_w2 = ceil(n × 0.30)` → para n=24: n_w2=8
+→ subgrupo = serie[-8:] → tau_w2=0.67071 (tesis: 0.35206) ✗
+
+**Corrección:** `n_w2 = floor(n × 0.30)` → para n=24: n_w2=7
+→ subgrupo = serie[-7:] → tau_w2=0.35206 ✓
+
+n_w1 usa `ceil` (correcto, confirmado con tau_w1=0.18289 ✓).
+La asimetría ceil/floor entre n_w1 y n_w2 está confirmada numéricamente.
+
+### Divergencia 2 — Grados de libertad del valor crítico
+
+**Comportamiento anterior:** `ν_w = n + n_w - 2`
+→ ν_w1=36 (crit≈2.026), ν_w2=29 (crit≈2.042) — no coincide con sheet
+
+**Corrección:** `ν = n - 2` para ambos subgrupos
+→ ν=22 (crit=2.0739) — coincide exactamente con sheet ✓
+
+La tesis escribe "ν = n₁ + n₂ - 2" en p.51, pero los resultados numéricos
+del sheet de Facundo (est_02 y est_03) son consistentes con ν = n - 2.
+Ante discrepancia texto/práctica, se prioriza la práctica numérica de la
+fuente bibliográfica primaria.
+
+PENDIENTE: confirmación formal de Facundo sobre la fórmula de ν.
+
+### Archivos modificados
+- `metis/core/homogeneity.py` — calcular_cramer: ceil→floor para n_w2, nu=n-2
+- `.claude/rules/formulas-etapa1.md` — sección Cramer actualizada con esta decisión
+
+---
+
+## DECISIÓN 012 — Criterio de aprobación Anderson: comparación entera vs ratio flotante
+**Fecha:** 16 de Junio de 2026
+**Estado:** IMPLEMENTADO — verificado contra tesis Facundo est_02
+
+### Contexto
+Durante los tests de regresión de est_02 (n=24, k_max=8) se detectó que el criterio
+`lags_fuera / k_max <= 0.10` rechazaba la prueba de Anderson cuando la tesis la aprueba.
+
+### Comportamiento anterior
+```python
+aprobada = (lags_fuera / k_max) <= 0.10
+```
+Con 1 lag fuera de 8: `1/8 = 0.125 > 0.10` → rechazada.
+La tesis reporta "Aceptada (1 punto fuera no supera el límite admisible de 1)".
+
+### Corrección
+```python
+aprobada = lags_fuera <= math.ceil(k_max * 0.10)
+```
+Con k_max=8: `ceil(8 × 0.10) = ceil(0.8) = 1`. `1 ≤ 1` → aprobada ✓
+
+### Justificación
+La tesis compara el conteo absoluto de lags fuera contra un umbral entero,
+no contra un ratio flotante. `ceil` garantiza que con k_max=8 el umbral sea 1
+(no 0), reproduciendo exactamente el criterio de Facundo.
+El ratio flotante era incorrecto para k_max que no son múltiplos de 10.
+
+### Archivos modificados
+- `metis/core/independence.py` — `calcular_anderson`: import math agregado, condición corregida
+
+---
+
+## DECISIÓN 013 — Fórmula de asimetría no sesgada: ddof=0 (IV-4/IV-5) en todas las distribuciones
+**Fecha:** 17 de Junio de 2026
+**Estado:** IMPLEMENTADO — propagado a las 5 distribuciones con _skewness interno
+
+### Contexto
+Durante los tests de regresión de est_02 se detectó que `descriptive.py` calcula
+g=1.6686 (siguiendo IV-4/IV-5) mientras que gamma3p, gve, logpearson3, lognormal3p
+y gen_pareto calculaban g≈1.565 internamente con `_skewness` usando `ddof=1`.
+
+### Raíz del problema
+Las funciones `_skewness` locales usaban `np.std(x, ddof=1)` en el denominador.
+IV-4 requiere `var_sesgada` con ddof=0:
+
+  g_sesg = mean((xi-xbar)³) / (var_sesgada)^(3/2)   [IV-4, ddof=0]
+  g_insesg = n²/((n-1)(n-2)) * g_sesg               [IV-5]
+
+El código anterior usaba `S = std(ddof=1)`, que coincide con SKEW() de Excel y
+scipy.stats.skew(bias=False), pero difiere de IV-4/IV-5 por un factor √(n/(n-1))
+en el denominador.
+
+### Decisión
+METIS sigue IV-4/IV-5 como fuente de verdad bibliográfica.
+`descriptive.py` ya implementa correctamente — no se modifica.
+Las 5 distribuciones con `_skewness` interno se corrigen a ddof=0.
+
+### Consecuencia en tests de regresión (est_02)
+- g METIS = 1.6686 (IV-4/IV-5)
+- g tesis Facundo = 1.565 (Excel SKEW(), ddof=1)
+- diff = 6.62%
+Parámetros afectados por g: Gamma 3p momentos (beta=4/g²), Log-Normal 3p momentos
+(w=f(g)), GVE momentos (polinomio en g). Diffs en estos parámetros clasifican como
+INFO (no bug) — origen trazable a diferencia de fórmula documentada.
+LP3 Indirecto usa gy = asimetría de yi=ln(xi), no de la serie original — también afectada.
+
+### Archivos modificados
+- `metis/core/etapa2/distributions/gamma3p.py` — _skewness: ddof=1 → ddof=0 (IV-4/IV-5)
+- `metis/core/etapa2/distributions/gve.py` — _skewness: ddof=1 → ddof=0 (IV-4/IV-5)
+- `metis/core/etapa2/distributions/logpearson3.py` — _skewness: ddof=1 → ddof=0 (IV-4/IV-5)
+- `metis/core/etapa2/distributions/lognormal3p.py` — _skewness: ddof=1 → ddof=0 (IV-4/IV-5)
+- `metis/core/etapa2/distributions/gen_pareto.py` — _skewness: ddof=1 → ddof=0 (IV-4/IV-5)
+
+---
+
 ## DECISIÓN 009 — Convención de nombres de distribuciones en el pipeline
 **Fecha:** 17 de Mayo de 2026
 **Estado:** IMPLEMENTADO
@@ -575,23 +690,19 @@ logpearson3 MV, lognormal3p MV, gamma3p MV, gve MV.
 
 ---
 
-## PENDIENTE — GVE ML: Inconsistencia IV-238 vs IV-243/244
-**Fecha:** 18 de Mayo de 2026
-**Estado:** PENDIENTE — consulta enviada a Facundo
+## RESUELTO — GVE ML: error de orden de serie en IV-243/244
+**Fecha:** 19 de Mayo de 2026
+**Estado:** IMPLEMENTADO — bug de implementación corregido
 
-Las ecuaciones IV-243/244 definen M̂(1) y M̂(2) con pesos descendentes (n-i),
-siguiendo la convención de la tesis. Con esa convención, el término (2·M̂(1) - M̂(0))
-en IV-234 e IV-238 resulta negativo para series hidrológicas típicas, porque
-M̂(1) < M̂(0)/2 cuando los valores más pequeños reciben los pesos más altos.
-Esto produce C < 0 en IV-238 y α̂ < 0 en IV-240 — parámetro de escala negativo,
-matemáticamente inválido.
+No era inconsistencia en la tesis sino error de implementación.
+La tesis p.81 especifica explícitamente que la serie debe ordenarse
+DE MAYOR A MENOR para IV-243 y IV-244. El código ordenaba de menor
+a mayor. Con orden descendente, (2·M̂(1) - M̂(0)) resulta positivo,
+C > 0, α̂ > 0.
+Fix: `xs = np.sort(serie)[::-1]` en `_momentos_L()`.
 
-La convención de Hosking (pesos ascendentes i-1) produciría M̂(1) > M̂(0)/2,
-(2·M̂(1) - M̂(0)) > 0, y α̂ > 0. No implementar con esa convención sin confirmar
-con Facundo, porque IV-243/244 en la tesis (p.81) usan explícitamente pesos (n-i).
-
-GVE ML retorna STATUS_NO_APLICABLE hasta recibir respuesta de Facundo.
-Archivo: `metis/core/etapa2/distributions/gve.py` — rama feature/core-etapa2.
+Smoke test post-fix (serie_facundo, n=40):
+- ml: nu=89.50, alpha=20.61, beta=0.071, Q100=170.44, EEA=46.71 ✓
 
 ---
 

@@ -8,14 +8,16 @@ def probabilidades_weibull(
     Fórmula de Weibull: T = (n+1)/m,  P = 1 - 1/T
     Fuente: Tesis Facundo, Cap. IV sección IV.1
 
-    m = rango de la observación ordenada (1 = mínimo, n = máximo)
+    Convención de la tesis: m=1 es el MÁXIMO (orden DESC).
+    T[0] = n+1 (mayor período de retorno → observación mayor).
+    P = 1 - 1/T es la probabilidad de no-excedencia.
 
     Retorna (serie_ordenada, periodos_retorno, probabilidades)
-    Los tres arrays tienen la misma longitud n y están ordenados ASC.
+    Los tres arrays tienen la misma longitud n, ordenados DESC (mayor a menor).
     """
     n = len(serie)
-    serie_ordenada = np.sort(serie)
+    serie_ordenada = np.sort(serie)[::-1]  # DESC: m=1 es el máximo
     m = np.arange(1, n + 1, dtype=float)
     periodos_retorno = (n + 1) / m
-    probabilidades = 1.0 - 1.0 / periodos_retorno  # equivalente a m/(n+1)
+    probabilidades = 1.0 - 1.0 / periodos_retorno
     return serie_ordenada, periodos_retorno, probabilidades

@@ -67,12 +67,8 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
         x1 = float(np.min(serie))  # mínimo de la muestra
-        denom = float(n * (n - 1))
-        if abs(denom) < _DENOM_GUARD:
-            return MetodoResult(
-                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
-            )
-        beta = (float(np.sum(serie)) - n * x1) / denom  # IV-72
+        # IV-72: β̂ = Σ(xi - x1) / (n-1) = (Σxi - n·x1) / (n-1)
+        beta = (float(np.sum(serie)) - n * x1) / (n - 1)  # IV-72
         if beta <= 0.0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE

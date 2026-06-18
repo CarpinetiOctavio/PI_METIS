@@ -9,26 +9,28 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-137 a IV-144
 
   Momentos:
     β̂ = 4/g²          (IV-137)
-    α̂ = S/β̂           (IV-138)  ← usa β̂ de IV-137
-    x̂0 = x̄ - S·β̂     (IV-139)  ← usa β̂ de IV-137
+    α̂ = S/√β̂          (IV-138)
+    x̂0 = x̄ - S·√β̂    (IV-139)
     g = asimetría no sesgada de la serie
 
-  MV: perfil de verosimilitud sobre x0 (IV-140 a IV-143)
-    Para x0 fijo: α̂ y β̂ de Gamma 2p sobre (xi - x0) via Thom (IV-126/IV-143)
-    x0 por minimización del perfil de verosimilitud negativo
-    bounds: (min(xi) - 20·S, min(xi) - 1e-9)
-    ψ(β) ≈ ln(β) - 1/(2β) - 1/(12β²)   (IV-143, digamma de Thom)
+  MV: sistema iterativo IV-140 a IV-143
+    Para x0 fijo:
+      S1 = Σ(xi-x0),  S2 = Σ(1/(xi-x0))
+      β̂ = 1 / (1 - n²/(S1·S2))            (IV-140)
+      α̂ = (1/n)·S1 - n/S2                  (IV-141)
+    x0 por brentq sobre IV-142:
+      F(x0) = Σln(xi-x0) - n·ln(α̂) - n·ψ(β̂) = 0
+    ψ(β) ≈ ln(β) - 1/(2β) - 1/(12β²)      (IV-143, Thom)
     NOTA: puede No Converger — comportamiento esperado
 
   Cuantil:
-    xT = x0 + α̂·β̂·(1 - 1/(9·β̂) + UT·sqrt(1/(9·β̂)))³    (IV-144)
+    xT = x0 + α̂·β̂·(1 - 1/(9·β̂) + UT·√(1/(9·β̂)))³    (IV-144)
 
 RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo.
 """
 
 import numpy as np
-from scipy.optimize import minimize_scalar
-from scipy.special import gammaln
+from scipy.optimize import brentq
 
 from metis.core.etapa2.types import (
     CONVERGENCIA,
@@ -41,32 +43,43 @@ from metis.core.etapa2.utils import _ut
 
 N_PARAMETROS: int = 3
 METODOS_APLICABLES: tuple[str, ...] = ("momentos", "mv")
-PENDING_ZEROS_CONFIRMATION: bool = True  # pendiente Facundo — ver constraints.md
+PENDING_ZEROS_CONFIRMATION: bool = True
 
 _DENOM_GUARD = 1e-10
 
 
 def _skewness(x: np.ndarray) -> float:
+    # IV-4: g_sesg = mean((xi-xbar)³) / (var_sesgada)^(3/2)
+    # IV-5: g_insesg = n²/((n-1)(n-2)) * g_sesg
     n = len(x)
     if n < 3:
         return 0.0
     xbar = float(np.mean(x))
-    sx = float(np.std(x, ddof=1))
-    if sx == 0.0:
+    var_sesgada = float(np.var(x, ddof=0))
+    if var_sesgada == 0.0:
         return 0.0
-    return float(n * np.sum((x - xbar) ** 3) / ((n - 1) * (n - 2) * sx**3))
+    g_sesg = float(np.mean((x - xbar) ** 3) / var_sesgada**1.5)
+    return float((n**2 / ((n - 1) * (n - 2))) * g_sesg)
 
 
-def _thom_beta(zi: np.ndarray):
-    """Thom IV-126/IV-143: β̂ (forma) y α̂ (escala) de Gamma 2p sobre zi>0. Retorna (β, α) o None."""
-    zbar = float(np.mean(zi))
-    C = float(np.log(zbar) - np.mean(np.log(zi)))  # IV-127/128
-    if abs(C) < _DENOM_GUARD:
+def _psi_thom(beta: float) -> float:
+    """IV-143: ψ(β) ≈ ln(β) - 1/(2β) - 1/(12β²)"""
+    return float(np.log(beta) - 1.0 / (2.0 * beta) - 1.0 / (12.0 * beta**2))
+
+
+def _params_from_x0(zi: np.ndarray, n: int):
+    """IV-140, IV-141: β̂ y α̂ dados zi = xi - x0 > 0. Retorna (beta, alpha) o None."""
+    S1 = float(np.sum(zi))
+    S2 = float(np.sum(1.0 / zi))
+    denom = 1.0 - n**2 / (S1 * S2)
+    if abs(denom) < _DENOM_GUARD:
         return None
-    beta = (1.0 + np.sqrt(1.0 + 4.0 * C / 3.0)) / (4.0 * C)  # IV-126
+    beta = 1.0 / denom  # IV-140
     if beta <= 0.0:
         return None
-    alpha = zbar / beta  # IV-125
+    alpha = S1 / n - n / S2  # IV-141
+    if alpha <= 0.0:
+        return None
     return beta, alpha
 
 
@@ -79,26 +92,20 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
         )
 
-    g = _skewness(serie)
-    if abs(g) < _DENOM_GUARD:
-        return MetodoResult(
-            metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
-        )
-
     if metodo == "momentos":
+        g = _skewness(serie)
+        if abs(g) < _DENOM_GUARD:
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            )
         beta = 4.0 / g**2  # IV-137
-        alpha = S / beta  # IV-138
-        x0 = xbar - S * beta  # IV-139
+        alpha = S / np.sqrt(beta)  # IV-138
+        x0 = xbar - S * np.sqrt(beta)  # IV-139
 
-        # NOTA: con g pequeño (cercano a 0), β̂=4/g² puede ser
-        # muy grande produciendo x0 muy negativo y EEA alta.
-        # Comportamiento correcto — el ranking lo deprioritiza
-        # automáticamente. La tesis no define umbral mínimo de g.
         if x0 >= float(np.min(serie)):
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
-
         return MetodoResult(
             metodo=metodo,
             parametros={"beta": beta, "alpha": alpha, "x0": x0},
@@ -109,41 +116,62 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
     if metodo == "mv":
         xi_min = float(np.min(serie))
 
-        def _neg_profile_ll(x0: float) -> float:
+        def _iv142(x0: float) -> float:
             zi = serie - x0
             if np.any(zi <= 0.0):
                 return np.inf
-            fit = _thom_beta(zi)
+            fit = _params_from_x0(zi, n)
             if fit is None:
                 return np.inf
             beta_hat, alpha_hat = fit
-            ll = (
-                (beta_hat - 1.0) * np.sum(np.log(zi))
-                - np.sum(zi) / alpha_hat
-                - n * (beta_hat * np.log(alpha_hat) + float(gammaln(beta_hat)))
-            )
-            return -ll
+            return float(
+                np.sum(np.log(zi)) - n * np.log(alpha_hat) - n * _psi_thom(beta_hat)
+            )  # IV-142
 
-        try:
-            result = minimize_scalar(
-                _neg_profile_ll,
-                bounds=(xi_min - 20.0 * S, xi_min - 1e-9),
-                method="bounded",
-                options={"xatol": CONVERGENCIA},
-            )
-        except Exception:
+        lo = xi_min - 20.0 * S
+        hi = xi_min - 1e-9
+
+        _scan = np.linspace(lo, hi, 200)
+        _vals = np.array([_iv142(float(x)) for x in _scan])
+        _finite = np.isfinite(_vals)
+        if not np.any(_finite):
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
-        if not result.success:
+        _signs = np.sign(_vals)
+        _idx = np.where((_finite[:-1] & _finite[1:]) & (np.diff(_signs) != 0))[0]
+        if len(_idx) == 0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
-        x0 = float(result.x)
-        zi = serie - x0
-        fit = _thom_beta(zi)
+        x0_hat = None
+        for _i in _idx:
+            try:
+                x0_hat = float(
+                    brentq(
+                        _iv142,
+                        float(_scan[_i]),
+                        float(_scan[_i + 1]),
+                        xtol=CONVERGENCIA,
+                    )
+                )
+                break
+            except Exception:
+                continue
+
+        if x0_hat is None:
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
+            )
+
+        zi = serie - x0_hat
+        if np.any(zi <= 0.0):
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
+            )
+        fit = _params_from_x0(zi, n)
         if fit is None:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
@@ -152,7 +180,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
 
         return MetodoResult(
             metodo=metodo,
-            parametros={"beta": beta, "alpha": alpha, "x0": x0},
+            parametros={"beta": beta, "alpha": alpha, "x0": x0_hat},
             eea=None,
             status=STATUS_OK,
         )
@@ -164,7 +192,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
 
 def cuantil(p: float, parametros: dict) -> float:
     """
-    xT = x0 + α̂·β̂·(1 - 1/(9·β̂) + UT·sqrt(1/(9·β̂)))³    (IV-144)
+    xT = x0 + α̂·β̂·(1 - 1/(9·β̂) + UT·√(1/(9·β̂)))³    (IV-144)
 
     p:          probabilidad de no excedencia F(x) ∈ (0, 1)
     parametros: {"beta": float (forma), "alpha": float (escala), "x0": float}
@@ -174,5 +202,6 @@ def cuantil(p: float, parametros: dict) -> float:
     x0 = parametros["x0"]
     beta = parametros["beta"]
     alpha = parametros["alpha"]
-    wh = 1.0 - 1.0 / (9.0 * beta) + _ut(p) * np.sqrt(1.0 / (9.0 * beta))
-    return x0 + alpha * beta * wh**3
+    t = 1.0 / (9.0 * beta)
+    wh = (1.0 - t + _ut(p) * np.sqrt(t)) ** 3
+    return float(x0 + alpha * beta * wh)

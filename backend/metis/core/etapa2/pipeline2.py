@@ -98,7 +98,7 @@ def ejecutar_etapa2(serie: np.ndarray, tiene_ceros: bool = False) -> Etapa2Resul
                         ]
                     )
                     eea = calcular_eea(
-                        np.sort(serie_arr), valores_estimados, modulo.N_PARAMETROS
+                        np.sort(serie_arr)[::-1], valores_estimados, modulo.N_PARAMETROS
                     )
                     resultado = MetodoResult(
                         metodo=metodo,

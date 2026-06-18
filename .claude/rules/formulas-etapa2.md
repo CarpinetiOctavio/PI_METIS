@@ -11,15 +11,23 @@ esa combinación distribución+método.
 
 ## Probabilidades empíricas — Weibull
 T = (n+1)/m,  P = 1 - 1/T
-Fuente: Tesis Facundo, Cap. IV sección IV.1
+Fuente: Tesis Facundo, Ecuación IV-263 (bloque descriptivo), sección IV.4.5
+Nota: La fórmula no aparece desarrollada en IV.1. IV.1 solo menciona
+      "siguiendo la ley de Weibull" sin expresión explícita.
+      La expresión formal está en IV.4.5 como parte de la definición
+      de los Q_T observados para el cálculo del EEA.
 
 ---
 
 ## EEA — Error Estándar de Ajuste
-EEA = sqrt( sum(QT_obs - QT_est)^2 / (n - mp) )
-n  = longitud de la serie
+EEA = sqrt( sum(QT_est - QT_obs)^2 / (n - mp) )
+n  = longitud en años del registro analizado (n_j en la tesis)
 mp = número de parámetros de la distribución ajustada
-Fuente: Tesis Facundo, Ecuación IV-263
+Fuente: Tesis Facundo, Ecuación IV-263, sección IV.4.5
+Nota: El orden de la diferencia en la fuente es (Q̂_T − Q_T),
+      es decir estimado menos observado. No afecta el resultado
+      (se eleva al cuadrado) pero se respeta el orden de la fuente.
+
 
 ---
 
@@ -46,7 +54,8 @@ Momentos y MV (coinciden):
   β̂ = 1/x̄    (IV-66)
 
 Cuantil:
-  xT = -ln[1 - F(x)] / β    (IV-67)
+  xT = -ln[1 - F(x)] / β
+
 
 RESTRICCIÓN: válida para x > 0 (IV-65)
 Deshabilitada si algún xi = 0 (confirmado con Facundo)
@@ -61,8 +70,8 @@ Momentos:
   x̂0 = x̄ - S     (IV-71)
 
 MV:
-  β̂ = (sum(xi) - n·x1) / (n·(n-1))    (IV-72)
-  x̂0 = x1 - β̂/n                        (IV-73)
+  β̂ = sum(xi - x1) / (n-1)    (IV-72)
+  x̂0 = x1 - β̂/n               (IV-73)
   x1 = mínimo de la muestra
 
 Cuantil:
@@ -77,7 +86,9 @@ Parámetros: α, λ
 
 Momentos:
   α por resolución de IV-77:
-    (ψ'(α+1) - ψ'(α)) / (ψ(α+1) - ψ(α)) = x̄/S
+    S/x̄ = √(ψ'(1) - ψ'(α+1)) / (ψ(α+1) - ψ(1))
+  Nota: ψ = digamma, ψ' = trigamma. La raíz cuadrada aplica
+        solo al numerador.
   λ por IV-78:
     µ = [ψ(α+1) - ψ(1)] / λ
 
@@ -87,8 +98,9 @@ MV: sistema iterativo IV-79 a IV-82
   α̂(λ) = -n / sum(ln(1 - e^(-λ·xi)))    (IV-82)
 
 ML (Momentos L): IV-83 a IV-88
-  α̂ resuelto de: β2/β1 = (ψ(α+1)-ψ(1)) / (ψ'(α)-ψ'(α+1))    (IV-83)
-  λ̂ = (ψ(1) + ψ(α̂+1)) / β1                                     (IV-84)
+  α̂ resuelto de: β2/β1 = (ψ(2·α+1) - ψ(α+1)) / (ψ(α+1) - ψ(1))    (IV-83)
+  Nota: todos los términos usan ψ (digamma), no ψ' (trigamma).
+  λ̂ = (ψ(α̂+1) + ψ(1)) / β1                                           (IV-84)
   β1 = M1 (IV-85),  β2 = M2 (IV-86)
   M1 por IV-87,  M2 por IV-88
 
@@ -119,6 +131,7 @@ Cuantil:
   UT por aproximación racional IV-102 a IV-105:
     Para 0 < F(x) ≤ 0.5:
       V = sqrt(ln(1/F(x)²))          (IV-103)
+      F(x) = 1 - 1/T                 (IV-104)
       UT = V - (b0 + b1·V + b2·V²) / (1 + b3·V + b4·V² + b5·V³)    (IV-102)
     Para 0.5 < F(x) ≤ 1: usar 1-F(x) en V y cambiar signo a UT    (IV-105)
     Coeficientes: b0=2.515517, b1=0.802853, b2=0.010328,
@@ -149,7 +162,9 @@ Momentos: sistema IV-111 a IV-116
   w = ((g² + 4)^(1/2) - g) / 2               (IV-113)
   n̂z = (1 - w^(2/3)) / w^(1/3)              (IV-114)
   µ̂y = ln(S/n̂z) - (1/2)·ln(n̂z²+1)          (IV-115)
-  σ̂y = [ln(n̂z²+1)]^(1/2)                    (IV-116)
+  σ̂²y = [ln(n̂z²+1)]^(1/2)                   (IV-116)
+  Nota: IV-116 define σ̂²y (varianza), no σ̂y (desvío).
+        En implementación: σ̂y = sqrt(σ̂²y) = [ln(n̂z²+1)]^(1/4)
   x̂0 = x̄·(1 - n̂x/n̂z)                        (IV-111)
 
 MV: sistema iterativo IV-117 a IV-119
@@ -168,27 +183,28 @@ RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
 Parámetros: α, β
 
 Momentos:
-  α̂ = (x̄/S)²       (IV-123)
-  β̂ = S²/x̄         (IV-124)
+  α̂ = S²/x̄         (IV-123)
+  β̂ = (x̄/S)²       (IV-124)
 
 MV:
   α̂ = x̄/β̂          (IV-125)
   β̂ = (1 + √(1 + 4C/3)) / (4C)    (IV-126)
-  C = ln(x̄) - y      (IV-127)
-  y = (1/n)·sum(ln xi)    (IV-128)
+  C = ln(x̄) - ȳ     (IV-127)
+  ȳ = (1/n)·sum(ln xi)    (IV-128)
 
 ML (Momentos L):
   τ2 = λ2/λ1         (IV-129)
   Para 0 ≤ τ2 < 0.5:
-    z = π²·τ2          (IV-131)
+    z = π·τ2²          (IV-131)
     β̂ = (1 - 0.308·z) / (z - 0.05812·z² + 0.01765·z³)    (IV-130)
   Para 0.5 ≤ τ2 < 1:
     z = 1 - τ2         (IV-133)
     β̂ = (0.7213·z - 0.59478·z²) / (1 - 2.1817·z + 1.2113·z²)    (IV-132)
   α̂ = x̄/β̂          (IV-134)
 
-Cuantil: IV-135
-xT = α̂·β̂·(1 - 1/(9·β̂) + UT·sqrt(1/(9·β̂)))³    (IV-135)
+Cuantil:
+  xT = α̂·β̂·(1 - 1/(9·β̂) + UT·sqrt(1/(9·β̂)))³    (IV-135)
+
 RESTRICCIÓN: deshabilitada si algún xi = 0 (confirmado con Facundo)
 
 ---
@@ -197,26 +213,27 @@ RESTRICCIÓN: deshabilitada si algún xi = 0 (confirmado con Facundo)
 Parámetros: β, α, x0
 
 Momentos:
-  β̂ = 4/g²          (IV-137)
-  α̂ = S/β̂           (IV-138)
-  x̂0 = x̄ - S·β̂     (IV-139)
+  β̂ = 4/g²              (IV-137)
+  α̂ = S/√β̂             (IV-138)
+  x̂0 = x̄ - S·√β̂       (IV-139)
   g = asimetría no sesgada de la serie
 
 MV: sistema iterativo IV-140 a IV-143
-  β̂ por IV-140/IV-141 (iterativo)
-  α̂ por IV-141
-  x0 por resolución de IV-142
+  β̂ = 1 / (1 - n² / (sum(xi-x0) · sum(1/(xi-x0))))    (IV-140)
+  α̂ = (1/n)·sum(xi-x0) - n/sum(1/(xi-x0))             (IV-141)
+  x0 por resolución de IV-142:
+    F(x0) = sum(ln(xi-x̂0)) - n·ln(α̂) - n·ψ(β̂) = 0
   ψ(β) por aproximación de Thom IV-143:
     ψ(β) ≈ ln(β) - 1/(2β) - 1/(12β²)
 
 MPP (Momentos de Probabilidad Pesada):
-  PENDIENTE — confirmar con Facundo qué ecuaciones conectan
-  los momentos pesados M0, M1, M2 con los parámetros α, β, x0
-  de esta distribución específica. Las ecuaciones generales de MPP
-  están en IV-43 a IV-47.
+  PENDIENTE — Tabla IV-1 de la tesis indica "Sí" para este método,
+  pero el capítulo IV no desarrolla las ecuaciones correspondientes.
+  Inconsistencia interna de la tesis. Escalar a Facundo antes
+  de implementar.
 
-Cuantil: IV-144
-xT = x0 + α̂·β̂·(1 - 1/(9·β̂) + UT·sqrt(1/(9·β̂)))³    (IV-144)
+Cuantil:
+  xT = x̂0 + α̂·β̂·(1 - 1/(9·β̂) + UT·√(1/(9·β̂)))³    (IV-144)
 
 RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
 
@@ -227,20 +244,22 @@ Parámetros: µ, σ, ε
 
 Momentos: sistema IV-147 a IV-149
   x̄ = µ + σ/(1+ε)                              (IV-147)
-  g = 2·(1-ε)·(1+2ε)^(1/2) / (1+3ε)          (IV-148)
-  S² = σ²/((1+ε)²·(1+2ε))                     (IV-149)
+  g = 2·(1-ε)·(1+2ε)^(1/2) / (1+3ε)           (IV-148)
+  S² = σ²/((1+2ε)·(1+ε)²)                      (IV-149)
 
 MV: sistema iterativo IV-150 a IV-152
-  LL = -n·ln(σ) - (1/ε+1)·sum(ln(1-(xi-µ)·ε/σ))    (IV-150)
+  LL = -n·ln(σ) + ((1-ε)/ε)·sum(ln(1-(ε/σ)·(xi-µ)))    (IV-150)
+  Nota: el coeficiente de la sumatoria es (1-ε)/ε, no -(1/ε+1).
 
   Resolver simultáneamente IV-151 y IV-152:
 
   IV-151 (∂L/∂ε = 0):
-    sum[ (1/ε²)·ln(1-(xi-µ)·ε/σ)
-         - (1/ε+1)·(xi-µ)/σ · 1/(1-(xi-µ)·ε/σ) ] = 0
+    sum(ln[1-(ε·(xi-µ)/σ)]) / ε²
+    + ((1-ε)/ε) · sum((xi-µ)/σ · 1/(1-ε·(xi-µ)/σ)) = 0
 
   IV-152 (∂L/∂σ = 0):
-    -n/σ + (1/ε+1)·sum[ (xi-µ)·ε/σ² · 1/(1-(xi-µ)·ε/σ) ] = 0
+    n/σ + ((1-ε)/ε) · sum(ε·(xi-µ)/σ² · 1/(1-ε·(xi-µ)/σ)) = 0
+  Nota: el primer término es +n/σ, no -n/σ.
 
   µ̂ = mínimo de la muestra (fijo antes de resolver IV-151/IV-152)
 
@@ -264,8 +283,12 @@ MC (Mínimos Cuadrados): sistema IV-153 a IV-166
     xyz̄ = (1/n)·sum(xi·yi·zi)    (IV-162)
 
   ε por resolución numérica de IV-153
-  σ̂ por IV-154
-  µ̂ por IV-155
+  σ̂ por IV-154:
+    σ̂ = (ε·(x̄-xz̄) + ε·x1·(z̄-1)) / (z̄2-z̄ - z1·(z̄-1))
+  µ̂ por IV-155:
+    µ̂ = x1 - (ε/µ)·(1-z1)
+    Nota: IV-155 es implícita — µ aparece en ambos lados.
+          En implementación resolver como ecuación en µ.
 
   Valor inicial de µ según asimetría (IV-166):
     g > 0 → µ = 0.3
@@ -278,21 +301,21 @@ MC (Mínimos Cuadrados): sistema IV-153 a IV-166
 MPP (Momentos de Probabilidad Pesada): IV-167 a IV-173
   Serie ordenada de menor a mayor. x1 = mínimo de la serie.
 
-  Pi = (i - 0.35) / n                             (IV-173)
-  M̂(0) = (1/n)·sum(xi) = x̄                      (IV-172, k=0)
-  M̂(1) = (1/n)·sum((1-Pi)·xi)                    (IV-172, k=1)
+  Pi = (i - 0.35) / n                              (IV-173)
+  M̂(0) = (1/n)·sum(xi) = x̄                       (IV-172, k=0)
+  M̂(1) = (1/n)·sum((1-Pi)·xi)                     (IV-172, k=1)
 
-  I1 = M̂(0) - x1                                 (IV-170)
-  I2 = M̂(0) - 2·M̂(1)                            (IV-171)
+  I1 = M̂(0) - x1                                  (IV-170)
+  I2 = M̂(0) - 2·M̂(1)                             (IV-171)
 
-  ε̂ = (n·I1 + 2·I2·(n-1)) / (I2·(n-1) - I1)    (IV-167)
-  σ̂ = (1 + ε̂)·(2 + ε̂)·I2                      (IV-168)
-  µ̂ = x1 - σ̂/(n + ε̂)                            (IV-169)
+  ε̂ = (n·I1 + 2·I2·(n-1)) / (I2·(n-1) - I1)     (IV-167)
+  σ̂ = (1+ε̂)·(2+ε̂)·I2                            (IV-168)
+  µ̂ = x1 - σ̂/(n+ε̂)                               (IV-169)
 
   Guard: denominador de IV-167 = 0 → STATUS_NO_APLICABLE
 
 Cuantil: IV-174
-  xT = ((1/(1-F(x)))^ε - 1)·(σ/ε) + µ
+  xT = ((1/(1-F(x)))^ε - 1)·(σ/ε) + µ   (IV-174)
 
   Guard: |ε| < _DENOM_GUARD → límite ε→0:
     xT = µ - σ·ln(1-F(x))
@@ -313,8 +336,8 @@ MV: sistema iterativo IV-179 a IV-187
   yi = (xi - µ̂) / α̂                              (IV-181)
   P = n - sum(e^(-yi))                             (IV-179)
   R = n - sum(yi) + sum(yi·e^(-yi))               (IV-180)
-  Criterios: P/α̂ ≈ 0, R/α̂ - 1 ≈ 0              (IV-182, IV-183)
-  δµ = α̂j·(1.1·P - 0.26·R) / n                  (IV-184)
+  Criterios: P/α̂ ≈ 0, -R/α̂ ≈ 0                 (IV-182, IV-183)
+  δµ = α̂j·(1.11·P - 0.26·R) / n                 (IV-184)
   δα = α̂j·(0.26·P - 0.61·R) / n                 (IV-185)
   µ̂j+1 = µ̂j + δµj                               (IV-186)
   α̂j+1 = α̂j + δαj                               (IV-187)
@@ -403,6 +426,11 @@ MV: sistema iterativo IV-216 a IV-233
   Convergencia: max(|δν|, |δα|, |δβ|) < CONVERGENCIA = 1×10⁻⁷
 
 ML (Momentos L): IV-234 a IV-244
+  CRÍTICO: la serie debe ordenarse DE MAYOR A MENOR antes
+  de calcular M̂(1) y M̂(2). Con ese orden, los pesos (n-i)
+  son descendentes y (2·M̂(1) - M̂(0)) resulta positivo,
+  garantizando α̂ > 0. Fuente: tesis Facundo p.81.
+
   E = {(2·M̂(1) - M̂(0)) / (3·M̂(2) - M̂(0))} - ln(2)/ln(3)    (IV-234)
   β̂ = 7.859·E + 2.9554·E²                                       (IV-235)
   A = Γ(1 + β̂)                                                   (IV-236)
@@ -412,14 +440,19 @@ ML (Momentos L): IV-234 a IV-244
   α̂ = C / (A·B)                                                  (IV-240)
   ν̂ = M̂(0) + D·α̂                                               (IV-241)
   M̂(0) = (1/n)·sum(xi)                                          (IV-242)
-  M̂(1) = (1/(n·(n-1)))·sum(xi·(n-i))  para i=1..n-1            (IV-243)
+  M̂(1) = (1/(n·(n-1)))·sum(xi·(n-i))  i=1..n-1  (serie desc.)  (IV-243)
   M̂(2) = (1/(n·(n-1)·(n-2)))·sum(xi·(n-i)·(n-i-1))  i=1..n-2  (IV-244)
 
 Cuantil: IV-245
   xT = ν + (α/β)·{1 - [-ln(F(x))]^β}
 
+  Guard: |β| < 1e-10 → límite β→0 (Gumbel):
+    xT = ν - α·ln(-ln(F(x)))
+
 NOTA: GVE Momentos frecuentemente No Converge según resultados de la tesis.
 NOTA: GVE MV también puede No Converge — comportamiento esperado.
+NOTA: GVE ML requiere serie ordenada descendentemente para IV-243/244.
+      Bug corregido — implementación anterior usaba orden ascendente.
 ---
 
 ## 13. Log-Pearson III
@@ -427,21 +460,21 @@ Trabaja sobre yi = ln(xi). Parámetros: α, β, y0
 
 Momentos Método Directo: IV-247 a IV-254
   µr = (1/n)·sum(xi^r)    (IV-248)
-  B = (3·ln(µ1) - ln(µ3)) / (2·ln(µ1) - ln(µ2))    (IV-249)
+  B = (ln(µ3) - 3·ln(µ1)) / (ln(µ2) - 2·ln(µ1))    (IV-249)
   C = 1/(B-3)             (IV-250)
-  Si 3 < B ≤ 5.3:  A = -0.45157 + 1.99955·C                              (IV-252)
-  Si 5.3 < B ≤ 6:  A = -0.23019 + 1.65262·C + 0.20911·C² - 0.04557·C³  (IV-251)
-  α̂ = (A+1)^(1/3)    (IV-247)
-  β̂ = (ln(µ2) - 2·ln(µ1)) / (ln(µ1·(α-1)) - ln(µ2·(α-2)))    (IV-253)
-  ŷ0 = ln(µ1) + β̂·ln(1 - α̂)    (IV-254)
+  Si 3.5 < B ≤ 6:  A = -0.23019 + 1.65262·C + 0.20911·C² - 0.04557·C³  (IV-251)
+  Si 3 < B ≤ 3.5:  A = -0.45157 + 1.99955·C                              (IV-252)
+  α̂ = 1/(A+3)            (IV-247)
+  β̂ = (ln(µ2) - 2·ln(µ1)) / (ln(1-α̂)² - ln(1-2·α̂))    (IV-253)
+  ŷ0 = ln(µ1) + β̂·ln(1-α̂)    (IV-254)
   NOTA: aplica solo cuando B ∈ (3,6]. Para series con B fuera de ese rango
-  el método retorna STATUS_NO_APLICABLE. El método indirecto (IV-255/256)
-  no tiene esta restricción y es el preferido en la práctica según la tesis.
+        el método retorna STATUS_NO_APLICABLE. El método indirecto (IV-255/256)
+        no tiene esta restricción y es el preferido en la práctica según la tesis.
 
 Momentos Método Indirecto: IV-255 a IV-256
   Trabajar sobre serie transformada yi = ln(xi)
-  β̂ = 4/gy²    (IV-255)
-  α̂ = Sy/β̂    (IV-256)
+  β̂ = 4/gy²      (IV-255)
+  α̂ = Sy/√β̂     (IV-256)
   gy, Sy = asimetría y desvío estándar de la serie yi = ln(xi)
 
 MV: sistema iterativo IV-257 a IV-259
@@ -463,8 +496,9 @@ NOTA: Método Indirecto produce mejores resultados en la práctica (tesis)
 1. Gamma 3p + MPP: confirmar qué ecuaciones conectan M0, M1, M2
    con los parámetros α, β, x0 de esta distribución específica.
 
-2. Generalizada Pareto + MPP: ubicar ecuaciones específicas en la tesis
-   (sección IV.3.10, más allá de lo disponible).
+2. Gamma 3p + MPP: Tabla IV-1 indica "Sí" para este método pero el
+   capítulo IV no desarrolla las ecuaciones. Inconsistencia interna
+   de la tesis. Escalar a Facundo antes de implementar.
 
 3. Comportamiento ante ceros para estas 5 distribuciones:
    Gamma 3p, Exponencial x0β, Generalizada Pareto,

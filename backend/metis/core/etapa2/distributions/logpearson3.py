@@ -16,10 +16,10 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-247 a IV-260
     µr = (1/n)·sum(xi^r),  r = 1, 2, 3   (IV-248)
     B  = (3·ln µ1 - ln µ3) / (2·ln µ1 - ln µ2)    (IV-249)
     C  = 1/(B-3)                                    (IV-250)
-    Si 3 < B ≤ 5.3: A = -0.45157 + 1.99955·C      (IV-252)
-    Si 5.3 < B ≤ 6: A = -0.23019 + 1.65262·C + 0.20911·C² - 0.04557·C³  (IV-251)
-    α̂ = (A+1)^(1/3)                                (IV-247)
-    β̂ = (ln µ2 - 2·ln µ1) / (ln(µ1·(α̂-1)) - ln(µ2·(α̂-2)))  (IV-253)
+    Si 3 < B ≤ 3.5: A = -0.45157 + 1.99955·C      (IV-252)
+    Si 3.5 < B ≤ 6: A = -0.23019 + 1.65262·C + 0.20911·C² - 0.04557·C³  (IV-251)
+    α̂ = 1/(A+3)                                    (IV-247)
+    β̂ = (ln µ2 - 2·ln µ1) / (2·ln(1-α̂) - ln(1-2·α̂))  (IV-253)
     ŷ0 = ln(µ1) + β̂·ln(1 - α̂)                    (IV-254)
     STATUS_NO_APLICABLE si B ∉ (3,6], α̂ ≥ 1 (IV-254 indefinido), o
     arg de cualquier log ≤ 0, o |denom de β̂| < _DENOM_GUARD.
@@ -52,15 +52,17 @@ _DENOM_GUARD = 1e-10
 
 
 def _skewness(yi: np.ndarray) -> float:
-    """Asimetría no sesgada — g = n·∑(yi−ȳ)³ / ((n−1)·(n−2)·Sy³)."""
+    # IV-4: g_sesg = mean((yi-ybar)³) / (var_sesgada)^(3/2)
+    # IV-5: g_insesg = n²/((n-1)(n-2)) * g_sesg
     n = len(yi)
     if n < 3:
         return 0.0
     ybar = float(np.mean(yi))
-    sy = float(np.std(yi, ddof=1))
-    if sy == 0.0:
+    var_sesgada = float(np.var(yi, ddof=0))
+    if var_sesgada == 0.0:
         return 0.0
-    return float(n * np.sum((yi - ybar) ** 3) / ((n - 1) * (n - 2) * sy**3))
+    g_sesg = float(np.mean((yi - ybar) ** 3) / var_sesgada**1.5)
+    return float((n**2 / ((n - 1) * (n - 2))) * g_sesg)
 
 
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
@@ -79,7 +81,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             )
         sy = float(np.std(yi, ddof=1))
         beta = 4.0 / gy**2  # IV-255
-        alpha = sy / beta  # IV-256
+        alpha = sy / np.sqrt(beta)  # IV-256: α̂ = Sy/√β̂
         y0 = float(np.mean(yi)) - alpha * beta
         return MetodoResult(
             metodo=metodo,
@@ -105,12 +107,12 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             )
 
         C = 1.0 / (B - 3.0)  # IV-250
-        if B <= 5.3:
+        if B <= 3.5:
             A = -0.45157 + 1.99955 * C  # IV-252
         else:
             A = -0.23019 + 1.65262 * C + 0.20911 * C**2 - 0.04557 * C**3  # IV-251
 
-        alpha_hat = (A + 1.0) ** (1.0 / 3.0)  # IV-247
+        alpha_hat = 1.0 / (A + 3.0)  # IV-247: α̂ = 1/(A+3)
 
         # IV-254 requiere ln(1-α̂) → α̂ < 1. Guard explícito antes de calcular
         # IV-253 (ln(µ1·(α̂-1)) → -∞ cuando α̂ → 1 puede causar overflow).
@@ -119,14 +121,15 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
 
-        # IV-253: ambos argumentos de log deben ser positivos
-        arg1 = mu1 * (alpha_hat - 1.0)
-        arg2 = mu2 * (alpha_hat - 2.0)
-        if arg1 <= 0.0 or arg2 <= 0.0:
+        # IV-253: denominador = ln(1-α̂)² - ln(1-2·α̂) = 2·ln(1-α̂) - ln(1-2·α̂)
+        # Requiere α̂ < 0.5 para que 1-2·α̂ > 0 (α̂ < 1 ya está guardado arriba)
+        if alpha_hat >= 0.5:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
-        denom_beta = np.log(arg1) - np.log(arg2)  # IV-253 denominador
+        denom_beta = 2.0 * np.log(1.0 - alpha_hat) - np.log(
+            1.0 - 2.0 * alpha_hat
+        )  # IV-253 denominador
         if abs(denom_beta) < _DENOM_GUARD:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE

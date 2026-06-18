@@ -52,7 +52,7 @@ def calcular_t_student(
     var1, var2 = np.var(s1, ddof=1), np.var(s2, ddof=1)
 
     nu = n1 + n2 - 2
-    sp2 = ((n1 - 1) * var1 + (n2 - 1) * var2) / nu
+    sp2 = (n1 * var1 + n2 * var2) / nu  # III-8 exacta — confirmado Facundo est_02
     sp = np.sqrt(sp2)
 
     estadistico = (
@@ -101,14 +101,15 @@ def calcular_cramer(
     arr = np.array(serie, dtype=float)
     n = len(arr)
 
+    # n_w1: ceil (confirmado numéricamente — tesis est_02)
+    # n_w2: floor (confirmado numéricamente — tesis est_02; ceil da subgrupo incorrecto)
+    # Ver decisions-log.md — DECISIÓN 011
     if particion == "default":
         n_w1 = int(np.ceil(n * 0.60))
-        n_w2 = int(np.ceil(n * 0.30))
+        n_w2 = int(np.floor(n * 0.30))
     else:
         n_w1 = int(np.ceil(n * particion["n1_pct"] / 100))
-        n_w2 = int(np.ceil(n * particion["n2_pct"] / 100))
-
-    n_w2 = min(n_w2, n - n_w1)
+        n_w2 = int(np.floor(n * particion["n2_pct"] / 100))
 
     media_global = float(np.mean(arr))
     s_global = float(np.std(arr, ddof=1))
@@ -143,11 +144,10 @@ def calcular_cramer(
     tau_w1, t_w1 = bloque1
     tau_w2, t_w2 = bloque2
 
-    nu_w1 = n + n_w1 - 2
-    nu_w2 = n + n_w2 - 2
-
-    vc_w1 = float(t_dist.ppf(1 - ALPHA / 2, df=nu_w1))
-    vc_w2 = float(t_dist.ppf(1 - ALPHA / 2, df=nu_w2))
+    # ν = n - 2, confirmado Facundo — mismo GL que t de Student
+    nu = n - 2
+    vc_w1 = float(t_dist.ppf(1 - ALPHA / 2, df=nu))
+    vc_w2 = vc_w1
 
     aprobada = (t_w1 <= vc_w1) and (t_w2 <= vc_w2)
     veredicto = "aprobada" if aprobada else "rechazada"

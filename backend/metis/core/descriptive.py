@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import skew
 
 from metis.core.types import DescriptiveStats
 
@@ -18,9 +17,17 @@ def calcular_descriptiva(serie: list[float]) -> DescriptiveStats:
     # Coeficiente de variación (Ec. IV-9)
     cv = desvio / media if media != 0 else float("nan")
 
-    # Asimetría sesgada y no sesgada (Ec. IV-4, IV-5)
-    asimetria_sesgada = float(skew(arr, bias=True))
-    asimetria_no_sesgada = float(skew(arr, bias=False))
+    # Asimetría sesgada y no sesgada (Ec. IV-4, IV-5) — implementación directa
+    if var_sesgada > 0:
+        asimetria_sesgada = float(
+            np.mean((arr - media) ** 3) / var_sesgada**1.5
+        )
+        asimetria_no_sesgada = float(
+            (n**2 / ((n - 1) * (n - 2))) * asimetria_sesgada
+        )
+    else:
+        asimetria_sesgada = 0.0
+        asimetria_no_sesgada = 0.0
 
     # Curtosis (Ec. IV-6, IV-7) — calculada directamente para evitar ambigüedad de scipy
     if var_sesgada > 0 and n >= 4:

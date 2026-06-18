@@ -1,52 +1,57 @@
 """
 Distribución Gamma 2 parámetros.
 
-Parámetros: α (forma/shape), β (escala/scale)
+Parámetros: α (escala), β (forma)
 N_PARAMETROS = 2
 
 Métodos aplicables: momentos, mv, ml
 Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-123 a IV-135
 
   Momentos:
-    α̂ = (x̄/S)²          (IV-123)  ← forma (shape)
-    β̂ = S²/x̄             (IV-124)  ← escala (scale)
+    α̂ = S²/x̄          (IV-123)  ← escala
+    β̂ = (x̄/S)²        (IV-124)  ← forma
 
   MV (aproximación de Thom):
-    C = ln(x̄) - (1/n)·sum(ln xi)    (IV-127, IV-128)
-    α̂ = (1 + √(1 + 4C/3)) / (4C)   (IV-126)  ← forma (lo que tesis llama β̂)
-    β̂ = x̄/α̂                         (IV-125)  ← escala (lo que tesis llama α̂)
+    ȳ = (1/n)·Σln(xi)   (IV-128)
+    C = ln(x̄) - ȳ       (IV-127)
+    β̂ = (1 + √(1 + 4C/3)) / (4C)   (IV-126)  ← forma
+    α̂ = x̄/β̂             (IV-125)  ← escala
 
-  ML (Momentos L — Hosking 1990):
+  ML (Momentos L):
+    xs = serie ordenada de MAYOR a MENOR
+    β0 = M̂(0) = x̄
+    β1 = M̂(1) = (1/(n(n-1)))·Σ_{i=1}^{n-1}(n-i)·xs_{(i)}  (IV-87, desc.)
+    λ1 = β0,  λ2 = 2·β1 - β0
     τ2 = λ2/λ1                        (IV-129)
     Para 0 ≤ τ2 < 0.5:
-      z = π²·τ2                        (IV-131)
-      α̂ = (1 - 0.308·z) / (z - 0.05812·z² + 0.01765·z³)   (IV-130) ← forma
+      z = π·τ2²                        (IV-131)
+      β̂ = (1 - 0.308·z) / (z - 0.05812·z² + 0.01765·z³)   (IV-130)
     Para 0.5 ≤ τ2 < 1:
       z = 1 - τ2                       (IV-133)
-      α̂ = (0.7213·z - 0.59478·z²) / (1 - 2.1817·z + 1.2113·z²)  (IV-132) ← forma
-    β̂ = x̄/α̂                          (IV-134)  ← escala
+      β̂ = (0.7213·z - 0.59478·z²) / (1 - 2.1817·z + 1.2113·z²)  (IV-132)
+    α̂ = x̄/β̂                          (IV-134)  ← escala
 
   Cuantil:
-    xT = scipy.stats.gamma.ppf(p, a=α̂, scale=β̂)   (equivalente a IV-135, WH exacto)
+    xT = α̂·β̂·(1 - 1/(9·β̂) + UT·√(1/(9·β̂)))³    (IV-135)
 
-NOTA de nomenclatura: la tesis usa β̂ como forma en MV/ML (ecuaciones IV-125/126)
-y α̂ como forma en Momentos (IV-123). Este módulo unifica: alpha=forma, beta=escala.
+NOTA: la tesis usa α̂ para escala y β̂ para forma en esta distribución.
+      El módulo respeta esa convención: alpha=escala, beta=forma.
 
-RESTRICCIÓN: No Aplicable si algún xi ≤ 0. Confirmado con Facundo.
+RESTRICCIÓN: deshabilitada si algún xi = 0 (confirmado con Facundo)
 """
 
 import numpy as np
-from scipy.stats import gamma as _gamma_dist
 
 from metis.core.etapa2.types import (
     STATUS_NO_APLICABLE,
     STATUS_OK,
     MetodoResult,
 )
+from metis.core.etapa2.utils import _ut
 
 N_PARAMETROS: int = 2
 METODOS_APLICABLES: tuple[str, ...] = ("momentos", "mv", "ml")
-DISABLED_WITH_ZEROS: bool = True  # confirmado — no aplicable si algún xi ≤ 0
+DISABLED_WITH_ZEROS: bool = True
 
 _DENOM_GUARD = 1e-10
 
@@ -65,8 +70,8 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "momentos":
-        alpha = (xbar / S) ** 2  # IV-123 — forma
-        beta = S**2 / xbar  # IV-124 — escala
+        alpha = S**2 / xbar  # IV-123 — escala
+        beta = (xbar / S) ** 2  # IV-124 — forma
         return MetodoResult(
             metodo=metodo,
             parametros={"alpha": alpha, "beta": beta},
@@ -81,13 +86,12 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
-        # Thom's approximation — IV-126 resuelve la forma (lo que tesis llama β̂)
-        alpha = (1.0 + np.sqrt(1.0 + 4.0 * C / 3.0)) / (4.0 * C)  # IV-126 — forma
-        if alpha <= 0.0:
+        beta = (1.0 + np.sqrt(1.0 + 4.0 * C / 3.0)) / (4.0 * C)  # IV-126 — forma
+        if beta <= 0.0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
-        beta = xbar / alpha  # IV-125 — escala
+        alpha = xbar / beta  # IV-125 — escala
         return MetodoResult(
             metodo=metodo,
             parametros={"alpha": alpha, "beta": beta},
@@ -97,11 +101,11 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
 
     if metodo == "ml":
         n = len(serie)
-        xi = np.sort(serie)  # ascendente para PWM
+        xs = np.sort(serie)[::-1]  # descendente: xs[0] = máximo
 
-        # β0 = M(0), β1 = M(1) con pesos ascendentes — misma convención que Normal ML
-        beta0 = float(np.mean(xi))
-        beta1 = float(np.sum(xi * np.arange(n)) / (n * (n - 1)))  # IV-129 → Hosking
+        beta0 = float(np.mean(xs))  # M̂(0)
+        weights = np.arange(n - 1, 0, -1, dtype=float)  # [n-1, n-2, …, 1]
+        beta1 = float(np.dot(xs[: n - 1], weights) / (n * (n - 1)))  # M̂(1) IV-87
 
         lambda1 = beta0
         lambda2 = 2.0 * beta1 - beta0
@@ -116,34 +120,28 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
 
-        if tau2 < 0.5:  # IV-130/IV-131
-            z = np.pi**2 * tau2  # IV-131
+        if tau2 < 0.5:
+            z = np.pi * tau2**2  # IV-131
             denom = z - 0.05812 * z**2 + 0.01765 * z**3
             if abs(denom) < _DENOM_GUARD:
                 return MetodoResult(
-                    metodo=metodo,
-                    parametros=None,
-                    eea=None,
-                    status=STATUS_NO_APLICABLE,
+                    metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
                 )
-            alpha = (1.0 - 0.308 * z) / denom  # IV-130 — forma
-        else:  # IV-132/IV-133
+            beta = (1.0 - 0.308 * z) / denom  # IV-130 — forma
+        else:
             z = 1.0 - tau2  # IV-133
             denom = 1.0 - 2.1817 * z + 1.2113 * z**2
             if abs(denom) < _DENOM_GUARD:
                 return MetodoResult(
-                    metodo=metodo,
-                    parametros=None,
-                    eea=None,
-                    status=STATUS_NO_APLICABLE,
+                    metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
                 )
-            alpha = (0.7213 * z - 0.59478 * z**2) / denom  # IV-132 — forma
+            beta = (0.7213 * z - 0.59478 * z**2) / denom  # IV-132 — forma
 
-        if alpha <= 0.0:
+        if beta <= 0.0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
-        beta = xbar / alpha  # IV-134 — escala
+        alpha = xbar / beta  # IV-134 — escala
         return MetodoResult(
             metodo=metodo,
             parametros={"alpha": alpha, "beta": beta},
@@ -158,11 +156,15 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
 
 def cuantil(p: float, parametros: dict) -> float:
     """
-    xT via función gamma incompleta inversa — equivalente exacto a WH IV-135.
+    xT = α̂·β̂·(1 - 1/(9·β̂) + UT·√(1/(9·β̂)))³    (IV-135)
 
     p:          probabilidad de no excedencia F(x) ∈ (0, 1)
-    parametros: {"alpha": float (forma/shape), "beta": float (escala/scale)}
+    parametros: {"alpha": float (escala), "beta": float (forma)}
     """
     if not (0.0 < p < 1.0):
         raise ValueError(f"p debe estar en (0, 1), recibido: {p}")
-    return float(_gamma_dist.ppf(p, a=parametros["alpha"], scale=parametros["beta"]))
+    alpha = parametros["alpha"]  # escala
+    beta = parametros["beta"]  # forma
+    t = 1.0 / (9.0 * beta)
+    wh = (1.0 - t + _ut(p) * np.sqrt(t)) ** 3
+    return float(alpha * beta * wh)
