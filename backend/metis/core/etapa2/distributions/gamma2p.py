@@ -159,12 +159,12 @@ def cuantil(p: float, parametros: dict) -> float:
     xT = α̂·β̂·(1 - 1/(9·β̂) + UT·√(1/(9·β̂)))³    (IV-135)
 
     p:          probabilidad de no excedencia F(x) ∈ (0, 1)
-    parametros: {"alpha": float (escala), "beta": float (forma)}
+    parametros: {"alpha": float (escala/scale), "beta": float (forma/shape)}
     """
     if not (0.0 < p < 1.0):
         raise ValueError(f"p debe estar en (0, 1), recibido: {p}")
-    alpha = parametros["alpha"]  # escala
-    beta = parametros["beta"]  # forma
+    alpha = parametros["alpha"]  # escala/scale
+    beta = parametros["beta"]  # forma/shape
     t = 1.0 / (9.0 * beta)
     wh = (1.0 - t + _ut(p) * np.sqrt(t)) ** 3
     return float(alpha * beta * wh)

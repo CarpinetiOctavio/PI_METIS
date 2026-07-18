@@ -10,8 +10,9 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-202 a IV-245
   Momentos: IV-203 a IV-215
     g = asimetría no sesgada de la serie
     β̂ por polinomio según rango de g:
-      IV-203: -11.35 < g < 11.396  (incluye overlap con IV-204)
-      IV-204:  11.396 ≤ g < 18.95  (overlap 1.14–11.396 → IV-203)
+      IV-203: -11.35 < g < 1.1396
+      IV-204:  1.14 ≤ g < 18.95
+      (hueco real, fiel a la tesis: 1.1396 ≤ g ≤ 1.14 → STATUS_NO_APLICABLE)
     E[y] = Γ(1+β̂),  Var(y) = Γ(1+2β̂) - Γ²(1+β̂)     (IV-208/209)
     B̂ = sqrt(Var(x)/Var(y))                            (IV-206/207)
     Â = x̄ + B̂·E[y]                                     (IV-205)
@@ -162,19 +163,46 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "mv":
-        # Inicializar con estimadores de momentos
+        # Condiciones iniciales: momentos, con fallback a ML si el guard falla.
+        # ML está más cerca del óptimo MV cuando g es grande y nu_momentos >> max(xi).
+        nu, alpha, beta = None, None, None
+
         g = _skewness(serie)
         beta0 = _beta_from_g(g)
-        if beta0 is None:
+        if beta0 is not None:
+            init = _nu_alpha_from_beta(serie, beta0)
+            if init is not None:
+                nu0, alpha0 = init
+                # Verificar que el guard de IV-202 pase con condiciones iniciales
+                if not np.any(1.0 - beta0 * (serie - nu0) / alpha0 <= 0.0):
+                    nu, alpha, beta = nu0, alpha0, beta0
+
+        if nu is None:
+            # Fallback: ML (Momentos-L) como condición inicial para MV
+            M0, M1, M2 = _momentos_L(serie)
+            denom_234 = 3.0 * M2 - M0
+            if abs(denom_234) > _DENOM_GUARD:
+                E = (2.0 * M1 - M0) / denom_234 - np.log(2.0) / np.log(3.0)
+                b_ml = 7.859 * E + 2.9554 * E**2
+                if abs(b_ml) > _DENOM_GUARD:
+                    try:
+                        A_ml = float(_gamma(1.0 + b_ml))
+                        B_ml = 1.0 - 2.0 ** (-b_ml)
+                        C_ml = (2.0 * M1 - M0) * b_ml
+                        D_ml = (A_ml - 1.0) / b_ml
+                        a_ml = C_ml / (A_ml * B_ml)
+                        n_ml = M0 + D_ml * a_ml
+                        if a_ml > 0.0 and not np.any(
+                            1.0 - b_ml * (serie - n_ml) / a_ml <= 0.0
+                        ):
+                            nu, alpha, beta = n_ml, a_ml, b_ml
+                    except (ValueError, OverflowError):
+                        pass
+
+        if nu is None:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
-        init = _nu_alpha_from_beta(serie, beta0)
-        if init is None:
-            return MetodoResult(
-                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
-            )
-        nu, alpha, beta = init[0], init[1], beta0
 
         for _ in range(_MAX_ITER):
             if abs(alpha * beta) < _DENOM_GUARD:
@@ -182,7 +210,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                     metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
                 )
             # IV-202: variable reducida
-            arg_log = 1.0 - (serie - nu) / (alpha * beta)
+            arg_log = 1.0 - beta * (serie - nu) / alpha
             if np.any(arg_log <= 0.0):
                 return MetodoResult(
                     metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE

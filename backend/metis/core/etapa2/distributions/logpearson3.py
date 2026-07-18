@@ -197,6 +197,23 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
+        lower_bound = yi_min - 20.0 * sigma_y
+        upper_bound = yi_min - 1e-9
+        # Brent (xatol=1e-7) termina a < 1e-7 del borde cuando la función
+        # es monótona — nunca llega a 1e-4 con mínimo interior real.
+        # Si result.x está a < 1e-4 de CUALQUIERA de los dos bordes, no hay
+        # mínimo interior genuino: NO_CONVERGE. Guard simétrico — antes solo
+        # protegía el borde inferior, lo que dejaba pasar como "convergencia"
+        # casos de borde superior disfrazados (causa de la divergencia con
+        # la tesis en est_05, donde la tesis reporta NO_CONVERGE).
+        if (
+            abs(result.x - lower_bound) < 1e-4
+            or abs(upper_bound - result.x) < 1e-4
+        ):
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
+            )
+
         y0 = float(result.x)
         zi = yi - y0
         mean_z = float(np.mean(zi))

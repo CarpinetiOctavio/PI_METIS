@@ -30,7 +30,7 @@ Viven en `tests/integration/`. Levantan la app completa con base de datos de tes
 Cubren:
 - Pipeline completo Etapa 1 con serie válida
 - Pipeline con cada código del catálogo de errores
-- Autenticación usuario/contraseña — PENDIENTE hasta confirmar IT (ver decisions-log.md — DECISIÓN 001)
+- Autenticación usuario/contraseña — PENDIENTE hasta confirmar IT (ver docs/decisiones/decision001.md — DECISIÓN 001)
 - CU-03 con API Key válida e inválida
 - Pausa ante atípico de Chow y reanudación con decisión del usuario
 - Persistencia correcta en BD para CU-01
@@ -110,7 +110,7 @@ markers =
 pytest -m unit
 
 # Correr tests de regresión
-pytest -m regression -v
+pytest -m regresion-unitaria -v
 
 # Todo
 pytest -v

@@ -165,7 +165,7 @@ A medida que avance Fase 2, el número de status=ok crecerá desde 0.
 - GVE — momentos, mv, ml — smoke test OK
   momentos: converge. mv: no_converge (esperado según tesis).
   ml: no_aplicable — pendiente respuesta de Facundo sobre
-  inconsistencia IV-238 vs IV-243/244 (ver decisions-log.md)
+  inconsistencia IV-238 vs IV-243/244 (ver docs/decisiones/decision029.md)
 
 ##### Errores corregidos en formulas-etapa2.md
 - Gumbel MV IV-179/IV-180: eran medias, son sumas con n
@@ -239,7 +239,7 @@ A medida que avance Fase 2, el número de status=ok crecerá desde 0.
 1. gen_pareto MC — fsolve reportaba convergencia falsa (residual=0.007 en valor inicial
    ε=0.3). El root real estaba en ε≈0.51. Fix: scan + brentq sobre (-0.49, 50.0),
    iterando sobre todos los brackets para evitar raíz espuria cerca de ε=0
-   (denom_b≈0 → B_hat→∞). Ver DECISIÓN 010 en decisions-log.md.
+   (denom_b≈0 → B_hat→∞). Ver DECISIÓN 010 en docs/decisiones/decision010.md.
 2. ValueError guard propagado a cuantil() en gen_exponencial y gen_pareto —
    p debe estar en (0,1). Propagación al resto de distribuciones pendiente (ver abajo).
 
@@ -260,16 +260,52 @@ Los asserts se deshabilitan con python -O — usar siempre if/raise.
 - Fase 5: pipeline2.py — orquestación exhaustiva
 - Fase 6: tests de comportamiento
 
+#### ACTUALIZACIÓN 15 de Julio de 2026 — cierre del primer análisis E2E del core estadístico
+
+Se completó el primer análisis end-to-end del core estadístico (Etapa 1 +
+Etapa 2 juntas), corriendo el flujo real y completo del pipeline
+(`ejecutar_etapa1()` seguido de `ejecutar_etapa2()`, sin atajos) contra las
+9 estaciones disponibles de la tesis de Facundo Ganancias Martínez, a modo
+de pruebas de regresión contra sus resultados publicados. Documentado en
+`.claude/rules/auditoria/` — `fases/fase1-unitarias.md` (fidelidad de
+fórmula), `fases/fase2-cableado.md` (integración entre módulos),
+`fases/fase3-testing.md` (integridad de la suite de tests), `fases/fase4-e2e.md`
+(el análisis E2E en sí, estación por estación en
+`regresion/regresion-e2e-coreEstadistico/est_0X-e2e.md`), con el informe de
+consolidación en `regresion/regresion-e2e-coreEstadistico/consolidacion-e2e.md`
+y las preguntas abiertas a escalar a Facundo en `pendientes-facundo.md`.
+
+**No queda cerrado por completo** — hay pendientes reales sin resolver
+(preguntas a Facundo con respuesta cerrada, necesidad del Excel original de
+la tesis para varios casos, y un par de correcciones cosméticas ya
+identificadas, como el conteo real de combinaciones distribución×método).
+Pero **no queda ninguna parte del core estadístico sin analizar** — de acá
+en más todo lo que falta es accionar sobre pendientes ya identificados y
+redactados, no seguir auditando a ciegas. Dos bugs de código reales se
+encontraron y corrigieron en el proceso (DECISIÓN023 en
+`docs/decisiones/decision023.md`, DECISIÓN025 en
+`docs/decisiones/decision025.md`), ambos verificados sin regresión
+contra las 9 estaciones.
+
+**Próximo paso: comenzar el desarrollo de autenticación** (continuación de
+`feature/auth-refactor` — ver Parte 2 más abajo, ya no bloqueada: las
+credenciales de Soporte IT de la UCC llegaron el 15/07/2026).
+
 ### feature/auth-refactor — mergeado a staging ✓
 
 #### Decisión implementada
 Autenticación usuario/contraseña + bcrypt + JWT HttpOnly Cookie con verificación de cuenta por mail @ucc.edu.ar.
 Mecanismo SMTP: App Password via smtp.gmail.com:587 (Opción B — confirmada por IT).
-Ver decisions-log.md — DECISIÓN 001, 002, 003, 004, 005.
+Ver docs/decisiones/ — DECISIÓN 001, 002, 003, 004, 005.
 
 #### División en dos partes
 Parte 1 — COMPLETADA
 Parte 2 — BLOQUEADA esperando IT (cuenta metis-noreply@ucc.edu.ar + App Password de 16 dígitos)
+
+**ACTUALIZACIÓN 15 de Julio de 2026:** credenciales recibidas de Soporte IT
+de la UCC — Parte 2 deja de estar bloqueada. Queda como próximo trabajo a
+implementar (ver actualización en la sección de `feature/core-etapa2` más
+arriba).
 
 #### Paso 0 completado — Alembic configurado
 - alembic/env.py — psycopg2 síncrono para migraciones,
@@ -303,7 +339,7 @@ Bugs encontrados y corregidos durante el smoke test:
 - auth/router.py: `datetime.now(timezone.utc)` → `datetime.utcnow()` en la
   actualización de `last_login` — TIMESTAMP WITHOUT TIME ZONE no acepta
   datetime timezone-aware; el error era un 500 silencioso en POST /login
-- decisions-log.md, sprint.md: corregido el usuario psql en comandos de
+- docs/decisiones/, sprint.md: corregido el usuario psql en comandos de
   limpieza (`metis_user` → `metis`, que es el POSTGRES_USER real del .env)
 - .env.example: reescrito con reglas explícitas de consistencia (ver DECISIÓN 008)
 
@@ -336,6 +372,11 @@ password: test1234
 nombre:   Octavio
 ```
 
+**Por qué documentarlo:** los tokens de verificación quedan en
+`_pending_tokens` (memoria del proceso) y el usuario queda en la BD hasta
+limpieza explícita. Sin esta documentación, un segundo smoke test fallaría
+con `AUTH_EMAIL_ALREADY_REGISTERED` sin que quede claro por qué.
+
 **Cómo obtener el token de verificación (mock SMTP):**
 Con el backend corriendo, después de POST /register:
 ```bash
@@ -344,7 +385,10 @@ docker-compose logs backend | grep "MOCK SMTP" | tail -1
 El token aparece en la URL: `.../auth/verify?token=<TOKEN>`
 
 **Cómo limpiar el usuario después del smoke test:**
-El usuario de psql es el valor de `POSTGRES_USER` en el `.env` (actualmente `metis`):
+El usuario de psql que acepta el contenedor es el definido por
+`POSTGRES_USER` en el `.env` (actualmente `metis`) — no `metis_user`
+genérico. Verificar el valor con `docker inspect pi-postgres-1 | grep
+POSTGRES_USER` antes de correr:
 ```bash
 docker exec pi-postgres-1 bash -c \
   "psql -U metis -d metis -c \"DELETE FROM users WHERE email = '2200631@ucc.edu.ar';\""
@@ -387,9 +431,15 @@ Criterios completados al 15 de Mayo de 2026:
 
 Criterios pendientes — bloqueados por factores externos:
 - Tests de regresión matemática: esperando series reales
-  de Facundo en formato digital
+  de Facundo en formato digital. NOTA 15/07/2026: distinto del análisis
+  E2E manual/documentado ya cerrado en `.claude/rules/auditoria/` (que usó
+  series transcriptas del PDF de la tesis, no un fixture digital nativo de
+  Facundo) — ese análisis no satisface este criterio de M1 tal como está
+  redactado, sigue pendiente el archivo digital real si se quiere una
+  suite automatizada en `tests/regression/`.
 - Auth Parte 2 (SMTP real): esperando credenciales IT
-  (cuenta metis-noreply@ucc.edu.ar + App Password)
+  (cuenta metis-noreply@ucc.edu.ar + App Password). **RESUELTO 15/07/2026
+  — credenciales recibidas de Soporte IT de la UCC desde 10/06/2026.**
 - Verificación end-to-end del pipeline con CSV real:
   pendiente hasta tener frontend o cliente HTTP configurado
 

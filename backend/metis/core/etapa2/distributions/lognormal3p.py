@@ -20,6 +20,9 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-111 a IV-120
                   σ̂²y = mean((ln(xi-x0)-µ̂y)²) (IV-118)  [ddof=0, MV]
     x0 por minimización del perfil de verosimilitud negativo (IV-119)
     bounds: (min(xi) - 20·S, min(xi) - 1e-9)
+    Guard de forma (DECISIÓN 025, docs/decisiones/decision025.md): ver
+    _tiene_optimo_interior — rechaza el resultado de minimize_scalar si
+    el escaneo no muestra un mínimo genuino en un punto interior.
     NOTA: puede No Converger — comportamiento esperado
   Cuantil:
     xT = x0 + exp(µ̂y + UT·σ̂y)               (IV-120)
@@ -46,6 +49,55 @@ PENDING_ZEROS_CONFIRMATION: bool = (
 )
 
 _DENOM_GUARD = 1e-10
+
+# DECISIÓN 025 (docs/decisiones/decision025.md) — guard de ausencia de óptimo finito.
+# A diferencia de DECISIÓN019 (logpearson3.py, detecta falsa convergencia
+# EN un borde — el óptimo genuino existe cerca del borde) y de DECISIÓN023
+# (gamma3p.py, detecta raíz espuria de un residuo por magnitud de S2), acá
+# el problema es que la verosimilitud perfilada puede no tener mínimo
+# finito en absoluto (diverge a -∞ acercándose a xi_min — verificado en
+# est_09, n=7). minimize_scalar converge igual, en un punto donde la
+# función todavía decrece sin haber encontrado un giro real — no es un
+# óptimo, es donde Brent se detuvo por su tolerancia de convergencia.
+#
+# Se detecta con un escaneo grueso de _N_SCAN_OPTIMO puntos sobre
+# (lo, hi): si el mínimo del escaneo cae exactamente en el primer o el
+# último punto finito, la función no giró en ningún punto interior del
+# dominio — no hay evidencia de óptimo genuino, se rechaza el resultado
+# de minimize_scalar aunque haya "convergido" numéricamente.
+#
+# Verificado sin regresión contra est_01 a est_08 (las 8 estaciones donde
+# lognormal3p/mv converge hoy) con densidades de escaneo 50/100/200/500/
+# 1000 puntos — el mínimo siempre cae en un índice interior para las 8,
+# nunca en el primero o el último. Para est_09 cae exactamente en el
+# último en las 5 densidades probadas.
+#
+# Diseño descartado antes de este: un chequeo de margen porcentual fijo
+# (2% de los puntos del escaneo desde cada borde) daba falsos positivos
+# en 6 de las 8 estaciones buenas (est_01, est_02, est_03, est_04, est_05,
+# est_06) — el mínimo genuino de esas series cae legítimamente muy cerca
+# de `hi` (a veces en el penúltimo o antepenúltimo punto del escaneo), y
+# un margen fijo las rechazaba de más. El criterio correcto no depende de
+# cuán cerca del borde esté el mínimo, solo de si hay al menos un punto
+# de recuperación (la función vuelve a subir) antes de llegar al borde
+# mismo — de ahí el chequeo de "no está exactamente en el primer/último
+# índice", sin margen porcentual.
+_N_SCAN_OPTIMO = 200
+
+
+def _tiene_optimo_interior(neg_profile_ll, lo: float, hi: float) -> bool:
+    """True si el escaneo grueso de neg_profile_ll sobre (lo, hi) muestra
+    un mínimo en un punto interior (no en el primer ni el último punto
+    finito evaluado) — evidencia de que la función gira genuinamente en
+    algún punto del dominio, no que decrece sin límite hasta un borde."""
+    scan = np.linspace(lo, hi, _N_SCAN_OPTIMO)
+    vals = np.array([neg_profile_ll(float(x)) for x in scan])
+    finite_mask = np.isfinite(vals)
+    if np.sum(finite_mask) < 3:
+        return False
+    vals_f = vals[finite_mask]
+    argmin_local = int(np.argmin(vals_f))
+    return argmin_local != 0 and argmin_local != len(vals_f) - 1
 
 
 def _skewness(x: np.ndarray) -> float:
@@ -97,8 +149,8 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             )
         mu_y = float(np.log(arg_log) - 0.5 * np.log(nz**2 + 1.0))  # IV-115
 
-        # IV-116: σ̂²y = [ln(nz²+1)]^(1/2) → σ̂y = [ln(nz²+1)]^(1/4)
-        sigma_y = float(np.log(nz**2 + 1.0) ** 0.25)
+        # IV-116: tesis Facundo pág. 70 usa [ln(nz²+1)]^(1/2) directamente como σ̂y
+        sigma_y = float(np.log(nz**2 + 1.0) ** 0.5)
 
         # IV-111
         x0 = float(xbar * (1.0 - nx / nz))
@@ -145,6 +197,16 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             )
 
         if not result.success:
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
+            )
+
+        lo = xi_min - 20.0 * S
+        hi = xi_min - 1e-9
+        if not _tiene_optimo_interior(_neg_profile_ll, lo, hi):
+            # DECISIÓN 025 — la verosimilitud perfilada no tiene mínimo
+            # finito en este dominio; minimize_scalar "convergió" en un
+            # punto sin haber encontrado un giro real.
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )

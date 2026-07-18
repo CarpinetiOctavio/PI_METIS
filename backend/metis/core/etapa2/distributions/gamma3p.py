@@ -83,6 +83,34 @@ def _params_from_x0(zi: np.ndarray, n: int):
     return beta, alpha
 
 
+# DECISIÓN 023 (docs/decisiones/decision023.md) — cota de plausibilidad sobre S2=Σ(1/zi).
+# Cuando x0 se acerca al mínimo observado, el zi más chico tiende a 0 y S2
+# diverge — es una singularidad de borde de la verosimilitud perfilada
+# (mismo tipo de patología que LN3p, DECISIÓN020), no una raíz genuina de
+# IV-142. Verificado en est_04: raíz genuina S2/n≈0.20, raíz espuria de
+# borde S2/n≈9.40 — casi 46x más grande. K_S2_MAX=2.0 deja margen amplio
+# a ambos lados de esos dos valores concretos (10x por debajo de la
+# genuina, 4.7x por encima de la espuria). No es un margen fijo tipo
+# "últimos N puntos del borde" (eso no generaliza entre distribuciones,
+# ver DECISIÓN 023) — es una cota sobre la magnitud de S2 en sí, que
+# depende de la serie a través de n, no de una distancia fija a x0.
+_K_S2_MAX = 2.0
+
+
+def _validar_raiz(x0: float, serie: np.ndarray, n: int):
+    """Valida un candidato a raíz de IV-142 más allá de β>0/α>0.
+
+    Retorna (beta, alpha) si el candidato es plausible, None si no.
+    """
+    zi = serie - x0
+    if np.any(zi <= 0.0):
+        return None
+    S2 = float(np.sum(1.0 / zi))
+    if S2 > _K_S2_MAX * n:
+        return None  # candidato pegado al borde — singularidad, no raíz genuina
+    return _params_from_x0(zi, n)
+
+
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
     n = len(serie)
     xbar = float(np.mean(serie))
@@ -131,7 +159,26 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         lo = xi_min - 20.0 * S
         hi = xi_min - 1e-9
 
-        _scan = np.linspace(lo, hi, 200)
+        # DECISIÓN 023 — escaneo denso concentrado hacia el extremo superior
+        # (hi = xi_min), en vez de uniforme sobre todo el dominio (~394
+        # unidades en est_04). Verificado en est_04: la raíz genuina de
+        # IV-142 y la singularidad de borde (S2 diverge cuando x0 → min(serie))
+        # conviven en una ventana de ancho ~0.3 unidades pegada a hi — el
+        # escaneo uniforme de 200 puntos (paso ~2 unidades sobre ~394) no
+        # genera ningún bracket ahí porque el paso es ~7x más ancho que la
+        # ventana entera. Se mantiene un escaneo grueso de cobertura sobre
+        # todo el dominio (por si existiera una raíz lejos del borde en otra
+        # serie) y se agrega un escaneo geométrico de distancias-a-hi, que
+        # concentra la densidad exactamente donde hace falta sin fuerza
+        # bruta pareja sobre las ~394 unidades.
+        _ancho = hi - lo
+        _scan_grueso = np.linspace(lo, hi, 200)
+        _offsets_cerca_hi = np.geomspace(1e-6, 0.05 * _ancho, 400)
+        _scan_fino = hi - _offsets_cerca_hi
+        _scan = np.unique(np.concatenate([_scan_grueso, _scan_fino]))
+        _scan = _scan[(_scan >= lo) & (_scan <= hi)]
+        _scan.sort()
+
         _vals = np.array([_iv142(float(x)) for x in _scan])
         _finite = np.isfinite(_vals)
         if not np.any(_finite):
@@ -146,10 +193,17 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )
 
+        # DECISIÓN 023 — no tomar el primer bracket sin validar (eso es lo
+        # que hacía frágil la versión anterior: con más de un bracket, podía
+        # quedarse con la raíz espuria de borde si aparecía primero en el
+        # orden de escaneo). Se refinan TODOS los brackets encontrados y se
+        # valida cada candidato (β>0, α>0 vía _params_from_x0, más la cota
+        # de plausibilidad sobre S2) antes de aceptar ninguno.
+        fit = None
         x0_hat = None
         for _i in _idx:
             try:
-                x0_hat = float(
+                _candidato = float(
                     brentq(
                         _iv142,
                         float(_scan[_i]),
@@ -157,22 +211,15 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                         xtol=CONVERGENCIA,
                     )
                 )
-                break
             except Exception:
                 continue
+            _fit_candidato = _validar_raiz(_candidato, serie, n)
+            if _fit_candidato is not None:
+                x0_hat = _candidato
+                fit = _fit_candidato
+                break
 
-        if x0_hat is None:
-            return MetodoResult(
-                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
-            )
-
-        zi = serie - x0_hat
-        if np.any(zi <= 0.0):
-            return MetodoResult(
-                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
-            )
-        fit = _params_from_x0(zi, n)
-        if fit is None:
+        if fit is None or x0_hat is None:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )

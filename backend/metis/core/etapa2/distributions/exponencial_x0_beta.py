@@ -12,8 +12,8 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-70 a IV-74
     x̂0 = x̄ - S     (IV-71)
 
   MV:
-    β̂ = (sum(xi) - n·x1) / (n·(n-1))    (IV-72)  x1 = mínimo de la muestra
-    x̂0 = x1 - β̂/n                        (IV-73)
+    β̂ = (sum(xi) - n·x1) / (n-1)    (IV-72)  x1 = mínimo de la muestra
+    x̂0 = x1 - β̂/n                    (IV-73)
 
   Cuantil:
     xT = x0 - β·ln[1 - F(x)]    (IV-74)

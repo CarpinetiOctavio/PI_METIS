@@ -14,7 +14,7 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-177 a IV-199
     yi = (xi - µ̂) / α̂                              (IV-181)
     P  = n - sum(e^(-yi))             → 0 al converger  (IV-179)
     R  = n - sum(yi) + sum(yi·e^(-yi)) → 0 al converger  (IV-180)
-    δµ = α̂j·(1.1·P - 0.26·R) / n                   (IV-184)
+    δµ = α̂j·(1.11·P - 0.26·R) / n                   (IV-184)
     δα = α̂j·(0.26·P - 0.61·R) / n                  (IV-185)
     µ̂j+1 = µ̂j + δµj                                (IV-186)
     α̂j+1 = α̂j + δαj                                (IV-187)

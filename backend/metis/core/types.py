@@ -19,6 +19,7 @@ class TestResult:
     n1: int | None = None
     n2: int | None = None
     valor_atipico: float | None = None
+    indice_atipico: int | None = None
 
 
 @dataclass
@@ -38,6 +39,7 @@ class DescriptiveStats:
     coef_asimetria: float  # Ec. IV-5, no sesgada
     minimo: float
     maximo: float
+    rango: float | None = None  # máximo - mínimo — tesis IV.5.1, RF-GEN-P-04
     varianza_sesgada: float | None = None  # Ec. IV-2
     varianza_no_sesgada: float | None = None  # Ec. IV-3
     asimetria_sesgada: float | None = None  # Ec. IV-4
