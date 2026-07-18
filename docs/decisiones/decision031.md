@@ -1,8 +1,10 @@
 # DECISIÓN 031 — Reorganización de repo post-cierre de Core Etapa 2
 **Fecha:** 18 de Julio de 2026
-**Estado:** APLICADA — ver commit [PEGAR HASH ACÁ], "feat(core): cierre de
+**Estado:** APLICADA — ver commit 5e9edaf6a51a5cfe4a9f87d027b83f8c5eada394, "feat(core): cierre de
 fase Core Etapa 2 — motor estadístico completo, auditado en 4 fases, más
 reorganización de repo pre-commit"
+
+Commit especifico: [5e9edaf6a51a5cfe4a9f87d027b83f8c5eada394](https://github.com/CarpinetiOctavio/PI_METIS/commit/5e9edaf6a51a5cfe4a9f87d027b83f8c5eada394)
 
 ### Contexto
 Con las 4 fases de auditoría de Core Etapa 2 cerradas (ver decision013.md

@@ -46,3 +46,6 @@ Thumbs.db
 *.swp
 *.swo
 .claude/settings.local.json
+
+# Commits
+commit_msg.txt
