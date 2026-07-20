@@ -33,7 +33,7 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
 **Validaciones:** email debe terminar en @ucc.edu.ar, password mínimo 8 caracteres
 **Auth:** Sin auth
 **Response 201:** `{"ok": true, "mensaje": "Cuenta creada. Revisá tu mail para verificar la dirección."}`
-**Errores:** 400 AUTH_EMAIL_ALREADY_REGISTERED, 422 validación Pydantic
+**Errores:** 400 AUTH_EMAIL_ALREADY_REGISTERED, 422 validación Pydantic, 500 AUTH_VERIFICATION_EMAIL_FAILED
 
 ---
 
@@ -214,6 +214,16 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
 ---
 
 ## Catálogo completo de códigos estandarizados
+
+### Auth
+```
+AUTH_EMAIL_ALREADY_REGISTERED     Email ya registrado (register)
+AUTH_VERIFICATION_EMAIL_FAILED    Fallo al enviar mail de verificación (register)
+AUTH_INVALID_TOKEN                Token de verificación inválido o expirado (verify)
+AUTH_USER_NOT_FOUND               Usuario no encontrado (verify)
+AUTH_INVALID_CREDENTIALS          Email o contraseña incorrectos (login)
+AUTH_EMAIL_NOT_VERIFIED           Email sin verificar (login)
+```
 
 ### Contrato — bloqueantes
 ```

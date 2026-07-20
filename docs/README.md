@@ -81,3 +81,16 @@ registro de cuándo se estableció o modificó.
   `DECISIÓN 031` (reorganización de repo post-cierre de Core Etapa 2, con
   árboles de archivos real antes/después) agregadas a `decisiones/`.
   Total actual: `decision001.md` a `decision031.md`.
+- **19-20/07/2026** — Cierre de Auth Parte 2 (envío real de mail via
+  `aiosmtplib`, primero contra Gmail y luego contra el relay SMTP real de
+  la UCC). `DECISIÓN 032` (orden mail-antes-que-commit en `register`),
+  `DECISIÓN 033` (bump de FastAPI/Starlette diferido) y `DECISIÓN 034`
+  (dos bugs de configuración SMTP encontrados en el smoke test real:
+  hostname vs. certificado, y `SMTP_USER` usado indebidamente como
+  remitente) agregadas a `decisiones/`. Total actual: `decision001.md` a
+  `decision034.md`. `historico/` sumó `oauth-descartado.md` a su propio
+  README — no estaba listado ahí pese a existir en el directorio.
+  Auditoría de referencias obsoletas a Google OAuth (mecanismo
+  descartado por `DECISIÓN 001`): corregidas en `CLAUDE.md`, `sprint.md`,
+  `decision001.md` (sección "Estado actual del código", que describía
+  OAuth como vigente), `decision002.md` y `decision028.md`.

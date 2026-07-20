@@ -1,6 +1,6 @@
 # DECISIÓN 004 — Mecanismo de envío de mail para verificación de cuenta
 **Fecha:** 14 de Mayo de 2026
-**Estado:** PARCIALMENTE IMPLEMENTADO — mock SMTP en desarrollo (auth/email.py), aiosmtplib pendiente de credenciales IT (cuenta metis-noreply@ucc.edu.ar + App Password)
+**Estado:** IMPLEMENTADO — Parte 1 y Parte 2 completas (mock reemplazado por `aiosmtplib` real, ver actualización 19/07/2026 más abajo)
 
 ### Contexto
 Con la autenticación propia usuario/contraseña confirmada ([DECISIÓN 001](decision001.md)),
@@ -69,3 +69,32 @@ pendiente de iniciar."
 + JWT). Ambas decisiones son sobre autenticación pero resuelven
 problemas distintos y no se reemplazan entre sí: 001 define cómo se
 loguea el usuario, 004 cómo se verifica su mail al registrarse.
+
+
+#### -------------- Actualizacion ---------------
+
+### Actualización 19 de Julio de 2026
+Parte 2 implementada: `auth/email.py` reemplazado por implementación real
+con `aiosmtplib.send()` — EmailMessage armado con From/To/Subject/body,
+`start_tls=True` sobre puerto 587, envío por llamada sin cliente
+persistente (decisión tomada por volumen bajo — un mail de verificación
+por registro, no envío masivo; ver detalle en la decisión de orden de
+operaciones más abajo). `aiosmtplib==5.1.2` agregado a `requirements.txt`.
+Variables de entorno (`SMTP_HOST/PORT/USER/PASSWORD`) descomentadas y
+marcadas como requeridas en `.env.example`.
+
+10/10 tests de auth en verde — los 5 endpoints existentes más los nuevos
+sobre `email.py` y el manejo de errores de envío en `register`.
+
+Estado pasa de "credenciales en mano desde 10/06, implementación real
+pendiente de iniciar" a "IMPLEMENTADO — Parte 1 y Parte 2 completas."
+
+El manejo de qué hace `register` cuando el envío falla (orden de
+operaciones, ventana de falla aceptada, IntegrityError en registros
+concurrentes) no se documenta acá porque es un problema distinto — de
+consistencia transaccional del endpoint, no del mecanismo de envío en
+sí. Ver [DECISIÓN 032](decision032.md).
+
+**Ver también:** `[DECISIÓN 001](decision001.md)` — mecanismo de login.
+`[DECISIÓN 032](decision032.md)` — orden de operaciones en `register` y
+manejo de fallos de envío.

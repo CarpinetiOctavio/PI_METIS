@@ -5,6 +5,8 @@
 ### Contexto
 Consecuencia directa de [DECISIÓN 001](decision001.md). El reemplazo de Google OAuth por
 autenticación propia requiere cambios en la tabla users y en auth/.
+Flujo de OAuth descartado, documentado por trazabilidad en
+`docs/historico/oauth-descartado.md`.
 
 ### Archivos que SE ELIMINAN cuando se implemente
 - metis/auth/google.py — completo. Toda la lógica de OAuth con Google

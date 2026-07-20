@@ -1,9 +1,12 @@
+import logging
 import os
 from datetime import datetime, timezone
 
+import aiosmtplib
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.auth.dependencies import get_current_user
@@ -12,6 +15,8 @@ from metis.auth.jwt import create_access_token
 from metis.db import get_db
 from metis.db.models import User
 from metis.schemas.auth import LoginRequest, RegisterRequest, UserMe, VerifyRequest
+
+logger = logging.getLogger(__name__)
 
 _FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 _ENV = os.environ.get("ENV", "development")
@@ -51,11 +56,49 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         password_hash=password_hash,
         email_verified=False,
     )
-    db.add(user)
-    await db.commit()
 
+    # Mandar el mail antes de tocar la sesión de BD acota la ventana de falla
+    # (no "la elimina": Gmail y Postgres no comparten transacción). Si el envío
+    # falla, no se persiste nada — el usuario puede reintentar el registro sin
+    # quedar huérfano (email_verified=False, sin vía de reenvío). Sigue existiendo
+    # el caso más raro de que el mail salga bien y el commit() de abajo falle
+    # después — se acepta esa ventana residual conscientemente.
+    try:
+        await send_verification_email(body.email, token)
+    except (aiosmtplib.SMTPException, RuntimeError):
+        logger.exception("Fallo al enviar mail de verificación a %s", body.email)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": {
+                    "codigo": "AUTH_VERIFICATION_EMAIL_FAILED",
+                    "mensaje": "No pudimos enviar el mail de verificación, intentá registrarte de nuevo en unos minutos.",
+                }
+            },
+        )
+
+    db.add(user)
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Race: otro registro con el mismo email commiteó entre el SELECT de
+        # arriba y este commit. El unique constraint de User.email lo atrapa acá.
+        await db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {
+                    "codigo": "AUTH_EMAIL_ALREADY_REGISTERED",
+                    "mensaje": "El email ya está registrado",
+                }
+            },
+        )
+
+    # Registrar el token solo tras commit exitoso: si el mail salió pero el
+    # commit falló arriba, no queda un token vivo apuntando a un usuario
+    # inexistente — quien clickee el link recibe AUTH_INVALID_TOKEN y puede
+    # re-registrarse limpio.
     _pending_tokens[token] = body.email
-    await send_verification_email(body.email, token)
 
     return {
         "ok": True,

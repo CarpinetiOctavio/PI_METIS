@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision031.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision034.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -64,14 +64,41 @@ antes/después). Header corregido a `#` (mismo problema que tuvo 030).
 Hash de commit pendiente — placeholder `[PEGAR HASH ACÁ]` dentro del
 archivo, se completa manualmente cuando el commit exista de verdad.
 
+**19/07/2026** — `DECISIÓN 032` (Auth: orden mail-antes-que-commit en
+`register`, ventana residual aceptada) y `DECISIÓN 033` (bump de
+FastAPI/Starlette diferido, con criterios explícitos de habilitación)
+agregadas — cierre de Auth Parte 2. `DECISIÓN 004` actualizada con el
+estado final de implementación; su índice y el de `DECISIÓN 001` abajo
+corregidos para dejar de decir "pendiente de credenciales IT" (recibidas
+10/06/2026, implementación cerrada 19/07/2026) — `DECISIÓN 001` sigue con
+contenido más profundo desactualizado (referencia a `auth/google.py`,
+eliminado hace varias sesiones) sin resolver en esta ronda — resuelto el
+20/07/2026, ver entrada de abajo.
+
+**20/07/2026** — `DECISIÓN 034` agregada (dos bugs de configuración SMTP
+encontrados en el smoke test real contra el relay de la UCC: hostname no
+coincidía con el certificado, y `SMTP_USER` se usaba indebidamente como
+remitente — ambos corregidos y verificados con entrega real de punta a
+punta). `DECISIÓN 032` actualizada — pasa de "pendiente de verificación
+exhaustiva por test" a verificada con evidencia real. `DECISIÓN 001`
+actualizada de punta a punta — header top-level, la sección "Decisión de
+reemplazo" (ya no dice "pendiente de confirmación con IT") y "Qué hay
+que hacer cuando IT confirme" (ahora "COMPLETADO") todas marcadas
+explícitamente como resueltas/históricas, con el texto original de cada
+una conservado por trazabilidad en vez de reescrito. Ya no queda como
+reescritura pendiente.
+Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
+(`CLAUDE.md`, `sprint.md`, `decision002.md`, `decision028.md`,
+`historico/README.md` — que no listaba ese archivo en absoluto).
+
 ## Índice
 
 | # | Título | Fecha | Estado |
 |---|---|---|---|
-| [001](decision001.md) | Autenticación CU-01 | 10/05/2026 | Parcialmente implementado — Parte 2 pendiente de credenciales SMTP de IT |
+| [001](decision001.md) | Autenticación CU-01 | 10/05/2026 | Resuelta — mecanismo OAuth original descartado, se conserva por trazabilidad (actualizado 20/07/2026) |
 | [002](decision002.md) | Esquema tabla users y refactor de auth/ | 10/05/2026 | Implementado |
 | [003](decision003.md) | Gestión de migraciones de esquema: Alembic | 14/05/2026 | Parcialmente implementado |
-| [004](decision004.md) | Mecanismo de envío de mail para verificación de cuenta | 14/05/2026 | Parcialmente implementado — mock SMTP, aiosmtplib pendiente de credenciales IT |
+| [004](decision004.md) | Mecanismo de envío de mail para verificación de cuenta | 14/05/2026 | Implementado — Parte 1 y Parte 2 completas 19/07/2026 |
 | [005](decision005.md) | Almacenamiento de tokens de verificación en memoria | 14/05/2026 | Aceptado para V1.0 — revisión post-M5 |
 | [006](decision006.md) | Regla de nullability en migraciones Alembic + SQLAlchemy | 15/05/2026 | Establecida |
 | [007](decision007.md) | DATABASE_URL dual-ambiente y convenciones de entorno de desarrollo | 15/05/2026 | Establecida |
@@ -99,3 +126,6 @@ archivo, se completa manualmente cuando el commit exista de verdad.
 | [029](decision029.md) | GVE ML: error de orden de serie en IV-243/244 | 19/05/2026 | Implementado |
 | [030](decision030.md) | Elevar CONTRACT_WRONG_ORDER a error bloqueante (orden cronológico) | 18/07/2026 | Pendiente de implementar — contradice "único caso: n<10" hasta que se aplique |
 | [031](decision031.md) | Reorganización de repo post-cierre de Core Etapa 2 | 18/07/2026 | Aplicada — pendiente de hash de commit |
+| [032](decision032.md) | Auth: orden mail-antes-que-commit en `register`, ventana residual aceptada | 19/07/2026 | Implementado — pendiente de verificación exhaustiva por test |
+| [033](decision033.md) | Bump de FastAPI/Starlette diferido, con criterios explícitos de habilitación | 19/07/2026 | Diferido — condicionado a dos criterios explícitos |
+| [034](decision034.md) | Correcciones de configuración SMTP encontradas en smoke test real: hostname y separación de identidad de remitente | 20/07/2026 | Implementado y verificado — envío real de punta a punta confirmado |
