@@ -35,7 +35,7 @@ metis/
 ├── services/   # Orquestación del pipeline, lógica de negocio.
 ├── db/         # Modelos SQLAlchemy, acceso a datos.
 ├── schemas/    # Modelos Pydantic: validación de inputs y outputs.
-└── auth/       # Usuario/contraseña + JWT (HttpOnly Cookie). Google OAuth descartado — docs/decisiones/decision001.md, DECISIÓN 001. Envío real de mail (aiosmtplib) pendiente de credenciales IT — docs/decisiones/decision004.md, DECISIÓN 004.
+└── auth/       # Usuario/contraseña + JWT (HttpOnly Cookie). Google OAuth descartado — docs/decisiones/decision001.md, DECISIÓN 001 (flujo original evaluado: docs/historico/oauth-descartado.md). Envío real de mail (aiosmtplib) pendiente de credenciales IT — docs/decisiones/decision004.md, DECISIÓN 004.
 
 **Regla crítica:** `core/` no importa nada de `api/`, `services/`, ni `db/`. El motor estadístico es una librería pura — recibe datos, devuelve resultados. Esto es lo que hace posible los tests de regresión matemática.
 

@@ -6,10 +6,21 @@
 Una rama por funcionalidad. Flujo de tres niveles: feature/xxx → staging → main.
 Nunca merge directo de feature a main.
 
+**Pendiente — documentar formalmente (20/07/2026):** protección de
+ramas main/staging vía GitHub Ruleset ya configurada y activa
+(bloquea push directo, exige PR + CI). Falta: decisión completa con
+alternativas evaluadas (Rulesets vs. Classic, reglas activadas/
+descartadas con motivo) en `docs/decisiones/decision035.md` — no
+escrita todavía. También pendiente: chequeo custom en `ci.yml` para
+restringir que `main` sólo reciba PRs desde `staging` (ver discusión,
+diferido por bajo riesgo con equipo de dos personas).
+
 ### Orden de implementación
 1. feature/db-models     — modelos SQLAlchemy + sesión  ✓ mergeado a staging
 2. feature/schemas       — modelos Pydantic de request/response  ✓ mergeado a staging
 3. feature/auth          — OAuth Google + JWT en HttpOnly Cookie  ✓ completado
+   (mecanismo original planeado — descartado y reemplazado por usuario/contraseña,
+   ver DECISIÓN 001 y docs/historico/oauth-descartado.md)
 4. feature/core-etapa1   — motor estadístico Etapa 1 completo  ✓ completado
 5. feature/api-etapa1    — endpoints de Etapa 1 + auth  ✓ completado
 6. feature/services-sse  — orquestación stream SSE hasta resultado Etapa 1  ✓ completado
@@ -353,6 +364,93 @@ Pasos verificados:
 6. POST /logout → 200 + cookie eliminada (Max-Age=0)
 7. GET /me sin cookie → 401
 
+7. GET /me sin cookie → 401
+
+
+#### Parte 2 — COMPLETADA ✓ (19 de Julio de 2026)
+
+Mock de `auth/email.py` reemplazado por implementación real con
+`aiosmtplib.send()` (App Password, smtp.gmail.com:587, start_tls=True).
+`register` reordenado para mandar el mail antes de comitear el usuario
+en base — evita usuarios huérfanos si el envío falla. `IntegrityError`
+en registros concurrentes capturado y mapeado a
+`AUTH_EMAIL_ALREADY_REGISTERED`. Excepciones logeadas con
+`logger.exception()` — primer uso de `logging` en el repo.
+Detalle completo de las decisiones de diseño (orden de operaciones,
+alternativas de lock evaluadas y descartadas, precedente de mocking
+para tests) en `docs/decisiones/decision032.md`.
+
+- `requirements.txt` — agregado `aiosmtplib==5.1.2`
+- `.env.example` — vars SMTP descomentadas y marcadas requeridas
+- `tests/unit/auth/` — primeros tests del repo (10/10), primer uso de
+  mocking (`unittest.mock` + `AsyncMock`) — precedente documentado en
+  decision032.md
+- `pytest.ini` — agregado `ignore::PendingDeprecationWarning:starlette.formparsers`
+  (primer import de FastAPI en tests/unit/ expone una deprecation de
+  Starlette/python-multipart). Bump que lo resuelve de raíz, diferido
+  con condiciones explícitas de habilitación — ver decision033.md.
+- `api-contracts.md` — sumado `500 AUTH_VERIFICATION_EMAIL_FAILED` al
+  contrato de `register`, agregada sección `### Auth` al catálogo
+  maestro de errores (no existía, sólo estaban documentados inline
+  por endpoint)
+
+#### Smoke test de Auth Parte 2 — COMPLETADO ✓ (20 de Julio de 2026)
+
+Camino A (envío exitoso) y Camino B (falla real de conexión) verificados
+contra el relay SMTP real de la UCC — no mockeado. Detalle completo de
+los bugs encontrados en `docs/decisiones/decision034.md`; verificación
+con evidencia real registrada en la actualización de `decision032.md`.
+
+Bugs encontrados y corregidos durante el smoke test:
+- `.env`: línea `SMTP_HOST` con `#` sin espacio adelante — python-dotenv
+  no lo trataba como comentario, el resto de la línea quedaba pegado al
+  valor. Trampa nueva de la misma familia que DECISIÓN 008 — pendiente
+  sumarla como regla nueva a esa decisión (ver Regla 6 más abajo).
+- `SMTP_HOST=wally.ucc.edu.ar` (dato literal compartido por IT) no
+  coincide con el CN real del certificado (`wally.uccor.edu.ar`) — mismo
+  servidor (misma IP), nombre de host distinto. Corregido, y verificado
+  como infraestructura legítima de la UCC (ver DECISIÓN 034).
+- `email.py` usaba `SMTP_USER` (identidad de autenticación, `metis`, sin
+  dominio) también como remitente del mensaje — el mail se aceptaba y
+  encolaba sin error, pero se perdía silenciosamente río abajo (candidato:
+  SPF/DMARC sin dominio para validar). Separado en `SMTP_FROM_ADDRESS`.
+- `tests/unit/auth/`: tras la separación de `SMTP_FROM_ADDRESS`, 3/4
+  tests de `test_email.py` quedaron rotos sin que se corriera la suite
+  para detectarlo — corregido, 12/12 en verde.
+
+Pasos verificados (Camino A, contra `2200631@ucc.edu.ar` — mismo usuario
+de prueba que Parte 1):
+1. `POST /register` → 201, mail real recibido
+2. Token real extraído del mail
+3. `POST /verify` con token real → 200
+4. `POST /login` → 200 + cookie HttpOnly
+5. `GET /me` → 200, `email_verified: true`
+6. Limpieza — `DELETE` aplicado, verificado con `SELECT`
+
+#### Pendiente — verificación dentro de la red UCC (bloqueado, sin acceso a infraestructura real)
+
+Todo lo verificado en el smoke test de arriba corrió desde red doméstica,
+nunca desde un host dentro de la intranet de la UCC. Pendientes reales,
+no urgentes hasta que haya acceso al servidor real (`172.16.168.14`) —
+ver DECISIÓN 034 para el detalle de qué se verificó desde afuera:
+
+1. Alcanzabilidad de `wally.uccor.edu.ar:587` desde el servidor real de
+   la UCC — no verificado. Reglas de firewall interno pueden comportarse
+   distinto para tráfico interno vs. externo.
+2. Resolución DNS interna — verificado solo contra DNS público (resolvió
+   a `190.3.95.77` y `200.45.112.13`). Si la UCC usa DNS split-horizon,
+   un host interno podría resolver distinto.
+3. Coincidencia de certificado/hostname desde adentro — casi seguro el
+   mismo servidor físico, pero no verificado directamente, sólo inferido.
+4. Deploy real de METIS en la infraestructura de la UCC en sí — todo el
+   stack corrió en Docker local hasta ahora. Pendiente para cuando
+   arranque el despliegue real (no urgente todavía según milestones
+   actuales — M4/M5 siguen lejos).
+
+Ninguno de los cuatro bloquea el cierre de Auth Parte 2 tal como está
+definida — son verificaciones de infraestructura, no de la
+implementación de auth en sí.
+
 ---
 
 ## Decisiones pendientes — no implementar hasta confirmar
@@ -403,6 +501,15 @@ docker exec pi-postgres-1 bash -c \
 Se guarda en `/tmp/metis_smoke_cookies.txt` — archivo temporal, no commitear.
 Se destruye al hacer POST /logout o al borrar el archivo.
 
+### Otros emails de prueba usados — Auth Parte 2 (SMTP real, 19-20/07/2026)
+
+`2200999@ucc.edu.ar` — legajo inventado para el primer intento de
+POST /register del smoke test de Camino A, antes de aclarar que hacía
+falta una casilla real para confirmar entrega. Quedó huérfano en `users`
+(201 sin verificar) porque el smoke test recién detectó el error un paso
+después. Limpiado el 20/07/2026 con el mismo procedimiento de arriba.
+No reusar — no es una casilla real.
+
 ### Regla general para datos de prueba
 
 - Nunca commitear datos de prueba (usuarios, tokens, cookies) al repositorio
@@ -442,6 +549,14 @@ Criterios pendientes — bloqueados por factores externos:
   — credenciales recibidas de Soporte IT de la UCC desde 10/06/2026.**
 - Verificación end-to-end del pipeline con CSV real:
   pendiente hasta tener frontend o cliente HTTP configurado
+
+**ACTUALIZACIÓN 19 de Julio de 2026:** Auth Parte 2 (SMTP real)
+completada — implementación, tests (10/10 en tests/unit/auth/) y
+documentación (decision032.md, decision033.md) cerrados. De los tres
+criterios pendientes listados arriba, éste queda resuelto por
+completo — no sólo credenciales recibidas, como marcaba la nota del
+15/07. Quedan 2 criterios pendientes para cerrar M1: tests de
+regresión matemática y verificación E2E con CSV real.
 
 M1 no se cierra hasta que los tres criterios pendientes estén resueltos.
 El desarrollo continúa hacia M2 en paralelo.

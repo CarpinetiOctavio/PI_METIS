@@ -55,6 +55,14 @@ Cada variable una sola vez. Los duplicados que resultan de copiar bloques del
 `.env.example` son silenciosos (python-dotenv no advierte) y generan confusión
 sobre cuál valor está activo.
 
+**Regla 6 — Sin `#` pegado sin espacio al final de un valor:**
+`python-dotenv` sólo interpreta `#` como inicio de comentario si está al
+inicio de línea o precedido de espacio. Un valor seguido de `#` sin
+espacio queda como texto literal pegado al valor, sin ningún error al
+arrancar — el fallo aparece recién en runtime (ver DECISIÓN 034, Bug 1).
+Agregar al chequeo de verificación:
+grep -nE '=.*[^ ]#' .env
+
 ### Cómo verificar el .env antes de levantar Docker
 ```bash
 # Detectar duplicados

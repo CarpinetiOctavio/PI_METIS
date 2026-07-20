@@ -1,6 +1,6 @@
 # DECISIÓN 001 — Autenticación CU-01
 **Fecha:** 10 de Mayo de 2026
-**Estado:** PARCIALMENTE IMPLEMENTADO — Parte 1 completa, Parte 2 pendiente de credenciales SMTP de IT
+**Estado:** RESUELTA — se conserva por trazabilidad y transparencia, no describe el mecanismo vigente. La "Decisión original" de este archivo (Google OAuth) fue evaluada y descartada — ver `docs/historico/oauth-descartado.md` para el flujo tal como se había diseñado. Reemplazada por usuario/contraseña + JWT (HttpOnly Cookie), con verificación de mail real contra el relay SMTP provisto por IT — Parte 1 (login) y Parte 2 (verificación por mail) ambas completas. Mecanismo vigente documentado en `architecture.md`, sección "Autenticación — flujo vigente"; detalle de Parte 2 en [DECISIÓN 004](decision004.md) y [DECISIÓN 034](decision034.md).
 
 ### Decisión original
 Autenticación mediante Google OAuth 2.0 con verificación de dominio @ucc.edu.ar.
@@ -28,7 +28,13 @@ Active Directory institucional también fue evaluado y descartado: existe en la 
 pero requiere aprobación manual de IT por cada usuario nuevo, lo que es inviable
 para un sistema docente con alumnos que rotan cada semestre.
 
-### Decisión de reemplazo — PENDIENTE DE CONFIRMACIÓN CON IT
+### Decisión de reemplazo — CONFIRMADA E IMPLEMENTADA
+IT confirmó y proveyó las credenciales reales (ver DECISIÓN 004 y DECISIÓN 034
+para el detalle de Parte 2). La variante implementada fue OPCIÓN A CON SMTP,
+descrita abajo — no el fallback sin SMTP. El texto de esta sección quedó tal
+como se escribió en el momento de la propuesta, antes de la confirmación;
+se conserva por trazabilidad.
+
 Autenticación propia con usuario/contraseña + bcrypt + JWT en HttpOnly Cookie.
 El mecanismo de JWT en HttpOnly Cookie no cambia — solo cambia cómo se obtiene el JWT.
 
@@ -55,7 +61,10 @@ OPCIÓN A SIN SMTP (fallback):
 Validación de formato para alumnos: exactamente 7 dígitos numéricos + @ucc.edu.ar
 Validación de formato para docentes: cualquier formato válido + @ucc.edu.ar
 
-### Qué hay que hacer cuando IT confirme
+### Qué había que hacer cuando IT confirmara — COMPLETADO
+Los seis puntos de abajo están hechos (ver DECISIÓN 002 para el detalle
+de esquema/refactor de auth/, y DECISIÓN 004/034 para SMTP). Lista
+conservada tal cual por trazabilidad, no como pendiente:
 1. Eliminar auth/google.py
 2. Reescribir auth/router.py con los nuevos endpoints
 3. Actualizar auth/dependencies.py — get_current_user y get_optional_user
@@ -64,8 +73,20 @@ Validación de formato para docentes: cualquier formato válido + @ucc.edu.ar
 5. Agregar columna password_hash y email_verified a la tabla users en BD
 6. Actualizar tests de integración — mock de OAuth reemplazado por mock de login
 
-### Estado actual del código
-auth/google.py y auth/router.py tienen implementado Google OAuth.
-Ese código está pendiente de reemplazo. No agregar funcionalidad sobre él.
-No usar auth/google.py como referencia para nada nuevo.
-NO tocar auth/ hasta que Octavio confirme la decisión de IT.
+### Estado actual del código — DESACTUALIZADO, ver nota
+Todo lo que sigue en esta sección describe un estado transitorio que ya
+no existe. `auth/google.py` fue eliminado (ver [DECISIÓN 002](decision002.md))
+y el reemplazo por usuario/contraseña + JWT está completo, incluida la
+Parte 2 de verificación por mail real (ver [DECISIÓN 004](decision004.md)
+y [DECISIÓN 034](decision034.md)). El flujo de OAuth que describe todo
+este archivo está descartado — ver `docs/historico/oauth-descartado.md`
+para el diseño original tal como se había planeado, y
+`architecture.md`, sección "Autenticación — flujo vigente", para el
+mecanismo real hoy.
+
+Texto original de esta sección, conservado por trazabilidad, ya no
+refleja la realidad:
+> auth/google.py y auth/router.py tienen implementado Google OAuth.
+> Ese código está pendiente de reemplazo. No agregar funcionalidad sobre él.
+> No usar auth/google.py como referencia para nada nuevo.
+> NO tocar auth/ hasta que Octavio confirme la decisión de IT.
