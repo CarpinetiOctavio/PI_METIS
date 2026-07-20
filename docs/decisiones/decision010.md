@@ -63,3 +63,28 @@ El resto del alcance de DECISIÓN 010 permanece sin cambios: gen_pareto MV,
 gen_exponencial MV, gamma3p MV y gve MV sí usan la estrategia scan+brentq
 tal como está descripta arriba (gamma3p MV y gve MV verificados por
 auditoría de código el 10/07/2026, sin hallazgos).
+
+### ENMIENDA — 20 de Julio de 2026 — filtro "sigma > 0" insuficiente en gen_pareto MC
+
+`test_gen_pareto_mc_q100_serie_facundo` empezó a fallar de forma consistente
+(no intermitente — reproducido igual en local y en CI) devolviendo un q100
+muy distinto del esperado (384.8 vs 90.6333 de la tesis). Investigado: la
+raíz espuria cerca de ε≈0 documentada arriba (línea 32) sí pasa el filtro
+`sigma > 0` — para `serie_facundo` da ε≈-8e-6, denom_sigma≈1.17e-10
+(por encima de `_DENOM_GUARD=1e-10`, así que no se descarta) y sigma≈20.4
+(positivo, así que tampoco se descarta ahí). Como esta raíz espuria aparece
+antes que la raíz válida (ε≈0.36) en el barrido ascendente, y el código
+corta en la primera raíz que pasa los guards, se queda con la espuria.
+
+La ecuación IV-153/154/155 de la tesis (ver formulas-etapa2.md, sección
+Generalizada de Pareto) es difícil de verificar contra el rasterizado sin
+el Excel original de Facundo — no hay certeza de que el sistema de
+ecuaciones esté transcripto correctamente como para justificar un criterio
+de selección de raíz distinto (ej. la más cercana a eps_init de IV-166) sin
+convertirlo en una suposición no verificada más.
+
+**Decisión:** no tocar `gen_pareto.py::ajustar(metodo="mc")`. Se marca
+`test_gen_pareto_mc_q100_serie_facundo` como `skip` (ver el test) hasta
+que se confirme con Facundo la formulación exacta de MC para Gen. Pareto.
+`test_gen_pareto_mc_converge_serie_facundo` (solo verifica STATUS_OK, sin
+valor numérico) sigue activo — no depende de cuál raíz se elija.

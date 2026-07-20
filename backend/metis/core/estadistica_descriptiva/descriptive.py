@@ -19,12 +19,8 @@ def calcular_descriptiva(serie: list[float]) -> DescriptiveStats:
 
     # Asimetría sesgada y no sesgada (Ec. IV-4, IV-5) — implementación directa
     if var_sesgada > 0:
-        asimetria_sesgada = float(
-            np.mean((arr - media) ** 3) / var_sesgada**1.5
-        )
-        asimetria_no_sesgada = float(
-            (n**2 / ((n - 1) * (n - 2))) * asimetria_sesgada
-        )
+        asimetria_sesgada = float(np.mean((arr - media) ** 3) / var_sesgada**1.5)
+        asimetria_no_sesgada = float((n**2 / ((n - 1) * (n - 2))) * asimetria_sesgada)
     else:
         asimetria_sesgada = 0.0
         asimetria_no_sesgada = 0.0

@@ -206,10 +206,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         # protegía el borde inferior, lo que dejaba pasar como "convergencia"
         # casos de borde superior disfrazados (causa de la divergencia con
         # la tesis en est_05, donde la tesis reporta NO_CONVERGE).
-        if (
-            abs(result.x - lower_bound) < 1e-4
-            or abs(upper_bound - result.x) < 1e-4
-        ):
+        if abs(result.x - lower_bound) < 1e-4 or abs(upper_bound - result.x) < 1e-4:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
             )

@@ -265,9 +265,7 @@ def _mapear_indice_a_serie_original(indice_filtrado: int, serie_original: list) 
     que devuelve Chow queda desalineado respecto de serie_original en
     cuanto hay algún valor no numérico antes de la posición del atípico.
     """
-    indices_numericos = [
-        i for i, v in enumerate(serie_original) if es_numerico(v)
-    ]
+    indices_numericos = [i for i, v in enumerate(serie_original) if es_numerico(v)]
     return indices_numericos[indice_filtrado]
 
 
