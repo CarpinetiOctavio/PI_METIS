@@ -5,10 +5,10 @@ import pytest
 def serie_facundo():
     # Serie real de caudales anuales 1980-2019 provista por Facundo Ganancias.
     # Produce: homogeneidad_ok, sin tendencia, sin atípico,
-    # Anderson rechaza (dependiente), Wald aprueba con TEST_WARNING_SMALL_SAMPLE.
-    # Útil para: tests de homogeneidad, tendencia, Chow, independencia crítica.
+    # Anderson aprueba (1/13 lags fuera = 7.69% ≤ 10%), Wald con TEST_WARNING_SMALL_SAMPLE.
+    # nivel_confianza="con_warnings" por el warning normal de Wald (n=40 ≤ 40).
+    # Útil para: tests de homogeneidad, tendencia, Chow, independencia, pipeline.
     # PENDIENTE: resultado de Anderson no validado contra Excel de Facundo.
-    # Confirmar con Facundo que Anderson rechaza para esta serie específica.
     return [
         27.5,
         49.4,

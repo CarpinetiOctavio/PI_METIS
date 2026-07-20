@@ -5,9 +5,10 @@ from collections.abc import AsyncGenerator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from metis.core.parser import parse_file
 from metis.core.pipeline import ejecutar_etapa1
 from metis.core.types import Etapa1Result
+from metis.core.utils import es_numerico
+from metis.core.validacion.parser import parse_file
 from metis.db.models import Analysis, AnalysisResult
 from metis.services import session_store
 
@@ -239,6 +240,35 @@ def _extraer_atipico(result: Etapa1Result) -> float | None:
     return None
 
 
+def _extraer_indice_atipico(result: Etapa1Result) -> int | None:
+    """Retorna el índice del atípico de Chow si fue detectado, None si no.
+
+    Este índice está calculado por calcular_chow() sobre valores_numericos
+    (la serie ya filtrada por filtrar_numericos() dentro de ejecutar_etapa1()),
+    no sobre la serie cruda. Usar _mapear_indice_a_serie_original() antes de
+    aplicarlo sobre serie_original.
+    """
+    for prueba in result.atipicos:
+        if prueba.warning_codigo == "TEST_WARNING_OUTLIER_DETECTED":
+            return prueba.indice_atipico
+    return None
+
+
+def _mapear_indice_a_serie_original(indice_filtrado: int, serie_original: list) -> int:
+    """Traduce un índice calculado sobre la serie filtrada (solo valores
+    numéricos, mismo criterio que filtrar_numericos/es_numerico) a la
+    posición real correspondiente en serie_original.
+
+    serie_original puede tener None u otros valores no numéricos
+    intercalados (valores Y faltantes) que filtrar_numericos() descarta
+    antes de correr las pruebas de Etapa 1 — sin este mapeo, el índice
+    que devuelve Chow queda desalineado respecto de serie_original en
+    cuanto hay algún valor no numérico antes de la posición del atípico.
+    """
+    indices_numericos = [i for i, v in enumerate(serie_original) if es_numerico(v)]
+    return indices_numericos[indice_filtrado]
+
+
 async def stream_etapa1(
     content: bytes,
     filename: str,
@@ -305,8 +335,12 @@ async def stream_etapa1(
             decision = session_store.get_decision(session_id)
 
             if decision == "rechazar":
+                indice_atipico = _extraer_indice_atipico(result)
+                indice_real = _mapear_indice_a_serie_original(
+                    indice_atipico, serie_original
+                )
                 serie_filtrada = serie_original.copy()
-                serie_filtrada.remove(valor_atipico)
+                del serie_filtrada[indice_real]
 
                 result_final = ejecutar_etapa1(
                     serie=serie_filtrada,

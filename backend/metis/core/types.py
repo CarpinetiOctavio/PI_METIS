@@ -19,6 +19,7 @@ class TestResult:
     n1: int | None = None
     n2: int | None = None
     valor_atipico: float | None = None
+    indice_atipico: int | None = None
 
 
 @dataclass
@@ -33,11 +34,22 @@ class DescriptiveStats:
     n: int
     media: float
     mediana: float
-    desvio_estandar: float
-    coef_variacion: float
-    coef_asimetria: float
+    desvio_estandar: float  # Ec. IV-8, ddof=1
+    coef_variacion: float  # Ec. IV-9
+    coef_asimetria: float  # Ec. IV-5, no sesgada
     minimo: float
     maximo: float
+    rango: float | None = None  # máximo - mínimo — tesis IV.5.1, RF-GEN-P-04
+    varianza_sesgada: float | None = None  # Ec. IV-2
+    varianza_no_sesgada: float | None = None  # Ec. IV-3
+    asimetria_sesgada: float | None = None  # Ec. IV-4
+    curtosis_sesgada: float | None = None  # Ec. IV-6
+    curtosis_no_sesgada: float | None = None  # Ec. IV-7
+    suma_log: float | None = None  # Σln(xi) — None si algún xi ≤ 0
+    mpp_m0: float | None = None  # Ec. IV-21
+    mpp_m1: float | None = None  # Ec. IV-22
+    mpp_m2: float | None = None  # Ec. IV-23
+    mpp_m3: float | None = None  # Ec. IV-24
 
 
 @dataclass

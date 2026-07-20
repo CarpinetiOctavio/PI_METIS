@@ -29,16 +29,13 @@ Se defenderá ante un tribunal de ISI — todas las decisiones técnicas deben p
 ---
 
 ## Estructura de módulos del backend — respetar estrictamente
-
-```
 metis/
 ├── api/        # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
 ├── core/       # Motores estadísticos Etapa 1 y Etapa 2. SIN conocimiento de HTTP ni BD.
 ├── services/   # Orquestación del pipeline, lógica de negocio.
 ├── db/         # Modelos SQLAlchemy, acceso a datos.
 ├── schemas/    # Modelos Pydantic: validación de inputs y outputs.
-└── auth/       # Lógica OAuth, JWT descartada. Pendiente de confirmacion de modelo de autenticacion.
-```
+└── auth/       # Usuario/contraseña + JWT (HttpOnly Cookie). Google OAuth descartado — docs/decisiones/decision001.md, DECISIÓN 001. Envío real de mail (aiosmtplib) pendiente de credenciales IT — docs/decisiones/decision004.md, DECISIÓN 004.
 
 **Regla crítica:** `core/` no importa nada de `api/`, `services/`, ni `db/`. El motor estadístico es una librería pura — recibe datos, devuelve resultados. Esto es lo que hace posible los tests de regresión matemática.
 
@@ -85,26 +82,19 @@ cd frontend && npm run lint
 ---
 
 ## Endpoints — estructura definitiva
-
-```
 POST   /api/v1/auth/register
 POST   /api/v1/auth/verify
 POST   /api/v1/auth/login
 POST   /api/v1/auth/logout
 GET    /api/v1/auth/me
-
 POST   /api/v1/analysis/stream            # SSE — CU-01 y CU-02
 POST   /api/v1/analysis/outlier-decision  # Decisión ante atípico Chow — CU-01 y CU-02
 POST   /api/v1/analysis/design-events     # Eventos de diseño por distribución — CU-01 y CU-02
 GET    /api/v1/analysis/{id}              # Consulta análisis persistido — CU-01
-
 GET    /api/v1/history/
 GET    /api/v1/history/{id}
-
 GET    /api/v1/export/{id}                # PDF on-demand
-
 POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1
-```
 
 ---
 
@@ -127,17 +117,33 @@ METIS detecta y advierte, pero **no bloquea** — excepto el único caso absolut
 - **10–29 datos → warning no bloqueante.** Pipeline continúa. Responsabilidad del usuario.
 - **≥ 30 datos → condiciones recomendables.** Sin warning por longitud.
 
+Pendiente: DECISIÓN 030 propone una segunda excepción — desorden cronológico bloqueante — sin implementar todavía. Ver docs/decisiones/decision030.md.
+
 **El sistema no garantiza resultados fuera del contrato.** Toda decisión ante un warning es responsabilidad del usuario y queda registrada en el historial (CU-01).
 
 ---
 
-## Referencias — Leer todas al comienzo. Consultar con @mención cada vez que se referencien
+## Referencias
 
-- `.claude/rules/architecture.md` — decisiones de arquitectura con justificaciones
-- `.claude/rules/api-contracts.md` — contratos detallados de cada endpoint y catálogo de errores
-- `.claude/rules/statistical-pipeline.md` — lógica completa Etapa 1 y Etapa 2
+Separadas en dos niveles: lo que se lee siempre al arrancar una sesión de trabajo, y lo que se consulta puntualmente cuando el trabajo lo amerita — para no inflar el contexto de sesiones que no lo necesitan.
+
+### Leer siempre al comienzo de cualquier sesión
+
+- `.claude/rules/architecture/architecture.md` — decisiones de arquitectura con justificaciones
+- `.claude/rules/architecture/constraints.md` — restricciones no negociables, pendientes y scope
+- `.claude/rules/architecture/api-contracts.md` — contratos detallados de cada endpoint y catálogo de errores
+- `.claude/rules/core/statistical-pipeline.md` — lógica completa Etapa 1 y Etapa 2
 - `.claude/rules/testing.md` — estrategia de testing y fixtures de referencia
-- `.claude/rules/constraints.md` — restricciones no negociables, pendientes y scope
 - `.claude/rules/sprint.md` — estado actual del sprint, qué está en curso y qué está fuera de alcance
-- `.claude/rules/core-implementation.md` — librerías permitidas, fuentes por prueba, restricciones del motor estadístico
-- `.claude/rules/decisions-log.md` — historial de decisiones descartadas y reemplazadas. Leer cuando algo en el código no coincida con los archivos de decisiones vigentes.
+
+`testing.md` y `sprint.md` no tienen subcarpeta propia dentro de `.claude/rules/` — a diferencia de `core/` y `architecture/`, que agrupan múltiples archivos de un mismo dominio, cada uno de estos dos es documento único de su tema, no partición de un tema mayor.
+
+### Consultar solo cuando el trabajo lo amerite
+
+- `.claude/rules/core/core-etapa1-implementation.md` — librerías permitidas, fuentes por prueba, restricciones del motor estadístico
+- `.claude/rules/core/core-etapa2-implementation.md` — librerías, fuentes y restricciones del motor de Etapa 2
+- `.claude/rules/core/formulas-etapa1.md` — referencias bibliográficas de todas las fórmulas de Etapa 1 mapeadas a ecuaciones de la tesis de Facundo, y demás referencias bibliográficas. Ninguna fórmula se implementa sin referencia explícita en este archivo.
+- `.claude/rules/core/formulas-etapa2.md` — referencias bibliográficas de todas las fórmulas de Etapa 2 mapeadas a ecuaciones de la tesis de Facundo. Ninguna fórmula se implementa sin referencia explícita en este archivo.
+- `docs/decisiones/README.md` — índice de decisiones tomadas, descartadas o reemplazadas (una por archivo, `decisionNNN.md`), transversal a todo el proyecto (no solo fidelidad estadística). Consultar cuando algo en el código no coincida con los archivos de decisiones vigentes.
+- `docs/auditoria/` — fases de auditoría, regresión numérica contra el Excel de Facundo, y pendientes sin resolver. Consultar cuando el trabajo sea sobre fidelidad del core estadístico o el código no coincida con una decisión ya tomada. Ver `docs/README.md` para el detalle de qué contiene cada subcarpeta.
+- `docs/historico/` — documentos superados por trabajo posterior, conservados por trazabilidad. Consultar solo si hace falta contexto de una decisión de implementación ya reemplazada.

@@ -4,7 +4,7 @@ Envío de mail de verificación de cuenta.
 ESTADO: mock de desarrollo — loggea el token en consola en lugar de enviarlo.
 PENDIENTE: cuando IT provea la cuenta metis-noreply@ucc.edu.ar y el App Password,
 reemplazar send_verification_email por implementación real con aiosmtplib.
-Ver decisions-log.md — DECISIÓN 004.
+Ver docs/decisiones/decision004.md — DECISIÓN 004.
 """
 
 import os
@@ -20,7 +20,7 @@ def generate_verification_token() -> str:
 async def send_verification_email(email: str, token: str) -> None:
     # TODO: eliminar este print y reemplazar con envío real
     # via aiosmtplib cuando IT provea credenciales SMTP.
-    # Ver decisions-log.md — DECISIÓN 004.
+    # Ver docs/decisiones/decision004.md — DECISIÓN 004.
     verify_url = f"{_FRONTEND_URL}/auth/verify?token={token}"
     print(
         f"[MOCK SMTP] Token de verificación para {email} — URL: {verify_url}",
