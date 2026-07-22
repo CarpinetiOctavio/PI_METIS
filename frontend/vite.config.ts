@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 // Dev-only CORS bypass (Decision D2, docs/frontend-implementation-plan.md §9.2.2):

@@ -5,8 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "types": ["vitest/globals"]
+    "strict": true
   },
   "include": ["vite.config.ts"]
 }
