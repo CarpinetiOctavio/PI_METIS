@@ -28,9 +28,9 @@ usar para este stream**. Todo el consumo de SSE se implementa con:
 - **`fetch()` + `ReadableStream`** (`response.body.getReader()`), decodificando UTF-8 y parseando
   los frames SSE a mano (`event:` / `data:` separados por `\n\n`), **o**
 - **`@microsoft/fetch-event-source`** — librería que encapsula exactamente ese patrón (fetch con
-  body + parseo SSE + reconexión configurable). **Decisión recomendada:** usar
-  `@microsoft/fetch-event-source` para no reimplementar el buffering de frames, salvo que el
-  equipo prefiera cero dependencias (en cuyo caso se implementa el reader manual descrito en §2.3).
+  body + parseo SSE + reconexión configurable). **Decisión tomada (22/07/2026):** se usa
+  `@microsoft/fetch-event-source` para no reimplementar el buffering de frames. El reader manual
+  queda como fallback documentado (§2.3) por si se decide eliminar la dependencia más adelante.
 
 Esta decisión atraviesa toda la capa de streaming — ver §2.3 y la lista de riesgos §9.
 
@@ -217,7 +217,7 @@ function useAnalysisStream(): {
 }
 ```
 
-**Mecánica (con `@microsoft/fetch-event-source` o reader manual):**
+**Mecánica (con `@microsoft/fetch-event-source` — decisión tomada, §0):**
 
 1. `start()` arma el `FormData` (archivo + campos) y abre **una** conexión `fetch` POST a
    `/api/v1/analysis/stream` con `credentials:"include"`. Se mantiene un `AbortController` para
@@ -407,11 +407,12 @@ quede explícito qué es real y qué es maqueta.
 | `cramer_particion` custom | Opción "Personalizada" en config **deshabilitada** (roto en el wiring backend, §3 de integration). Solo "default" activo. | `PendingBadge` en la opción. |
 | Campos descriptivos extendidos (curtosis, MPP, rango, etc.) | No llegan por SSE. No mostrarlos, o mostrarlos como "—" con nota. Es gap de backend. | Nota si se decide exponerlos. |
 
-**Estrategia de mock:** los mocks viven detrás de la **misma interfaz** que tendría el cliente
-real (funciones async que devuelven el tipo esperado), para que reemplazarlos por llamadas reales
-cuando Etapa 2 se exponga sea cambiar la implementación, no los componentes. Opcional: usar **MSW**
-para interceptar `/api/v1/analysis/design-events` y servir el mock, así el día que exista el
-endpoint real solo se quita el handler.
+**Estrategia de mock — decisión tomada (22/07/2026): MSW (Mock Service Worker).** Los handlers
+de MSW interceptan las rutas no implementadas (`/api/v1/analysis/design-events`, y el ranking de
+Etapa 2 cuando corresponda) y sirven los datos de `mocks/*.mock.ts` como si fueran el backend. Los
+componentes llaman al cliente real (§2.2) sin saber que la respuesta es falsa — el día que el
+endpoint real exista, **solo se quita el handler de MSW**, sin tocar componentes ni cliente. MSW se
+reutiliza además en los tests (§9.1), unificando el mock de dev y el de test en un solo lugar.
 
 ---
 
@@ -530,9 +531,14 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
    o reader manual con buffering de `TextDecoder` bien testeado. Un frame puede partirse entre
    chunks — el parser debe bufferear hasta `\n\n`.
 2. **Cookie + CORS.** Sin `credentials:"include"` la cookie no viaja y todo da 401 silencioso.
-   `FRONTEND_ORIGIN` debe matchear el origen exacto (puerto 5173). Alternativa en dev: **proxy de
-   Vite** (`/api` → `localhost:8000`) para evitar CORS por completo — evaluar en Fase 0. La cookie
-   es `SameSite=Lax` y sin `Secure` en dev (funciona en HTTP localhost); en prod requiere HTTPS.
+   `FRONTEND_ORIGIN` debe matchear el origen exacto (puerto 5173). **Decisión tomada (22/07/2026):**
+   en dev se usa **proxy de Vite** (`/api` → `localhost:8000`) para evitar CORS por completo (mismo
+   origen) — se configura en Fase 0. **⚠️ Pendiente explícito:** el proxy es un atajo **solo de
+   desarrollo**; NO ejercita el CORS real del backend. **CORS real debe implementarse y probarse
+   antes de producción** (nginx sirve front + proxya `/api`, o el front pega directo con
+   `FRONTEND_ORIGIN` productivo y cookie `Secure`). Ver §10, pendiente P1. La cookie es
+   `SameSite=Lax` y sin `Secure` en dev (funciona en HTTP localhost); en prod requiere HTTPS
+   (`ENV=production` activa `Secure`).
 3. **`iteracion`.** Si la UI acumula en vez de reemplazar, tras rechazar un atípico se muestran
    resultados duplicados/contradictorios. El reducer debe versionar por `iteracion`.
 4. **`total` de `progress` no confiable** (§4 de integration). No atar la barra de progreso a
@@ -550,18 +556,27 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
 
 ---
 
-## 10. Preguntas abiertas / decisiones a confirmar antes de codear
+## 10. Decisiones tomadas y pendientes
 
-1. **Librería SSE:** ¿`@microsoft/fetch-event-source` (recomendada) o reader manual sin
-   dependencias? Afecta §2.3.
-2. **Proxy de Vite vs. CORS directo** en dev (riesgo 9.2.2): ¿preferís evitar CORS con proxy, o
-   probar CORS real desde ya para acercarse a producción?
-3. **Estrategia de mock:** ¿MSW (intercepta red, más realista) o funciones mock directas (más
-   simple)? Recomiendo MSW por el reemplazo limpio cuando Etapa 2 se exponga.
-4. **Confirmar puerto/herramienta** definitivos del frontend (5173/Vite) para no desalinear
-   `FRONTEND_ORIGIN` del backend.
-5. **Azul institucional UCC** para las secciones con logo (blend UCC de Fase 2) — pendiente de
-   confirmar contra el manual de marca (no bloquea el arranque, sí el pie de PDF/encabezados).
+### Decisiones tomadas (22/07/2026)
+
+- **D1 — Librería SSE:** `@microsoft/fetch-event-source` (§0, §2.3). El reader manual queda como
+  fallback documentado.
+- **D2 — CORS en dev:** proxy de Vite (`/api` → `localhost:8000`), mismo origen, sin CORS en
+  desarrollo (§9.2.2). Ver pendiente **P1**.
+- **D3 — Mocks:** MSW intercepta las rutas no implementadas y se reutiliza en tests (§6, §9.1).
+
+### Pendientes
+
+- **P1 — CORS real para producción (bloquea deploy, no el desarrollo).** El proxy de Vite (D2) es
+  solo de dev y NO ejercita el CORS real del backend. Antes de producción hay que implementar y
+  probar el camino real: nginx sirviendo el build del front y proxyando `/api` (arquitectura
+  definida en `architecture.md`), con cookie `Secure` (`ENV=production`) y `FRONTEND_ORIGIN`
+  productivo. Agendar como tarea explícita al cerrar el desarrollo local.
+- **P2 — Puerto/herramienta del frontend.** Se asume **5173/Vite** (alineado con `FRONTEND_ORIGIN`
+  del `.env.example`). Confirmar antes del scaffold para no desalinear el CORS del backend.
+- **P3 — Azul institucional UCC** para las secciones con logo (blend UCC de Fase 2) — pendiente de
+  confirmar contra el manual de marca. No bloquea el arranque; sí el pie de PDF/encabezados.
 
 ---
 
