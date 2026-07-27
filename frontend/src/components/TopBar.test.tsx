@@ -1,22 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ThemeProvider } from "../theme/ThemeProvider";
 import { TopBar } from "./TopBar";
 
 describe("TopBar", () => {
-  beforeEach(() => {
-    // jsdom's own matchMedia support for prefers-color-scheme is unreliable
-    // across versions — stub it explicitly, same precedent as
-    // ThemeProvider.test.tsx, since TopBar renders inside <ThemeProvider>.
-    vi.spyOn(window, "matchMedia").mockReturnValue({
-      matches: false,
-    } as MediaQueryList);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("shows the METIS wordmark and the current mode badge", () => {
     render(
       <ThemeProvider>

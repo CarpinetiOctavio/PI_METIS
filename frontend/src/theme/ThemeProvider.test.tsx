@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ThemeProvider, useTheme } from "./ThemeProvider";
 
@@ -17,16 +17,6 @@ describe("ThemeProvider", () => {
     localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
     document.documentElement.removeAttribute("data-mode");
-    // jsdom's own matchMedia support for prefers-color-scheme is unreliable
-    // across versions — stub it explicitly in every test so "no stored
-    // preference" always exercises a known, deterministic value (light).
-    vi.spyOn(window, "matchMedia").mockReturnValue({
-      matches: false,
-    } as MediaQueryList);
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   it("sets data-theme to instrumento on the root element", () => {
