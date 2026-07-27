@@ -2,7 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -32,7 +32,7 @@ function readInitialMode(): ThemeMode {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<ThemeMode>(readInitialMode);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = THEME_NAME;
     document.documentElement.dataset.mode = mode;
     localStorage.setItem(STORAGE_KEY, mode);
