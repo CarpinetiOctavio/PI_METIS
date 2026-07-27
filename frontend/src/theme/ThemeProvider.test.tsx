@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ThemeProvider, useTheme } from "./ThemeProvider";
 
@@ -13,12 +13,6 @@ function Consumer() {
 }
 
 describe("ThemeProvider", () => {
-  beforeEach(() => {
-    localStorage.clear();
-    document.documentElement.removeAttribute("data-theme");
-    document.documentElement.removeAttribute("data-mode");
-  });
-
   it("sets data-theme to instrumento on the root element", () => {
     render(
       <ThemeProvider>
