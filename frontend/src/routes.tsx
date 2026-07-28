@@ -8,18 +8,33 @@ import { RankingPage } from "./routes/ranking/RankingPage";
 import { DesignEventsPage } from "./routes/design-events/DesignEventsPage";
 import { HistoryPage } from "./routes/history/HistoryPage";
 import { AuthVerifyPage } from "./routes/auth-verify/AuthVerifyPage";
+import { RedirectIfAuthed, RequireAuth } from "./auth/guards";
 
 export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
     children: [
-      { path: "/", element: <EntryPage /> },
+      {
+        path: "/",
+        element: (
+          <RedirectIfAuthed>
+            <EntryPage />
+          </RedirectIfAuthed>
+        ),
+      },
       { path: "/config", element: <ConfigPage /> },
       { path: "/stream", element: <StreamPage /> },
       { path: "/results", element: <ResultsPage /> },
       { path: "/ranking", element: <RankingPage /> },
       { path: "/design-events", element: <DesignEventsPage /> },
-      { path: "/history", element: <HistoryPage /> },
+      {
+        path: "/history",
+        element: (
+          <RequireAuth>
+            <HistoryPage />
+          </RequireAuth>
+        ),
+      },
       { path: "/auth/verify", element: <AuthVerifyPage /> },
     ],
   },

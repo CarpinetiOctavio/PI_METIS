@@ -4,6 +4,7 @@ import App from "./App";
 import { ThemeProvider } from "./theme/ThemeProvider";
 import "./theme/tokens.instrumento.css";
 import "./theme/global.css";
+import "./theme/components.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

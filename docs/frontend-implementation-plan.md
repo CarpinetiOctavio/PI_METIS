@@ -566,6 +566,40 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   desarrollo (§9.2.2). Ver pendiente **P1**.
 - **D3 — Mocks:** MSW intercepta las rutas no implementadas y se reutiliza en tests (§6, §9.1).
 
+### Decisiones tomadas (28/07/2026 — inicio de Fase 1, Auth)
+
+- **D4 — Sin TanStack Query todavía.** `AuthProvider` usa `fetch` + `useState`/`useEffect` simple
+  (sin la dependencia de §1.1) para `/me`, `login` y `logout`. Menos superficie para arrancar Auth;
+  React Query se suma recién en Fase 4, cuando `/history` lo justifique más — no antes, para no
+  sumar una dependencia sin necesidad real todavía.
+- **D5 — Sin MSW todavía.** Los tests de Auth (Fase 1) siguen el patrón ya establecido en el repo
+  antes de esta fase (`vi.stubGlobal("fetch", ...)`, ver `ping.test.ts`/`useBackendPing.test.tsx`),
+  no MSW. La decisión D3 (MSW) sigue en pie para cuando Fase 5 la necesite de verdad con los mocks
+  de Etapa 2 — introducirla antes sería una dependencia nueva sin consumidor real todavía.
+- **D6 — Workaround de dev para el 500 de `register`, sin tocar el backend.** Al leer el código real
+  de `auth/router.py`/`auth/email.py` se confirmó que la nota original de este documento (§3.4,
+  Opción B — "token de logs") **ya no aplica**: el mock que lo hacía posible
+  (`print("MOCK SMTP...")`) fue reemplazado por completo en Auth Parte 2 (19/07/2026, ver
+  [DECISIÓN 032](../docs/decisiones/decision032.md) y
+  [DECISIÓN 034](../docs/decisiones/decision034.md)). Hoy, sin SMTP real configurado,
+  `send_verification_email()` lanza `RuntimeError` **antes** de que el token se guarde en
+  `_pending_tokens` o se loguee en ningún lado, y como el mail se manda antes de comitear el usuario
+  (para evitar huérfanos, DECISIÓN 032), no queda ningún usuario ni token creado — no hay ningún
+  token real que rescatar de los logs con el código actual. Opción evaluada y descartada: agregar
+  2 líneas de log dev-only en `register()` para exponer el token igual — fuera de alcance de
+  "frontend Fase 1", no se tocó el backend. En su lugar, el banner de dev (bajo
+  `import.meta.env.DEV`, ver `EntryPage.tsx`) es honesto sobre la limitación en vez de sugerir
+  revisar logs que no van a tener nada. Ver pendiente **P4**.
+- **D7 — Persistencia del flag anónimo.** `enterAnonymously()` persiste en `localStorage`
+  (clave `metis-anon-session`), mismo patrón que `metis-theme-mode` de `ThemeProvider`, para
+  sobrevivir a un refresh de página. Se limpia al loguear con una cuenta real.
+- **D8 — Fidelidad visual de la Puerta de entrada.** El markup de `EntryPage` se adaptó
+  directamente del HTML real de la variante A ★ en `frontend-design/metis-prototipo-fase3.html`
+  (bloque `auth.variants[0]`), no de una estructura nueva — mismas clases genéricas (`.h`, `.sub`,
+  `.fn`, `.logo`, `.row`, `.col`, `.field`, `.input`, `.b`/`.b-pri`/`.b-sec`, `.banner`), portadas a
+  `theme/components.css` con alcance acotado a lo que Fase 1 necesita — el resto de las clases del
+  prototipo se suma página por página cuando esa pantalla se implemente de verdad, no todas de una.
+
 ### Pendientes
 
 - **P1 — CORS real para producción (bloquea deploy, no el desarrollo).** El proxy de Vite (D2) es
@@ -577,6 +611,13 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   del `.env.example`). Confirmar antes del scaffold para no desalinear el CORS del backend.
 - **P3 — Azul institucional UCC** para las secciones con logo (blend UCC de Fase 2) — pendiente de
   confirmar contra el manual de marca. No bloquea el arranque; sí el pie de PDF/encabezados.
+- **P4 — Verificación E2E de registro→verify bloqueada sin SMTP real (ver D6).** El tramo
+  registro→mail→verify de Fase 1 solo tiene cobertura de tests unitarios/componente (fetch
+  mockeado) — no se pudo correr manualmente contra el backend real en esta sesión por falta de
+  credenciales SMTP locales. Login/logout/`me` sí quedan para verificarse manualmente contra el
+  backend real (Docker) al cierre de esta fase, reutilizando el usuario ya verificado que
+  documenta `sprint.md` ("Usuario de prueba para smoke tests", `2200631@ucc.edu.ar`) si sigue
+  existiendo en la BD local, o insertándolo directo en Postgres si no.
 
 ---
 

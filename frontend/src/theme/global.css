@@ -20,6 +20,21 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Oculta visualmente pero mantiene accesible a lectores de pantalla — patrón
+   estándar, usado para el h1 de página cuando el título visible ya lo cubre
+   un encabezado de nivel inferior (ver EntryPage). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Retícula técnica de fondo — Instrumento (Fase 3, línea 143 del prototipo) */
 .app-shell {
   min-height: 100%;

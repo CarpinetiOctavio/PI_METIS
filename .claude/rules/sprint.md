@@ -475,12 +475,27 @@ nombre:   Octavio
 limpieza explícita. Sin esta documentación, un segundo smoke test fallaría
 con `AUTH_EMAIL_ALREADY_REGISTERED` sin que quede claro por qué.
 
-**Cómo obtener el token de verificación (mock SMTP):**
+**Cómo obtener el token de verificación (mock SMTP) — DESACTUALIZADO, ver nota 28/07/2026 abajo:**
 Con el backend corriendo, después de POST /register:
 ```bash
 docker-compose logs backend | grep "MOCK SMTP" | tail -1
 ```
 El token aparece en la URL: `.../auth/verify?token=<TOKEN>`
+
+**ACTUALIZACIÓN 28/07/2026 (desde la Fase 1 del frontend, Auth):** este
+procedimiento ya no funciona. `print("MOCK SMTP...")` pertenecía al mock de
+`auth/email.py` de la Parte 1, reemplazado por completo en la Parte 2
+(19/07/2026, envío real con `aiosmtplib`) — hoy no hay ningún log de token.
+Peor aún: sin `SMTP_HOST/USER/PASSWORD` configurados, `send_verification_email()`
+lanza `RuntimeError` **antes** de que el token se guarde en `_pending_tokens`, y
+como el mail se manda antes de comitear el usuario (DECISIÓN 032, evita
+huérfanos), `POST /register` **no crea ningún usuario ni token** — no hay nada
+que rescatar de los logs. Sin credenciales SMTP reales, el flujo
+registro→verify no se puede probar localmente en absoluto (ni con este
+procedimiento ni con ningún otro atajo actual); solo queda cobertura de tests
+con `fetch` mockeado. Ver `docs/frontend-implementation-plan.md` §10, Decisión
+D6, para el detalle completo y por qué se decidió no tocar el backend para
+reintroducir un log dev-only.
 
 **Cómo limpiar el usuario después del smoke test:**
 El usuario de psql que acepta el contenedor es el definido por

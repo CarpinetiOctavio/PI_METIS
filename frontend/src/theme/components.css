@@ -1,0 +1,157 @@
+/*
+ * Clases genéricas portadas de frontend-design/metis-prototipo-fase3.html
+ * (variante A ★ de la Puerta de entrada). Todo el color viene de las CSS vars
+ * de tokens.instrumento.css, así que estas clases ya son theme-aware.
+ *
+ * Alcance: solo lo que Fase 1 (Auth) necesita. El resto de las clases del
+ * prototipo (.card ya vive en global.css, .kpi, .pill, .chart, .step, etc.)
+ * se suman página por página cuando esa pantalla se implemente de verdad —
+ * ver docs/frontend-implementation-plan.md, no todas de una.
+ */
+
+.h {
+  font-size: 18px;
+  margin: 0 0 3px;
+  color: var(--ink);
+  font-family: var(--f-head);
+}
+
+.sub {
+  color: var(--mut);
+  font-size: 12.5px;
+  margin: 0 0 16px;
+}
+
+.fn {
+  font-size: 11px;
+  color: var(--fnt);
+}
+
+.logo {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-family: var(--f-head);
+  color: var(--ink);
+}
+
+.row {
+  display: flex;
+  gap: 14px;
+}
+
+.col {
+  flex: 1;
+  min-width: 0;
+}
+
+.field {
+  margin-bottom: 11px;
+}
+
+.field label {
+  display: block;
+  font-size: 11.5px;
+  color: var(--mut);
+  margin-bottom: 5px;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surf);
+  height: 33px;
+  padding: 0 10px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.input::placeholder {
+  color: var(--fnt);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+.b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: var(--r-sm);
+  padding: 9px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  font-family: var(--f-body);
+  cursor: pointer;
+}
+
+.b:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.b-pri {
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.b-sec {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--acc);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.banner {
+  border-radius: var(--r-sm);
+  padding: 10px 13px;
+  font-size: 12.5px;
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  border: 1px solid;
+  margin: 0 0 14px;
+}
+
+.banner .ic {
+  font-weight: 800;
+}
+
+.banner.info {
+  background: var(--acc-soft);
+  border-color: color-mix(in srgb, var(--acc) 35%, transparent);
+  color: var(--acc);
+}
+
+.banner.warn {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+  color: var(--warn);
+}
+
+.banner.crit {
+  background: color-mix(in srgb, var(--crit) 14%, transparent);
+  border-color: color-mix(in srgb, var(--crit) 40%, transparent);
+  color: var(--crit);
+}
+
+.banner.ok {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+  color: var(--ok);
+}
