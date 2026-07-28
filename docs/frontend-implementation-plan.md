@@ -684,6 +684,37 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   bookmarkeable/recargable por URL (`/history/:id`), no una parada intermedia de un flujo en memoria
   como stream→resultados.
 
+### Decisiones tomadas (28/07/2026 — Fase 5, Mocks de Etapa 2)
+
+- **D19 — MSW solo intercepta `POST /analysis/design-events`, no el ranking.** De los dos gaps de
+  Etapa 2, solo `design-events` tiene un contrato REST documentado de verdad (`api-contracts.md`)
+  aunque no implementado — MSW interceptándolo es fiel a D3 (mockear la ruta real). El ranking, en
+  cambio, **nunca tuvo un endpoint REST documentado**: solo aparece como evento SSE
+  `result_etapa2_ranking` dentro del mismo stream de Etapa 1 (`statistical-pipeline.md`), evento que
+  el backend nunca emite porque Etapa 2 no está cableada del lado del servidor. Inventar una URL para
+  que MSW la intercepte habría fabricado un contrato que no existe en ningún documento del proyecto —
+  en cambio, `RankingPage` importa `mocks/etapa2.mock.ts` directo, sin capa de red de por medio. Esta
+  es la única desviación real de D3 tal como estaba escrita originalmente.
+- **D20 — MSW no se usa en los tests, solo en el navegador de dev.** El plan original (§9.1) preveía
+  reutilizar MSW en los tests. Al implementar `DesignEventsPage.test.tsx` se evaluó usar
+  `setupServer` de `msw/node`, pero comparte el mismo slot global (`fetch`) que el patrón
+  `vi.stubGlobal("fetch", ...)` ya establecido en todo el resto de la suite (D5) — mezclarlos en el
+  mismo archivo de test arriesga un conflicto real entre ambos interceptores sin aportar más
+  confianza que la que ya da mockear `fetch` directamente. Se mantuvo un solo mecanismo de mock en
+  toda la suite de tests; MSW se reserva para el valor que sí es exclusivo suyo: un humano
+  navegando la pantalla mock en el browser de dev sin tooling especial (verificado manualmente,
+  ver más abajo).
+- **Botón "Exportar PDF" ubicado solo en `DesignEventsPage`**, no repetido en `ResultsPage` ni
+  `HistoryDetailPage` — mantiene `Etapa1ResultView` libre de lógica de auth (sigue sin saber de
+  `isAuthed`, consistente con D17) y evita duplicar el mismo botón deshabilitado en tres pantallas.
+  Visible únicamente si `isAuthed` (CU-02 anónimo y CU-03 no exportan, ver tabla de casos de uso de
+  `CLAUDE.md`).
+- **Verificado manualmente en el navegador de dev** (única fase de esta ronda que no depende de un
+  backend real — Etapa 2 es 100% mock por diseño): Ranking→"Elegir"→Design Events con la petición
+  `POST /api/v1/analysis/design-events` interceptada por MSW (confirmado en Network: `200 OK` sin
+  ningún backend corriendo), chips de período cambiando el valor mostrado, badge de "pendiente"
+  visible en ambas pantallas.
+
 ### Pendientes
 
 - **P1 — CORS real para producción (bloquea deploy, no el desarrollo).** El proxy de Vite (D2) es

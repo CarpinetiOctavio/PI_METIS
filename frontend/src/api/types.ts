@@ -205,3 +205,39 @@ export interface AnalysisDetail {
   etapa1: Etapa1Result | null;
   etapa2: null;
 }
+
+// --- Etapa 2 — MOCK, no implementado por el backend todavía (ver
+// frontend-implementation-plan.md §6 y §10, D19). El ranking no tiene shape
+// de contrato real (nunca se documentó un endpoint REST para él — solo
+// aparece como evento SSE `result_etapa2_ranking` que el backend nunca
+// emite); RankingItem es un shape de ejemplo para la pantalla mock, no una
+// interfaz derivada de api-contracts.md. design-events, en cambio, SÍ tiene
+// contrato real documentado (api-contracts.md) aunque no implementado.
+
+export interface RankingItem {
+  distribucion: string;
+  metodo: string;
+  eea: number;
+  rank: number;
+}
+
+export interface DesignEventsRequest {
+  session_id: string;
+  distribucion: string;
+  metodo: string;
+  periodos_retorno: number[];
+}
+
+export interface DesignEvento {
+  periodo_retorno: number;
+  valor: number;
+}
+
+export interface DesignEventsResponse {
+  distribucion: string;
+  metodo: string;
+  parametros: Record<string, number>;
+  eventos_diseno: DesignEvento[];
+  grafico_ajuste: string | null;
+  analysis_id: string | null;
+}
