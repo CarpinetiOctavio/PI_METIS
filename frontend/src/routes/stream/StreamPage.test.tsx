@@ -187,5 +187,10 @@ describe("StreamPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("results-state")).toHaveTextContent("an-1"),
     );
+    // modo viaja junto al resultado — ResultsPage lo necesita para elegir
+    // presentación (acordeón paso a paso vs. tarjetas planas de experto).
+    expect(screen.getByTestId("results-state")).toHaveTextContent(
+      makeForm().modo,
+    );
   });
 });

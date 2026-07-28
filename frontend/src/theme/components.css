@@ -279,6 +279,27 @@
   color: var(--mut);
 }
 
+.kpi {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  background: var(--surf);
+}
+
+.kpi .l {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mut);
+}
+
+.kpi .v {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--f-mono);
+}
+
 table.t {
   width: 100%;
   border-collapse: collapse;

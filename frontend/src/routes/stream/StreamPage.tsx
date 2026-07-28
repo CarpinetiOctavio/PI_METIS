@@ -194,7 +194,11 @@ export function StreamPage() {
             style={{ marginLeft: "auto" }}
             onClick={() =>
               navigate("/results", {
-                state: { result: state.result, analysisId: state.analysisId },
+                state: {
+                  result: state.result,
+                  analysisId: state.analysisId,
+                  modo: form.modo,
+                },
               })
             }
           >

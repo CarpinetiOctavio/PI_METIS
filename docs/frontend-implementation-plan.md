@@ -632,6 +632,36 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   establecido en el backend de series 100% sintéticas con expectativa recomputada inline
   (`backend/tests/README.md`), no dato real.
 
+### Decisiones tomadas (28/07/2026 — Fase 3, Resultados Etapa 1)
+
+- **D14 — Sin sustitución de fórmulas en la pantalla de resultados.** La variante D del wireframe
+  ("Paso a paso vs Experto") muestra un acordeón con pasos tipo "Planteo y media", "Secuencias y
+  cambios", "Fórmula y sustitución" — pero `TestResultDetail` (el shape real de cada prueba en
+  `Etapa1Result`) solo trae `estadistico`/`valor_critico`/`veredicto`/`n1`/`n2`/`warning_*`, no las
+  cantidades intermedias (S, C, τ, etc.) que un desarrollo paso a paso genuino necesitaría — esos
+  datos no salen del backend por ningún evento SSE ni por `GET /analysis/{id}`. Inventar esos
+  números para simular una sustitución de fórmula sería fabricar contenido estadístico no respaldado
+  por el backend, algo que este proyecto trata como una falta grave (ver la cultura de
+  `formulas-etapa1.md`/`formulas-etapa2.md`: "ninguna fórmula se implementa sin referencia
+  explícita"). La sustitución de fórmulas con valores reales **sí** es un requisito real, pero
+  específico del PDF de exportación (`constraints.md`, "PDF de exportación — CU-01"), no de esta
+  pantalla — se implementará ahí cuando corresponda, no acá con datos inventados.
+- **D15 — El modo Paso a paso se expresa como divulgación progresiva (`<details>`), no como
+  contenido distinto.** Docencia+paso_a_paso envuelve cada grupo de pruebas
+  (independencia/homogeneidad/tendencia/atípicos) en un `<details class="results-group">` nativo,
+  colapsado por defecto; docencia+experto y anónimo (Decisión D) muestran las mismas tarjetas
+  siempre abiertas, sin acordeón. Es la misma data en los tres modos — la única diferencia real es
+  el widget de presentación, consistente con el criterio de "hecho" de Fase 3
+  (`§8`: "los tres modos de presentación renderizan correctamente el mismo Etapa1Result").
+- **D16 — Sin gráficos (serie temporal, correlograma, boxplot).** La variante E del wireframe
+  incluye gráficos, pero requieren la serie cruda de datos y estadísticos que `Etapa1Result` no
+  expone (el evento `descriptive_stats` solo trae los 8 campos agregados, no la serie ni el
+  correlograma — ver `frontend-integration.md` §4, nota sobre `DescriptiveStats`). No hay datos
+  reales que graficar todavía; agregarlos requeriría o bien un gap de backend nuevo, o mockear datos
+  falsos en una pantalla que sí tiene datos reales — deliberadamente no se mezclan ambas cosas acá.
+- **`modo` viaja de `ConfigPage` a `ResultsPage` a través de `StreamPage`** (router state en las tres
+  paradas, coherente con D9) — `StreamPage` no lo necesitaba para sí misma pero sí reenviarlo.
+
 ### Pendientes
 
 - **P1 — CORS real para producción (bloquea deploy, no el desarrollo).** El proxy de Vite (D2) es
@@ -657,6 +687,19 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   un caso con atípico pausando y `resolveOutlier` desbloqueando la `iteracion:2`, ni un caso
   bloqueante mostrando `contract_error`. Cobertura de tests unitarios/componente completa (D13);
   falta la corrida manual contra Docker, agendada junto con P4 al cierre de esta etapa de trabajo.
+- **P6 — Verificación E2E de Fase 3 contra el backend real, pendiente.** `ResultsPage` no se pudo
+  ejercer contra un `Etapa1Result` real (no hay backend disponible esta sesión, y a diferencia de
+  Fase 2 no existe un camino de "fallo gracioso" que la ejercite igual sin backend — esta pantalla
+  solo se alcanza tras un análisis completo). Cobertura de tests de componente completa (6 tests:
+  redirect sin resultado, banner de `nivel_confianza`, KPIs, warnings, acordeón en paso a paso,
+  tarjetas planas en experto/anónimo) con un `Etapa1Result` sintético armado a mano. Falta la corrida
+  manual real (los tres modos de presentación sobre un resultado real), agendada junto con P4/P5.
+
+**Backlog de verificación E2E contra el backend real — consolidado.** P4, P5 y P6 son la misma
+espera de fondo (no hay Docker disponible en esta sesión de trabajo): registro→verify, Config→stream
+con un CSV real (incluido un caso con atípico), y los tres modos de presentación de resultados sobre
+un análisis real. Se corren todos juntos la primera vez que haya acceso a Docker — no hace falta
+resolverlos uno por uno a medida que cada fase se cierra.
 
 ---
 
