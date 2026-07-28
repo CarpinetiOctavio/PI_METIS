@@ -184,3 +184,24 @@ export type SseEvent =
   | SseResultEtapa1Event
   | SseCompleteEvent
   | SseErrorEvent;
+
+// --- Historial (CU-01) — ver frontend-integration.md §3. Array plano, sin
+// envoltura ni paginación de parte del backend (paginación client-side).
+
+export interface HistoryItem {
+  id: string;
+  tipo_variable: string;
+  modo: string | null;
+  etapas: string[] | null;
+  created_at: string;
+}
+
+export interface AnalysisDetail {
+  id: string;
+  tipo_variable: string;
+  modo: string | null;
+  etapas: string[] | null;
+  created_at: string;
+  etapa1: Etapa1Result | null;
+  etapa2: null;
+}

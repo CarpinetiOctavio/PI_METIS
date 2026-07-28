@@ -662,6 +662,28 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
 - **`modo` viaja de `ConfigPage` a `ResultsPage` a través de `StreamPage`** (router state en las tres
   paradas, coherente con D9) — `StreamPage` no lo necesitaba para sí misma pero sí reenviarlo.
 
+### Decisiones tomadas (28/07/2026 — Fase 4, Historial)
+
+- **D17 — `Etapa1ResultView` extraído de `ResultsPage` para reutilizar en el detalle de historial.**
+  `GET /history/{id}` devuelve el mismo shape de `Etapa1Result` que `result_etapa1` del stream (ver
+  `frontend-integration.md` §3, "mismo shape que GET /analysis/{analysis_id}"). En vez de duplicar el
+  banner/KPIs/descriptivos/warnings/grupos entre `ResultsPage` y `HistoryDetailPage`, esa parte se
+  extrajo a un componente presentacional puro (`routes/results/Etapa1ResultView.tsx`, `{result,
+  modo}`) que no sabe de dónde vino el dato (stream en vivo vs. historial persistido) ni decide el
+  `modo` efectivo — esa decisión (anónimo=experto, Decisión D) sigue siendo responsabilidad de quien
+  lo usa, según su propio contexto de auth. `ResultsPage` quedó como un wrapper delgado (redirect si
+  no hay `result` en el state + `modoEfectivo` derivado de `isAuthed`).
+- **D18 — Paginación 100% client-side, tamaño de página 10.** `GET /history/` devuelve un array
+  plano sin paginación (`frontend-integration.md` §3, discrepancia de forma con `api-contracts.md`).
+  Sin volumen real de análisis por usuario todavía, paginar de a 10 en el cliente es suficiente y no
+  exige tocar el backend; si el volumen real lo justifica más adelante, paginar server-side es un
+  cambio de backend + un ajuste menor acá (reemplazar el `slice()` por parámetros de query), no una
+  reescritura.
+- **`HistoryDetailPage` no recibe `modo` por router state** (a diferencia de `ResultsPage`) — se lee
+  directamente de `AnalysisDetail.modo` (persistido en la BD), porque esta ruta es un destino
+  bookmarkeable/recargable por URL (`/history/:id`), no una parada intermedia de un flujo en memoria
+  como stream→resultados.
+
 ### Pendientes
 
 - **P1 — CORS real para producción (bloquea deploy, no el desarrollo).** El proxy de Vite (D2) es
@@ -694,12 +716,21 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   redirect sin resultado, banner de `nivel_confianza`, KPIs, warnings, acordeón en paso a paso,
   tarjetas planas en experto/anónimo) con un `Etapa1Result` sintético armado a mano. Falta la corrida
   manual real (los tres modos de presentación sobre un resultado real), agendada junto con P4/P5.
+- **P7 — Verificación E2E de Fase 4 contra el backend real, pendiente.** `HistoryPage`/
+  `HistoryDetailPage` están detrás de `RequireAuth` — sin backend real no hay forma de alcanzarlas
+  siquiera (`/auth/me` nunca resuelve `isAuthed=true`, así que el guard redirige antes de que se
+  monten). A diferencia de Fase 2, tampoco hay un camino de "fallo gracioso" que las ejercite sin
+  login real. Cobertura de tests de componente completa (7 tests entre las dos pantallas: carga,
+  error, lista vacía, paginación, links, y detalle con/sin `etapa1`) con datos sintéticos. Falta la
+  corrida manual: loguearse, correr al menos un análisis real para tener algo que listar, ver el
+  historial, y abrir el detalle.
 
-**Backlog de verificación E2E contra el backend real — consolidado.** P4, P5 y P6 son la misma
+**Backlog de verificación E2E contra el backend real — consolidado.** P4, P5, P6 y P7 son la misma
 espera de fondo (no hay Docker disponible en esta sesión de trabajo): registro→verify, Config→stream
-con un CSV real (incluido un caso con atípico), y los tres modos de presentación de resultados sobre
-un análisis real. Se corren todos juntos la primera vez que haya acceso a Docker — no hace falta
-resolverlos uno por uno a medida que cada fase se cierra.
+con un CSV real (incluido un caso con atípico), los tres modos de presentación de resultados sobre un
+análisis real, y el historial de un usuario logueado con al menos un análisis persistido. Se corren
+todos juntos la primera vez que haya acceso a Docker — no hace falta resolverlos uno por uno a medida
+que cada fase se cierra.
 
 ---
 

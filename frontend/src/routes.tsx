@@ -7,6 +7,7 @@ import { ResultsPage } from "./routes/results/ResultsPage";
 import { RankingPage } from "./routes/ranking/RankingPage";
 import { DesignEventsPage } from "./routes/design-events/DesignEventsPage";
 import { HistoryPage } from "./routes/history/HistoryPage";
+import { HistoryDetailPage } from "./routes/history/HistoryDetailPage";
 import { AuthVerifyPage } from "./routes/auth-verify/AuthVerifyPage";
 import { RedirectIfAuthed, RequireAuth } from "./auth/guards";
 
@@ -32,6 +33,14 @@ export const routes: RouteObject[] = [
         element: (
           <RequireAuth>
             <HistoryPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "/history/:id",
+        element: (
+          <RequireAuth>
+            <HistoryDetailPage />
           </RequireAuth>
         ),
       },
