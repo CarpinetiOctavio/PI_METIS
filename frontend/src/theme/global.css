@@ -54,6 +54,10 @@ body {
   padding: 16px;
 }
 
+.card.soft {
+  background: var(--surf2);
+}
+
 .card::before,
 .card::after {
   content: "";

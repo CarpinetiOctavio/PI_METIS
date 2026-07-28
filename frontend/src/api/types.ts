@@ -32,3 +32,155 @@ export interface RegisterResponse {
 export interface OkResponse {
   ok: true;
 }
+
+// --- Análisis — shapes reales, ver docs/frontend-integration.md §3-4.
+// NO usar metis/schemas/analysis.py como referencia: desconectado de los
+// endpoints reales (ver ese documento §5/§6).
+
+export type TipoVariable = "caudal_precipitacion" | "otro";
+export type Modo = "paso_a_paso" | "experto";
+
+export interface AnalysisStreamForm {
+  archivo: File;
+  columna_x: string;
+  columna_y: string;
+  tipo_variable: TipoVariable;
+  modo: Modo;
+  // "Personalizada" está roto en el wiring real del backend — solo "default"
+  // funciona (ver frontend-integration.md §3, nota crítica de cramer_particion).
+  cramer_particion?: "default";
+}
+
+export interface OutlierDecisionRequest {
+  session_id: string;
+  decision: "rechazar" | "aceptar";
+  dato_atipico: number;
+}
+
+export interface OutlierDecisionResponse {
+  ok: boolean;
+  pipeline_continua: boolean;
+}
+
+export type Veredicto = "aprobada" | "rechazada" | "no_ejecutada";
+export type WarningNivel = "critico" | "normal";
+
+export interface WarningItem {
+  codigo: string;
+  nivel: WarningNivel;
+  descripcion: string;
+}
+
+export interface TestResultDetail {
+  prueba: string;
+  estadistico: number | null;
+  valor_critico: number | null;
+  veredicto: Veredicto | null;
+  warning_codigo: string | null;
+  warning_nivel: WarningNivel | null;
+  n1: number | null;
+  n2: number | null;
+  valor_atipico: number | null;
+}
+
+export interface DescriptiveStats {
+  n: number;
+  media: number;
+  mediana: number;
+  desvio_estandar: number;
+  coef_variacion: number;
+  coef_asimetria: number;
+  minimo: number;
+  maximo: number;
+}
+
+export interface Etapa1Result {
+  contract: {
+    bloqueante: boolean;
+    codigo_error: string | null;
+    warnings: WarningItem[];
+  };
+  descriptive: DescriptiveStats | null;
+  independencia: TestResultDetail[];
+  homogeneidad: TestResultDetail[];
+  tendencia: TestResultDetail[];
+  atipicos: TestResultDetail[];
+  nivel_independencia: "independiente" | "dependiente" | null;
+  nivel_homogeneidad:
+    | "homogeneidad_ok"
+    | "homogeneidad_warning"
+    | "homogeneidad_critica"
+    | null;
+  // "rechazado" nunca llega en este evento — ver frontend-integration.md §4,
+  // nota sobre result_etapa1 (el stream corta antes en contract_error).
+  nivel_confianza: "validado" | "con_warnings" | "rechazado";
+  warnings: WarningItem[];
+}
+
+// --- Eventos SSE — union discriminada por `type`. Todos llevan `iteracion`
+// salvo outlier_detected/result_etapa1/complete/error (ver frontend-integration.md §4).
+
+export interface SseContractErrorEvent {
+  type: "contract_error";
+  codigo: string;
+  iteracion: number;
+}
+
+export interface SseContractWarningEvent {
+  type: "contract_warning";
+  codigo: string;
+  nivel: "normal";
+  iteracion: number;
+}
+
+export interface SseDescriptiveStatsEvent extends DescriptiveStats {
+  type: "descriptive_stats";
+  iteracion: number;
+}
+
+export interface SseProgressEvent {
+  type: "progress";
+  paso: string;
+  etapa: 1;
+  completado: number;
+  total: number;
+  iteracion: number;
+}
+
+export interface SseTestResultEvent extends TestResultDetail {
+  type: "test_result";
+  iteracion: number;
+}
+
+export interface SseOutlierDetectedEvent {
+  type: "outlier_detected";
+  session_id: string;
+  valor_atipico: number;
+}
+
+export interface SseResultEtapa1Event {
+  type: "result_etapa1";
+  result: Etapa1Result;
+}
+
+export interface SseCompleteEvent {
+  type: "complete";
+  analysis_id: string | null;
+}
+
+export interface SseErrorEvent {
+  type: "error";
+  codigo: "PARSE_ERROR" | "SESSION_TIMEOUT";
+  mensaje: string;
+}
+
+export type SseEvent =
+  | SseContractErrorEvent
+  | SseContractWarningEvent
+  | SseDescriptiveStatsEvent
+  | SseProgressEvent
+  | SseTestResultEvent
+  | SseOutlierDetectedEvent
+  | SseResultEtapa1Event
+  | SseCompleteEvent
+  | SseErrorEvent;

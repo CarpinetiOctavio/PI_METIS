@@ -600,6 +600,38 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   `theme/components.css` con alcance acotado a lo que Fase 1 necesita — el resto de las clases del
   prototipo se suma página por página cuando esa pantalla se implemente de verdad, no todas de una.
 
+### Decisiones tomadas (28/07/2026 — Fase 2, Config + stream Etapa 1)
+
+- **D9 — Router state en vez de `AnalysisConfigProvider`.** `ConfigPage` arma el `AnalysisStreamForm`
+  completo (incluido el `File`) y lo pasa a `/stream` vía `navigate(path, {state})` de React Router,
+  no vía un context dedicado. Es un hand-off de una sola vez que `StreamPage` consume una única vez
+  al montar — un context solo se justifica si varios componentes desconectados necesitaran leer
+  `modo` reactivamente entre renders, que no es el caso acá.
+- **D10 — Sin preview de CSV/Excel en Config.** `columna_x`/`columna_y` son inputs de texto plano,
+  fieles al contrato real (`Form(str)`, sin `Literal` — ver `frontend-integration.md` §3), en vez
+  de la tabla de preview con columnas parseadas de la variante H. Parsear el archivo en el cliente
+  para mostrar una preview real exigiría sumar una dependencia (`papaparse`/`xlsx`) sin necesidad
+  probada todavía — el backend ya hace el parseo real y acepta cualquier nombre/índice de columna
+  como string. Queda como posible pulido de Fase 6, no bloquea el flujo funcional.
+- **D11 — Agrupación por bloque, no lista plana de 8 pruebas.** El timeline de `StreamPage` agrupa
+  las 8 pruebas en 4 pasos conceptuales (Independencia, Homogeneidad, Tendencia, Atípicos), igual
+  que la propia forma de `Etapa1Result` (`independencia[]`/`homogeneidad[]`/`tendencia[]`/
+  `atipicos[]`) — cada paso se expande al hacer click una vez que tiene datos, mostrando el detalle
+  prueba por prueba. Más fiel al concepto de "timeline" de la variante A que una lista de 8 filas
+  sueltas.
+- **D12 — La finalización del stream es un paso manual, no un auto-redirect.** Al llegar
+  `fase="done"`, `StreamPage` muestra un banner de completado con un botón "Ver resultados ▸" en vez
+  de navegar sola a `/results` — así se puede ver el timeline completo (todos los grupos con su
+  veredicto) antes de pasar a la pantalla de resultados, útil para pruebas manuales/demo mientras
+  `ResultsPage` siga siendo el stub de Fase 3.
+- **D13 — Mockeo de `sse.test.ts` a nivel de librería.** Los tests de `useAnalysisStream` mockean el
+  módulo `@microsoft/fetch-event-source` directamente (capturando `onopen`/`onmessage`/`onclose`/
+  `onerror`) y disparan secuencias de eventos sintéticas armadas a mano según los shapes reales de
+  `frontend-integration.md` §4, en vez de grabar una sesión SSE real contra el backend (no
+  disponible en esta sesión — ver P5). Coherente con D5 (sin MSW todavía) y con el precedente ya
+  establecido en el backend de series 100% sintéticas con expectativa recomputada inline
+  (`backend/tests/README.md`), no dato real.
+
 ### Pendientes
 
 - **P1 — CORS real para producción (bloquea deploy, no el desarrollo).** El proxy de Vite (D2) es
@@ -618,6 +650,13 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   backend real (Docker) al cierre de esta fase, reutilizando el usuario ya verificado que
   documenta `sprint.md` ("Usuario de prueba para smoke tests", `2200631@ucc.edu.ar`) si sigue
   existiendo en la BD local, o insertándolo directo en Postgres si no.
+- **P5 — Verificación E2E de Fase 2 contra el backend real, pendiente.** Config→stream se probó
+  manualmente en el navegador solo contra un backend inexistente (proxy de Vite devolviendo 500) —
+  confirma que el flujo no rompe ante un fallo de conexión (banner de error legible, sin excepciones
+  sin manejar), pero no confirma el camino feliz real: subir un CSV real, ver los 8 `test_result`,
+  un caso con atípico pausando y `resolveOutlier` desbloqueando la `iteracion:2`, ni un caso
+  bloqueante mostrando `contract_error`. Cobertura de tests unitarios/componente completa (D13);
+  falta la corrida manual contra Docker, agendada junto con P4 al cierre de esta etapa de trabajo.
 
 ---
 
