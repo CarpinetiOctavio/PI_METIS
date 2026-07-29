@@ -152,7 +152,7 @@ export function ConfigPage() {
             <button
               type="button"
               disabled
-              title="No disponible — partición personalizada rota en el backend actual"
+              title="No disponible — ver docs/decisiones/decision036.md"
             >
               Personalizada
             </button>

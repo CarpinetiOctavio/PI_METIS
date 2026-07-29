@@ -93,6 +93,14 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
 - Con JWT válido (@ucc.edu.ar): persiste análisis, habilita exportación
 - Sin JWT: sesión efímera, sin persistencia
 
+**Nota de implementación — `cramer_particion` personalizada no implementada.**
+El contrato de arriba documenta `{n1_pct, n2_pct}` como valor válido, pero el
+endpoint real (`api/v1/analysis.py`) declara el campo como `Form(str)` — cualquier
+valor distinto del literal `"default"` llega como string a
+`core/etapa1/homogeneity.py::calcular_cramer` y produce un `TypeError` no
+manejado, no un 400 controlado. Hoy el frontend nunca envía otra cosa que
+`"default"`. Ver `docs/decisiones/decision036.md` — DECISIÓN 036.
+
 ---
 
 ### POST /api/v1/analysis/outlier-decision

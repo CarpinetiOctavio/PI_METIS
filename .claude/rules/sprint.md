@@ -455,6 +455,15 @@ implementación de auth en sí.
 
 ## Decisiones pendientes — no implementar hasta confirmar
 
+- **Partición de Cramer personalizada** — inalcanzable hoy por el endpoint
+  `POST /api/v1/analysis/stream`: `cramer_particion` llega siempre como `str`
+  vía `multipart/form-data`, y `calcular_cramer` indexa `particion["n1_pct"]`
+  asumiendo `dict` en cualquier valor distinto de `"default"` → `TypeError`
+  no manejado. El botón "Personalizada" de `ConfigPage.tsx` está `disabled`
+  en consecuencia. Tres opciones evaluadas sin decisión cerrada — ver
+  `docs/decisiones/decision036.md` — DECISIÓN 036. No implementar ninguna
+  sin decidir entre las tres opciones primero.
+
 ---
 
 ## Entorno de desarrollo — datos de prueba
