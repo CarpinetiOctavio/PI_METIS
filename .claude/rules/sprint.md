@@ -729,7 +729,24 @@ completo — no sólo credenciales recibidas, como marcaba la nota del
 15/07. Quedan 2 criterios pendientes para cerrar M1: tests de
 regresión matemática y verificación E2E con CSV real.
 
-M1 no se cierra hasta que los tres criterios pendientes estén resueltos.
+**ACTUALIZACIÓN 29 de Julio de 2026:** Verificación end-to-end del pipeline
+con CSV real — **CERRADA.** El backlog P4-P7 de
+`docs/frontend-implementation-plan.md` §10 (pendiente P5) corrió un CSV
+sintético de 40 años contra el backend real (`docker-compose up backend
+postgres`, no mockeado), con un valor forzado a 6-7x el resto para disparar
+Chow: los 4 grupos de pruebas de Etapa 1 llegaron y se resolvieron
+correctamente, el atípico pausó el stream con el modal real, y
+`resolveOutlier("rechazar")` desbloqueó la `iteracion:2` con el reemplazo
+correcto de resultados (sin duplicar). Dos bugs reales de `useAnalysisStream`
+aparecieron recién en esta verificación — ver
+"feature/frontend-fases1-5 — COMPLETA" más abajo para el detalle. De los tres
+criterios pendientes originales de M1, quedan **2**: tests de regresión
+matemática (bloqueado externamente, esperando series de Facundo) y el tramo
+registro→verify de Auth (bloqueado por falta de SMTP real en desarrollo — no
+es un criterio de M1 en sí, pero es el único hueco real que queda en la
+superficie de auth verificada).
+
+M1 no se cierra hasta que los criterios pendientes estén resueltos.
 El desarrollo continúa hacia M2 en paralelo.
 
 M2 — Etapa 2 operativa en staging
