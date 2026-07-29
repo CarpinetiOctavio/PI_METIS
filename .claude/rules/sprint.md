@@ -27,7 +27,10 @@ diferido por bajo riesgo con equipo de dos personas).
 
 ### Fuera de alcance en este sprint
 - Etapa 2 (distribuciones, ranking EEA, eventos de diseño)
-- Frontend React + TypeScript
+- ~~Frontend React + TypeScript~~ — alcance original de Sprint 1 (backend-only,
+  Etapa 1). Contradicho desde el 28/07/2026: ver
+  "feature/frontend-fases1-5 — COMPLETA" más abajo. Se deja tachado, no
+  eliminado, por trazabilidad del alcance histórico real de este sprint.
 - Exportación PDF
 - Endpoint /export/
 - Endpoint /analysis/design-events
@@ -42,6 +45,9 @@ diferido por bajo riesgo con equipo de dos personas).
 - feature/api-etapa1 — mergeado a staging
 - feature/services-sse — mergeado a staging
 - feature/github-actions — CI pipeline con ruff + pytest  ✓ completado
+- feature/frontend-fases1-5 — Fases 1-5 del frontend (Auth, Config+Stream,
+  Resultados, Historial, Mocks Etapa 2)  ✓ completado — ver sección propia
+  más abajo
 
 ### Archivos creados en feature/github-actions
 - `.github/workflows/ci.yml` — jobs lint (ruff check + format --check) y test (pytest unit+integration, exit code 5 tolerado)
@@ -451,6 +457,104 @@ Ninguno de los cuatro bloquea el cierre de Auth Parte 2 tal como está
 definida — son verificaciones de infraestructura, no de la
 implementación de auth en sí.
 
+### feature/frontend-fases1-5 — COMPLETA
+
+Implementación de Fases 1 a 5 del frontend (28-29/07/2026), sobre el scaffold de
+Fase 0 (`docs/superpowers/plans/2026-07-22-frontend-fase0-scaffold.md`, ya
+mergeado). Plan completo y decisión por decisión en
+`docs/frontend-implementation-plan.md` §10; resumen navegable en
+`docs/informe-implementacion-frontend-fase1-6.md`.
+
+**Nota de nomenclatura:** este proyecto ya usaba "Fase 1...Fase 6" para el
+desarrollo de Core Etapa 2 (ver más arriba, `feature/core-etapa2`). El frontend
+reutiliza los mismos números para una secuencia distinta. Toda mención nueva
+dice explícitamente "Fase N del frontend" para no confundir ambas — las
+entradas de esta sección son todas del frontend salvo que se aclare lo
+contrario.
+
+#### Fase 1 — Auth end-to-end
+Archivos clave: `src/auth/AuthProvider.tsx`, `src/auth/guards.tsx`,
+`src/api/auth.ts`, `src/api/client.ts` (agregó `ApiError`/`requestJson`),
+`src/routes/entry/EntryPage.tsx`, `src/routes/auth-verify/AuthVerifyPage.tsx`.
+Login/registro/anónimo en una sola pantalla, guards `RequireAuth`/
+`RedirectIfAuthed`, flag de sesión anónima persistido en `localStorage`
+(FE-7). Verificado contra Docker: login/logout/me reales; registro→verify
+bloqueado por falta de SMTP real en desarrollo (FE-6, límite conocido, no un
+bug de esta fase).
+
+#### Fase 2 — Config + stream de Etapa 1
+Archivos clave: `src/routes/config/ConfigPage.tsx`, `src/api/sse.ts` (hook
+`useAnalysisStream`, SSE-sobre-fetch — DECISIÓN 040), `src/routes/stream/StreamPage.tsx`.
+Timeline agrupado en 4 pasos (FE-11), modal de atípico de Chow real, router
+state para pasar el form completo a `/stream` (FE-9). Verificado con CSV
+sintético de 40 años contra el backend real, con un atípico forzado —
+**dos bugs reales encontrados y corregidos** en `useAnalysisStream`
+(`complete` pisando una `fase="error"` previa; `result_etapa1` sin desenvolver
+el payload crudo del evento), ambos con test de regresión en `sse.test.ts`.
+Detalle completo en `frontend-implementation-plan.md` §10, pendiente P5.
+
+#### Fase 3 — Resultados de Etapa 1
+Archivo clave: `src/routes/results/Etapa1ResultView.tsx` (componente
+presentacional puro, reutilizado en Fase 4). Tres modos de presentación sobre
+el mismo `Etapa1Result`: docencia+paso_a_paso (`<details>` colapsados, FE-15),
+docencia+experto (tarjetas siempre abiertas), anónimo (fuerza experto, UX-D).
+Sin sustitución de fórmulas (FE-14 — esa pieza es del PDF de exportación, no
+de esta pantalla) ni gráficos (FE-16 — `Etapa1Result` no expone la serie
+cruda). Verificado con datos reales en los tres modos.
+
+#### Fase 4 — Historial
+Archivos clave: `src/routes/history/HistoryPage.tsx`,
+`src/routes/history/HistoryDetailPage.tsx`. Paginación 100% client-side,
+tamaño de página 10 (FE-18 — sin volumen real que lo justifique todavía).
+`HistoryDetailPage` lee `modo` de `AnalysisDetail.modo` persistido, no de
+router state (ruta bookmarkeable). Verificado: lista y detalle reales
+coinciden exactamente con lo visto en vivo en Fase 2/3.
+
+#### Fase 5 — Mocks de Etapa 2
+Archivos clave: `src/routes/ranking/RankingPage.tsx`,
+`src/routes/design-events/DesignEventsPage.tsx`, `src/mocks/`. MSW intercepta
+solo `POST /analysis/design-events` (tiene contrato REST documentado); el
+ranking no tiene endpoint REST real (solo evento SSE nunca emitido) y
+`RankingPage` importa el mock directo, sin red de por medio — DECISIÓN 042.
+`PendingBadge` visible en ambas pantallas. Verificado manualmente en el
+navegador de dev (única fase que no depende de backend real, por diseño).
+
+#### Fase 6 — Pulido y accesibilidad — PARCIAL
+Único pendiente reconocido del backlog original. Ver Bloque D
+(`docs/plan-mejora-frontend-pasada2.md`) para las correcciones puntuales de
+código y accesibilidad agendadas en la pasada de mejora del 29/07/2026.
+
+#### Verificación E2E fuera de las 6 fases nominales (backlog P4-P7)
+Corrida contra `docker-compose up backend postgres` real, no mockeada. Login →
+`200` + cookie, `GET /me` → `200`, logout → `200` + cookie borrada
+verificada. Config→stream con CSV sintético de 40 años y atípico forzado,
+resultados en los tres modos, historial con 6 análisis reales — todo
+verificado punta a punta. Único tramo genuinamente bloqueado: registro→verify,
+por falta de SMTP real en desarrollo (no resoluble desde este backlog). Usuario
+de prueba y sus análisis borrados de Postgres al cerrar la verificación — no
+queda dato de prueba en la BD.
+
+#### Bugs corregidos como parte de esta rama
+- `useAnalysisStream`: `complete` pisaba una `fase="error"` previa con
+  `"done"` — corregido, `complete` ya no sobreescribe una fase de error.
+- `useAnalysisStream`: `result_etapa1` nunca llegaba a `state.result` porque
+  `onmessage` no desenvolvía ese evento en particular — corregido.
+
+#### Decisiones asociadas
+D1-D20 del plan original, migradas a `docs/decisiones/` según criterio
+explícito — ver DECISIÓN 039 (criterio de promoción y tabla de equivalencia
+completa), DECISIÓN 040 (SSE sobre fetch), DECISIÓN 041 (sin TanStack Query,
+patrón único de test), DECISIÓN 042 (alcance de mocks de Etapa 2). El resto
+(D2, D6-D18) quedan como notas `FE-NN` en `frontend-implementation-plan.md` §10.
+
+#### Pendiente
+- Fase 6 (pulido, accesibilidad) — ver Bloque D del plan de mejora.
+- Tres hallazgos de backend encontrados durante esta implementación pero no
+  escalados en su momento — registrados recién en la pasada de mejora
+  posterior: DECISIÓN 036 (partición de Cramer personalizada inalcanzable),
+  DECISIÓN 037 (`etapas` descartado, `AnalysisRequest` sin cablear),
+  DECISIÓN 038 (códigos de error fuera del catálogo).
+
 ---
 
 ## Decisiones pendientes — no implementar hasta confirmar
@@ -539,8 +643,10 @@ Se destruye al hacer POST /logout o al borrar el archivo.
 /register (sigue sin haber SMTP real):** confirmado que sin SMTP,
 `POST /register` falla por completo (ver nota de arriba) — no hay forma de
 crear NINGÚN usuario verificado vía la API todavía. Para probar
-login/logout/me/historial del lado del frontend (Fase 6, verificación E2E
-contra `docker-compose up backend postgres`), se insertó un usuario ya
+login/logout/me/historial del lado del frontend (verificación E2E del backlog
+P4-P7, fuera de las 6 fases nominales del frontend — ver
+"feature/frontend-fases1-5 — COMPLETA" más abajo, contra
+`docker-compose up backend postgres`), se insertó un usuario ya
 verificado directo en Postgres, generando el hash bcrypt con el propio
 Python del contenedor backend (evita instalar `bcrypt` en el host):
 ```bash
