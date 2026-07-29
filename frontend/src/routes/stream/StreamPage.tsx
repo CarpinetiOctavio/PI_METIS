@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAnalysisStream } from "../../api/sse";
 import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
+import { formatNum } from "../../i18n/format";
 import "./StreamPage.css";
 
 interface Group {
@@ -217,8 +218,8 @@ export function StreamPage() {
                           {results.map((t) => (
                             <tr key={t.prueba}>
                               <td>{t.prueba}</td>
-                              <td className="num">{t.estadistico ?? "—"}</td>
-                              <td className="num">{t.valor_critico ?? "—"}</td>
+                              <td className="num">{formatNum(t.estadistico)}</td>
+                              <td className="num">{formatNum(t.valor_critico)}</td>
                               <td>{t.veredicto ?? "—"}</td>
                             </tr>
                           ))}
@@ -268,7 +269,7 @@ export function StreamPage() {
             </h2>
             <p className="sub">
               Chow detectó un valor atípico:{" "}
-              <span className="num">{state.outlier.valor_atipico}</span>. ¿Qué
+              <span className="num">{formatNum(state.outlier.valor_atipico)}</span>. ¿Qué
               hacemos con este dato?
             </p>
             <div className="row">

@@ -1,4 +1,5 @@
 import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
+import { formatInt, formatNum } from "../../i18n/format";
 import "./Etapa1ResultView.css";
 
 interface Group {
@@ -62,14 +63,20 @@ function GroupTable({ items }: { items: TestResultDetail[] }) {
         {items.map((t) => (
           <tr key={t.prueba}>
             <td>{t.prueba}</td>
-            <td className="num">{t.estadistico ?? "—"}</td>
-            <td className="num">{t.valor_critico ?? "—"}</td>
+            <td className="num">{formatNum(t.estadistico)}</td>
+            <td className="num">{formatNum(t.valor_critico)}</td>
             <td>
               {t.veredicto ?? "—"}
+              {/* D6 (pasada de mejora): antes renderizaba literalmente
+                  "n2=null" cuando solo uno de los dos estaba presente —
+                  Cramer siempre reporta ambos, pero otras pruebas no
+                  reportan ninguno. Cada uno se muestra solo si no es null. */}
               {(t.n1 !== null || t.n2 !== null) && (
                 <span className="fn">
                   {" "}
-                  (n1={t.n1}, n2={t.n2})
+                  ({t.n1 !== null && `n1=${t.n1}`}
+                  {t.n1 !== null && t.n2 !== null && ", "}
+                  {t.n2 !== null && `n2=${t.n2}`})
                 </span>
               )}
             </td>
@@ -138,35 +145,35 @@ export function Etapa1ResultView({ result, modo }: { result: Etapa1Result; modo:
             <tbody>
               <tr>
                 <td>n</td>
-                <td className="num">{result.descriptive.n}</td>
+                <td className="num">{formatInt(result.descriptive.n)}</td>
               </tr>
               <tr>
                 <td>media</td>
-                <td className="num">{result.descriptive.media}</td>
+                <td className="num">{formatNum(result.descriptive.media)}</td>
               </tr>
               <tr>
                 <td>mediana</td>
-                <td className="num">{result.descriptive.mediana}</td>
+                <td className="num">{formatNum(result.descriptive.mediana)}</td>
               </tr>
               <tr>
                 <td>desvío S</td>
-                <td className="num">{result.descriptive.desvio_estandar}</td>
+                <td className="num">{formatNum(result.descriptive.desvio_estandar)}</td>
               </tr>
               <tr>
                 <td>CV</td>
-                <td className="num">{result.descriptive.coef_variacion}</td>
+                <td className="num">{formatNum(result.descriptive.coef_variacion)}</td>
               </tr>
               <tr>
                 <td>asimetría</td>
-                <td className="num">{result.descriptive.coef_asimetria}</td>
+                <td className="num">{formatNum(result.descriptive.coef_asimetria)}</td>
               </tr>
               <tr>
                 <td>mínimo</td>
-                <td className="num">{result.descriptive.minimo}</td>
+                <td className="num">{formatNum(result.descriptive.minimo)}</td>
               </tr>
               <tr>
                 <td>máximo</td>
-                <td className="num">{result.descriptive.maximo}</td>
+                <td className="num">{formatNum(result.descriptive.maximo)}</td>
               </tr>
             </tbody>
           </table>
