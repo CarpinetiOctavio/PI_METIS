@@ -68,6 +68,16 @@ bypass exclusivo de este entorno, no válido en producción. El manejo de
 CORS real para producción queda pendiente (ver
 `docs/frontend/frontend-implementation-plan.md`).
 
+## `.claude/launch.json`
+
+No es convención de VS Code ni archivo inerte — es la configuración que lee
+la herramienta de preview de navegador de Claude Code (`preview_start` con
+`{name: "frontend-dev"}`) para levantar `npm run dev` y abrir una pestaña de
+preview apuntando a `http://localhost:5173`. Entró sin mención explícita en
+el commit de Fase 1 porque Claude Code lo generó solo, la primera vez que
+una sesión necesitó previsualizar el frontend en el navegador integrado — no
+hace falta tocarlo a mano.
+
 ## Tema
 
 El tema visual está fijo a "Instrumento" — no es seleccionable por el
