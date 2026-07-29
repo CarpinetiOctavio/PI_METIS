@@ -45,11 +45,11 @@ Esta decisión atraviesa toda la capa de streaming — ver §2.3 y la lista de r
 | Bundler/dev server | **Vite** | `.env.example` ya asume puerto **5173** (Vite), y `FRONTEND_ORIGIN` está seteado a `http://localhost:5173`. Cambiar el puerto obliga a cambiar `FRONTEND_ORIGIN` en el `.env` del backend. |
 | Framework | React 18 + TypeScript (strict) | Stack fijado en `CLAUDE.md` / `constraints.md` — no negociable. |
 | Ruteo | **React Router v6** | SPA con rutas por pantalla; guards de auth (§3). |
-| Estado servidor | **TanStack Query** (react-query) para REST (auth, history) | El stream SSE NO usa react-query — es un hook propio (§2.3). Query cubre `/me`, `/history`, `/analysis/{id}`. |
+| Estado servidor | ~~**TanStack Query** (react-query) para REST (auth, history)~~ → `fetch`+`useState`/`useEffect` | **DEROGADO — DECISIÓN 041.** Nunca se agregó; D4 prometió sumarla "en Fase 4" y no se cumplió. Diferido con criterio de habilitación explícito, no descartado por decreto. El stream SSE sigue sin usarla — es un hook propio (§2.3). |
 | Estado UI | Context API (auth, tema, modo de análisis) | No hace falta Redux para este alcance. |
-| Estilos | **CSS variables + CSS Modules** (o vanilla-extract) | Los tokens del tema son CSS vars (§4); componentes toman color de las vars. Evitar librerías de UI pesadas que impongan su propio look (choca con "Instrumento"). |
-| Linting | **ESLint** (config del repo) + Prettier | `constraints.md` exige ESLint; alinear con `cd frontend && npm run lint` que ya está referenciado en `CLAUDE.md`. |
-| Testing | Vitest + React Testing Library; MSW para mocks de red | Ver §9. |
+| Estilos | ~~**CSS variables + CSS Modules** (o vanilla-extract)~~ → CSS plano co-locado por ruta | **DEROGADO en la práctica** (Fase 1 en adelante) — `frontend/src/routes/*/*.css`, sin `.module.css`. Los tokens del tema siguen siendo CSS vars (§4); no se registró una decisión formal aparte, se deja constancia acá por ser una desviación real del stack originalmente elegido. |
+| Linting | **ESLint** (config del repo) + ~~Prettier~~ | **DEROGADO en la práctica** — `frontend/package.json` no lista `prettier` ni `eslint-config-prettier`. ESLint solo, alineado con `cd frontend && npm run lint`. |
+| Testing | Vitest + React Testing Library; ~~MSW para mocks de red~~ → `vi.stubGlobal("fetch")` en tests, MSW solo en navegador de dev | **DEROGADO — DECISIÓN 041** (D5/D20). Ver §9.1. |
 
 ### 1.2 Estructura de carpetas propuesta (`frontend/`)
 
@@ -256,10 +256,13 @@ entre chunks); respetar `prefers-reduced-motion` en las animaciones de "contador
 
 ### 3.1 AuthProvider
 
-- Al montar, `GET /api/v1/auth/me` (react-query). 200 → sesión CU-01 activa; 401 → anónimo.
+- Al montar, `GET /api/v1/auth/me` (~~react-query~~ `fetch`+`useState` — DEROGADO, ver
+  DECISIÓN 041 y §1.1). 200 → sesión CU-01 activa; 401 → anónimo.
 - Expone `{ user: UserMe | null, isAuthed: boolean, isLoading, login, logout, refetch }`.
-- `login()` → `POST /login` (setea cookie) → invalida/`refetch` de `/me`.
-- `logout()` → `POST /logout` (borra cookie) → limpia el cache y vuelve a estado anónimo.
+- `login()` → `POST /login` (setea cookie) → ~~invalida/`refetch`~~ vuelve a pedir `/me`
+  manualmente (sin cache de react-query que invalidar).
+- `logout()` → `POST /logout` (borra cookie) → ~~limpia el cache~~ resetea el estado local
+  y vuelve a estado anónimo.
 - No se guarda nada del JWT en JS (la cookie es HttpOnly; no es accesible ni necesario).
 
 ### 3.2 Determinación CU-01 vs CU-02 (Decisiones C y D)
@@ -519,11 +522,13 @@ backend real** (Etapa 1) y qué queda **mockeado**.
 |---|---|---|
 | Unit | Reducer de `useAnalysisStream` (parseo de frames, dedupe por `iteracion`, transiciones de fase), diccionario de errores, guards. | Vitest |
 | Componente | Pantallas con estados mockeados (resultados según modo, modal de atípico, PendingBadge en mocks). | React Testing Library |
-| Red mockeada | Flujos de auth y análisis con **MSW** simulando respuestas del backend, incluida una **secuencia SSE canned** (frames de ejemplo con atípico + iteracion:2). | MSW |
-| Integración real (manual) | Fases 1-4 recorridas contra el backend real (Docker local). No hay E2E automatizado — está **fuera de alcance V1.0** (`constraints.md`: sin Selenium/Playwright). | Manual |
+| Red mockeada | ~~Flujos de auth y análisis con **MSW** simulando respuestas del backend, incluida una **secuencia SSE canned**~~ → `vi.stubGlobal("fetch", ...)` para auth/history, mock directo del módulo `@microsoft/fetch-event-source` para el hook de SSE (secuencias sintéticas armadas a mano, no grabadas). **DEROGADO — DECISIÓN 041** (D5/D13/D20). MSW solo se usa en el navegador de dev para Etapa 2 (DECISIÓN 042), nunca en la suite de tests. | `vi.stubGlobal` / mock de módulo |
+| Integración real (manual) | Fases 1-5 recorridas contra el backend real (Docker local), incluido el backlog P4-P7. No hay E2E automatizado — está **fuera de alcance V1.0** (`constraints.md`: sin Selenium/Playwright). | Manual |
 
-Fixture recomendado: guardar una **grabación de una secuencia SSE real** (con y sin atípico) como
-archivo de frames para alimentar los tests del hook sin depender del backend.
+~~Fixture recomendado: guardar una grabación de una secuencia SSE real como archivo de frames.~~
+No se implementó así — `sse.test.ts` arma las secuencias de eventos a mano según los shapes de
+`frontend-integration.md` §4, coherente con el precedente ya establecido en el backend de series
+100% sintéticas con expectativa recomputada inline (`backend/tests/README.md`).
 
 ### 9.2 Riesgos de integración
 
@@ -729,8 +734,11 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   probar el camino real: nginx sirviendo el build del front y proxyando `/api` (arquitectura
   definida en `architecture.md`), con cookie `Secure` (`ENV=production`) y `FRONTEND_ORIGIN`
   productivo. Agendar como tarea explícita al cerrar el desarrollo local.
-- **P2 — Puerto/herramienta del frontend.** Se asume **5173/Vite** (alineado con `FRONTEND_ORIGIN`
-  del `.env.example`). Confirmar antes del scaffold para no desalinear el CORS del backend.
+- **P2 — CERRADO desde Fase 0.** Puerto/herramienta del frontend confirmado: **5173/Vite**,
+  alineado con `FRONTEND_ORIGIN` del `.env.example`. Scaffold de Fase 0
+  (`docs/superpowers/plans/2026-07-22-frontend-fase0-scaffold.md`) lo fijó sin desalinear el
+  CORS del backend — sigue así desde entonces. Quedaba listado como abierto pese a estar
+  resuelto de hecho; corregido en la pasada de mejora del 29/07/2026.
 - **P3 — Azul institucional UCC** para las secciones con logo (blend UCC de Fase 2) — pendiente de
   confirmar contra el manual de marca. No bloquea el arranque; sí el pie de PDF/encabezados.
 - **P4 — CERRADO PARCIALMENTE 29/07/2026.** `docker-compose up backend postgres` levantado contra un
