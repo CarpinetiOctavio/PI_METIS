@@ -196,6 +196,18 @@ de depender de que alguien la corra a mano: se agrega como step de CI en
 `.github/workflows/ci.yml`, con las excepciones conocidas (`DIST_*`) en un
 allowlist versionado y comentado, no hardcodeadas sin explicación en el YAML.
 
+**M2 implementado.** `scripts/check-error-catalog.sh` — el chequeo de las
+tres direcciones de arriba, ejecutable (`./scripts/check-error-catalog.sh`
+desde la raíz del repo) y no solo copiable a mano. Lee las excepciones
+conocidas de `scripts/error-catalog-allowlist.txt` (hoy: los cuatro `DIST_*`,
+con el comentario de por qué y cuándo dejan de aplicar). Job nuevo
+`error-catalog` en `.github/workflows/ci.yml`, independiente de `lint`
+(cruza `backend/metis/` y `frontend/src/` — no es solo una preocupación de
+`ruff`). Verificado localmente en ambas direcciones antes de wirearlo a CI:
+corre limpio contra el estado real del repo, y falla con exit 1 cuando se
+inyecta a propósito un código no catalogado (probado y revertido, no
+asumido).
+
 **Ver también:** [DECISIÓN 040](decision040.md) — D1, la corrección de
 `STREAM_CONNECTION_ERROR` de código muerto a cableado de verdad, que este
 addendum complementa desde el lado del catálogo.

@@ -52,6 +52,13 @@ jobs:
           set -e
           [ $EXIT -eq 0 ] || [ $EXIT -eq 5 ]
 
+  error-catalog:
+    name: Catálogo de códigos de error (DECISIÓN 038)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash ./scripts/check-error-catalog.sh
+
   frontend:
     name: Frontend (lint, test, build)
     runs-on: ubuntu-latest
