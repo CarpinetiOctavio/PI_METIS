@@ -55,12 +55,14 @@ function renderDesignEvents() {
 describe("DesignEventsPage", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  // Valores formateados con formatNum (F2/F4, pasada 3): 5 decimales fijos,
+  // separador es-AR — 312.7 -> "312,70000". Ver src/i18n/format.ts.
   it("shows a loading state, then the mock value for the default period (T=100)", async () => {
     stubFetch(false);
     renderDesignEvents();
 
     expect(screen.getByText("Calculando eventos de diseño…")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("312.7")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("312,70000")).toBeInTheDocument());
     expect(screen.getByText("Valor de diseño · T = 100 años")).toBeInTheDocument();
   });
 
@@ -68,10 +70,10 @@ describe("DesignEventsPage", () => {
     stubFetch(false);
     renderDesignEvents();
 
-    await waitFor(() => expect(screen.getByText("312.7")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("312,70000")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "50" }));
 
-    expect(screen.getByText("290.9")).toBeInTheDocument();
+    expect(screen.getByText("290,90000")).toBeInTheDocument();
   });
 
   it("shows the PendingBadge marking the response as mock", async () => {
@@ -87,7 +89,7 @@ describe("DesignEventsPage", () => {
     stubFetch(false);
     renderDesignEvents();
 
-    await waitFor(() => expect(screen.getByText("312.7")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("312,70000")).toBeInTheDocument());
     expect(
       screen.queryByRole("button", { name: /Exportar PDF/ }),
     ).not.toBeInTheDocument();
@@ -97,7 +99,7 @@ describe("DesignEventsPage", () => {
     stubFetch(true);
     renderDesignEvents();
 
-    await waitFor(() => expect(screen.getByText("312.7")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("312,70000")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: /Exportar PDF/ })).toBeDisabled();
   });
 });

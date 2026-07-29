@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { rankingMock } from "../../mocks/etapa2.mock";
 import { PendingBadge } from "../../mocks/PendingBadge";
+import { formatNum } from "../../i18n/format";
 import type { RankingItem } from "../../api/types";
 import "./RankingPage.css";
 
@@ -56,7 +57,9 @@ function RankingCard({
       <div className="chart" style={{ height: 70 }}>
         gráfico de ejemplo — {axis}
       </div>
-      <p className="fn">EEA {item.eea}</p>
+      <p className="fn">
+        EEA <span className="num">{formatNum(item.eea)}</span>
+      </p>
       <button
         type="button"
         className={`b ${item.rank === 1 ? "b-pri" : "b-sec"}`}
