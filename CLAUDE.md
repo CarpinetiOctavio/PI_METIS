@@ -87,7 +87,9 @@ npm install
 npm run dev       # Vite dev server, http://localhost:5173 — proxy /api y /ping hacia localhost:8000
 npm run build     # tsc -b + build de producción a dist/
 npm run lint      # ESLint
-npm test          # Vitest + Testing Library
+npm test          # Vitest + Testing Library, todos los tests (modo run, no watch)
+npm run test:watch                            # Vitest en modo watch
+npx vitest run src/routes/results/ResultsPage.test.tsx   # un solo archivo de test
 ```
 
 Entorno completo (Docker):
@@ -104,7 +106,9 @@ Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de pu
 
 ## Frontend — estado actual
 
-Scaffold de las 8 pantallas de CU-01/CU-02 con Vite + React + TypeScript + react-router-dom: `entry`, `config`, `stream`, `results`, `ranking`, `design-events`, `history`, `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`). Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`). El frontend entra en operación recién en la primera instancia de avance del proyecto (ver architecture.md) — por ahora es scaffold, no integración real con los endpoints de análisis.
+Vite + React + TypeScript + react-router-dom, 8 pantallas de CU-01/CU-02: `entry`, `config`, `stream`, `results`, `ranking`, `design-events`, `history`, `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`). Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`).
+
+**Ya no es scaffold** — Fases 1 a 5 del plan de integración están completas con integración real contra el backend (verificado contra Docker): auth end-to-end (`src/auth/`), stream de Etapa 1 vía SSE-sobre-fetch (`src/api/sse.ts`, hook `useAnalysisStream` — ver `docs/decisiones/decision040.md`), los tres modos de presentación de resultados de Etapa 1, historial con lista paginada y detalle. Etapa 2 (ranking, eventos de diseño) está mockeada con MSW (`src/mocks/`) y marca visual `PendingBadge` ("pendiente · datos de ejemplo") porque los endpoints reales de Etapa 2 todavía no existen en el backend — no confundir con "no implementado en el frontend"; ver `docs/decisiones/decision042.md` para el alcance exacto de qué es mock y qué no. Fase 6 (pulido y accesibilidad) quedó parcial. Verificación E2E contra backend real: login/logout/me, Config→stream con atípico real, los tres modos de Resultados e Historial cerrados; solo el tramo registro→verify de Auth sigue bloqueado por falta de SMTP real en desarrollo. Punto de entrada para retomar el estado exacto: [`docs/informe-implementacion-frontend-fase1-6.md`](docs/informe-implementacion-frontend-fase1-6.md) (resumen navegable) y [`docs/frontend-implementation-plan.md`](docs/frontend-implementation-plan.md) §10 (fuente de verdad decisión por decisión). La nota de `architecture.md` sobre que el frontend "entra en operación recién en la primera instancia de avance del proyecto" está desactualizada frente a este estado — no editada acá porque no es archivo de arquitectura, señalarlo si se toca ese documento.
 
 ---
 
