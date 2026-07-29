@@ -4,7 +4,9 @@
 **Alcance ejecutado.** `docs/frontend/plan-mejora-frontend-pasada2.md`, Bloques A a E completos, en el
 orden que el propio plan sugiere.
 **Rama.** `fix/frontend-pasada2` (creada desde `staging` — `staging` no admite commits directos,
-`constraints.md`). 18 commits, uno por punto lógico, siguiendo la granularidad que el plan pedía en
+`constraints.md`). 22 commits (`git rev-list --count staging..HEAD` al cierre de esta pasada;
+corregido en la pasada 3 — decía "18" acá, encontrado en la revisión independiente, F5), uno por
+punto lógico, siguiendo la granularidad que el plan pedía en
 varios puntos (ej. `.gitattributes` aislado, un commit por decisión).
 **Propósito de este documento.** Punto único de retoma de esta pasada — igual que
 [`informe-implementacion-frontend-fase1-6.md`](./informe-implementacion-frontend-fase1-6.md) lo es
