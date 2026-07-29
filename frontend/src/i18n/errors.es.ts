@@ -28,17 +28,26 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_NON_NUMERIC_VALUES: "Hay valores no numéricos mezclados en la serie.",
 
   // Etapa 1 — pruebas
+  TEST_CRITICAL_INDEPENDENCE:
+    "Anderson rechazó independencia — resultado crítico.",
+  TEST_CRITICAL_HOMOGENEITY:
+    "Cramer rechazó homogeneidad — resultado crítico.",
   TEST_WARNING_TREND:
     "Se detectó una posible tendencia (Mann-Kendall o Kolmogorov-Smirnov).",
   TEST_WARNING_HOMOGENEITY: "Helmert o t de Student rechazaron homogeneidad.",
   TEST_WARNING_SMALL_SAMPLE:
-    "Muestra chica (n ≤ 40) — Wald-Wolfowitz se ejecuta con advertencia.",
+    "Muestra chica — Wald-Wolfowitz (n ≤ 40) o Mann-Kendall (10 ≤ n ≤ 30) se ejecutan con advertencia.",
   TEST_WARNING_OUTLIER_DETECTED:
     "Chow detectó un dato atípico — se requiere tu decisión.",
+  TEST_OUTLIER_REJECTED_BY_USER: "Rechazaste el dato atípico detectado por Chow.",
+  TEST_OUTLIER_ACCEPTED_BY_USER:
+    "Aceptaste el dato atípico como parte de la población.",
   TEST_NOT_EXECUTED_ZEROS:
     "Chow no se ejecutó: hay ceros en la serie de caudal/precipitación.",
   TEST_NOT_EXECUTED_CONDITION:
     "La prueba no se ejecutó: no se cumple una condición previa.",
+  TEST_NOT_EXECUTED_MIN_SAMPLES:
+    "Mann-Kendall no se ejecutó: la serie tiene menos de 10 datos.",
 
   // Stream
   PARSE_ERROR:

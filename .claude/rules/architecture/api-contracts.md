@@ -264,13 +264,21 @@ TEST_CRITICAL_INDEPENDENCE       Anderson rechaza — CRÍTICO
 TEST_CRITICAL_HOMOGENEITY        Cramer rechaza — CRÍTICO
 TEST_WARNING_TREND               Mann-Kendall o KS detectan tendencia
 TEST_WARNING_HOMOGENEITY         Helmert o t de Student rechazan
-TEST_WARNING_SMALL_SAMPLE        Wald-Wolfowitz con n ≤ 40
+TEST_WARNING_SMALL_SAMPLE        Wald-Wolfowitz con n ≤ 40, o Mann-Kendall con 10 ≤ n ≤ 30 (*)
 TEST_WARNING_OUTLIER_DETECTED    Chow detecta atípico — decisión pendiente
 TEST_OUTLIER_REJECTED_BY_USER    Usuario rechazó el dato atípico
 TEST_OUTLIER_ACCEPTED_BY_USER    Usuario aceptó el dato como parte de la población
 TEST_NOT_EXECUTED_ZEROS          Chow no ejecutado por ceros en caudal_precipitacion
 TEST_NOT_EXECUTED_CONDITION      Prueba con condición no cumplida
+TEST_NOT_EXECUTED_MIN_SAMPLES    Mann-Kendall no ejecutado — serie con n < 10
 ```
+
+(*) `core/etapa1/independence.py::determinar_warnings_independencia` promueve el
+`warning_codigo` de Wald-Wolfowitz a `result.warnings` correctamente.
+`core/etapa1/trend.py::determinar_warnings_tendencia` **no** hace lo mismo con el
+de Mann-Kendall — el `TestResult` individual lo lleva, pero nunca llega a la lista
+agregada de warnings. Gap encontrado y documentado, no corregido — ver
+`docs/decisiones/decision038.md` — DECISIÓN 038.
 
 ### Etapa 2 — distribuciones
 ```
@@ -279,3 +287,14 @@ DIST_NOT_CONVERGED               Método iterativo sin solución estable
 DIST_HIGH_EEA                    EEA supera el 5% de la media
 DIST_DISABLED_ZEROS              Distribución deshabilitada por ceros en caudal_precipitacion
 ```
+
+### Stream / sesión
+```
+PARSE_ERROR                      No se pudo parsear el archivo subido (evento SSE "error")
+SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante un atípico (evento SSE "error")
+```
+Ambos son eventos SSE `error`, no respuestas HTTP de error — ver nota general al
+principio de este archivo. Emitidos por `services/analysis_service.py`. Agregados
+al catálogo en `docs/decisiones/decision038.md` — DECISIÓN 038, que también deja
+la regla: todo código nuevo emitido por `core/` o `services/` se agrega acá en el
+mismo commit que lo introduce.
