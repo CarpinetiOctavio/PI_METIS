@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision042.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision043.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -146,3 +146,4 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [040](decision040.md) | SSE sobre fetch para el stream de Etapa 1 | 22/07/2026 | Implementado — verificado contra backend real |
 | [041](decision041.md) | Estado de servidor sin TanStack Query; `vi.stubGlobal("fetch")` como patrón único de test | 22-28/07/2026 | Diferido (TanStack Query, con criterio de habilitación) — Establecido (patrón de test) |
 | [042](decision042.md) | Alcance de los mocks de Etapa 2 y rol de MSW | 22-28/07/2026 | Implementado — verificado manualmente |
+| 043 | Contraste WCAG AA del tema Instrumento: hallazgos y propuesta, no aplicada | 29/07/2026 | EN CURSO |
