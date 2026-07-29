@@ -140,7 +140,7 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [036](decision036.md) | Partición de Cramer personalizada inalcanzable por el endpoint multipart | 29/07/2026 | Documentado — no implementado, requerimiento funcional caído |
 | [037](decision037.md) | Contrato de `/analysis/stream`: `etapas` descartado y `AnalysisRequest` sin cablear | 29/07/2026 | Documentado — inocuo hoy, prioridad M2/M3 |
 | [038](decision038.md) | Catálogo de códigos de error como fuente única, en ambas direcciones | 29/07/2026 | Aplicada — gap de propagación en `trend.py` documentado, no corregido |
-| 039 | Criterio de promoción de las decisiones de frontend y unificación de numeración | 29/07/2026 | EN CURSO |
-| 040 | SSE sobre fetch para el stream de Etapa 1 | 29/07/2026 | EN CURSO |
-| 041 | Estado de servidor sin TanStack Query; `vi.stubGlobal("fetch")` como patrón único de test | 29/07/2026 | EN CURSO |
-| 042 | Alcance de los mocks de Etapa 2 y rol de MSW | 29/07/2026 | EN CURSO |
+| [039](decision039.md) | Criterio de promoción de las decisiones de frontend y unificación de numeración | 29/07/2026 | Establecida |
+| [040](decision040.md) | SSE sobre fetch para el stream de Etapa 1 | 22/07/2026 | Implementado — verificado contra backend real |
+| [041](decision041.md) | Estado de servidor sin TanStack Query; `vi.stubGlobal("fetch")` como patrón único de test | 22-28/07/2026 | Diferido (TanStack Query, con criterio de habilitación) — Establecido (patrón de test) |
+| [042](decision042.md) | Alcance de los mocks de Etapa 2 y rol de MSW | 22-28/07/2026 | Implementado — verificado manualmente |
