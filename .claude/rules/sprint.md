@@ -790,6 +790,19 @@ registro→verify de Auth (bloqueado por falta de SMTP real en desarrollo — no
 es un criterio de M1 en sí, pero es el único hueco real que queda en la
 superficie de auth verificada).
 
+**ACTUALIZACIÓN 29 de Julio de 2026 (pasada 3):** `pytest -m unit` corrido por
+primera vez de punta a punta contra un entorno real — vía Docker
+(`docker-compose up -d backend postgres`, `docker exec pi_metis-backend-1
+pytest -m unit -v`), no contra el Python del host (que no tiene las
+dependencias instaladas, ni `venv` en el repo — ver `CLAUDE.md`, sección de
+comandos, actualizada con el procedimiento). **131 passed, 1 skipped.**
+`ruff check`/`ruff format --check` también verificados dentro del
+contenedor, ambos limpios. Esto no cierra el criterio de "tests de regresión
+matemática" (sigue bloqueado esperando las series digitales de Facundo — son
+tests distintos, en `tests/regression/`), pero confirma que la suite
+`unit` existente corre reproduciblemente, cosa que nunca se había verificado
+de punta a punta en este repo antes de esta pasada.
+
 M1 no se cierra hasta que los criterios pendientes estén resueltos.
 El desarrollo continúa hacia M2 en paralelo.
 

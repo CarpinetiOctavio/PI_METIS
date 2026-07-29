@@ -56,7 +56,12 @@ backend/metis/
 
 ## Comandos esenciales
 
-Backend — correr siempre con `backend/` como working directory:
+Backend — correr siempre con `backend/` como working directory. Los comandos de abajo asumen
+`pip install -r requirements.txt` corrido en el Python que los ejecuta — **no asumir que el
+Python del host lo tiene**: si no hay un `venv` del proyecto activado, corren contra el sistema
+sin `sqlalchemy`/`aiosmtplib`/etc. instalados y fallan en el import. Verificado el 29/07/2026
+(pasada 3): en esa máquina, sin `venv`, la ruta que sí corre reproduciblemente es dentro del
+contenedor Docker — 131 passed, 1 skipped.
 
 ```bash
 cd backend
@@ -77,6 +82,18 @@ pytest tests/unit/core/etapa1/test_independence.py::test_anderson_manda_sobre_wa
 # Linting — corre en CI (.github/workflows/ci.yml), correr antes de cada commit
 ruff check metis/
 ruff format metis/
+```
+
+**Sin `venv` local — correr todo lo de arriba dentro del contenedor:**
+
+```bash
+docker-compose up -d backend postgres
+docker ps  # confirmar el nombre real del contenedor — el prefijo lo decide Docker Compose
+           # a partir del nombre del directorio y ya cambió una vez en este repo
+           # (pi-postgres-1 vs. pi_metis-postgres-1, ver sprint.md)
+docker exec <backend> ruff check metis/
+docker exec <backend> ruff format --check metis/
+docker exec <backend> pytest -m unit -v
 ```
 
 Frontend — correr siempre con `frontend/` como working directory (ver [frontend/README.md](frontend/README.md)):
