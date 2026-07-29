@@ -298,3 +298,20 @@ principio de este archivo. Emitidos por `services/analysis_service.py`. Agregado
 al catálogo en `docs/decisiones/decision038.md` — DECISIÓN 038, que también deja
 la regla: todo código nuevo emitido por `core/` o `services/` se agrega acá en el
 mismo commit que lo introduce.
+
+### Códigos originados en el frontend
+```
+VALIDATION_ERROR          Sintetizado por api/client.ts ante un 422 genérico de
+                           FastAPI/Pydantic sin código propio — no lo manda el backend.
+STREAM_CONNECTION_ERROR   Sintetizado por api/sse.ts::onerror ante una falla de red/
+                           conexión del stream SSE — condición client-side, el
+                           backend nunca la ve ni la emite.
+```
+Estos dos no tienen contraparte en `core/`/`services/` porque describen condiciones
+que solo el cliente puede detectar (fallo de red, 422 sin `codigo` propio del
+backend) — no es un gap de sincronización, es el catálogo reconociendo que no
+todo código de error se origina en el servidor. Agregados acá en el addendum
+del 29/07/2026 de `docs/decisiones/decision038.md` — DECISIÓN 038, que también
+deja la regla explícita en esta dirección: todo código nuevo que el frontend
+invente para una condición client-side se agrega acá en el mismo commit que lo
+introduce, igual que los de `core/`/`services/`.

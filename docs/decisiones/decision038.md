@@ -34,6 +34,10 @@ archivo completo antes de esta pasada):
 se llama `errorText("STREAM_CONNECTION_ERROR")` en ningún componente; `sse.ts`
 usa `String(err)` crudo en su lugar. No se toca acá — es la corrección D1 del
 plan de esta pasada, sobre código de `frontend/src/`, no sobre el catálogo.
+**Desactualizado desde D1 (implementado más tarde en esta misma pasada 2):**
+`sse.ts` ya llama `errorText("STREAM_CONNECTION_ERROR")` — dejado de código
+muerto. Ver el addendum del 29/07/2026 (pasada 3) más abajo, que además
+encontró que el código en sí nunca se agregó al catálogo.
 
 **Hallazgo adicional — asimetría real en la propagación de `TEST_WARNING_SMALL_SAMPLE`.**
 `core/etapa1/independence.py::determinar_warnings_independencia` (línea ~139)
@@ -111,3 +115,87 @@ necesita ajustarse.
 
 **Ver también:** [DECISIÓN 036](decision036.md), [DECISIÓN 037](decision037.md) —
 mismos hallazgos de esta pasada, mismo patrón de "documentar sin tocar `core/`".
+
+---
+
+### Addendum — 29 de Julio de 2026 (pasada 3)
+
+**Motivo.** La revisión independiente de la pasada 2 encontró que el regex de
+verificación de arriba era demasiado ruidoso (`A`, `E`, `P` como falsos
+códigos) y que ese ruido tapaba un gap real: la regla de "fuente única" se
+escribió y verificó **en una sola dirección** (`core/`/`services/` → catálogo,
+y catálogo → `errors.es.ts`), pero nunca en la dirección contraria —
+¿todo código que el frontend le muestra al usuario está en el catálogo?
+
+**Diagnóstico confirmado con un regex limpio** (ancla los prefijos reales de
+código en vez de cualquier corrida de mayúsculas):
+- Backend → catálogo: **cero gaps.** Confirma que el punto 1 de la Decisión
+  original, arriba, está genuinamente cerrado en esa dirección.
+- Catálogo → `errors.es.ts`: solo los `DIST_*` de Etapa 2 (esperado,
+  documentado, ver DECISIÓN 042).
+- **`errors.es.ts` → catálogo — la dirección que faltaba: `STREAM_CONNECTION_ERROR`
+  y `VALIDATION_ERROR` no existen en ningún contrato.** Ambos son códigos que
+  el frontend **inventa** para condiciones que solo el cliente puede detectar
+  — `VALIDATION_ERROR` (`api/client.ts`) ante un 422 genérico de
+  FastAPI/Pydantic sin código propio del backend, `STREAM_CONNECTION_ERROR`
+  (`api/sse.ts::onerror`, ya cableado desde D1 — ver nota más arriba) ante una
+  falla de red del stream SSE que el backend nunca ve ni emite.
+
+**Decisión.**
+1. Agregada sección nueva "### Códigos originados en el frontend" a
+   `api-contracts.md`, con ambos códigos y la explicación de por qué no
+   tienen contraparte en `core/`/`services/` (no es una divergencia — son
+   condiciones client-side por diseño).
+2. **La regla de DECISIÓN 038 se declara explícitamente bidireccional
+   también para códigos de frontend:** todo código nuevo que el frontend
+   invente para una condición que el servidor no puede reportar se agrega
+   al catálogo en el mismo commit que lo introduce, igual que los de
+   `core/`/`services/`. No solo servidor → catálogo.
+3. El regex de "Criterio de hecho" de arriba **se reemplaza** por uno que
+   ancla los prefijos de código reales en vez de cualquier corrida de
+   mayúsculas, y agrega la tercera dirección:
+
+```bash
+# Emitidos por el backend y ausentes del catálogo — el backend solo emite
+# estos seis prefijos, VALIDATION_/STREAM_ son exclusivamente de frontend
+grep -rhoE '"(AUTH|CONTRACT|TEST|DIST|PARSE|SESSION)_[A-Z_]+"' backend/metis/ \
+  | tr -d '"' | sort -u > /tmp/emit.txt
+grep -ohE '\b(AUTH|CONTRACT|TEST|DIST|PARSE|SESSION|VALIDATION|STREAM)_[A-Z_]+' \
+  .claude/rules/architecture/api-contracts.md | sort -u > /tmp/cat.txt
+comm -23 /tmp/emit.txt /tmp/cat.txt
+# (verificado 29/07/2026: vacío)
+
+# Del catálogo y ausentes del diccionario del frontend
+grep -ohE '^  [A-Z_]+:' frontend/src/i18n/errors.es.ts | tr -d ' :' | sort -u > /tmp/fe.txt
+comm -23 /tmp/cat.txt /tmp/fe.txt
+# (verificado 29/07/2026: solo DIST_* — esperado, ver DECISIÓN 042)
+
+# Del frontend y ausentes del catálogo — la dirección que faltaba
+comm -13 /tmp/cat.txt /tmp/fe.txt
+# (verificado 29/07/2026, antes del fix: STREAM_CONNECTION_ERROR, VALIDATION_ERROR
+#  — corregido arriba; después del fix con el prefijo VALIDATION|STREAM agregado
+#  a la lista: vacío. Sin agregar esos dos prefijos a la lista, este comando
+#  sigue reportando un falso gap — verificado en el momento de escribir esto:
+#  la primera corrida con la lista vieja de seis prefijos todavía marcaba
+#  ambos códigos como faltantes pese a ya estar en el catálogo.)
+```
+
+Este regex ancla los prefijos de código conocidos (`AUTH|CONTRACT|TEST|DIST|
+PARSE|SESSION|VALIDATION|STREAM`) en vez de matchear cualquier corrida de
+mayúsculas — elimina el ruido de una letra que el regex de la pasada 2
+producía sobre párrafos de prosa. Los dos prefijos originados en frontend
+(`VALIDATION`, `STREAM`) están en la lista del catálogo pero **no** en la del
+backend — a propósito, el backend nunca los emite. Si se agrega una familia
+de códigos con un prefijo nuevo, el regex correspondiente necesita ese
+prefijo agregado a su lista o dejará de detectar esa familia — es una
+limitación conocida, no automática como un parser real.
+
+**Automatización — ver M2 del plan de pasada 3
+(`docs/frontend/plan-mejora-frontend-pasada3.md`).** Esta verificación deja
+de depender de que alguien la corra a mano: se agrega como step de CI en
+`.github/workflows/ci.yml`, con las excepciones conocidas (`DIST_*`) en un
+allowlist versionado y comentado, no hardcodeadas sin explicación en el YAML.
+
+**Ver también:** [DECISIÓN 040](decision040.md) — D1, la corrección de
+`STREAM_CONNECTION_ERROR` de código muerto a cableado de verdad, que este
+addendum complementa desde el lado del catálogo.

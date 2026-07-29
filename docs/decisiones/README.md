@@ -29,7 +29,9 @@ original de la decisión) vive dentro del mismo archivo que actualiza, no
 en uno nuevo — no es una decisión distinta, es la misma decisión con
 información más reciente. Addendums fechados existentes: `decision004.md`
 (17/07/2026), `decision010.md` (10/07/2026), `decision011.md`
-(18/07/2026), `decision023.md` (15/07/2026).
+(18/07/2026), `decision023.md` (15/07/2026), `decision038.md` (29/07/2026,
+dos addendums — pasada 2 y pasada 3, la de pasada 3 agrega la tercera
+dirección del chequeo de códigos de error).
 
 ## Historial de esta migración
 
