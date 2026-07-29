@@ -55,6 +55,8 @@ cerrada de una vez):
   Fases 1-6, punto único de retoma.
 - `plan-mejora-frontend-pasada2.md` — plan de la segunda pasada de revisión
   sobre ese trabajo (29/07/2026).
+- `informe-pasada2-resultados.md` — resultado de esa pasada, ítem por ítem
+  (29/07/2026).
 
 Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`,
 `historico/` o `frontend/` se discute antes de crear una carpeta nueva o
@@ -139,3 +141,11 @@ registro de cuándo se estableció o modificó.
   (`../docs/decisiones/...` dentro del propio plan, `../plan-mejora...`
   dentro de `decisiones/README.md`) que la profundidad extra de carpeta
   hubiera dejado rotos si no se ajustaban.
+- **29/07/2026 (cierre de la pasada)** — `informe-pasada2-resultados.md`
+  agregado a `docs/frontend/`: resultado ítem por ítem de los Bloques A-E
+  del plan de mejora, con la salida real de la verificación final (lint,
+  123/123 tests, build, chequeo bidireccional de códigos de error, sweep
+  de enlaces del repo). Backend: `ruff` verificado real; `pytest -m unit`
+  no se pudo correr por dependencias faltantes en el Python local (sin
+  `venv`) — brecha de entorno preexistente, sin riesgo real porque esta
+  pasada no tocó ningún archivo `backend/metis/*.py`.
