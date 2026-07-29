@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAnalysisStream } from "../../api/sse";
 import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
@@ -123,6 +124,8 @@ export function StreamPage() {
 
   const modalOpen = state.fase === "waiting_outlier" && Boolean(state.outlier);
   const contentRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   // `inert` no está en los tipos de esta versión de @types/react — se
   // setea imperativamente sobre el DOM real en vez de pasarlo como prop JSX.
@@ -131,6 +134,40 @@ export function StreamPage() {
   useEffect(() => {
     if (contentRef.current) contentRef.current.inert = modalOpen;
   }, [modalOpen]);
+
+  // M3 (cierre de Fase 6, pasada de mejora 3) — foco del modal de atípico.
+  useEffect(() => {
+    if (modalOpen) {
+      // Auto-foco al abrir: al contenedor del diálogo (tabIndex={-1}), no a
+      // ninguno de los dos botones — "Rechazar"/"Aceptar" son dos decisiones
+      // reales, ninguna es un "cancelar" por defecto; poner el foco inicial
+      // en cualquiera de las dos sesgaría al usuario hacia esa opción ante
+      // un Enter apurado. El contenedor es neutral y de todas formas mete el
+      // foco (y al lector de pantalla) adentro del diálogo.
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+      dialogRef.current?.focus();
+    } else if (previouslyFocusedRef.current) {
+      // Restaurar el foco al elemento que lo tenía cuando el modal se cierra.
+      previouslyFocusedRef.current.focus();
+      previouslyFocusedRef.current = null;
+    }
+  }, [modalOpen]);
+
+  function handleDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    // Decisión de producto, no de accesibilidad (M3.2): Escape NO cierra el
+    // modal ni descarta la decisión pendiente. El backend está bloqueado
+    // esperando (session_store, hasta 300s) y el pipeline no continúa sin
+    // una respuesta real — "rechazar" y "aceptar" son las dos únicas
+    // decisiones válidas, ninguna es un "cancelar" seguro para mapear un
+    // Escape accidental. Además cada una queda en el registro de auditoría
+    // (TEST_OUTLIER_REJECTED_BY_USER / TEST_OUTLIER_ACCEPTED_BY_USER) — un
+    // Escape sin querer no puede convertirse silenciosamente en una de las
+    // dos. Escape solo devuelve el foco al contenedor del diálogo; el modal
+    // sigue abierto y el usuario tiene que elegir explícitamente un botón.
+    dialogRef.current?.focus();
+  }
 
   if (!form) return null;
 
@@ -259,10 +296,13 @@ export function StreamPage() {
       {modalOpen && state.outlier && (
         <div className="modal-backdrop">
           <div
+            ref={dialogRef}
             className="card"
             role="dialog"
             aria-modal="true"
             aria-labelledby="outlier-title"
+            tabIndex={-1}
+            onKeyDown={handleDialogKeyDown}
           >
             <h2 id="outlier-title" className="h">
               Dato atípico detectado

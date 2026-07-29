@@ -68,23 +68,44 @@ function renderStreamPage(
     abort,
   });
 
-  const { unmount } = render(
-    <MemoryRouter
-      initialEntries={[
-        withForm
-          ? { pathname: "/stream", state: { form: makeForm() } }
-          : { pathname: "/stream" },
-      ]}
-    >
-      <Routes>
-        <Route path="/stream" element={<StreamPage />} />
-        <Route path="/config" element={<div>config screen</div>} />
-        <Route path="/results" element={<ResultsProbe />} />
-      </Routes>
-    </MemoryRouter>,
-  );
+  // Función, no una constante reutilizada: <Routes> de react-router memoiza
+  // internamente por identidad de referencia de sus children. Pasarle el
+  // mismo elemento de árbol dos veces a `rerender` deja el DOM viejo sin
+  // avisar — hay que construir un árbol nuevo en cada llamada. Confirmado
+  // con un repro mínimo antes de este fix, no asumido.
+  function makeTree() {
+    return (
+      <MemoryRouter
+        initialEntries={[
+          withForm
+            ? { pathname: "/stream", state: { form: makeForm() } }
+            : { pathname: "/stream" },
+        ]}
+      >
+        <Routes>
+          <Route path="/stream" element={<StreamPage />} />
+          <Route path="/config" element={<div>config screen</div>} />
+          <Route path="/results" element={<ResultsProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
 
-  return { start, resolveOutlier, abort, unmount };
+  const { unmount, rerender } = render(makeTree());
+
+  // Para simular una transición de estado del hook mockeado (ej. el modal
+  // cerrándose) — actualiza el mock y vuelve a renderizar un árbol nuevo.
+  function rerenderWithState(nextStateOverrides: Partial<StreamState>) {
+    mockedUseAnalysisStream.mockReturnValue({
+      start,
+      state: { ...BASE_STATE, ...nextStateOverrides },
+      resolveOutlier,
+      abort,
+    });
+    rerender(makeTree());
+  }
+
+  return { start, resolveOutlier, abort, unmount, rerenderWithState };
 }
 
 describe("StreamPage", () => {
@@ -172,6 +193,55 @@ describe("StreamPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Rechazar" }));
 
     await waitFor(() => expect(resolveOutlier).toHaveBeenCalledWith("rechazar"));
+  });
+
+  // M3 (cierre de Fase 6, pasada de mejora 3): foco del modal de atípico.
+  it("auto-focuses the dialog container (not either button) when the outlier modal opens", async () => {
+    renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+    });
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+  });
+
+  it("Escape does not close the modal or resolve a decision — the backend is blocked waiting for a real choice", async () => {
+    const { resolveOutlier } = renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+    });
+
+    const dialog = screen.getByRole("dialog");
+    await waitFor(() => expect(dialog).toHaveFocus());
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(resolveOutlier).not.toHaveBeenCalled();
+    expect(dialog).toHaveFocus();
+  });
+
+  it("restores focus to the previously-focused element once the outlier modal closes", async () => {
+    const { rerenderWithState } = renderStreamPage({
+      tests: { anderson: testResult({ prueba: "anderson" }) },
+    });
+
+    const independenciaStep = screen.getByText("Independencia").closest(".step") as HTMLElement;
+    independenciaStep.focus();
+    expect(independenciaStep).toHaveFocus();
+
+    rerenderWithState({
+      fase: "waiting_outlier",
+      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+    });
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+
+    rerenderWithState({
+      fase: "streaming",
+      tests: { anderson: testResult({ prueba: "anderson" }) },
+    });
+
+    await waitFor(() => expect(independenciaStep).toHaveFocus());
   });
 
   it("shows a completion banner and navigates to /results carrying the result", async () => {

@@ -519,10 +519,30 @@ ranking no tiene endpoint REST real (solo evento SSE nunca emitido) y
 `PendingBadge` visible en ambas pantallas. Verificado manualmente en el
 navegador de dev (única fase que no depende de backend real, por diseño).
 
-#### Fase 6 — Pulido y accesibilidad — PARCIAL
-Único pendiente reconocido del backlog original. Ver Bloque D
-(`docs/frontend/plan-mejora-frontend-pasada2.md`) para las correcciones puntuales de
-código y accesibilidad agendadas en la pasada de mejora del 29/07/2026.
+#### Fase 6 — Pulido y accesibilidad — COMPLETA salvo D11
+Bloque D (`docs/frontend/plan-mejora-frontend-pasada2.md`) y M3
+(`docs/frontend/plan-mejora-frontend-pasada3.md`) cerraron las correcciones
+puntuales de código y accesibilidad. Con `inert` ya aplicado al contenedor
+de fondo (D10), el foco no podía escaparse del diálogo — el grueso del
+focus trap ya estaba resuelto de hecho. M3 cerró lo que faltaba en
+`StreamPage.tsx`, modal de atípico:
+- **Auto-foco al abrir** — al contenedor del diálogo (`tabIndex={-1}`), no
+  a ninguno de los dos botones. Foco en un botón sesgaría al usuario hacia
+  esa decisión ante un Enter apurado; ninguna de las dos es un "cancelar"
+  por defecto.
+- **Escape no cierra el modal ni descarta la decisión** — decisión de
+  producto, no de accesibilidad: el backend está bloqueado esperando
+  (`session_store`, hasta 300s) y "rechazar"/"aceptar" son las únicas dos
+  decisiones válidas, cada una con su propio código de auditoría
+  (`TEST_OUTLIER_REJECTED_BY_USER`/`TEST_OUTLIER_ACCEPTED_BY_USER`) — un
+  Escape accidental no puede convertirse silenciosamente en ninguna de las
+  dos. Escape solo devuelve el foco al contenedor del diálogo.
+- **Restaura el foco** al elemento que lo tenía cuando el modal se cierra.
+
+Las tres con test de regresión (`StreamPage.test.tsx`). Único pendiente real
+de Fase 6: `docs/decisiones/decision043.md` — DECISIÓN 043 (contraste WCAG
+del tema Instrumento) — identidad visual fijada, pendiente de decisión de
+Kevin/Octavio, no de implementación.
 
 #### Verificación E2E fuera de las 6 fases nominales (backlog P4-P7)
 Corrida contra `docker-compose up backend postgres` real, no mockeada. Login →
