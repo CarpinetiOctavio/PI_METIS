@@ -27,7 +27,7 @@ toda fórmula implementada). Incluye:
   pendientes de escalar a Facundo o Carlos Catalini.
 
 ### `decisiones/`
-Un archivo por decisión (`decision001.md` a `decision042.md`, número
+Un archivo por decisión (`decision001.md` a `decision043.md`, número
 inmutable — citado en código de producción y en toda la documentación),
 más `README.md` como índice. No es un ADR estándar en sentido estricto:
 mezcla decisiones de arquitectura de software con hallazgos de fidelidad
@@ -56,6 +56,12 @@ cerrada de una vez):
 - `plan-mejora-frontend-pasada2.md` — plan de la segunda pasada de revisión
   sobre ese trabajo (29/07/2026).
 - `informe-pasada2-resultados.md` — resultado de esa pasada, ítem por ítem
+  (29/07/2026).
+- `plan-mejora-frontend-pasada3.md` — plan de cierre: verificación
+  independiente de la pasada 2, gaps encontrados, y merge a `staging`
+  (29/07/2026).
+- `informe-pasada3-resultados.md` — resultado de esa pasada. El merge a
+  `staging` quedó diferido — ver el documento para el estado real
   (29/07/2026).
 
 Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`,
@@ -149,3 +155,14 @@ registro de cuándo se estableció o modificó.
   no se pudo correr por dependencias faltantes en el Python local (sin
   `venv`) — brecha de entorno preexistente, sin riesgo real porque esta
   pasada no tocó ningún archivo `backend/metis/*.py`.
+- **29/07/2026 (pasada 3, cierre)** — `plan-mejora-frontend-pasada3.md` e
+  `informe-pasada3-resultados.md` agregados. `pytest -m unit` corrido por
+  primera vez de punta a punta vía Docker (131 passed, 1 skipped) — cierra
+  la brecha que la entrada anterior dejó pendiente. `decisiones/` pasó de
+  `decision001.md`-`042.md` a `decision001.md`-`043.md` (DECISIÓN 043 —
+  contraste WCAG del tema Instrumento, movida desde `sprint.md`). El merge
+  de `fix/frontend-pasada2` a `staging` quedó diferido por falta de acceso
+  a GitHub en esta máquina (`gh` no instalado, sin token) — decisión
+  explícita de Kevin de seguir con el resto del plan primero. Ver
+  `informe-pasada3-resultados.md` §2 para el estado real y los pasos
+  pendientes antes de que este trabajo sea visible fuera de este checkout.
