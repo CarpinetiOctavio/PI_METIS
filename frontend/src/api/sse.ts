@@ -72,7 +72,7 @@ function buildFormData(form: AnalysisStreamForm): FormData {
 /**
  * Corre un análisis de Etapa 1 y expone su progreso como estado React.
  * SSE-sobre-fetch (no EventSource nativo — el stream es un POST multipart,
- * ver frontend-implementation-plan.md §0/§2.3, Decisión D1).
+ * ver docs/decisiones/decision040.md — DECISIÓN 040).
  */
 export function useAnalysisStream(): UseAnalysisStreamResult {
   const [internal, setInternal] = useState<InternalState>(INITIAL_STATE);

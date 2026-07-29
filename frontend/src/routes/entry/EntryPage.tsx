@@ -126,7 +126,7 @@ function RegisterForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
       setFeedback({ kind: "ok", text: response.mensaje });
     } catch (err) {
       if (err instanceof ApiError && err.codigo === "AUTH_VERIFICATION_EMAIL_FAILED" && import.meta.env.DEV) {
-        // Ver docs/frontend-implementation-plan.md §3.4 (Decisión D6) — sin
+        // Ver docs/frontend-implementation-plan.md §3.4 (FE-6) — sin
         // SMTP real configurado, register falla por completo (no se crea el
         // usuario, no queda token). No hay forma de rescatar un token de los
         // logs en este entorno; el aviso es honesto sobre esa limitación.

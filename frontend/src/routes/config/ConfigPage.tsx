@@ -17,8 +17,8 @@ export function ConfigPage() {
   const [modo, setModo] = useState<Modo>("paso_a_paso");
   const [error, setError] = useState<string | null>(null);
 
-  // Decisión D — el anónimo siempre usa la UI Experto, sin selector de modo
-  // (metis-wireframes-fase1-decisiones.md, "Decisión de arquitectura D").
+  // UX-D — el anónimo siempre usa la UI Experto, sin selector de modo
+  // (metis-wireframes-fase1-decisiones.md, "UX-D").
   const modoEfectivo: Modo = isAuthed ? modo : "experto";
 
   function handleSubmit(event: FormEvent) {

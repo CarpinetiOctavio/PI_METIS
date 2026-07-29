@@ -84,7 +84,7 @@ function GroupTable({ items }: { items: TestResultDetail[] }) {
  * Vista puramente presentacional de un `Etapa1Result` — reutilizada por
  * ResultsPage (stream en vivo, Fase 3) y HistoryDetailPage (historial
  * persistido, Fase 4). No decide el `modo` efectivo (anónimo=experto,
- * Decisión D) — eso es responsabilidad de quien la use, según su propio
+ * UX-D) — eso es responsabilidad de quien la use, según su propio
  * contexto de auth.
  */
 export function Etapa1ResultView({ result, modo }: { result: Etapa1Result; modo: Modo }) {
