@@ -464,6 +464,16 @@ implementación de auth en sí.
   `docs/decisiones/decision036.md` — DECISIÓN 036. No implementar ninguna
   sin decidir entre las tres opciones primero.
 
+- **`etapas` se recibe y se descarta en `POST /analysis/stream`** —
+  `api/v1/analysis.py` declara `etapas: str = Form("1")` pero nunca lo pasa
+  a `stream_etapa1()`; el frontend tampoco lo envía.
+  `schemas/analysis.py::AnalysisRequest` (el modelo tipado que representaría
+  el contrato completo) no lo importa ninguna ruta — código muerto. Inocuo
+  mientras Etapa 2 esté mockeada en el frontend; **prioridad para M2/M3**,
+  cuando Etapa 2 se exponga de verdad y el backend necesite saber si el
+  usuario pidió `[1]` o `[1, 2]`. Ver `docs/decisiones/decision037.md` —
+  DECISIÓN 037.
+
 ---
 
 ## Entorno de desarrollo — datos de prueba

@@ -101,6 +101,14 @@ valor distinto del literal `"default"` llega como string a
 manejado, no un 400 controlado. Hoy el frontend nunca envía otra cosa que
 `"default"`. Ver `docs/decisiones/decision036.md` — DECISIÓN 036.
 
+**Nota de implementación — `etapas` se recibe y se descarta.** El endpoint real
+declara `etapas: str = Form("1")` pero nunca lo pasa a `stream_etapa1()` — el
+frontend tampoco lo envía. `schemas/analysis.py::AnalysisRequest` (el modelo
+Pydantic que representaría este contrato completo, tipado) no lo importa ninguna
+ruta. Hoy es inocuo porque Etapa 2 está mockeada en el frontend; deja de serlo
+cuando Etapa 2 se exponga de verdad (M2/M3). Ver `docs/decisiones/decision037.md`
+— DECISIÓN 037.
+
 ---
 
 ### POST /api/v1/analysis/outlier-decision
