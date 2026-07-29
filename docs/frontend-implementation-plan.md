@@ -726,42 +726,60 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   del `.env.example`). Confirmar antes del scaffold para no desalinear el CORS del backend.
 - **P3 — Azul institucional UCC** para las secciones con logo (blend UCC de Fase 2) — pendiente de
   confirmar contra el manual de marca. No bloquea el arranque; sí el pie de PDF/encabezados.
-- **P4 — Verificación E2E de registro→verify bloqueada sin SMTP real (ver D6).** El tramo
-  registro→mail→verify de Fase 1 solo tiene cobertura de tests unitarios/componente (fetch
-  mockeado) — no se pudo correr manualmente contra el backend real en esta sesión por falta de
-  credenciales SMTP locales. Login/logout/`me` sí quedan para verificarse manualmente contra el
-  backend real (Docker) al cierre de esta fase, reutilizando el usuario ya verificado que
-  documenta `sprint.md` ("Usuario de prueba para smoke tests", `2200631@ucc.edu.ar`) si sigue
-  existiendo en la BD local, o insertándolo directo en Postgres si no.
-- **P5 — Verificación E2E de Fase 2 contra el backend real, pendiente.** Config→stream se probó
-  manualmente en el navegador solo contra un backend inexistente (proxy de Vite devolviendo 500) —
-  confirma que el flujo no rompe ante un fallo de conexión (banner de error legible, sin excepciones
-  sin manejar), pero no confirma el camino feliz real: subir un CSV real, ver los 8 `test_result`,
-  un caso con atípico pausando y `resolveOutlier` desbloqueando la `iteracion:2`, ni un caso
-  bloqueante mostrando `contract_error`. Cobertura de tests unitarios/componente completa (D13);
-  falta la corrida manual contra Docker, agendada junto con P4 al cierre de esta etapa de trabajo.
-- **P6 — Verificación E2E de Fase 3 contra el backend real, pendiente.** `ResultsPage` no se pudo
-  ejercer contra un `Etapa1Result` real (no hay backend disponible esta sesión, y a diferencia de
-  Fase 2 no existe un camino de "fallo gracioso" que la ejercite igual sin backend — esta pantalla
-  solo se alcanza tras un análisis completo). Cobertura de tests de componente completa (6 tests:
-  redirect sin resultado, banner de `nivel_confianza`, KPIs, warnings, acordeón en paso a paso,
-  tarjetas planas en experto/anónimo) con un `Etapa1Result` sintético armado a mano. Falta la corrida
-  manual real (los tres modos de presentación sobre un resultado real), agendada junto con P4/P5.
-- **P7 — Verificación E2E de Fase 4 contra el backend real, pendiente.** `HistoryPage`/
-  `HistoryDetailPage` están detrás de `RequireAuth` — sin backend real no hay forma de alcanzarlas
-  siquiera (`/auth/me` nunca resuelve `isAuthed=true`, así que el guard redirige antes de que se
-  monten). A diferencia de Fase 2, tampoco hay un camino de "fallo gracioso" que las ejercite sin
-  login real. Cobertura de tests de componente completa (7 tests entre las dos pantallas: carga,
-  error, lista vacía, paginación, links, y detalle con/sin `etapa1`) con datos sintéticos. Falta la
-  corrida manual: loguearse, correr al menos un análisis real para tener algo que listar, ver el
-  historial, y abrir el detalle.
+- **P4 — CERRADO PARCIALMENTE 29/07/2026.** `docker-compose up backend postgres` levantado contra un
+  `.env` recién creado (sin SMTP real) y migraciones (`alembic upgrade head`) aplicadas. Sin SMTP,
+  `register`→`verify` sigue sin poder probarse (D6 — no cambia, sigue siendo un límite real, no de
+  esta sesión): en su lugar se insertó un usuario ya verificado directo en Postgres via `psql`
+  (bcrypt hash generado con el propio Python del contenedor backend, `docker exec`) — mismo patrón
+  que documenta `sprint.md` para el usuario de smoke test anterior. Con ese usuario: login → `200` +
+  cookie, `GET /me` → `200` con los datos correctos, logout → `200`, y tras un hard-reload posterior
+  `GET /me` → `401` (cookie efectivamente borrada del lado del server). Usuario y sus análisis de
+  prueba borrados al cerrar la sesión (ver más abajo). Registro→verify en sí **sigue pendiente** —
+  sin SMTP real no hay forma de cerrarlo end-to-end, es la única pieza que de verdad sigue bloqueada.
+- **P5 — CERRADO 29/07/2026, con 2 bugs reales encontrados y corregidos.** Config→stream corrido
+  contra el backend real con un CSV sintético de 40 años (uno de ellos un valor 6-7x el resto para
+  forzar a Chow). Confirmado de punta a punta: los 4 grupos de pruebas llegan y se resuelven
+  correctamente, el atípico pausa el stream con el modal real, `resolveOutlier("rechazar")`
+  desbloquea la `iteracion:2` y el grupo de Atípicos pasa de "warning" a "aprobada" (reemplazo
+  correcto, sin duplicar). Dos bugs reales aparecieron recién acá, ninguno detectado por los tests
+  unitarios de Fase 2 porque ninguno probó la secuencia exacta que el backend real manda:
+  - **Bug 1 — `complete` pisaba `fase="error"` con `"done"`.** El backend manda `complete` después
+    de `contract_error` también (ya documentado en `frontend-integration.md` §4), pero
+    `useAnalysisStream` no lo contemplaba: el primer CSV de prueba (años como enteros crudos, sin
+    guiones) disparó `CONTRACT_NO_TEMPORAL_RESOLUTION` real, y el `complete` inmediatamente después
+    tapaba el error y mostraba "Análisis completo" en su lugar. Corregido: `complete` ya no
+    sobreescribe una `fase` que ya está en `"error"`.
+  - **Bug 2 — `result_etapa1` nunca llegaba a `state.result`.** La doc y el propio comentario del
+    plan (§2.1: "envuelto al parsear, data = Etapa1Result crudo") ya decían que el payload del evento
+    viene crudo, sin envoltura `{result: ...}` — pero la implementación de `onmessage` construía el
+    evento genéricamente (`{type: ev.event, ...payload}`) para todos los tipos por igual, dejando
+    `event.result` siempre `undefined`. Confirmado leyendo el frame SSE real via `fetch` manual
+    (`event: result_etapa1\ndata: {"contract":...` — los campos de `Etapa1Result` sueltos, no
+    anidados). Corregido: `onmessage` ahora envuelve `result_etapa1` explícitamente.
+  Ambos bugs tienen test de regresión nuevo en `sse.test.ts` (con el comentario "found via live
+  backend testing" para que quede trazable de dónde salieron). Ninguno de los dos era detectable
+  sin correr contra el backend real — es exactamente el valor de este backlog.
+- **P6 — CERRADO 29/07/2026.** Con el Bug 2 de P5 corregido, `ResultsPage` renderiza el
+  `Etapa1Result` real correctamente en los tres modos: docencia+paso_a_paso (acordeón, verificado con
+  `<details>` cerrados por defecto conteniendo las tablas reales al expandir), docencia+experto
+  (tarjetas planas, `detailsCount:0`), y anónimo (fuerza experto igual, `analysisId:null` confirmando
+  que no persiste). Los KPIs, descriptivos y warnings mostrados coinciden exactamente con el `data:`
+  crudo inspeccionado en P5.
+- **P7 — CERRADO 29/07/2026.** `GET /history/` lista los 6 análisis reales persistidos durante las
+  corridas de P5/P6 (los anónimos correctamente ausentes — no persisten). `GET /history/{id}` en el
+  detalle reproduce exactamente el mismo `Etapa1Result` y `modo` que se vio en vivo en `/results`
+  para ese análisis — confirma que la persistencia y la lectura de vuelta son consistentes.
 
-**Backlog de verificación E2E contra el backend real — consolidado.** P4, P5, P6 y P7 son la misma
-espera de fondo (no hay Docker disponible en esta sesión de trabajo): registro→verify, Config→stream
-con un CSV real (incluido un caso con atípico), los tres modos de presentación de resultados sobre un
-análisis real, y el historial de un usuario logueado con al menos un análisis persistido. Se corren
-todos juntos la primera vez que haya acceso a Docker — no hace falta resolverlos uno por uno a medida
-que cada fase se cierra.
+**Limpieza post-verificación (29/07/2026).** Usuario de prueba (`2201001@ucc.edu.ar`, insertado
+directo via `psql`, nunca por `/register`) y sus 6 análisis borrados de Postgres al cerrar esta
+ronda — `DELETE FROM analyses WHERE user_id = (...)`, luego `DELETE FROM users WHERE email = ...`
+(`analysis_results` se limpia solo por `ON DELETE CASCADE`). No queda dato de prueba en la BD.
+
+**Estado final del backlog.** De P4-P7, solo el tramo registro→verify de P4 sigue genuinamente
+bloqueado — depende exclusivamente de credenciales SMTP reales que no están disponibles, no de nada
+que este backlog pueda resolver por su cuenta. El resto (login/logout/me, Config→stream con atípico,
+los tres modos de Resultados, e Historial) quedó verificado de punta a punta contra el backend real,
+con dos bugs reales corregidos en el proceso.
 
 ---
 

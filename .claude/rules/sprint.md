@@ -516,6 +516,37 @@ docker exec pi-postgres-1 bash -c \
 Se guarda en `/tmp/metis_smoke_cookies.txt` — archivo temporal, no commitear.
 Se destruye al hacer POST /logout o al borrar el archivo.
 
+**ACTUALIZACIÓN 29/07/2026 — insertar un usuario verificado sin pasar por
+/register (sigue sin haber SMTP real):** confirmado que sin SMTP,
+`POST /register` falla por completo (ver nota de arriba) — no hay forma de
+crear NINGÚN usuario verificado vía la API todavía. Para probar
+login/logout/me/historial del lado del frontend (Fase 6, verificación E2E
+contra `docker-compose up backend postgres`), se insertó un usuario ya
+verificado directo en Postgres, generando el hash bcrypt con el propio
+Python del contenedor backend (evita instalar `bcrypt` en el host):
+```bash
+docker exec pi_metis-backend-1 python3 -c \
+  "import bcrypt; print(bcrypt.hashpw(b'una-password', bcrypt.gensalt()).decode())"
+
+docker exec pi_metis-postgres-1 psql -U metis_user -d metis -c "
+INSERT INTO users (id, email, nombre, password_hash, email_verified, created_at)
+VALUES (gen_random_uuid(), 'legajo@ucc.edu.ar', 'Nombre', '<hash de arriba>', true, now());
+"
+```
+Notar `pi_metis-backend-1`/`pi_metis-postgres-1` (guión bajo, prefijo del
+nombre de carpeta real `PI_METIS`) — no `pi-postgres-1` con guión medio como
+en las notas anteriores de este archivo; el prefijo del contenedor lo decide
+Docker Compose a partir del nombre del directorio, no es fijo entre sesiones.
+Verificar con `docker ps` antes de asumir cualquiera de los dos.
+Limpieza al cerrar, incluyendo los análisis que haya generado el usuario
+(`analysis_results` se limpia solo por `ON DELETE CASCADE`):
+```bash
+docker exec pi_metis-postgres-1 psql -U metis_user -d metis -c \
+  "DELETE FROM analyses WHERE user_id = (SELECT id FROM users WHERE email = 'legajo@ucc.edu.ar');"
+docker exec pi_metis-postgres-1 psql -U metis_user -d metis -c \
+  "DELETE FROM users WHERE email = 'legajo@ucc.edu.ar';"
+```
+
 ### Otros emails de prueba usados — Auth Parte 2 (SMTP real, 19-20/07/2026)
 
 `2200999@ucc.edu.ar` — legajo inventado para el primer intento de

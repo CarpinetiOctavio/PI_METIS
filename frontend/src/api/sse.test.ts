@@ -130,6 +130,39 @@ describe("useAnalysisStream", () => {
     expect(result.current.state.tests.anderson.estadistico).toBe(0.11);
   });
 
+  it("unwraps result_etapa1 correctly — the real backend sends the raw Etapa1Result as the payload, not {result: ...} (regression — found via live backend testing)", () => {
+    mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useAnalysisStream());
+    act(() => result.current.start(makeForm()));
+
+    const rawEtapa1Result = {
+      contract: { bloqueante: false, codigo_error: null, warnings: [] },
+      descriptive: {
+        n: 39,
+        media: 134.4,
+        mediana: 134.3,
+        desvio_estandar: 24.55,
+        coef_variacion: 0.18,
+        coef_asimetria: 0.21,
+        minimo: 91.9,
+        maximo: 189.1,
+      },
+      independencia: [],
+      homogeneidad: [],
+      tendencia: [],
+      atipicos: [],
+      nivel_independencia: "independiente",
+      nivel_homogeneidad: "homogeneidad_ok",
+      nivel_confianza: "validado",
+      warnings: [],
+    };
+    // emit() manda el payload crudo tal cual — sin envoltura {result: ...} —
+    // igual que lo confirmado contra el backend real (docker-compose up).
+    act(() => emit("result_etapa1", rawEtapa1Result));
+
+    expect(result.current.state.result).toEqual(rawEtapa1Result);
+  });
+
   it("pauses on outlier_detected and resolveOutlier posts the decision then resumes streaming", async () => {
     mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
     const postSpy = vi
@@ -169,6 +202,18 @@ describe("useAnalysisStream", () => {
     expect(result.current.state.fase).toBe("error");
     expect(result.current.state.error?.codigo).toBe("CONTRACT_SERIES_TOO_SHORT");
     expect(result.current.state.error?.mensaje).toMatch(/menos de 10 datos/);
+  });
+
+  it("does not let the complete event that always follows contract_error overwrite fase=error with done (regression — found via live backend testing)", () => {
+    mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useAnalysisStream());
+    act(() => result.current.start(makeForm()));
+
+    act(() => emit("contract_error", { codigo: "CONTRACT_NO_TEMPORAL_RESOLUTION", iteracion: 1 }));
+    act(() => emit("complete", { analysis_id: null }));
+
+    expect(result.current.state.fase).toBe("error");
+    expect(result.current.state.error?.codigo).toBe("CONTRACT_NO_TEMPORAL_RESOLUTION");
   });
 
   it("sets fase=error on a server error event (e.g. SESSION_TIMEOUT)", () => {

@@ -141,7 +141,13 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
         case "result_etapa1":
           return { ...base, result: event.result };
         case "complete":
-          return { ...base, fase: "done", analysisId: event.analysis_id };
+          // `complete` SIEMPRE llega después de `contract_error` también
+          // (docs/frontend-integration.md §4: "Después de este evento el
+          // backend manda complete con analysis_id: null y cierra") — si ya
+          // estamos en fase="error" no hay que pisarla con "done".
+          return base.fase === "error"
+            ? base
+            : { ...base, fase: "done", analysisId: event.analysis_id };
         case "error":
           return {
             ...base,
@@ -181,7 +187,18 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
             const payload = JSON.parse(ev.data) as Record<string, unknown>;
             // El discriminante `type` no viaja en el JSON — lo da la línea
             // `event:` del frame SSE (ver architecture.md, formato `_sse()`).
-            handleEvent({ type: ev.event, ...payload } as SseEvent);
+            //
+            // result_etapa1 es un caso especial confirmado contra el backend
+            // real (no solo la doc): el frame trae el Etapa1Result crudo
+            // como payload — NO como `{result: {...}}` — hay que envolverlo
+            // acá. Bug real encontrado recién al probar contra Docker real;
+            // el mock sintético de sse.test.ts asumía (incorrectamente) el
+            // shape ya envuelto, por eso no lo agarró antes.
+            const event: SseEvent =
+              ev.event === "result_etapa1"
+                ? { type: "result_etapa1", result: payload as unknown as Etapa1Result }
+                : ({ type: ev.event, ...payload } as SseEvent);
+            handleEvent(event);
           } catch {
             setInternal((prev) => ({
               ...prev,
