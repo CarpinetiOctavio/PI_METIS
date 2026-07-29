@@ -27,7 +27,7 @@ toda fórmula implementada). Incluye:
   pendientes de escalar a Facundo o Carlos Catalini.
 
 ### `decisiones/`
-Un archivo por decisión (`decision001.md` a `decision031.md`, número
+Un archivo por decisión (`decision001.md` a `decision042.md`, número
 inmutable — citado en código de producción y en toda la documentación),
 más `README.md` como índice. No es un ADR estándar en sentido estricto:
 mezcla decisiones de arquitectura de software con hallazgos de fidelidad
@@ -41,6 +41,24 @@ borran — se mueven acá con una nota en `historico/README.md` explicando
 qué eran, cuándo se superaron, y qué los reemplaza. Mismo criterio de
 trazabilidad que rige el resto del proyecto: preservar el camino
 recorrido, no solo el estado final.
+
+### Archivos sueltos directamente bajo `docs/`
+No encajan en ninguna de las tres carpetas de arriba — son documentación de
+la implementación real del frontend, no de fidelidad estadística ni de
+decisiones de arquitectura de una sola línea:
+- `frontend-implementation-plan.md` — plan de integración del frontend,
+  fuente de verdad decisión por decisión (§10).
+- `frontend-integration.md` — contrato real backend↔frontend observado
+  (shapes de eventos SSE, discrepancias con `api-contracts.md`).
+- `informe-implementacion-frontend-fase1-6.md` — informe consolidado de
+  Fases 1-6, punto único de retoma.
+- `plan-mejora-frontend-pasada2.md` — plan de la segunda pasada de revisión
+  sobre ese trabajo (29/07/2026).
+
+**Propuesta abierta, no ejecutada:** agrupar estos cuatro bajo `docs/frontend/`
+— hoy están sueltos en la raíz de `docs/` sin categoría propia, que es
+justamente lo que la regla de abajo pide discutir antes de crear una carpeta
+nueva. No se ejecuta unilateralmente en esta pasada.
 
 Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`
 o `historico/` se discute antes de crear una carpeta nueva o forzarlo
@@ -102,3 +120,15 @@ registro de cuándo se estableció o modificó.
   `frontend-implementation-plan.md` §10 (fuente de detalle decisión por
   decisión) — pensado como punto único de retoma para una persona o para
   otra sesión de Claude Code sin contexto previo.
+- **29/07/2026 (pasada de mejora)** — `plan-mejora-frontend-pasada2.md`
+  agregado (diagnóstico y plan de una segunda revisión sobre el trabajo de
+  Fases 1-5). Nueva sección "Archivos sueltos directamente bajo `docs/`"
+  agregada arriba — `frontend-implementation-plan.md` y
+  `frontend-integration.md` existían desde el 22-28/07/2026 sin estar
+  listados en este README, incumplimiento de la regla de abajo detectado y
+  corregido en esta ronda. `decisiones/` pasó de `decision001.md`-`034.md` a
+  `decision001.md`-`042.md` (036-042 de esta pasada — DECISIÓN 036/037/038
+  hallazgos de backend, DECISIÓN 039/040/041/042 promoción de las decisiones
+  de frontend). `frontend/frontend-design/` (wireframes, identidad,
+  prototipo, `versiones/`) commiteado por primera vez — no es parte de
+  `docs/` pero se registra acá por ser el mismo evento de trazabilidad.
