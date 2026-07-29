@@ -67,6 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await authApi.logout();
     setUser(null);
+    // D8 (pasada de mejora): antes no limpiaba el flag anónimo — un usuario
+    // que hizo login real y después logout podía quedar con
+    // metis-anon-session="true" residual de una sesión anónima anterior.
+    localStorage.removeItem(ANON_STORAGE_KEY);
+    setIsAnonymous(false);
   }, []);
 
   const enterAnonymously = useCallback(() => {
