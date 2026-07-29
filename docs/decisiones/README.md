@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision034.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision042.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -32,6 +32,13 @@ información más reciente. Addendums fechados existentes: `decision004.md`
 (18/07/2026), `decision023.md` (15/07/2026).
 
 ## Historial de esta migración
+
+**29/07/2026 (reserva de números, previa a `decision036.md`-`decision042.md`)** —
+[`docs/plan-mejora-frontend-pasada2.md`](../plan-mejora-frontend-pasada2.md) (Bloque B0)
+reserva 035-042 en el índice antes de escribir ningún contenido, para que ningún
+trabajo paralelo pise un número. `035` ya estaba comprometido desde `sprint.md`
+(protección de ramas, 20/07/2026) sin archivo propio todavía — no se toca en esta
+pasada. `036`-`042` se completan en el mismo trabajo que reserva los números.
 
 **18/07/2026** — `decisions-log.md` (monolito de 29 entradas, algunas sin
 número de decisión) separado en archivos individuales. Cambios de
@@ -129,3 +136,11 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [032](decision032.md) | Auth: orden mail-antes-que-commit en `register`, ventana residual aceptada | 19/07/2026 | Implementado — pendiente de verificación exhaustiva por test |
 | [033](decision033.md) | Bump de FastAPI/Starlette diferido, con criterios explícitos de habilitación | 19/07/2026 | Diferido — condicionado a dos criterios explícitos |
 | [034](decision034.md) | Correcciones de configuración SMTP encontradas en smoke test real: hostname y separación de identidad de remitente | 20/07/2026 | Implementado y verificado — envío real de punta a punta confirmado |
+| 035 | *(reservado — GitHub Ruleset de protección de ramas, no tocar en esta pasada)* | — | Pendiente — ver `sprint.md`, sección "Estrategia de ramas", 20/07/2026 |
+| 036 | Partición de Cramer personalizada inalcanzable por el endpoint multipart | 29/07/2026 | EN CURSO |
+| 037 | Contrato de `/analysis/stream`: `etapas` descartado y `AnalysisRequest` sin cablear | 29/07/2026 | EN CURSO |
+| 038 | Catálogo de códigos de error como fuente única, en ambas direcciones | 29/07/2026 | EN CURSO |
+| 039 | Criterio de promoción de las decisiones de frontend y unificación de numeración | 29/07/2026 | EN CURSO |
+| 040 | SSE sobre fetch para el stream de Etapa 1 | 29/07/2026 | EN CURSO |
+| 041 | Estado de servidor sin TanStack Query; `vi.stubGlobal("fetch")` como patrón único de test | 29/07/2026 | EN CURSO |
+| 042 | Alcance de los mocks de Etapa 2 y rol de MSW | 29/07/2026 | EN CURSO |
