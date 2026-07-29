@@ -578,6 +578,50 @@ patrón único de test), DECISIÓN 042 (alcance de mocks de Etapa 2). El resto
   usuario pidió `[1]` o `[1, 2]`. Ver `docs/decisiones/decision037.md` —
   DECISIÓN 037.
 
+- **Contraste WCAG AA de `tokens.instrumento.css` — pendiente heredado de
+  Fase 6 del frontend (pulido y accesibilidad), auditado en la pasada de
+  mejora del 29/07/2026 (D11).** El tema Instrumento es identidad visual
+  fijada — **no se tocan los tokens acá**, solo se deja el hallazgo y una
+  propuesta concreta registrados. Metodología: contraste WCAG real
+  (fórmula de luminancia relativa) calculado programáticamente sobre los 21
+  pares texto/fondo de `tokens.instrumento.css`, incluidos los fondos
+  compuestos reales de `color-mix(in srgb, ...)` que usan las banners/pills
+  de `ok`/`warn`/`crit` (no el color sólido de fondo — el hallazgo inicial
+  contra el fondo sólido daba falsos negativos).
+
+  **Hallazgos reales (no falsos positivos):**
+  1. `--fnt` (`.fn`, 11px — usado en decenas de lugares: notas al pie,
+     `(n1=X, n2=Y)`, EEA de ranking, separadores) — **2.31:1 en claro,
+     2.89-3.15:1 en oscuro**, muy por debajo del mínimo de 4.5:1 para texto
+     normal. Es el hallazgo más extendido — `.fn` se usa en casi todas las
+     pantallas.
+  2. `--ok`/`--warn`/`--crit` como texto sobre su propio fondo `color-mix`
+     translúcido (banners/pills de warning) — **solo en modo claro**:
+     ratios entre 2.79:1 y 4.10:1 según el token y el % de mezcla (peor
+     caso: `--warn` sobre `--bg`, 2.79-2.92:1 — ni siquiera cumple el
+     umbral de 3:1 para texto grande/UI). Verificado que el modo oscuro no
+     tiene este problema (5.16-8.59:1, todos aprueban).
+
+  **Propuesta concreta (no aplicada), calculada — mismo tono, oscurecido/
+  aclarado lo mínimo necesario para llegar a 4.5:1:**
+
+  | Token | Valor actual | Propuesta | Ratio resultante |
+  |---|---|---|---|
+  | `--fnt` (claro) | `#9aa5b1` | `#697888` | 4.51:1 vs. `--surf` |
+  | `--fnt` (oscuro) | `#566270` | `#728193` | 4.51:1 vs. `--surf` |
+  | `--warn` (claro) | `#b5791a` | `#825713` | 4.50:1 (peor caso, 18% sobre `--bg`) |
+  | `--ok` (claro) | `#128a4e` | `#0e6d3e` | 4.54:1 (peor caso, 18% sobre `--bg`) |
+  | `--crit` (claro) | `#c24444` | `#a83737` | 4.50:1 (peor caso, 18% sobre `--bg`) |
+
+  Estos valores **oscurecen el mismo matiz** (no cambian de color) lo
+  mínimo necesario para cruzar 4.5:1 — son un piso computado, no una
+  propuesta de diseño terminada. `--acc`/`--acc2`/`--ink`/`--mut` ya
+  cumplen AA en ambos modos, sin cambios propuestos. `--line`/
+  `--line-strong` no cumplen 3:1 contra `--bg`, pero son separadores
+  decorativos, no el único indicador de un borde interactivo — no se
+  proponen cambios ahí. Decisión de aplicar o no queda en manos de
+  Kevin/Octavio — es identidad visual, no una corrección mecánica.
+
 ---
 
 ## Entorno de desarrollo — datos de prueba
