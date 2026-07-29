@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>METIS · Explorador de Wireframes — Fase 1</title>
+<style>
+  :root{
+    --canvas:#e9eaec;--surface:#ffffff;--line:#c7ccd1;--line-strong:#9aa1a8;
+    --ink:#2c3136;--muted:#7b828a;--faint:#aeb4ba;--fill:#eef0f2;--fill-2:#e2e5e8;
+    --sel:#3f5566;--sel-soft:#dbe4ea;--warn:#8a7b3a;--warn-soft:#efe9d2;--crit:#8a4a4a;--crit-soft:#efdcdc;--ok:#4a6b52;--ok-soft:#dde9e0;
+    --radius:6px;--mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--canvas);font-size:14px;line-height:1.45}
+  /* ---------- Chrome del explorador ---------- */
+  header.explorer{position:sticky;top:0;z-index:50;background:#1f272e;color:#e7eaed;display:flex;align-items:center;gap:18px;padding:10px 18px;border-bottom:1px solid #000}
+  header.explorer .brand{font-weight:700;letter-spacing:.5px}
+  header.explorer .brand small{font-weight:400;color:#9aa4ad;letter-spacing:0}
+  header.explorer .spacer{flex:1}
+  .mode-toggle{display:flex;background:#2c363e;border-radius:20px;padding:3px;border:1px solid #3a454e}
+  .mode-toggle button{border:0;background:transparent;color:#aeb8c0;padding:5px 14px;border-radius:16px;cursor:pointer;font-size:13px;font-weight:600}
+  .mode-toggle button.active{background:#e7eaed;color:#1f272e}
+  .exp-btn{border:1px solid #3a454e;background:#2c363e;color:#cfd6db;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+  .exp-btn.on{background:#e7eaed;color:#1f272e}
+  .layout{display:flex;min-height:calc(100vh - 49px)}
+  nav.flow{width:210px;flex-shrink:0;background:#f4f5f7;border-right:1px solid var(--line);padding:14px 0}
+  nav.flow .grp{padding:6px 18px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);margin-top:8px}
+  nav.flow a{display:flex;align-items:center;gap:9px;padding:9px 18px;color:var(--ink);text-decoration:none;cursor:pointer;border-left:3px solid transparent;font-size:13.5px}
+  nav.flow a .n{width:20px;height:20px;border:1px solid var(--line-strong);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);flex-shrink:0}
+  nav.flow a:hover{background:#eaecef}
+  nav.flow a.active{background:#e4e8eb;border-left-color:var(--sel);font-weight:600}
+  nav.flow a.active .n{border-color:var(--sel);color:var(--sel)}
+  nav.flow a.locked{opacity:.4}
+  nav.flow a.locked::after{content:'docencia';margin-left:auto;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
+  main.stage{flex:1;display:flex;flex-direction:column;min-width:0}
+  .stage-top{background:var(--surface);border-bottom:1px solid var(--line);padding:12px 22px}
+  .stage-top h2{margin:0 0 3px;font-size:16px}
+  .stage-top p{margin:0;color:var(--muted);font-size:12.5px}
+  .variant-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+  .variant-tabs button{border:1px solid var(--line);background:var(--fill);color:var(--muted);padding:5px 13px;border-radius:16px;cursor:pointer;font-size:12.5px;font-weight:600}
+  .variant-tabs button.active{background:var(--sel);border-color:var(--sel);color:#fff}
+  .canvas-wrap{flex:1;overflow:auto;padding:26px;display:flex;gap:22px;align-items:flex-start}
+  .device{flex:1;min-width:0;max-width:1000px;margin:0 auto}
+  .frame{background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.07)}
+  .notes{width:270px;flex-shrink:0;background:#fbfbfc;border:1px dashed var(--line-strong);border-radius:8px;padding:15px 16px;font-size:12.5px;color:#4c545b;position:sticky;top:26px}
+  .notes h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .notes .vname{font-weight:700;color:var(--ink);font-size:13px;margin-bottom:6px}
+  .notes ul{margin:8px 0 0;padding-left:16px}
+  .notes li{margin-bottom:5px}
+  .notes.hidden{display:none}
+  /* ---------- Primitivas de wireframe ---------- */
+  .app{font-size:13px}
+  .app-bar{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--line);background:#fafbfc}
+  .app-bar .logo{font-weight:700;letter-spacing:1px;color:var(--ink)}
+  .app-bar .logo .dot{color:var(--sel)}
+  .app-bar .sp{flex:1}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;font-size:11.5px;font-weight:600;border:1px solid}
+  .badge.doc{background:var(--sel-soft);border-color:#b9cad6;color:var(--sel)}
+  .badge.anon{background:var(--fill-2);border-color:var(--line);color:var(--muted)}
+  .badge::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+  .avatar{width:28px;height:28px;border-radius:50%;background:var(--fill-2);border:1px solid var(--line)}
+  .navlink{color:var(--muted);font-size:12.5px}
+  .pad{padding:22px 26px}
+  .pad-lg{padding:30px 34px}
+  h3.wf{margin:0 0 4px;font-size:17px}
+  .sub{color:var(--muted);font-size:12.5px;margin:0 0 18px}
+  .row{display:flex;gap:16px}
+  .col{flex:1;min-width:0}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:16px;background:var(--surface)}
+  .card.soft{background:#fafbfc}
+  .card-t{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 10px;font-weight:700}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .input{border:1px solid var(--line);border-radius:5px;background:#fff;height:34px;display:flex;align-items:center;padding:0 10px;color:var(--faint);font-size:12.5px}
+  .input.sel{border-color:var(--sel);color:var(--ink)}
+  .dropzone{border:2px dashed var(--line-strong);border-radius:8px;background:#fafbfc;padding:26px;text-align:center;color:var(--muted)}
+  .dropzone .ic{font-size:26px;color:var(--faint)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);border-radius:16px;padding:5px 12px;font-size:12px;color:var(--muted);background:#fff;cursor:default}
+  .chip.sel{border-color:var(--sel);background:var(--sel-soft);color:var(--sel);font-weight:600}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg span{padding:6px 14px;font-size:12px;color:var(--muted);border-right:1px solid var(--line)}
+  .seg span:last-child{border-right:0}
+  .seg span.sel{background:var(--sel);color:#fff;font-weight:600}
+  .btn{display:inline-flex;align-items:center;gap:7px;border-radius:6px;padding:9px 16px;font-size:13px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:default}
+  .btn.pri{background:var(--sel);border-color:var(--sel);color:#fff}
+  .btn.sm{padding:6px 11px;font-size:12px}
+  .btn.gho{background:transparent;color:var(--muted)}
+  .ph{background:repeating-linear-gradient(45deg,#f0f2f4,#f0f2f4 7px,#e8ebee 7px,#e8ebee 14px);border-radius:5px;border:1px solid var(--line)}
+  .graph{border:1px solid var(--line);border-radius:6px;background:#fcfcfd;position:relative;overflow:hidden}
+  .graph .axis{position:absolute;background:var(--faint)}
+  .graph svg{display:block;width:100%;height:100%}
+  .bars{display:flex;align-items:flex-end;gap:5px;height:100%;padding:10px}
+  .bars i{flex:1;background:var(--fill-2);border-top:2px solid var(--line-strong)}
+  table.wf{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.wf th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line-strong);font-weight:700}
+  table.wf td{padding:9px 10px;border-bottom:1px solid var(--fill-2);color:var(--ink)}
+  table.wf tr.sel td{background:var(--sel-soft)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:11px;font-size:10.5px;font-weight:700;letter-spacing:.3px}
+  .pill.ok{background:var(--ok-soft);color:var(--ok)}
+  .pill.warn{background:var(--warn-soft);color:var(--warn)}
+  .pill.crit{background:var(--crit-soft);color:var(--crit)}
+  .pill.wait{background:var(--fill-2);color:var(--muted)}
+  .step{display:flex;gap:12px;align-items:flex-start}
+  .step .node{width:26px;height:26px;border-radius:50%;border:2px solid var(--line-strong);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);background:#fff;flex-shrink:0}
+  .step.done .node{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+  .step.active .node{background:var(--sel);border-color:var(--sel);color:#fff}
+  .step .line{width:2px;background:var(--line);flex:1;margin:2px 0 0 12px}
+  .progress{height:8px;background:var(--fill-2);border-radius:5px;overflow:hidden}
+  .progress i{display:block;height:100%;background:var(--sel);border-radius:5px}
+  .console{background:#20272d;color:#cdd6de;font-family:var(--mono);font-size:12px;border-radius:6px;padding:14px 16px;line-height:1.7}
+  .console .t{color:#6f7d89}.console .g{color:#8bb59a}.console .y{color:#c9b878}.console .r{color:#c98d8d}.console .cur{color:#cdd6de}
+  .kpi{border:1px solid var(--line);border-radius:6px;padding:12px 14px;background:#fafbfc}
+  .kpi .v{font-size:20px;font-weight:700}
+  .kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .banner{border:1px solid var(--line);border-radius:6px;padding:11px 14px;display:flex;gap:10px;align-items:center;font-size:12.5px}
+  .banner.warn{background:var(--warn-soft);border-color:#d8ceac;color:var(--warn)}
+  .banner.crit{background:var(--crit-soft);border-color:#dbbfbf;color:var(--crit)}
+  .banner.info{background:var(--sel-soft);border-color:#b9cad6;color:var(--sel)}
+  .banner .ic{font-weight:800}
+  .modal-scrim{background:rgba(30,36,42,.32);padding:26px;display:flex;align-items:center;justify-content:center}
+  .modal{background:#fff;border:1px solid var(--line-strong);border-radius:10px;max-width:440px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.2);overflow:hidden}
+  .muted{color:var(--muted)}.mono{font-family:var(--mono)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .tag-anon{display:inline-block;font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);border:1px dashed var(--line-strong);border-radius:4px;padding:1px 6px}
+  .foot-note{font-size:11px;color:var(--faint);margin-top:6px}
+  .hr{height:1px;background:var(--fill-2);margin:16px 0}
+  .stack>*+*{margin-top:10px}
+</style>
+</head>
+<body>
+<!--
+  METIS · Explorador de Wireframes — Fase 1
+  v1 (2026-07-20): 25 variantes iniciales. Snapshot en /versiones/metis-wireframes-fase1-v1_2026-07-20.html
+  v2 (2026-07-20): +5 variantes mezcla pedidas por Kevin → total 30.
+    · Config G      — hero + acordeón (2 opciones) + selector de etapa siempre visible (mezcla A+E)
+    · Stream G      — barras de B + índice de etapa (anillo) y pasos (puntos) + contador que sube al resultado
+    · ResultadosE1 E— resumen/veredictos de A sobre el tablero de gráficos de C
+    · Ranking D     — tarjetas de C con toggle año calendario/hidrológico por tarjeta
+    · Eventos C     — variante B + slider sincronizado con los botones de período
+  v3 (2026-07-20): nueva pantalla "Paso a paso vs Experto" (4 variantes) → total 34.
+    Hace visible la diferencia funcional docencia↔anónimo: en docencia el modo Paso a paso
+    muestra fórmulas con valores sustituidos; en anónimo colapsa a "solo resultados".
+-->
+<header class="explorer">
+  <div class="brand">METIS <small>· Explorador de Wireframes — Fase 1 · v3</small></div>
+  <div class="spacer"></div>
+  <span style="font-size:12px;color:#9aa4ad">Modo de la app:</span>
+  <div class="mode-toggle" id="modeToggle">
+    <button data-mode="doc" class="active">Docencia</button>
+    <button data-mode="anon">Anónimo</button>
+  </div>
+  <button class="exp-btn on" id="notesBtn">Notas de diseño</button>
+</header>
+
+<div class="layout">
+  <nav class="flow" id="flowNav"></nav>
+  <main class="stage">
+    <div class="stage-top">
+      <h2 id="scTitle"></h2>
+      <p id="scDesc"></p>
+      <div class="variant-tabs" id="variantTabs"></div>
+    </div>
+    <div class="canvas-wrap">
+      <div class="device"><div class="frame" id="frame"></div></div>
+      <aside class="notes" id="notes"></aside>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   Helpers de wireframe (mid-fi, sin identidad visual)
+   ============================================================ */
+const el = (m)=>`<span class="badge ${m==='doc'?'doc':'anon'}">${m==='doc'?'Docencia · guardado activo':'Anónimo · sin guardado'}</span>`;
+function appBar(m,{nav=true}={}){
+  return `<div class="app-bar">
+    <span class="logo">METIS<span class="dot">.</span></span>
+    ${nav?`<span class="sp"></span>
+      <span class="navlink">Nuevo análisis</span>
+      ${m==='doc'?`<span class="navlink">Historial</span>`:``}
+      <span class="sp"></span>`:`<span class="sp"></span>`}
+    ${el(m)}
+    ${m==='doc'?`<div class="avatar"></div>`:`<span class="btn sm gho">Crear cuenta</span>`}
+  </div>`;
+}
+const graphBars=(n=12,h=120)=>{let b='';for(let i=0;i<n;i++){b+=`<i style="height:${25+Math.round(Math.abs(Math.sin(i*1.3))*70)}%"></i>`}return `<div class="graph" style="height:${h}px"><div class="bars">${b}</div></div>`};
+const graphLine=(h=120)=>`<div class="graph" style="height:${h}px"><svg viewBox="0 0 300 120" preserveAspectRatio="none"><polyline points="0,95 40,70 80,82 120,45 160,60 200,30 240,52 300,20" fill="none" stroke="#9aa1a8" stroke-width="2"/><polyline points="0,110 300,110" stroke="#c7ccd1" stroke-width="1"/><line x1="2" y1="6" x2="2" y2="112" stroke="#c7ccd1"/></svg></div>`;
+const graphLine2=(h=120)=>`<div class="graph" style="height:${h}px"><svg viewBox="0 0 300 120" preserveAspectRatio="none"><polyline points="0,60 40,40 80,55 120,72 160,35 200,66 240,28 300,48" fill="none" stroke="#9aa1a8" stroke-width="2" stroke-dasharray="3 2"/><polyline points="0,110 300,110" stroke="#c7ccd1" stroke-width="1"/><line x1="2" y1="6" x2="2" y2="112" stroke="#c7ccd1"/></svg></div>`;
+const ph=(h)=>`<div class="ph" style="height:${h}px"></div>`;
+function yearTabs(){return `<div class="seg" style="font-size:11px"><span class="sel">Año calendario</span><span>Año hidrológico</span></div>`}
+function modeSubToggle(sel){return `<div class="seg"><span class="${sel==='paso'?'sel':''}">Paso a paso</span><span class="${sel==='exp'?'sel':''}">Experto</span></div>`}
+function signChips(){const s=['+','+','−','+','−','−','+','+','+','−','+','−'];return '<span class="mono" style="letter-spacing:2px">'+s.map(x=>`<span style="color:${x==='+'?'#4a6b52':'#8a4a4a'};font-weight:700">${x}</span>`).join(' ')+'</span>'}
+function stepCard(n,title,body,last){return `<div class="card"${last?' style="border-color:var(--ok)"':''}><div class="row" style="align-items:flex-start;gap:12px"><div style="width:24px;height:24px;border:2px solid var(--sel);color:var(--sel);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;font-weight:700">${n}</div><div style="flex:1"><div style="font-weight:600;font-size:12.5px">${title}</div><div class="muted" style="margin-top:3px;font-size:12.5px">${body}</div></div></div></div>`}
+function anonResult(){return `<div class="app">${appBar('anon')}<div class="pad-lg">
+  <div class="banner info" style="margin-bottom:14px"><span class="ic">i</span> Modo anónimo: <b>&nbsp;solo resultados</b>. El modo paso a paso (fórmulas sustituidas) es exclusivo de Docencia.</div>
+  <h3 class="wf" style="font-size:15px">Homogeneidad — Helmert</h3><p class="sub">Resultado directo</p>
+  <div class="grid3"><div class="kpi"><span class="l">|S − C|</span><div class="v mono">3</div></div><div class="kpi"><span class="l">Límite √(n−1)</span><div class="v mono">6.24</div></div><div class="kpi"><span class="l">Veredicto</span><div class="v"><span class="pill ok">aprobada</span></div></div></div>
+  </div></div>`}
+
+/* ============================================================
+   Definición de pantallas y variantes
+   ============================================================ */
+const SCREENS = {
+
+/* ---------- AUTH (docencia) ---------- */
+auth:{ title:'Ingreso / Registro', grp:'Acceso', docOnly:true,
+  desc:'Solo CU-01. Usuario/contraseña @ucc.edu.ar + verificación por mail. En modo anónimo no existe esta pantalla.',
+  variants:[
+    {name:'A · Split hero',
+     notes:['Panel de marca a la izquierda, formulario a la derecha.','Deja lugar para la identidad visual de la Fase 2 sin tocar el form.','Clásico y confiable — bajo riesgo.'],
+     render:m=>`<div class="app"><div class="row" style="gap:0;min-height:440px">
+        <div class="col" style="background:#f4f5f7;border-right:1px solid var(--line);padding:34px;display:flex;flex-direction:column;justify-content:center">
+          <span class="logo" style="font-size:22px;font-weight:700">METIS<span style="color:var(--sel)">.</span></span>
+          <p class="muted" style="margin-top:14px;max-width:260px">Análisis de frecuencia de eventos extremos hidrológicos. Ingreso institucional UCC.</p>
+          ${ph(140)}
+        </div>
+        <div class="col pad-lg" style="display:flex;flex-direction:column;justify-content:center">
+          <h3 class="wf">Iniciar sesión</h3><p class="sub">Con tu cuenta @ucc.edu.ar</p>
+          <div class="field"><label>Email institucional</label><div class="input">legajo@ucc.edu.ar</div></div>
+          <div class="field"><label>Contraseña</label><div class="input">••••••••</div></div>
+          <div class="btn pri" style="justify-content:center">Ingresar</div>
+          <p class="foot-note" style="text-align:center">¿No tenés cuenta? Registrate · Verificás por mail</p>
+        </div></div></div>`},
+    {name:'B · Card central',
+     notes:['Formulario centrado sobre fondo neutro.','Máxima simplicidad, funciona igual en mobile.','El fondo es el lienzo para el background de la Fase 2.'],
+     render:m=>`<div class="app pad-lg" style="background:#f4f5f7;min-height:440px;display:flex;align-items:center;justify-content:center">
+        <div class="card" style="max-width:360px;width:100%;padding:28px">
+          <div style="text-align:center;margin-bottom:18px"><span class="logo" style="font-size:20px;font-weight:700">METIS<span style="color:var(--sel)">.</span></span></div>
+          <div class="seg" style="width:100%;margin-bottom:16px"><span class="sel" style="flex:1;text-align:center">Ingresar</span><span style="flex:1;text-align:center">Registrarme</span></div>
+          <div class="field"><label>Email @ucc.edu.ar</label><div class="input">legajo@ucc.edu.ar</div></div>
+          <div class="field"><label>Contraseña</label><div class="input">••••••••</div></div>
+          <div class="btn pri" style="justify-content:center;width:100%">Ingresar</div>
+        </div></div>`}
+  ]},
+
+/* ---------- CONFIGURACIÓN / CARGA ---------- */
+config:{ title:'Carga y configuración del análisis', grp:'Flujo principal',
+  desc:'Subir CSV/Excel, mapear columnas X/Y, tipo de variable, etapas [1] o [1,2], modo (paso a paso/experto, solo docencia) y partición de Cramer. Pantalla de alta variación.',
+  variants:[
+    {name:'A · Wizard vertical',
+     notes:['Una sección debajo de la otra, scroll natural.','Ideal para no expertos: no hay nada oculto, se lee como un checklist.','Botón de ejecutar fijo al pie.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <h3 class="wf">Nuevo análisis</h3><p class="sub">Seguí los pasos de arriba hacia abajo.</p>
+        <div class="stack">
+          <div class="card"><div class="card-t">1 · Archivo de datos</div><div class="dropzone"><div class="ic">⬆</div><div>Arrastrá tu CSV o Excel, o hacé clic para elegir</div></div></div>
+          <div class="card"><div class="card-t">2 · Columnas</div><div class="grid2">
+            <div class="field"><label>Columna X (tiempo)</label><div class="input sel">año</div></div>
+            <div class="field"><label>Columna Y (variable)</label><div class="input sel">caudal_max</div></div></div></div>
+          <div class="card"><div class="card-t">3 · Tipo de variable</div><div class="chips"><span class="chip sel">Caudal / Precipitación</span><span class="chip">Otro</span></div></div>
+          <div class="card"><div class="card-t">4 · Etapas y modo</div>
+            <div class="row"><div class="col"><label class="muted" style="font-size:12px">Etapas</label><div class="chips" style="margin-top:5px"><span class="chip sel">Etapa 1</span><span class="chip sel">Etapa 1 + 2</span></div></div>
+            ${m==='doc'?`<div class="col"><label class="muted" style="font-size:12px">Modo de presentación</label><div class="seg" style="margin-top:5px"><span class="sel">Paso a paso</span><span>Experto</span></div></div>`:`<div class="col"><span class="tag-anon">modo no disponible en anónimo</span></div>`}</div></div>
+        </div>
+        <div class="hr"></div>
+        <div class="row" style="align-items:center"><span class="muted" style="font-size:12px">Partición de Cramer: <b>default 60/30</b> · <span class="navlink">personalizar</span></span><span class="sp" style="flex:1"></span><div class="btn pri">Ejecutar análisis ▸</div></div>
+        </div></div>`},
+    {name:'B · Dos columnas (datos | opciones)',
+     notes:['Carga + preview del archivo a la izquierda; toda la configuración a la derecha.','Aprovecha pantallas anchas de escritorio.','Ver la tabla de datos da confianza antes de correr.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <h3 class="wf">Nuevo análisis</h3><p class="sub">Cargá tus datos y ajustá las opciones.</p>
+        <div class="row">
+          <div class="col" style="flex:1.3">
+            <div class="card"><div class="card-t">Datos cargados · serie_caudal.csv</div>
+              <table class="wf"><thead><tr><th>año</th><th>caudal_max</th></tr></thead><tbody>
+              <tr><td>1980</td><td>142.5</td></tr><tr><td>1981</td><td>98.1</td></tr><tr><td>1982</td><td>176.0</td></tr><tr><td>1983</td><td>121.7</td></tr><tr><td class="muted">…</td><td class="muted">40 filas</td></tr></tbody></table>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card"><div class="card-t">Configuración</div>
+              <div class="field"><label>Columna X (tiempo)</label><div class="input sel">año</div></div>
+              <div class="field"><label>Columna Y (variable)</label><div class="input sel">caudal_max</div></div>
+              <div class="field"><label>Tipo de variable</label><div class="seg"><span class="sel">Caudal/Precip.</span><span>Otro</span></div></div>
+              <div class="field"><label>Etapas</label><div class="chips"><span class="chip sel">1</span><span class="chip sel">1 + 2</span></div></div>
+              ${m==='doc'?`<div class="field"><label>Modo</label><div class="seg"><span class="sel">Paso a paso</span><span>Experto</span></div></div>`:``}
+              <div class="btn pri" style="width:100%;justify-content:center;margin-top:6px">Ejecutar ▸</div>
+            </div>
+          </div>
+        </div></div></div>`},
+    {name:'C · Stepper numerado',
+     notes:['Pasos discretos con barra de progreso superior.','Reduce la carga cognitiva: una decisión por vez.','Muy guiado — perfecto para el primer uso.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center;margin-bottom:22px">
+          <div class="step done" style="flex:0"><div class="node">✓</div></div><div style="height:2px;background:var(--ok);width:60px;margin:0 -2px"></div>
+          <div class="step active" style="flex:0"><div class="node">2</div></div><div style="height:2px;background:var(--line);width:60px;margin:0 -2px"></div>
+          <div class="step" style="flex:0"><div class="node">3</div></div><div style="height:2px;background:var(--line);width:60px;margin:0 -2px"></div>
+          <div class="step" style="flex:0"><div class="node">4</div></div>
+          <span class="sp" style="flex:1"></span><span class="muted" style="font-size:12px">Paso 2 de 4 — Mapear columnas</span>
+        </div>
+        <div class="card" style="min-height:220px">
+          <h3 class="wf" style="font-size:15px">Mapear columnas</h3><p class="sub">Indicá qué columna es el tiempo y cuál la variable a analizar.</p>
+          <div class="grid2" style="max-width:520px">
+            <div class="field"><label>Columna X — tiempo</label><div class="input sel">año</div></div>
+            <div class="field"><label>Columna Y — variable</label><div class="input sel">caudal_max</div></div>
+          </div>
+          <div class="banner info" style="max-width:520px"><span class="ic">i</span> Detectamos 40 filas numéricas. La serie cumple el mínimo de 10 datos.</div>
+        </div>
+        <div class="row" style="margin-top:16px"><div class="btn gho">◂ Atrás</div><span class="sp" style="flex:1"></span><div class="btn pri">Siguiente ▸</div></div>
+        </div></div>`},
+    {name:'D · Tablero de tarjetas',
+     notes:['Cada grupo de configuración es una tarjeta independiente.','El usuario elige en qué orden completar.','Escala bien si en el futuro se agregan más opciones (pruebas post-M5).'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <h3 class="wf">Configurar análisis</h3><p class="sub">Completá las tarjetas. Podés hacerlo en cualquier orden.</p>
+        <div class="grid2">
+          <div class="card"><div class="card-t">Origen de datos ✓</div><div class="banner info" style="padding:8px 11px"><span class="ic">▤</span> serie_caudal.csv · 40 filas</div></div>
+          <div class="card"><div class="card-t">Columnas ✓</div><p style="margin:0" class="mono">X = año &nbsp;·&nbsp; Y = caudal_max</p></div>
+          <div class="card"><div class="card-t">Tipo de variable</div><div class="chips"><span class="chip sel">Caudal / Precipitación</span><span class="chip">Otro</span></div></div>
+          <div class="card"><div class="card-t">Etapas a ejecutar</div><div class="chips"><span class="chip">Solo Etapa 1</span><span class="chip sel">Etapa 1 + 2</span></div></div>
+          ${m==='doc'?`<div class="card"><div class="card-t">Modo de presentación</div><div class="seg"><span class="sel">Paso a paso</span><span>Experto</span></div></div>`:`<div class="card soft"><div class="card-t">Modo de presentación</div><span class="tag-anon">exclusivo de docencia</span><p class="foot-note">En anónimo se muestran solo resultados.</p></div>`}
+          <div class="card"><div class="card-t">Partición de Cramer</div><div class="seg"><span class="sel">Default 60/30</span><span>Personalizada</span></div></div>
+        </div>
+        <div class="row" style="margin-top:18px;align-items:center"><span class="sp" style="flex:1"></span><div class="btn pri">Ejecutar análisis ▸</div></div>
+        </div></div>`},
+    {name:'E · Hero de carga + acordeón',
+     notes:['La carga del archivo domina la pantalla como acción primaria.','El resto de opciones se despliega en acordeón con buenos defaults.','Rápido para usuarios que confían en los valores por defecto.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="dropzone" style="padding:38px;margin-bottom:20px"><div class="ic" style="font-size:34px">⬆</div><div style="font-size:15px;color:var(--ink);margin-top:6px">Arrastrá tu serie (CSV o Excel)</div><div class="foot-note">o hacé clic para explorar — máx. 1 columna de tiempo + 1 de variable</div></div>
+        <div class="card soft" style="margin-bottom:10px"><div class="row" style="align-items:center"><b style="font-size:13px">Columnas y tipo de variable</b><span class="sp" style="flex:1"></span><span class="muted mono" style="font-size:12px">año · caudal_max · Caudal/Precip.</span><span style="margin-left:12px;color:var(--faint)">▾</span></div></div>
+        <div class="card soft" style="margin-bottom:10px"><div class="row" style="align-items:center"><b style="font-size:13px">Etapas y ${m==='doc'?'modo':'opciones'}</b><span class="sp" style="flex:1"></span><span class="muted mono" style="font-size:12px">${m==='doc'?'Etapa 1+2 · Paso a paso':'Etapa 1+2'}</span><span style="margin-left:12px;color:var(--faint)">▾</span></div></div>
+        <div class="card soft"><div class="row" style="align-items:center"><b style="font-size:13px">Partición de Cramer</b><span class="sp" style="flex:1"></span><span class="muted mono" style="font-size:12px">default 60/30</span><span style="margin-left:12px;color:var(--faint)">▾</span></div></div>
+        <div class="row" style="margin-top:20px;align-items:center"><span class="muted foot-note">Todo listo con valores por defecto</span><span class="sp" style="flex:1"></span><div class="btn pri">Ejecutar ▸</div></div>
+        </div></div>`},
+    {name:'F · Formulario denso (experto)',
+     notes:['Todo en una vista compacta, sin scroll, para usuarios recurrentes.','Contraparte del wizard: prioriza velocidad sobre guía.','Pensado para el modo experto de docencia.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad">
+        <div class="row" style="align-items:center;margin-bottom:12px"><h3 class="wf" style="font-size:15px">Nuevo análisis</h3><span class="sp" style="flex:1"></span><span class="tag-anon">${m==='doc'?'modo experto':'anónimo'}</span></div>
+        <div class="card"><div class="grid4">
+          <div class="field"><label>Archivo</label><div class="input sel">serie_caudal.csv</div></div>
+          <div class="field"><label>Col. X</label><div class="input sel">año</div></div>
+          <div class="field"><label>Col. Y</label><div class="input sel">caudal_max</div></div>
+          <div class="field"><label>Tipo variable</label><div class="input sel">Caudal/Precip.</div></div>
+          <div class="field"><label>Etapas</label><div class="input sel">1 + 2</div></div>
+          ${m==='doc'?`<div class="field"><label>Modo</label><div class="input sel">Experto</div></div>`:`<div class="field"><label>Modo</label><div class="input" style="color:var(--faint)">— (anónimo)</div></div>`}
+          <div class="field"><label>Cramer n1%</label><div class="input">60</div></div>
+          <div class="field"><label>Cramer n2%</label><div class="input">30</div></div>
+        </div>
+        <div class="row" style="align-items:center;margin-top:6px"><span class="muted foot-note mono">α = 0.05 (fijo) · Weibull para T empíricos</span><span class="sp" style="flex:1"></span><div class="btn pri sm">Ejecutar ▸</div></div>
+        </div></div></div>`},
+    {name:'G · Hero + acordeón + etapas visibles',
+     notes:['Mezcla de A y E: hero de carga arriba, resto en acordeón como en E.','La elección Etapa 1 vs 1+2 sale del acordeón y queda siempre visible — es la decisión que define todo el pipeline.','Lo colapsado tiene buenos defaults; lo que cambia el análisis nunca queda oculto.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="dropzone" style="padding:32px;margin-bottom:18px"><div class="ic" style="font-size:32px">⬆</div><div style="font-size:15px;color:var(--ink);margin-top:6px">Arrastrá tu serie (CSV o Excel)</div><div class="foot-note">o hacé clic para explorar</div></div>
+        <div class="card" style="border-color:var(--sel);margin-bottom:14px"><div class="row" style="align-items:center"><div><div class="card-t" style="margin-bottom:3px">Etapas a ejecutar</div><span class="muted foot-note">Definí el alcance. Siempre visible.</span></div><span class="sp" style="flex:1"></span><div class="seg"><span class="sel">Etapa 1</span><span class="sel">Etapa 1 + 2</span></div></div></div>
+        <div class="card soft" style="margin-bottom:10px"><div class="row" style="align-items:center"><b style="font-size:13px">Columnas y tipo de variable</b><span class="sp" style="flex:1"></span><span class="muted mono foot-note">año · caudal_max · Caudal/Precip.</span><span style="margin-left:12px;color:var(--faint)">▾</span></div>
+          <div class="hr"></div><div class="grid3"><div class="field" style="margin:0"><label>Columna X</label><div class="input sel">año</div></div><div class="field" style="margin:0"><label>Columna Y</label><div class="input sel">caudal_max</div></div><div class="field" style="margin:0"><label>Tipo</label><div class="input sel">Caudal/Precip.</div></div></div></div>
+        <div class="card soft"><div class="row" style="align-items:center"><b style="font-size:13px">${m==='doc'?'Modo y partición de Cramer':'Partición de Cramer'}</b><span class="sp" style="flex:1"></span><span class="muted mono foot-note">${m==='doc'?'Paso a paso · 60/30':'default 60/30'}</span><span style="margin-left:12px;color:var(--faint)">▸</span></div></div>
+        <div class="row" style="margin-top:20px;align-items:center"><span class="muted foot-note">Etapas elegidas: <b>1 + 2</b></span><span class="sp" style="flex:1"></span><div class="btn pri">Ejecutar análisis ▸</div></div>
+        </div></div>`}
+  ]},
+
+/* ---------- STREAM EN VIVO (SSE) ---------- */
+stream:{ title:'Análisis en vivo (stream SSE)', grp:'Flujo principal',
+  desc:'La pantalla signature. El pipeline avanza en tiempo real: contrato → descriptiva → independencia → homogeneidad → tendencia → atípicos. Chow puede pausar esperando la decisión del usuario. Alta variación.',
+  variants:[
+    {name:'A · Timeline vertical',
+     notes:['Cada prueba es un nodo que se enciende al completarse.','La metáfora de "recorrido" transmite progreso sin ansiedad.','Los resultados se anidan bajo cada nodo — historia legible al final.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center;margin-bottom:6px"><h3 class="wf" style="font-size:15px">Ejecutando Etapa 1…</h3><span class="sp" style="flex:1"></span>${m==='doc'?`<span class="pill wait">guardando en tu historial</span>`:`<span class="pill wait">sesión efímera</span>`}</div>
+        <div class="progress" style="margin-bottom:20px"><i style="width:62%"></i></div>
+        <div>
+          <div class="step done"><div class="node">✓</div><div style="flex:1"><b>Contrato de datos</b> <span class="pill ok">aprobado</span><div class="foot-note">40 datos · resolución anual detectada</div></div></div>
+          <div class="step done"><div class="node">✓</div><div style="flex:1"><b>Estadística descriptiva</b><div class="foot-note mono">media 142.5 · S 38.1 · CV 0.267 · asimetría 0.84</div></div></div>
+          <div class="step done"><div class="node">✓</div><div style="flex:1"><b>Independencia</b> <span class="pill ok">independiente</span><div class="foot-note">Anderson aprueba · Wald-Wolfowitz aprueba</div></div></div>
+          <div class="step active"><div class="node">▸</div><div style="flex:1"><b>Homogeneidad</b> <span class="pill wait">calculando…</span><div class="foot-note">Helmert ✓ · t de Student ✓ · Cramer en curso</div></div></div>
+          <div class="step"><div class="node">5</div><div style="flex:1;color:var(--faint)"><b>Tendencia</b> — Mann-Kendall + Kolmogorov-Smirnov</div></div>
+          <div class="step" style="align-items:flex-start"><div class="node">6</div><div style="flex:1;color:var(--faint)"><b>Atípicos (Chow)</b> — puede pausar para tu decisión</div></div>
+        </div></div></div>`},
+    {name:'B · Barra + feed de resultados',
+     notes:['Barra de progreso global arriba, tarjetas de resultado que caen debajo.','Cada prueba aparece como un item nuevo — sensación de "en vivo".','Escanear resultados es fácil; no hay que seguir un hilo.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="card soft" style="margin-bottom:16px"><div class="row" style="align-items:center"><b>Etapa 1 · paso 4 de 6</b><span class="sp" style="flex:1"></span><span class="muted mono foot-note">homogeneidad · Cramer</span></div><div class="progress" style="margin-top:9px"><i style="width:66%"></i></div></div>
+        <div class="stack">
+          <div class="card"><div class="row"><b>Independencia — Anderson</b><span class="sp" style="flex:1"></span><span class="pill ok">aprobada</span></div><div class="foot-note mono">estadístico 0.23 · valor crítico 0.37</div></div>
+          <div class="card"><div class="row"><b>Independencia — Wald-Wolfowitz</b><span class="sp" style="flex:1"></span><span class="pill ok">aprobada</span></div><div class="foot-note mono">Z 0.37 · crítico 1.96 · <span style="color:var(--warn)">n≤40: muestra chica</span></div></div>
+          <div class="card"><div class="row"><b>Homogeneidad — Helmert</b><span class="sp" style="flex:1"></span><span class="pill ok">aprobada</span></div></div>
+          <div class="card" style="border-color:var(--sel)"><div class="row"><b>Homogeneidad — Cramer</b><span class="sp" style="flex:1"></span><span class="pill wait">calculando…</span></div><div class="progress" style="margin-top:8px;height:5px"><i style="width:40%"></i></div></div>
+        </div></div></div>`},
+    {name:'C · Consola / log en vivo',
+     notes:['Estilo terminal: técnico, "anti-Excel", transmite motor real corriendo.','Muy diferenciador visualmente — arriesgado para no expertos.','Podría ser una vista opcional "avanzada" del modo experto.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center;margin-bottom:12px"><h3 class="wf" style="font-size:15px">Pipeline en ejecución</h3><span class="sp" style="flex:1"></span><span class="pill wait">SSE conectado</span></div>
+        <div class="console">
+          <div><span class="t">10:42:01</span> <span class="g">✓ contrato</span> <span class="cur">40 datos · resolución=anual · sin bloqueos</span></div>
+          <div><span class="t">10:42:01</span> <span class="cur">descriptiva → media=142.5 S=38.1 CV=0.267 g=0.84</span></div>
+          <div><span class="t">10:42:02</span> <span class="g">✓ anderson</span> <span class="cur">r=0.23 crit=0.37 → aprobada</span></div>
+          <div><span class="t">10:42:02</span> <span class="y">⚠ wald_wolfowitz</span> <span class="cur">Z=0.37 crit=1.96 aprobada · TEST_WARNING_SMALL_SAMPLE</span></div>
+          <div><span class="t">10:42:03</span> <span class="g">✓ helmert</span> <span class="cur">|S−C|=2.1 lim=6.24 → aprobada</span></div>
+          <div><span class="t">10:42:03</span> <span class="g">✓ t_student</span> <span class="cur">t=−1.76 crit=2.07 → aprobada</span></div>
+          <div><span class="t">10:42:04</span> <span class="cur">cramer → calculando particiones 60/30…</span> <span style="opacity:.6">▊</span></div>
+        </div>
+        <p class="foot-note">Vista técnica · los mismos eventos alimentan las vistas visuales A/B/D.</p>
+        </div></div>`},
+    {name:'D · Grilla de tarjetas (flip)',
+     notes:['Cada prueba es una tarjeta que pasa de "pendiente" a resultado.','Panorama completo del pipeline de un vistazo.','Las agrupaciones (independencia/homogeneidad/tendencia) quedan visibles.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center;margin-bottom:14px"><h3 class="wf" style="font-size:15px">Etapa 1 en progreso</h3><span class="sp" style="flex:1"></span><div class="progress" style="width:180px"><i style="width:62%"></i></div></div>
+        <div class="card-t">Independencia</div>
+        <div class="grid2" style="margin-bottom:14px">
+          <div class="kpi"><div class="row"><span class="l">Anderson</span><span class="sp" style="flex:1"></span><span class="pill ok">aprobada</span></div><div class="v mono" style="font-size:15px">0.23 <span class="muted" style="font-size:11px">/ 0.37</span></div></div>
+          <div class="kpi"><div class="row"><span class="l">Wald-Wolfowitz</span><span class="sp" style="flex:1"></span><span class="pill ok">aprobada</span></div><div class="v mono" style="font-size:15px">0.37 <span class="muted" style="font-size:11px">/ 1.96</span></div></div>
+        </div>
+        <div class="card-t">Homogeneidad</div>
+        <div class="grid3" style="margin-bottom:14px">
+          <div class="kpi"><span class="l">Helmert</span><div class="v"><span class="pill ok">ok</span></div></div>
+          <div class="kpi"><span class="l">t de Student</span><div class="v"><span class="pill ok">ok</span></div></div>
+          <div class="kpi" style="border-color:var(--sel)"><span class="l">Cramer</span><div class="v"><span class="pill wait">…</span></div></div>
+        </div>
+        <div class="card-t">Tendencia · Atípicos</div>
+        <div class="grid3">
+          <div class="kpi soft" style="opacity:.5"><span class="l">Mann-Kendall</span><div class="v"><span class="pill wait">en cola</span></div></div>
+          <div class="kpi soft" style="opacity:.5"><span class="l">Kolmogorov-S.</span><div class="v"><span class="pill wait">en cola</span></div></div>
+          <div class="kpi soft" style="opacity:.5"><span class="l">Chow</span><div class="v"><span class="pill wait">en cola</span></div></div>
+        </div></div></div>`},
+    {name:'E · Mapa + detalle (split)',
+     notes:['Mapa del pipeline a la izquierda, detalle del paso actual a la derecha.','Bueno para modo paso a paso: la derecha muestra la fórmula sustituida.','Contexto y foco a la vez, sin perder de vista el todo.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad">
+        <div class="row" style="gap:0;min-height:360px">
+          <div class="col" style="flex:0 0 210px;border-right:1px solid var(--line);padding:16px 14px">
+            <div class="card-t">Pipeline</div>
+            <div class="stack" style="font-size:12.5px">
+              <div class="row"><span class="pill ok">✓</span>&nbsp; Contrato</div>
+              <div class="row"><span class="pill ok">✓</span>&nbsp; Descriptiva</div>
+              <div class="row"><span class="pill ok">✓</span>&nbsp; Independencia</div>
+              <div class="row" style="font-weight:700;color:var(--sel)"><span class="pill" style="background:var(--sel);color:#fff">▸</span>&nbsp; Homogeneidad</div>
+              <div class="row muted"><span class="pill wait">5</span>&nbsp; Tendencia</div>
+              <div class="row muted"><span class="pill wait">6</span>&nbsp; Atípicos (Chow)</div>
+            </div>
+          </div>
+          <div class="col pad">
+            <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Homogeneidad — Cramer</h3><span class="sp" style="flex:1"></span><span class="pill wait">calculando…</span></div>
+            <p class="sub">Compara submuestras (60% y 30% finales) contra la media global.</p>
+            ${m==='doc'?`<div class="card soft mono" style="font-size:12px">t_w1 = √[(15·22)/(24−15·(1+0.183²))] · 0.183 = <b>1.140</b><br>t_w2 = √[(7·22)/(24−7·(1+0.352²))] · 0.352 = <b>1.088</b><br>crítico (ν=22) = 2.074</div><p class="foot-note">Modo paso a paso: se muestran fórmulas con valores sustituidos.</p>`:`<div class="grid2"><div class="kpi"><span class="l">t_w1</span><div class="v mono" style="font-size:16px">1.140</div></div><div class="kpi"><span class="l">t_w2</span><div class="v mono" style="font-size:16px">1.088</div></div></div>`}
+          </div>
+        </div></div></div>`},
+    {name:'F · Pausa por atípico (Chow)',
+     notes:['El momento crítico de interacción: el stream se pausa y pide decisión.','El pipeline NO avanza hasta aceptar/rechazar (CU-01/02).','En anónimo también pausa; en CU-03 (API) se resolvería solo — acá no aplica.'],
+     render:m=>`<div class="app">${appBar(m)}<div style="position:relative">
+        <div class="pad-lg" style="filter:blur(1.5px);opacity:.55">
+          <div class="progress" style="margin-bottom:16px"><i style="width:92%"></i></div>
+          <div class="card"><b>Atípicos — Chow (Grubbs-Beck)</b> ${graphLine(90)}</div>
+        </div>
+        <div class="modal-scrim" style="position:absolute;inset:0">
+          <div class="modal">
+            <div style="padding:18px 20px;border-bottom:1px solid var(--line)"><span class="pill warn">Decisión requerida</span><h3 class="wf" style="font-size:16px;margin-top:8px">Se detectó un dato atípico</h3></div>
+            <div style="padding:18px 20px">
+              <p style="margin:0 0 10px">El test de Chow marcó el valor <b class="mono">245.7</b> (año 2003) como atípico sobre los logaritmos de la serie.</p>
+              <div class="banner warn"><span class="ic">!</span> METIS detecta y advierte, pero no decide por vos. Tu elección queda registrada${m==='doc'?' en el historial':''}.</div>
+              <div class="row" style="margin-top:16px"><div class="btn" style="flex:1;justify-content:center">Aceptar el dato</div><div class="btn pri" style="flex:1;justify-content:center">Rechazar el dato</div></div>
+            </div>
+          </div>
+        </div></div></div>`},
+    {name:'G · Barras con contador creciente',
+     notes:['Mantiene las barras de la B; arriba, índice de etapa (anillo) y pasos (puntos) con estilos distintos.','Cada test muestra un número que sube en vivo hasta clavar el estadístico calculado.','Interacción real: al entrar a esta variante corre la animación (volvé a entrar para repetirla).'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="card soft" style="margin-bottom:16px"><div class="row" style="align-items:center;gap:18px">
+          <svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="19" fill="none" stroke="#e2e5e8" stroke-width="5"/><circle cx="24" cy="24" r="19" fill="none" stroke="#3f5566" stroke-width="5" stroke-dasharray="119" stroke-dashoffset="60" stroke-linecap="round" transform="rotate(-90 24 24)"/><text x="24" y="28" text-anchor="middle" font-size="12" fill="#2c3136" font-weight="700">E1</text></svg>
+          <div><div class="l muted">Etapa 1 de 2</div><div style="display:flex;gap:7px;margin-top:6px;align-items:center">${[1,1,1,2,0,0].map(s=>`<span style="width:11px;height:11px;border-radius:50%;background:${s==1?'#4a6b52':s==2?'#3f5566':'#e2e5e8'};border:1px solid ${s?'transparent':'#c7ccd1'}"></span>`).join('')}<span class="foot-note" style="margin-left:6px">paso 4 de 6 · homogeneidad</span></div></div>
+          <span class="sp" style="flex:1"></span>${m==='doc'?`<span class="pill wait">guardando en historial</span>`:`<span class="pill wait">sesión efímera</span>`}
+        </div></div>
+        <div class="stack">
+          ${[['Anderson (independencia)','0.23','0.37','2'],['Wald-Wolfowitz','0.37','1.96','2'],['Helmert (homogeneidad)','2.10','6.24','2'],['t de Student','1.76','2.07','2'],['Cramer','1.14','2.07','2']].map(t=>`
+          <div class="card"><div class="row" style="align-items:baseline"><b>${t[0]}</b><span class="sp" style="flex:1"></span><span class="mono" style="font-size:16px;font-weight:700" data-count data-target="${t[1]}" data-dec="${t[3]}">0.00</span><span class="muted mono foot-note">&nbsp;/ ${t[2]}</span></div><div class="progress" style="margin-top:8px;height:6px"><i data-fill style="width:0%"></i></div></div>`).join('')}
+        </div>
+        <p class="foot-note">El número sube en vivo hasta el estadístico que devuelve el motor; la barra acompaña.</p>
+        </div></div>`,
+     after:()=>{
+        const root=document.getElementById('frame');
+        root.querySelectorAll('[data-count]').forEach((elm,i)=>{
+          const target=parseFloat(elm.dataset.target),dec=parseInt(elm.dataset.dec||'2'),dur=1000+i*120,start=performance.now()+i*140;
+          function tick(now){let p=(now-start)/dur;if(p<0)p=0;if(p>1)p=1;const e=1-Math.pow(1-p,3);elm.textContent=(target*e).toFixed(dec);if(p<1)requestAnimationFrame(tick);}
+          requestAnimationFrame(tick);
+        });
+        root.querySelectorAll('[data-fill]').forEach((bar,i)=>{bar.style.transition='none';bar.style.width='0%';setTimeout(()=>{bar.style.transition='width 1s cubic-bezier(.2,.7,.2,1)';bar.style.width='100%';},60+i*140);});
+     }}
+  ]},
+
+/* ---------- RESULTADOS ETAPA 1 ---------- */
+resultsE1:{ title:'Resultados de Etapa 1', grp:'Flujo principal',
+  desc:'Independencia, homogeneidad, tendencia y atípicos, cada uno con estadístico, valor crítico, veredicto y warnings. Los gráficos van siempre en dos versiones (año calendario + hidrológico).',
+  variants:[
+    {name:'A · Resumen + secciones',
+     notes:['Encabezado con el estado de confianza global, luego cada grupo de pruebas.','La jerarquía crítico/normal de los warnings se ve al tope.','Para no expertos: el veredicto grande primero, el detalle después.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="banner ${'warn'}" style="margin-bottom:6px"><span class="ic">▲</span> Resultado: <b>&nbsp;con warnings</b> — muestra chica (n=40) y tendencia detectada. Ninguno bloquea.</div>
+        <div class="row" style="margin:16px 0"><div class="kpi col"><span class="l">Independencia</span><div class="v"><span class="pill ok">independiente</span></div></div><div class="kpi col"><span class="l">Homogeneidad</span><div class="v"><span class="pill warn">warning</span></div></div><div class="kpi col"><span class="l">Tendencia</span><div class="v"><span class="pill warn">detectada</span></div></div><div class="kpi col"><span class="l">Atípicos</span><div class="v"><span class="pill ok">sin atípico</span></div></div></div>
+        <div class="card"><div class="card-t">Independencia</div><table class="wf"><thead><tr><th>Prueba</th><th>Estadístico</th><th>Crítico</th><th>Veredicto</th></tr></thead><tbody>
+          <tr><td>Anderson <span class="muted">(principal)</span></td><td class="mono">0.23</td><td class="mono">0.37</td><td><span class="pill ok">aprobada</span></td></tr>
+          <tr><td>Wald-Wolfowitz</td><td class="mono">0.37</td><td class="mono">1.96</td><td><span class="pill ok">aprobada</span></td></tr></tbody></table></div>
+        <div class="card" style="margin-top:12px"><div class="row"><div class="card-t">Serie temporal</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphLine(150)}</div>
+        </div></div>`},
+    {name:'B · Acordeón por grupo',
+     notes:['Cada grupo de pruebas colapsable; abre el que te interesa.','Mantiene la pantalla corta con muchas pruebas.','El estado (ok/warning/crítico) se ve en la cabecera cerrada.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <h3 class="wf">Resultados · Etapa 1</h3><p class="sub">serie_caudal.csv · 40 datos</p>
+        <div class="stack">
+          <div class="card"><div class="row" style="align-items:center"><b>Independencia</b><span class="sp" style="flex:1"></span><span class="pill ok">independiente</span><span style="margin-left:12px;color:var(--faint)">▾</span></div>
+            <div class="hr"></div><table class="wf"><tbody><tr><td>Anderson</td><td class="mono">0.23 / 0.37</td><td><span class="pill ok">aprobada</span></td></tr><tr><td>Wald-Wolfowitz</td><td class="mono">0.37 / 1.96</td><td><span class="pill ok">aprobada</span></td></tr></tbody></table></div>
+          <div class="card"><div class="row" style="align-items:center"><b>Homogeneidad</b><span class="sp" style="flex:1"></span><span class="pill warn">warning</span><span style="margin-left:12px;color:var(--faint)">▸</span></div></div>
+          <div class="card"><div class="row" style="align-items:center"><b>Tendencia</b><span class="sp" style="flex:1"></span><span class="pill warn">detectada</span><span style="margin-left:12px;color:var(--faint)">▸</span></div></div>
+          <div class="card"><div class="row" style="align-items:center"><b>Atípicos — Chow</b><span class="sp" style="flex:1"></span><span class="pill ok">sin atípico</span><span style="margin-left:12px;color:var(--faint)">▸</span></div></div>
+        </div>
+        ${m==='doc'?`<div class="row" style="margin-top:16px"><span class="sp" style="flex:1"></span><div class="btn">Exportar PDF</div><div class="btn pri">Continuar a Etapa 2 ▸</div></div>`:`<div class="row" style="margin-top:16px"><span class="tag-anon">sin exportación en anónimo</span><span class="sp" style="flex:1"></span><div class="btn pri">Continuar a Etapa 2 ▸</div></div>`}
+        </div></div>`},
+    {name:'C · Tablero de gráficos',
+     notes:['Prioriza lo visual: correlograma, serie, boxplot mensual, Chow.','Cada gráfico con su toggle calendario/hidrológico.','Los números quedan en un panel lateral compacto.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad">
+        <div class="row">
+          <div class="col" style="flex:2.2"><div class="grid2">
+            <div class="card"><div class="row"><div class="card-t">Serie temporal</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphLine(120)}</div>
+            <div class="card"><div class="card-t">Correlograma (Anderson)</div>${graphBars(10,120)}</div>
+            <div class="card"><div class="row"><div class="card-t">Boxplot mensual</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphBars(12,120)}</div>
+            <div class="card"><div class="card-t">Chow (log)</div>${graphLine(120)}</div>
+          </div></div>
+          <div class="col"><div class="card"><div class="card-t">Veredictos</div><div class="stack">
+            <div class="row"><span>Independencia</span><span class="sp" style="flex:1"></span><span class="pill ok">ok</span></div>
+            <div class="row"><span>Homogeneidad</span><span class="sp" style="flex:1"></span><span class="pill warn">warn</span></div>
+            <div class="row"><span>Tendencia</span><span class="sp" style="flex:1"></span><span class="pill warn">warn</span></div>
+            <div class="row"><span>Atípicos</span><span class="sp" style="flex:1"></span><span class="pill ok">ok</span></div>
+            <div class="hr"></div><div class="foot-note mono">media 142.5 · S 38.1<br>CV 0.267 · g 0.84</div>
+          </div></div></div>
+        </div></div></div>`},
+    {name:'D · Tabla maestra única',
+     notes:['Todas las pruebas en una sola tabla densa, ordenable.','Máxima densidad — cómodo para el usuario experto.','Fila resaltada = warning que requiere atención.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <h3 class="wf" style="font-size:15px">Etapa 1 — todas las pruebas</h3>
+        <div class="card" style="padding:0;overflow:hidden"><table class="wf">
+          <thead><tr><th>Grupo</th><th>Prueba</th><th>Estadístico</th><th>Crítico</th><th>Veredicto</th><th>Warning</th></tr></thead>
+          <tbody>
+            <tr><td>Independencia</td><td>Anderson</td><td class="mono">0.23</td><td class="mono">0.37</td><td><span class="pill ok">aprobada</span></td><td>—</td></tr>
+            <tr class="sel"><td>Independencia</td><td>Wald-Wolfowitz</td><td class="mono">0.37</td><td class="mono">1.96</td><td><span class="pill ok">aprobada</span></td><td><span class="pill warn">n≤40</span></td></tr>
+            <tr><td>Homogeneidad</td><td>Helmert</td><td class="mono">2.1</td><td class="mono">6.24</td><td><span class="pill ok">aprobada</span></td><td>—</td></tr>
+            <tr><td>Homogeneidad</td><td>t de Student</td><td class="mono">−1.76</td><td class="mono">2.07</td><td><span class="pill ok">aprobada</span></td><td>—</td></tr>
+            <tr class="sel"><td>Homogeneidad</td><td>Cramer</td><td class="mono">1.14 / 1.09</td><td class="mono">2.07</td><td><span class="pill ok">aprobada</span></td><td><span class="muted">n1=15 n2=7</span></td></tr>
+            <tr class="sel"><td>Tendencia</td><td>Mann-Kendall</td><td class="mono">2.11</td><td class="mono">1.96</td><td><span class="pill warn">tendencia</span></td><td><span class="pill warn">detectada</span></td></tr>
+            <tr><td>Tendencia</td><td>Kolmogorov-S.</td><td class="mono">0.89</td><td class="mono">1.358</td><td><span class="pill ok">sin tend.</span></td><td>—</td></tr>
+            <tr><td>Atípicos</td><td>Chow</td><td class="mono">2.10</td><td class="mono">2.75</td><td><span class="pill ok">sin atípico</span></td><td>—</td></tr>
+          </tbody></table></div>
+        <p class="foot-note">Filas resaltadas = warnings no bloqueantes. α = 0.05 fijo.</p>
+        </div></div>`},
+    {name:'E · Resumen + tablero de gráficos (A+C)',
+     notes:['Mezcla de A y C: arriba el estado global y los veredictos como en A; abajo el tablero de gráficos de C.','El no experto ve primero el semáforo; quien quiere profundizar baja a los gráficos y descriptivos.','Panel lateral compacto con los números, sin saturar la vista.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="banner warn"><span class="ic">▲</span> Resultado: <b>&nbsp;con warnings</b> — muestra chica (n=40) y tendencia detectada. Ninguno bloquea.</div>
+        <div class="row" style="margin:14px 0"><div class="kpi col"><span class="l">Independencia</span><div class="v"><span class="pill ok">independiente</span></div></div><div class="kpi col"><span class="l">Homogeneidad</span><div class="v"><span class="pill warn">warning</span></div></div><div class="kpi col"><span class="l">Tendencia</span><div class="v"><span class="pill warn">detectada</span></div></div><div class="kpi col"><span class="l">Atípicos</span><div class="v"><span class="pill ok">sin atípico</span></div></div></div>
+        <div class="row">
+          <div class="col" style="flex:2.2"><div class="grid2">
+            <div class="card"><div class="row"><div class="card-t">Serie temporal</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphLine(110)}</div>
+            <div class="card"><div class="card-t">Correlograma (Anderson)</div>${graphBars(10,110)}</div>
+            <div class="card"><div class="row"><div class="card-t">Boxplot mensual</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphBars(12,110)}</div>
+            <div class="card"><div class="card-t">Chow (log)</div>${graphLine(110)}</div>
+          </div></div>
+          <div class="col"><div class="card"><div class="card-t">Descriptivos</div><table class="wf"><tbody><tr><td>media</td><td class="mono">142.5</td></tr><tr><td>desvío S</td><td class="mono">38.1</td></tr><tr><td>CV</td><td class="mono">0.267</td></tr><tr><td>asimetría</td><td class="mono">0.84</td></tr><tr><td>n</td><td class="mono">40</td></tr></tbody></table><div class="hr"></div><div class="card-t">Independencia</div><table class="wf"><tbody><tr><td>Anderson</td><td class="mono">0.23/0.37</td><td><span class="pill ok">ok</span></td></tr><tr><td>Wald-W.</td><td class="mono">0.37/1.96</td><td><span class="pill ok">ok</span></td></tr></tbody></table></div></div>
+        </div>
+        </div></div>`}
+  ]},
+
+/* ---------- PASO A PASO vs EXPERTO ---------- */
+pasoapaso:{ title:'Prueba paso a paso vs experto', grp:'Flujo principal',
+  desc:'La diferencia funcional clave docencia↔anónimo. En docencia el modo Paso a paso muestra cada fórmula con valores sustituidos; el modo Experto va directo al resultado. En anónimo solo existe "solo resultados". Probá el toggle Docencia/Anónimo arriba. Ejemplo: Helmert (homogeneidad).',
+  variants:[
+    {name:'A · Paso a paso apilado',
+     notes:['Cada paso del cálculo apilado: planteo → clasificación → fórmula → sustitución → veredicto.','Es el corazón del enfoque docente: fórmulas con los valores reales de la serie sustituidos.','En anónimo colapsa a "solo resultados" — la secuencia de pasos desaparece por completo.'],
+     render:m=>{ if(m==='anon') return anonResult();
+       return `<div class="app">${appBar(m)}<div class="pad-lg">
+         <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Homogeneidad — Helmert</h3><span class="sp" style="flex:1"></span>${modeSubToggle('paso')}</div>
+         <div class="stack" style="margin-top:14px">
+           ${stepCard('1','Planteo','¿La serie es homogénea? Helmert compara secuencias contra cambios de signo respecto de la media.')}
+           ${stepCard('2','Media de referencia','<span class="mono">x̄ = 142.5</span> &nbsp;·&nbsp; <span class="mono">n = 40</span>')}
+           ${stepCard('3','Clasificar cada dato','Signo de cada xi respecto de x̄ (+ alto, − bajo):<div style="margin-top:6px">'+signChips()+' …</div>')}
+           ${stepCard('4','Contar','Secuencias <span class="mono">S = 21</span> &nbsp;·&nbsp; Cambios <span class="mono">C = 18</span>')}
+           ${stepCard('5','Fórmula','<span class="mono">|S − C| ≤ √(n − 1)</span>')}
+           ${stepCard('6','Sustitución','<span class="mono">|21 − 18| = 3 &nbsp; ≤ &nbsp; √(40 − 1) = 6.24</span>')}
+           ${stepCard('7','Veredicto','<span class="mono">3 ≤ 6.24</span> → <span class="pill ok">aprobada</span> · homogénea por Helmert',true)}
+         </div></div></div>`;
+     }},
+    {name:'B · Fórmula | explicación',
+     notes:['Dos columnas: a la izquierda la matemática, a la derecha la explicación en lenguaje simple.','Pensada para el ingeniero civil no experto en estadística: el "por qué" al lado del "cómo".','En anónimo colapsa a solo resultados.'],
+     render:m=>{ if(m==='anon') return anonResult();
+       return `<div class="app">${appBar(m)}<div class="pad-lg">
+         <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Homogeneidad — Helmert</h3><span class="sp" style="flex:1"></span>${modeSubToggle('paso')}</div>
+         <div class="row" style="margin-top:14px">
+           <div class="col"><div class="card"><div class="card-t">Cálculo</div><div class="stack mono" style="font-size:13px">
+             <div>x̄ = 142.5 · n = 40</div><div>S = 21 · C = 18</div><div>|S − C| ≤ √(n − 1)</div><div>|21 − 18| = 3</div><div>√(40 − 1) = 6.24</div><div>3 ≤ 6.24 → <span class="pill ok">aprobada</span></div>
+           </div></div></div>
+           <div class="col"><div class="card soft"><div class="card-t">Qué significa</div><div class="stack" style="font-size:12.5px">
+             <div>Se marca cada año como alto (+) o bajo (−) respecto del promedio.</div>
+             <div>Una serie homogénea alterna sin rachas largas: los cambios (C) no deberían ser muy distintos de las secuencias (S).</div>
+             <div>Si la diferencia |S−C| queda por debajo del límite, no hay evidencia de que el régimen haya cambiado en el tiempo.</div>
+             <div><b>Conclusión:</b> la serie pasa la prueba de homogeneidad de Helmert.</div>
+           </div></div></div>
+         </div></div></div>`;
+     }},
+    {name:'C · Comparación paso a paso ↔ experto',
+     notes:['Muestra las dos presentaciones de docencia lado a lado — hace explícita la diferencia de modo.','Muy útil para la propia revisión de diseño con Octavio.','En anónimo solo queda la columna de resultados (= lo que ve el usuario anónimo).'],
+     render:m=>{
+       const experto=`<div class="card"><div class="card-t">Experto — resultado directo</div><div class="grid3"><div class="kpi"><span class="l">|S−C|</span><div class="v mono">3</div></div><div class="kpi"><span class="l">límite</span><div class="v mono">6.24</div></div><div class="kpi"><span class="l">veredicto</span><div class="v"><span class="pill ok">ok</span></div></div></div></div>`;
+       if(m==='anon') return `<div class="app">${appBar(m)}<div class="pad-lg"><div class="banner info" style="margin-bottom:14px"><span class="ic">i</span> En anónimo solo existe esta presentación: <b>&nbsp;solo resultados</b>.</div><h3 class="wf" style="font-size:15px">Homogeneidad — Helmert</h3>${experto}</div></div>`;
+       return `<div class="app">${appBar(m)}<div class="pad-lg">
+         <h3 class="wf" style="font-size:15px">Homogeneidad — Helmert · los dos modos</h3><p class="sub">La misma prueba, según el modo elegido en Docencia.</p>
+         <div class="row" style="margin-top:6px">
+           <div class="col"><div class="card" style="border-color:var(--sel)"><div class="card-t">Paso a paso</div><div class="stack mono" style="font-size:12.5px"><div>1 · x̄ = 142.5, n = 40</div><div>2 · S = 21, C = 18</div><div>3 · |S − C| ≤ √(n − 1)</div><div>4 · |21 − 18| = 3 ≤ 6.24</div><div>5 · <span class="pill ok">aprobada</span></div></div></div></div>
+           <div class="col">${experto}<p class="foot-note" style="margin-top:8px">Esta columna es, además, exactamente lo que ve el usuario anónimo.</p></div>
+         </div></div></div>`;
+     }},
+    {name:'D · Acordeón de pasos',
+     notes:['Cada paso colapsable; el usuario expande el que quiere entender.','Mantiene la pantalla corta cuando la prueba tiene muchos pasos (ej. Cramer).','En anónimo colapsa a solo resultados.'],
+     render:m=>{ if(m==='anon') return anonResult();
+       return `<div class="app">${appBar(m)}<div class="pad-lg">
+         <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Homogeneidad — Helmert</h3><span class="sp" style="flex:1"></span>${modeSubToggle('paso')}</div>
+         <div class="stack" style="margin-top:14px">
+           <div class="card"><div class="row"><b style="font-size:12.5px">1 · Planteo y media</b><span class="sp" style="flex:1"></span><span style="color:var(--faint)">▾</span></div><div class="hr"></div><div class="muted mono" style="font-size:12.5px">x̄ = 142.5 · n = 40 · se clasifica cada xi por signo</div></div>
+           <div class="card"><div class="row"><b style="font-size:12.5px">2 · Secuencias y cambios</b><span class="sp" style="flex:1"></span><span class="mono foot-note">S=21 · C=18</span><span style="margin-left:10px;color:var(--faint)">▸</span></div></div>
+           <div class="card"><div class="row"><b style="font-size:12.5px">3 · Fórmula y sustitución</b><span class="sp" style="flex:1"></span><span class="mono foot-note">|21−18|=3 ≤ 6.24</span><span style="margin-left:10px;color:var(--faint)">▸</span></div></div>
+           <div class="card" style="border-color:var(--ok)"><div class="row"><b style="font-size:12.5px">4 · Veredicto</b><span class="sp" style="flex:1"></span><span class="pill ok">aprobada</span></div></div>
+         </div></div></div>`;
+     }}
+  ]},
+
+/* ---------- RANKING ETAPA 2 ---------- */
+rankingE2:{ title:'Ranking de distribuciones (Etapa 2)', grp:'Flujo principal',
+  desc:'13 distribuciones × hasta 6 métodos, ajustadas automáticamente y rankeadas por EEA (menor = mejor). METIS NO sugiere ganadora — el usuario selecciona.',
+  variants:[
+    {name:'A · Tabla rankeada + selección',
+     notes:['Ranking por EEA con radio para elegir. Deja claro que la decisión es del usuario.','Casos especiales (no converge / no aplicable) visibles pero deprioritizados.','Fila seleccionada habilita "calcular eventos de diseño".'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Ajuste de distribuciones</h3><span class="sp" style="flex:1"></span><span class="muted foot-note">30 combinaciones ajustadas · rankeadas por EEA</span></div>
+        <div class="banner info" style="margin:10px 0"><span class="ic">i</span> METIS presenta el ranking pero no elige por vos. Seleccioná una distribución para continuar.</div>
+        <div class="card" style="padding:0;overflow:hidden"><table class="wf">
+          <thead><tr><th>#</th><th>Distribución</th><th>Método</th><th>EEA</th><th>Params</th><th>Estado</th><th></th></tr></thead><tbody>
+          <tr class="sel"><td>1</td><td>Gumbel</td><td>Momentos</td><td class="mono">34.5</td><td>2</td><td><span class="pill ok">ok</span></td><td><span class="pill" style="background:var(--sel);color:#fff">✓ elegida</span></td></tr>
+          <tr><td>2</td><td>GVE</td><td>Momentos</td><td class="mono">35.1</td><td>3</td><td><span class="pill ok">ok</span></td><td><span class="btn sm gho">elegir</span></td></tr>
+          <tr><td>3</td><td>Gamma 2p</td><td>MV</td><td class="mono">36.2</td><td>2</td><td><span class="pill ok">ok</span></td><td><span class="btn sm gho">elegir</span></td></tr>
+          <tr><td>4</td><td>Log-Pearson III</td><td>Mom. indirecto</td><td class="mono">38.4</td><td>3</td><td><span class="pill ok">ok</span></td><td><span class="btn sm gho">elegir</span></td></tr>
+          <tr class="muted"><td>—</td><td>GVE</td><td>MV</td><td>—</td><td>3</td><td><span class="pill wait">no converge</span></td><td></td></tr>
+          <tr class="muted"><td>—</td><td>Log-Normal 2p</td><td>MV</td><td>—</td><td>2</td><td><span class="pill wait">deshab. (ceros)</span></td><td></td></tr>
+          </tbody></table></div>
+        <div class="row" style="margin-top:14px"><span class="sp" style="flex:1"></span><div class="btn pri">Calcular eventos de diseño ▸</div></div>
+        </div></div>`},
+    {name:'B · Ranking + gráfico comparativo',
+     notes:['Tabla a la izquierda, gráfico de ajuste de la seleccionada a la derecha.','Ver la curva sobre los puntos empíricos ayuda a decidir con criterio.','Actualiza el gráfico al cambiar de fila.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad">
+        <div class="row">
+          <div class="col" style="flex:1.4"><div class="card" style="padding:0;overflow:hidden"><table class="wf">
+            <thead><tr><th>#</th><th>Distribución</th><th>Método</th><th>EEA</th></tr></thead><tbody>
+            <tr class="sel"><td>1</td><td>Gumbel</td><td>Momentos</td><td class="mono">34.5</td></tr>
+            <tr><td>2</td><td>GVE</td><td>Momentos</td><td class="mono">35.1</td></tr>
+            <tr><td>3</td><td>Gamma 2p</td><td>MV</td><td class="mono">36.2</td></tr>
+            <tr><td>4</td><td>Log-Pearson III</td><td>Mom. indir.</td><td class="mono">38.4</td></tr>
+            <tr><td>5</td><td>Normal</td><td>Momentos</td><td class="mono">41.0</td></tr>
+          </tbody></table></div></div>
+          <div class="col"><div class="card"><div class="row"><div class="card-t">Ajuste — Gumbel (Momentos)</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphLine(150)}<div class="foot-note mono">μ 142.5 · α 38.2 · EEA 34.5</div><div class="btn pri sm" style="width:100%;justify-content:center;margin-top:12px">Elegir esta distribución</div></div></div>
+        </div></div></div>`},
+    {name:'C · Tarjetas comparables (top N)',
+     notes:['Las mejores distribuciones como tarjetas lado a lado.','Menos denso que la tabla — amable para no expertos.','Un enlace revela la tabla completa con todas las combinaciones.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Mejores ajustes</h3><span class="sp" style="flex:1"></span><span class="navlink">ver las 30 combinaciones ▾</span></div>
+        <div class="grid3" style="margin-top:12px">
+          <div class="card" style="border-color:var(--sel)"><div class="row"><span class="pill" style="background:var(--sel);color:#fff">#1</span><span class="sp" style="flex:1"></span><span class="pill ok">menor EEA</span></div><h3 class="wf" style="font-size:15px;margin-top:10px">Gumbel</h3><p class="sub" style="margin:2px 0 10px">Método de Momentos</p>${graphLine(80)}<div class="foot-note mono">EEA 34.5 · 2 params</div><div class="btn pri sm" style="width:100%;justify-content:center;margin-top:10px">Elegir</div></div>
+          <div class="card"><div class="row"><span class="pill wait">#2</span></div><h3 class="wf" style="font-size:15px;margin-top:10px">GVE</h3><p class="sub" style="margin:2px 0 10px">Momentos</p>${graphLine(80)}<div class="foot-note mono">EEA 35.1 · 3 params</div><div class="btn sm gho" style="width:100%;justify-content:center;margin-top:10px">Elegir</div></div>
+          <div class="card"><div class="row"><span class="pill wait">#3</span></div><h3 class="wf" style="font-size:15px;margin-top:10px">Gamma 2p</h3><p class="sub" style="margin:2px 0 10px">Máx. verosimilitud</p>${graphLine(80)}<div class="foot-note mono">EEA 36.2 · 2 params</div><div class="btn sm gho" style="width:100%;justify-content:center;margin-top:10px">Elegir</div></div>
+        </div></div></div>`},
+    {name:'D · Tarjetas con año calendario/hidrológico (de C)',
+     notes:['Basada en C, pero cada tarjeta alterna su gráfico entre año calendario e hidrológico.','El toggle es por tarjeta: se compara la misma distribución en ambas convenciones sin salir de la vista.','Interacción real: probá los toggles de cada tarjeta (hidrológico va punteado).'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Mejores ajustes</h3><span class="sp" style="flex:1"></span><span class="navlink">ver las 30 combinaciones ▾</span></div>
+        <div class="grid3" style="margin-top:12px">
+          ${['Gumbel|Método de Momentos|34.5|2|1|1','GVE|Momentos|35.1|3|2|0','Gamma 2p|Máx. verosimilitud|36.2|2|3|0'].map(r=>{const p=r.split('|');const sel=p[5]==='1';return `
+          <div class="card"${sel?' style="border-color:var(--sel)"':''}><div class="row"><span class="pill ${sel?'':'wait'}"${sel?' style="background:var(--sel);color:#fff"':''}>#${p[4]}</span>${sel?'<span class="sp" style="flex:1"></span><span class="pill ok">menor EEA</span>':''}</div>
+            <h3 class="wf" style="font-size:15px;margin-top:10px">${p[0]}</h3><p class="sub" style="margin:2px 0 8px">${p[1]}</p>
+            <div class="seg yeartoggle" style="font-size:10px;margin-bottom:8px"><span class="sel" data-y="cal">Calendario</span><span data-y="hid">Hidrológico</span></div>
+            <div data-graph="cal">${graphLine(78)}</div><div data-graph="hid" style="display:none">${graphLine2(78)}</div>
+            <div class="foot-note mono">EEA ${p[2]} · ${p[3]} params</div>
+            <div class="btn ${sel?'pri':'gho'} sm" style="width:100%;justify-content:center;margin-top:10px">Elegir</div></div>`}).join('')}
+        </div></div></div>`,
+     after:()=>{
+        document.getElementById('frame').querySelectorAll('.yeartoggle').forEach(seg=>{
+          const card=seg.closest('.card');
+          seg.querySelectorAll('span').forEach(sp=>sp.onclick=()=>{
+            seg.querySelectorAll('span').forEach(x=>x.classList.remove('sel'));sp.classList.add('sel');
+            card.querySelectorAll('[data-graph]').forEach(g=>g.style.display=g.dataset.graph===sp.dataset.y?'':'none');
+          });
+        });
+     }}
+  ]},
+
+/* ---------- EVENTOS DE DISEÑO ---------- */
+designEvents:{ title:'Eventos de diseño', grp:'Flujo principal',
+  desc:'Para la distribución elegida: valores por período de retorno (2, 5, 10, 25, 50, 100, 200, 500) y gráfico de ajuste en dos versiones temporales.',
+  variants:[
+    {name:'A · Tabla + gráfico',
+     notes:['Los caudales de diseño por período de retorno, con la curva al lado.','Es el output final que el ingeniero civil se lleva.','Botón de exportación PDF solo en docencia.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Eventos de diseño — Gumbel (Momentos)</h3><span class="sp" style="flex:1"></span><span class="foot-note mono">μ 142.5 · α 38.2</span></div>
+        <div class="row" style="margin-top:12px">
+          <div class="col"><div class="card" style="padding:0;overflow:hidden"><table class="wf"><thead><tr><th>T (años)</th><th>Prob.</th><th>Valor de diseño</th></tr></thead><tbody>
+            <tr><td>2</td><td class="mono">0.500</td><td class="mono">138.4</td></tr>
+            <tr><td>5</td><td class="mono">0.800</td><td class="mono">191.2</td></tr>
+            <tr><td>10</td><td class="mono">0.900</td><td class="mono">223.0</td></tr>
+            <tr><td>25</td><td class="mono">0.960</td><td class="mono">262.1</td></tr>
+            <tr><td>50</td><td class="mono">0.980</td><td class="mono">290.9</td></tr>
+            <tr class="sel"><td>100</td><td class="mono">0.990</td><td class="mono">312.7</td></tr>
+            <tr><td>500</td><td class="mono">0.998</td><td class="mono">378.4</td></tr>
+          </tbody></table></div></div>
+          <div class="col"><div class="card"><div class="row"><div class="card-t">Curva de ajuste</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphLine(180)}</div></div>
+        </div>
+        ${m==='doc'?`<div class="row" style="margin-top:14px"><span class="sp" style="flex:1"></span><div class="btn">Exportar PDF</div><div class="btn">Guardar en historial</div></div>`:`<div class="row" style="margin-top:14px"><span class="tag-anon">exportación PDF solo con cuenta (docencia)</span></div>`}
+        </div></div>`},
+    {name:'B · Foco en un período',
+     notes:['Selector grande de período de retorno + valor destacado.','Útil cuando el usuario busca un T específico (ej. crecida de 100 años).','La tabla completa queda como referencia secundaria.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <h3 class="wf" style="font-size:15px">Evento de diseño</h3><p class="sub">Gumbel · Momentos</p>
+        <div class="card soft" style="text-align:center;padding:26px"><div class="chips" style="justify-content:center;margin-bottom:16px"><span class="chip">2</span><span class="chip">5</span><span class="chip">10</span><span class="chip">25</span><span class="chip">50</span><span class="chip sel">100</span><span class="chip">500</span></div><div class="l muted">Valor de diseño · T = 100 años</div><div style="font-size:38px;font-weight:700" class="mono">312.7</div><div class="foot-note">probabilidad de no excedencia 0.990</div></div>
+        <div class="card" style="margin-top:14px"><div class="row"><div class="card-t">Curva de ajuste</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphLine(140)}</div>
+        </div></div>`},
+    {name:'C · Foco en período con slider (de B)',
+     notes:['Basada en B: botones de período + un slider para barrer T de forma continua.','Slider y chips están sincronizados; mover uno actualiza el otro, el valor y la probabilidad.','Interacción real: arrastrá el slider para ver la sensibilidad del valor de diseño.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <h3 class="wf" style="font-size:15px">Evento de diseño</h3><p class="sub">Gumbel · Momentos</p>
+        <div class="card soft" style="text-align:center;padding:24px">
+          <div class="chips" style="justify-content:center;margin-bottom:14px">${[2,5,10,25,50,100,200,500].map((t,i)=>`<span class="chip${i==5?' sel':''}" data-tchip>${t}</span>`).join('')}</div>
+          <input type="range" min="0" max="7" value="5" data-slider style="width:80%;max-width:420px;accent-color:#3f5566">
+          <div class="l muted" data-tlabel style="margin-top:14px">Valor de diseño · T = 100 años</div>
+          <div style="font-size:38px;font-weight:700" class="mono" data-val>312.7</div>
+          <div class="foot-note" data-prob>probabilidad de no excedencia 0.990</div>
+        </div>
+        <div class="card" style="margin-top:14px"><div class="row"><div class="card-t">Curva de ajuste</div><span class="sp" style="flex:1"></span>${yearTabs()}</div>${graphLine(130)}</div>
+        </div></div>`,
+     after:()=>{
+        const root=document.getElementById('frame');
+        const T=[2,5,10,25,50,100,200,500],V=['138.4','191.2','223.0','262.1','290.9','312.7','340.0','378.4'],P=['0.500','0.800','0.900','0.960','0.980','0.990','0.995','0.998'];
+        const sl=root.querySelector('[data-slider]'),chips=root.querySelectorAll('[data-tchip]'),val=root.querySelector('[data-val]'),prob=root.querySelector('[data-prob]'),lab=root.querySelector('[data-tlabel]');
+        function upd(i){chips.forEach((c,j)=>c.classList.toggle('sel',j==i));val.textContent=V[i];prob.textContent='probabilidad de no excedencia '+P[i];lab.textContent='Valor de diseño · T = '+T[i]+' años';}
+        sl.oninput=()=>upd(parseInt(sl.value));chips.forEach((c,j)=>c.onclick=()=>{sl.value=j;upd(j);});upd(parseInt(sl.value));
+     }}
+  ]},
+
+/* ---------- HISTORIAL (docencia) ---------- */
+history:{ title:'Historial de análisis', grp:'Cuenta', docOnly:true,
+  desc:'Solo CU-01. Lista de análisis persistidos con sus decisiones registradas. No existe en modo anónimo (sesión efímera).',
+  variants:[
+    {name:'A · Lista con filtros',
+     notes:['Lista cronológica con estado de confianza y acciones.','Reabrir un análisis restaura resultados y decisiones tomadas.','La ausencia total de esta sección es una señal clara del modo anónimo.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <div class="row" style="align-items:center"><h3 class="wf" style="font-size:15px">Tu historial</h3><span class="sp" style="flex:1"></span><div class="input" style="width:200px">buscar por nombre…</div></div>
+        <div class="card" style="padding:0;overflow:hidden;margin-top:12px"><table class="wf"><thead><tr><th>Fecha</th><th>Serie</th><th>Etapas</th><th>Resultado</th><th></th></tr></thead><tbody>
+          <tr><td class="mono">20/07</td><td>serie_caudal.csv</td><td>1 + 2</td><td><span class="pill warn">con warnings</span></td><td><span class="btn sm gho">abrir · PDF</span></td></tr>
+          <tr><td class="mono">18/07</td><td>rio_tercero_Q.xlsx</td><td>1</td><td><span class="pill ok">validado</span></td><td><span class="btn sm gho">abrir · PDF</span></td></tr>
+          <tr><td class="mono">15/07</td><td>precip_anual.csv</td><td>1 + 2</td><td><span class="pill crit">rechazado</span></td><td><span class="btn sm gho">abrir</span></td></tr>
+        </tbody></table></div></div></div>`},
+    {name:'B · Tarjetas resumen',
+     notes:['Cada análisis como tarjeta con miniatura del gráfico principal.','Más visual, bueno para reconocer análisis por su forma.','Escala peor con cientos de items — pensada para uso docente acotado.'],
+     render:m=>`<div class="app">${appBar(m)}<div class="pad-lg">
+        <h3 class="wf" style="font-size:15px">Tu historial</h3>
+        <div class="grid3" style="margin-top:12px">
+          <div class="card"><div class="row"><b style="font-size:13px">serie_caudal.csv</b><span class="sp" style="flex:1"></span><span class="pill warn">warn</span></div><div style="margin:10px 0">${graphLine(70)}</div><div class="foot-note">20/07 · Etapa 1 + 2</div></div>
+          <div class="card"><div class="row"><b style="font-size:13px">rio_tercero_Q</b><span class="sp" style="flex:1"></span><span class="pill ok">ok</span></div><div style="margin:10px 0">${graphLine(70)}</div><div class="foot-note">18/07 · Etapa 1</div></div>
+          <div class="card"><div class="row"><b style="font-size:13px">precip_anual.csv</b><span class="sp" style="flex:1"></span><span class="pill crit">rech.</span></div><div style="margin:10px 0">${ph(70)}</div><div class="foot-note">15/07 · Etapa 1 + 2</div></div>
+        </div></div></div>`}
+  ]}
+};
+
+/* ============================================================
+   Motor del explorador
+   ============================================================ */
+const ORDER = ['auth','config','stream','resultsE1','pasoapaso','rankingE2','designEvents','history'];
+let state = { mode:'doc', screen:'config', variant:0, notes:true };
+
+function buildNav(){
+  const groups = {};
+  ORDER.forEach(k=>{const s=SCREENS[k];(groups[s.grp]=groups[s.grp]||[]).push(k)});
+  let html='';let idx=0;
+  for(const g in groups){
+    html+=`<div class="grp">${g}</div>`;
+    groups[g].forEach(k=>{
+      idx++;
+      const s=SCREENS[k];
+      const locked = s.docOnly && state.mode==='anon';
+      html+=`<a data-screen="${k}" class="${k===state.screen?'active':''} ${locked?'locked':''}"><span class="n">${idx}</span>${s.title.split('(')[0].trim()}</a>`;
+    });
+  }
+  document.getElementById('flowNav').innerHTML=html;
+  document.querySelectorAll('nav.flow a').forEach(a=>a.onclick=()=>{
+    const k=a.dataset.screen;
+    if(SCREENS[k].docOnly && state.mode==='anon'){ state.mode='doc'; syncModeButtons(); }
+    state.screen=k; state.variant=0; render();
+  });
+}
+function syncModeButtons(){
+  document.querySelectorAll('#modeToggle button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.mode));
+}
+function render(){
+  const s=SCREENS[state.screen];
+  // pantalla docOnly en modo anónimo → mostrar estado vacío
+  document.getElementById('scTitle').textContent=s.title;
+  document.getElementById('scDesc').textContent=s.desc;
+  // tabs
+  const tabs=document.getElementById('variantTabs');
+  if(s.docOnly && state.mode==='anon'){
+    tabs.innerHTML='';
+    document.getElementById('frame').innerHTML=`<div class="app"><div class="pad-lg" style="text-align:center;padding:60px 30px"><span class="tag-anon">no disponible en modo anónimo</span><h3 class="wf" style="margin-top:14px">Esta pantalla es exclusiva de Docencia</h3><p class="sub" style="max-width:380px;margin:8px auto 0">El modo anónimo no persiste sesiones ni historial. Cambiá a Docencia (arriba a la derecha) para verla.</p></div></div>`;
+    buildNav();syncNotes();return;
+  }
+  tabs.innerHTML=s.variants.map((v,i)=>`<button class="${i===state.variant?'active':''}">${v.name}</button>`).join('');
+  tabs.querySelectorAll('button').forEach((b,i)=>b.onclick=()=>{state.variant=i;render()});
+  const v=s.variants[state.variant];
+  document.getElementById('frame').innerHTML=v.render(state.mode);
+  if(v.after) v.after(state.mode);
+  syncNotes();
+  buildNav();
+}
+function syncNotes(){
+  const n=document.getElementById('notes');
+  n.classList.toggle('hidden',!state.notes);
+  const s=SCREENS[state.screen];
+  if(s.docOnly && state.mode==='anon'){n.innerHTML=`<h4>Nota</h4><div class="vname">Distinción de modo</div><p>La desaparición completa de esta sección es, en sí, el marcador de que estás en modo anónimo.</p>`;return;}
+  const v=s.variants[state.variant];
+  n.innerHTML=`<h4>Notas de esta variante</h4><div class="vname">${v.name}</div><ul>${v.notes.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+}
+document.querySelectorAll('#modeToggle button').forEach(b=>b.onclick=()=>{
+  state.mode=b.dataset.mode;syncModeButtons();
+  if(SCREENS[state.screen].docOnly && state.mode==='anon'){/* queda en estado vacío */}
+  state.variant=0;render();
+});
+document.getElementById('notesBtn').onclick=()=>{state.notes=!state.notes;document.getElementById('notesBtn').classList.toggle('on',state.notes);render()};
+buildNav();render();
+</script>
+</body>
+</html>
