@@ -12,7 +12,7 @@ custom properties (no CSS-in-JS runtime) toggled via `data-theme`/`data-mode` at
 `<html>`, read by a small React context (`ThemeProvider`) that also persists the choice.
 Routing uses `react-router-dom` v6 with one stub component per screen. Backend connectivity in
 dev goes through Vite's dev-server proxy (same-origin, no CORS) — see Global Constraint on CORS
-below, and `docs/frontend-implementation-plan.md` §9.2.2 for why real CORS is deferred.
+below, and `docs/frontend/frontend-implementation-plan.md` §9.2.2 for why real CORS is deferred.
 
 **Tech Stack:** Vite 5, React 18, TypeScript 5 (strict), react-router-dom 6, Vitest 2 +
 React Testing Library + jsdom, ESLint 9 (flat config) + typescript-eslint.
@@ -20,20 +20,20 @@ React Testing Library + jsdom, ESLint 9 (flat config) + typescript-eslint.
 ## Global Constraints
 
 These apply to every task in this plan — copied verbatim from
-`docs/frontend-implementation-plan.md` and `docs/frontend-integration.md`.
+`docs/frontend/frontend-implementation-plan.md` and `docs/frontend/frontend-integration.md`.
 
 - **Dev server port is 5173**, matching `FRONTEND_ORIGIN=http://localhost:5173` in the backend's
-  `.env.example` (`docs/frontend-implementation-plan.md` §10, P2). Do not change the port without
+  `.env.example` (`docs/frontend/frontend-implementation-plan.md` §10, P2). Do not change the port without
   updating the backend `.env`.
 - **CORS in dev is bypassed via a Vite proxy** (`/api` and `/ping` → `http://localhost:8000`),
-  same-origin, per Decision D2 (`docs/frontend-implementation-plan.md` §9.2.2). This is a **dev-only
+  same-origin, per Decision D2 (`docs/frontend/frontend-implementation-plan.md` §9.2.2). This is a **dev-only
   shortcut** — do not implement or rely on cross-origin CORS handling in this plan; that is
   explicitly deferred to production hardening (pendiente P1). All fetch calls still set
   `credentials: "include"` so the same code works once real CORS is wired up later.
-- **Theme is fixed to `data-theme="instrumento"`** (`docs/frontend-implementation-plan.md` §4).
+- **Theme is fixed to `data-theme="instrumento"`** (`docs/frontend/frontend-implementation-plan.md` §4).
   Only light/dark (`data-mode`) is a user toggle in this phase — no theme picker (the other three
   Fase-2 identities are not implemented; METIS ships with one theme).
-- **Instrumento token values are exact** (`docs/frontend-implementation-plan.md` §4.1 /
+- **Instrumento token values are exact** (`docs/frontend/frontend-implementation-plan.md` §4.1 /
   `frontend/frontend-design/metis-prototipo-fase3.html` `THEMES.instrumento`) — use the hex values
   and CSS variable names given in Task 3 verbatim, do not approximate or rename them.
 - **Numbers render in monospace** (`--f-mono`, JetBrains Mono) — a transversal rule from Fase 2
@@ -46,7 +46,7 @@ These apply to every task in this plan — copied verbatim from
 - **All fetch calls use `credentials: "include"`** — required for the JWT HttpOnly cookie to
   travel once auth exists (Fase 1), even though Fase 0 has no authenticated calls yet.
 - Do not add CSS-in-JS libraries, UI kits (MUI, Chakra, Ant, shadcn, etc.), or state managers
-  (Redux) — out of scope per `docs/frontend-implementation-plan.md` §1.1 tooling table.
+  (Redux) — out of scope per `docs/frontend/frontend-implementation-plan.md` §1.1 tooling table.
 
 ---
 
@@ -161,7 +161,7 @@ These apply to every task in this plan — copied verbatim from
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Dev-only CORS bypass (Decision D2, docs/frontend-implementation-plan.md §9.2.2):
+// Dev-only CORS bypass (Decision D2, docs/frontend/frontend-implementation-plan.md §9.2.2):
 // same-origin via proxy so the browser never needs cross-origin CORS in development.
 // Real CORS handling for production is pendiente P1 — not implemented here.
 const BACKEND_ORIGIN = "http://localhost:8000";
@@ -407,7 +407,7 @@ Expected: FAIL — `Cannot find module './tokens'` (file doesn't exist yet).
 
 - [ ] **Step 3: Create `frontend/src/theme/tokens.ts`**
 
-Values copied verbatim from `docs/frontend-implementation-plan.md` §4.1 /
+Values copied verbatim from `docs/frontend/frontend-implementation-plan.md` §4.1 /
 `frontend/frontend-design/metis-prototipo-fase3.html` `THEMES.instrumento`:
 
 ```ts
@@ -1182,7 +1182,7 @@ git commit -m "feat(frontend): add router, TopBar layout, and stub pages for the
   forgotten.
 - Produces: `checkBackendPing(): Promise<{ status: string }>` from `ping.ts`, calling
   `apiFetch("/ping")` and parsing the JSON body (backend returns `{"status": "ok"}` per
-  `docs/frontend-integration.md` §1).
+  `docs/frontend/frontend-integration.md` §1).
 - Produces: `useBackendPing()` hook from `useBackendPing.ts` returning
   `{ state: "loading" | "ok" | "error" }`, used by `TopBar`.
 
@@ -1478,11 +1478,11 @@ git commit -m "feat(frontend): add typed API client and backend connectivity ind
 ## End-of-phase manual verification (not a subagent task — controller/human checklist)
 
 After Task 7's review is approved, the plan's automated tasks are done, but Fase 0's own
-"hecho si" criteria (`docs/frontend-implementation-plan.md`, Fase 0) include a live check that no
+"hecho si" criteria (`docs/frontend/frontend-implementation-plan.md`, Fase 0) include a live check that no
 subagent can perform meaningfully (a dev server + real browser + real backend):
 
 1. Start the real backend (`docker-compose up backend postgres` or `uvicorn metis.main:app --reload
-   --port 8000` per `docs/frontend-integration.md` §1).
+   --port 8000` per `docs/frontend/frontend-integration.md` §1).
 2. Run `cd frontend && npm run dev` — confirm it serves on `http://localhost:5173`.
 3. Open it in a browser: confirm the entry page renders, the theme toggle switches all tokens
    (background, ink, accent visibly change), and the TopBar's backend status reads "Backend

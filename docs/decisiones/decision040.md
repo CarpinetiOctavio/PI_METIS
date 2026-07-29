@@ -39,7 +39,7 @@ la elección de librería en sí, sino con el manejo de eventos de la capa propi
 `complete` pisando una `fase="error"` previa, y `result_etapa1` sin desenvolver
 correctamente el payload crudo del evento. Ambos corregidos con test de regresión
 en `sse.test.ts` — detalle completo en
-`docs/frontend-implementation-plan.md` §10, pendiente P5.
+`docs/frontend/frontend-implementation-plan.md` §10, pendiente P5.
 
 **Ver también:** [DECISIÓN 039](decision039.md) — criterio de promoción que trajo
 esta decisión (originalmente "D1") a `docs/decisiones/`.

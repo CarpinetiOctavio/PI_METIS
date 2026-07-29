@@ -2,13 +2,13 @@
 
 **Propósito.** Plan de trabajo para construir el frontend de METIS (React + TypeScript,
 tema visual **"Instrumento"**) contra el backend REAL descrito en
-[`docs/frontend-integration.md`](./frontend-integration.md). Este documento **no contiene
+[`docs/frontend/frontend-integration.md`](./frontend-integration.md). Este documento **no contiene
 código de producción** — describe qué construir, en qué orden, con qué criterios de "hecho"
 y qué se prueba contra el backend real vs. qué queda mockeado.
 
 **Fecha.** 22/07/2026 · Autores: Kevin / Octavio.
 **Depende de:**
-- [`docs/frontend-integration.md`](./frontend-integration.md) — contrato REAL del backend (fuente de verdad para lo implementado).
+- [`docs/frontend/frontend-integration.md`](./frontend-integration.md) — contrato REAL del backend (fuente de verdad para lo implementado).
 - `frontend/frontend-design/metis-wireframes-fase1-decisiones.md` — variantes elegidas (★) y Decisiones A / C / D.
 - `frontend/frontend-design/metis-prototipo-fase3.html` — identidad visual; tema "Instrumento" (claro y oscuro).
 - `.claude/rules/` (architecture, constraints, api-contracts, statistical-pipeline, sprint) y `CLAUDE.md`.
@@ -586,8 +586,8 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   de `auth/router.py`/`auth/email.py` se confirmó que la nota original de este documento (§3.4,
   Opción B — "token de logs") **ya no aplica**: el mock que lo hacía posible
   (`print("MOCK SMTP...")`) fue reemplazado por completo en Auth Parte 2 (19/07/2026, ver
-  [DECISIÓN 032](../docs/decisiones/decision032.md) y
-  [DECISIÓN 034](../docs/decisiones/decision034.md)). Hoy, sin SMTP real configurado,
+  [DECISIÓN 032](../../docs/decisiones/decision032.md) y
+  [DECISIÓN 034](../../docs/decisiones/decision034.md)). Hoy, sin SMTP real configurado,
   `send_verification_email()` lanza `RuntimeError` **antes** de que el token se guarde en
   `_pending_tokens` o se loguee en ningún lado, y como el mail se manda antes de comitear el usuario
   (para evitar huérfanos, DECISIÓN 032), no queda ningún usuario ni token creado — no hay ningún

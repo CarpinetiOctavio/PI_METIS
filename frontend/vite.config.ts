@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
-// Dev-only CORS bypass (Decision D2, docs/frontend-implementation-plan.md §9.2.2):
+// Dev-only CORS bypass (Decision D2, docs/frontend/frontend-implementation-plan.md §9.2.2):
 // same-origin via proxy so the browser never needs cross-origin CORS in development.
 // Real CORS handling for production is pendiente P1 — not implemented here.
 const BACKEND_ORIGIN = "http://localhost:8000";

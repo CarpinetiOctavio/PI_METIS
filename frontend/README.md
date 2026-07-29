@@ -22,7 +22,7 @@ En desarrollo, `/api` y `/ping` se redirigen (proxy de Vite) hacia
 localmente. Esto evita configurar CORS real durante el desarrollo — es un
 bypass exclusivo de este entorno, no válido en producción. El manejo de
 CORS real para producción queda pendiente (ver
-`docs/frontend-implementation-plan.md`).
+`docs/frontend/frontend-implementation-plan.md`).
 
 ## Tema
 

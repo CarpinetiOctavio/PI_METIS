@@ -1,5 +1,5 @@
 // Diccionario código→texto legible en español. El backend no manda mensaje
-// legible en varios eventos (ver docs/frontend-implementation-plan.md §7).
+// legible en varios eventos (ver docs/frontend/frontend-implementation-plan.md §7).
 export const ERROR_TEXT: Record<string, string> = {
   // Auth
   AUTH_EMAIL_ALREADY_REGISTERED: "Ese email ya está registrado.",

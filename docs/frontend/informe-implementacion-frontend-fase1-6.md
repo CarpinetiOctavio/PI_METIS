@@ -7,7 +7,7 @@ Etapa 2, y una primera verificación E2E completa contra el backend real (Docker
 **Propósito de este documento.** Punto único de consulta para retomar el trabajo — pensado
 para que lo lea tanto una persona como otra sesión de Claude Code sin contexto previo. La
 fuente de verdad más detallada, decisión por decisión, sigue siendo
-[`docs/frontend-implementation-plan.md`](./frontend-implementation-plan.md) §10 — este informe
+[`docs/frontend/frontend-implementation-plan.md`](./frontend-implementation-plan.md) §10 — este informe
 resume y da un mapa de navegación, no lo reemplaza.
 
 ---

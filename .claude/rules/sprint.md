@@ -462,8 +462,8 @@ implementación de auth en sí.
 Implementación de Fases 1 a 5 del frontend (28-29/07/2026), sobre el scaffold de
 Fase 0 (`docs/superpowers/plans/2026-07-22-frontend-fase0-scaffold.md`, ya
 mergeado). Plan completo y decisión por decisión en
-`docs/frontend-implementation-plan.md` §10; resumen navegable en
-`docs/informe-implementacion-frontend-fase1-6.md`.
+`docs/frontend/frontend-implementation-plan.md` §10; resumen navegable en
+`docs/frontend/informe-implementacion-frontend-fase1-6.md`.
 
 **Nota de nomenclatura:** este proyecto ya usaba "Fase 1...Fase 6" para el
 desarrollo de Core Etapa 2 (ver más arriba, `feature/core-etapa2`). El frontend
@@ -521,7 +521,7 @@ navegador de dev (única fase que no depende de backend real, por diseño).
 
 #### Fase 6 — Pulido y accesibilidad — PARCIAL
 Único pendiente reconocido del backlog original. Ver Bloque D
-(`docs/plan-mejora-frontend-pasada2.md`) para las correcciones puntuales de
+(`docs/frontend/plan-mejora-frontend-pasada2.md`) para las correcciones puntuales de
 código y accesibilidad agendadas en la pasada de mejora del 29/07/2026.
 
 #### Verificación E2E fuera de las 6 fases nominales (backlog P4-P7)
@@ -616,7 +616,7 @@ huérfanos), `POST /register` **no crea ningún usuario ni token** — no hay na
 que rescatar de los logs. Sin credenciales SMTP reales, el flujo
 registro→verify no se puede probar localmente en absoluto (ni con este
 procedimiento ni con ningún otro atajo actual); solo queda cobertura de tests
-con `fetch` mockeado. Ver `docs/frontend-implementation-plan.md` §10, Decisión
+con `fetch` mockeado. Ver `docs/frontend/frontend-implementation-plan.md` §10, Decisión
 D6, para el detalle completo y por qué se decidió no tocar el backend para
 reintroducir un log dev-only.
 
@@ -731,7 +731,7 @@ regresión matemática y verificación E2E con CSV real.
 
 **ACTUALIZACIÓN 29 de Julio de 2026:** Verificación end-to-end del pipeline
 con CSV real — **CERRADA.** El backlog P4-P7 de
-`docs/frontend-implementation-plan.md` §10 (pendiente P5) corrió un CSV
+`docs/frontend/frontend-implementation-plan.md` §10 (pendiente P5) corrió un CSV
 sintético de 40 años contra el backend real (`docker-compose up backend
 postgres`, no mockeado), con un valor forzado a 6-7x el resto para disparar
 Chow: los 4 grupos de pruebas de Etapa 1 llegaron y se resolvieron

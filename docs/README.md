@@ -42,10 +42,11 @@ qué eran, cuándo se superaron, y qué los reemplaza. Mismo criterio de
 trazabilidad que rige el resto del proyecto: preservar el camino
 recorrido, no solo el estado final.
 
-### Archivos sueltos directamente bajo `docs/`
-No encajan en ninguna de las tres carpetas de arriba — son documentación de
-la implementación real del frontend, no de fidelidad estadística ni de
-decisiones de arquitectura de una sola línea:
+### `frontend/`
+Documentación de la implementación real del frontend — no encaja en
+`auditoria/` (no es fidelidad estadística) ni en `decisiones/` como archivo
+único (son documentos vivos que se actualizan fase a fase, no una decisión
+cerrada de una vez):
 - `frontend-implementation-plan.md` — plan de integración del frontend,
   fuente de verdad decisión por decisión (§10).
 - `frontend-integration.md` — contrato real backend↔frontend observado
@@ -55,14 +56,9 @@ decisiones de arquitectura de una sola línea:
 - `plan-mejora-frontend-pasada2.md` — plan de la segunda pasada de revisión
   sobre ese trabajo (29/07/2026).
 
-**Propuesta abierta, no ejecutada:** agrupar estos cuatro bajo `docs/frontend/`
-— hoy están sueltos en la raíz de `docs/` sin categoría propia, que es
-justamente lo que la regla de abajo pide discutir antes de crear una carpeta
-nueva. No se ejecuta unilateralmente en esta pasada.
-
-Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`
-o `historico/` se discute antes de crear una carpeta nueva o forzarlo
-en la que más se le parezca.
+Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`,
+`historico/` o `frontend/` se discute antes de crear una carpeta nueva o
+forzarlo en la que más se le parezca.
 
 ## Trazabilidad de requerimientos (`RF-XXX`)
 
@@ -122,13 +118,24 @@ registro de cuándo se estableció o modificó.
   otra sesión de Claude Code sin contexto previo.
 - **29/07/2026 (pasada de mejora)** — `plan-mejora-frontend-pasada2.md`
   agregado (diagnóstico y plan de una segunda revisión sobre el trabajo de
-  Fases 1-5). Nueva sección "Archivos sueltos directamente bajo `docs/`"
-  agregada arriba — `frontend-implementation-plan.md` y
-  `frontend-integration.md` existían desde el 22-28/07/2026 sin estar
-  listados en este README, incumplimiento de la regla de abajo detectado y
-  corregido en esta ronda. `decisiones/` pasó de `decision001.md`-`034.md` a
-  `decision001.md`-`042.md` (036-042 de esta pasada — DECISIÓN 036/037/038
-  hallazgos de backend, DECISIÓN 039/040/041/042 promoción de las decisiones
-  de frontend). `frontend/frontend-design/` (wireframes, identidad,
-  prototipo, `versiones/`) commiteado por primera vez — no es parte de
-  `docs/` pero se registra acá por ser el mismo evento de trazabilidad.
+  Fases 1-5). `frontend-implementation-plan.md` y `frontend-integration.md`
+  existían desde el 22-28/07/2026 sin estar listados en este README,
+  incumplimiento de la regla de abajo detectado y corregido en esta ronda.
+  `decisiones/` pasó de `decision001.md`-`034.md` a `decision001.md`-`042.md`
+  (036-042 de esta pasada — DECISIÓN 036/037/038 hallazgos de backend,
+  DECISIÓN 039/040/041/042 promoción de las decisiones de frontend).
+  `frontend/frontend-design/` (wireframes, identidad, prototipo, `versiones/`)
+  commiteado por primera vez — no es parte de `docs/` pero se registra acá
+  por ser el mismo evento de trazabilidad.
+- **29/07/2026 (pasada de mejora, misma ronda)** — Nueva carpeta `docs/frontend/`
+  creada: los cuatro archivos de arriba (`frontend-implementation-plan.md`,
+  `frontend-integration.md`, `informe-implementacion-frontend-fase1-6.md`,
+  `plan-mejora-frontend-pasada2.md`) movidos con `git mv` (historia
+  preservada) desde la raíz de `docs/`. Decisión de Kevin, no ejecutada
+  unilateralmente — ver la propuesta que motivó la pregunta en la entrada
+  anterior. Todas las referencias cruzadas del repo (`CLAUDE.md`,
+  `sprint.md`, `docs/decisiones/`, `frontend/src/`) actualizadas a la ruta
+  nueva en el mismo cambio, incluyendo dos enlaces relativos
+  (`../docs/decisiones/...` dentro del propio plan, `../plan-mejora...`
+  dentro de `decisiones/README.md`) que la profundidad extra de carpeta
+  hubiera dejado rotos si no se ajustaban.

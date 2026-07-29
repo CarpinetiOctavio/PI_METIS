@@ -1,4 +1,4 @@
-// Interfaces 1:1 con el contrato real documentado en docs/frontend-integration.md
+// Interfaces 1:1 con el contrato real documentado en docs/frontend/frontend-integration.md
 // (no con metis/schemas/analysis.py — desconectado de los endpoints reales, ver
 // ese documento §5/§6). Alcance actual: solo Auth (Fase 1 del frontend).
 
@@ -33,7 +33,7 @@ export interface OkResponse {
   ok: true;
 }
 
-// --- Análisis — shapes reales, ver docs/frontend-integration.md §3-4.
+// --- Análisis — shapes reales, ver docs/frontend/frontend-integration.md §3-4.
 // NO usar metis/schemas/analysis.py como referencia: desconectado de los
 // endpoints reales (ver ese documento §5/§6).
 

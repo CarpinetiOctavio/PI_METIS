@@ -142,7 +142,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
           return { ...base, result: event.result };
         case "complete":
           // `complete` SIEMPRE llega después de `contract_error` también
-          // (docs/frontend-integration.md §4: "Después de este evento el
+          // (docs/frontend/frontend-integration.md §4: "Después de este evento el
           // backend manda complete con analysis_id: null y cierra") — si ya
           // estamos en fase="error" no hay que pisarla con "done".
           return base.fase === "error"

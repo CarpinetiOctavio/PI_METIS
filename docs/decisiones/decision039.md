@@ -5,7 +5,7 @@
 ### Contexto
 La sesión de implementación de Fases 1-5 del frontend (28-29/07/2026) tomó 20
 decisiones de diseño (`D1`-`D20`), registradas únicamente en
-`docs/frontend-implementation-plan.md` §10 — sin número global, sin estado, sin
+`docs/frontend/frontend-implementation-plan.md` §10 — sin número global, sin estado, sin
 entrada en `docs/decisiones/README.md`. `docs/decisiones/` fija la convención del
 proyecto: un archivo por decisión, número inmutable, entrada en el índice. Esa
 sesión no la siguió para el trabajo de frontend.

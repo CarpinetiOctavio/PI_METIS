@@ -34,7 +34,7 @@ información más reciente. Addendums fechados existentes: `decision004.md`
 ## Historial de esta migración
 
 **29/07/2026 (reserva de números, previa a `decision036.md`-`decision042.md`)** —
-[`docs/plan-mejora-frontend-pasada2.md`](../plan-mejora-frontend-pasada2.md) (Bloque B0)
+[`docs/frontend/plan-mejora-frontend-pasada2.md`](../frontend/plan-mejora-frontend-pasada2.md) (Bloque B0)
 reserva 035-042 en el índice antes de escribir ningún contenido, para que ningún
 trabajo paralelo pise un número. `035` ya estaba comprometido desde `sprint.md`
 (protección de ramas, 20/07/2026) sin archivo propio todavía — no se toca en esta
