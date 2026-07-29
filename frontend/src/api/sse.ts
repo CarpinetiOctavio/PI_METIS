@@ -77,6 +77,14 @@ function buildFormData(form: AnalysisStreamForm): FormData {
 export function useAnalysisStream(): UseAnalysisStreamResult {
   const [internal, setInternal] = useState<InternalState>(INITIAL_STATE);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Espejo síncrono de `internal` para lecturas fuera de un `setInternal`
+  // funcional (ej. `resolveOutlier`, que necesita `outlier` ANTES de la
+  // llamada de red, no dentro de un actualizador de estado). Evita que
+  // `resolveOutlier` dependa de `internal` completo — dependencia que
+  // recreaba el `useCallback` en cada evento SSE y arriesgaba closure
+  // obsoleta si dos actualizaciones de estado ocurrían entre renders.
+  const internalRef = useRef(internal);
+  internalRef.current = internal;
 
   const handleEvent = useCallback((event: SseEvent) => {
     setInternal((prev) => {
@@ -149,10 +157,18 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
             ? base
             : { ...base, fase: "done", analysisId: event.analysis_id };
         case "error":
+          // Criterio (DECISIÓN 038, D1 de la pasada de mejora): el texto
+          // mostrado siempre sale del diccionario curado (`errorText`), nunca
+          // de `event.mensaje` crudo del backend — mismo criterio que ya
+          // aplicaba `contract_error`. El backend no es consistente en lo que
+          // manda ahí (PARSE_ERROR manda `str(exc)` técnico sin traducir;
+          // SESSION_TIMEOUT manda español curado) — unificar en el frontend
+          // evita que el usuario vea texto técnico en algunos casos y
+          // traducido en otros.
           return {
             ...base,
             fase: "error",
-            error: { codigo: event.codigo, mensaje: event.mensaje },
+            error: { codigo: event.codigo, mensaje: errorText(event.codigo) },
           };
         default:
           return base;
@@ -218,7 +234,10 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
           setInternal((prev) => ({
             ...prev,
             fase: "error",
-            error: { codigo: "STREAM_CONNECTION_ERROR", mensaje: String(err) },
+            error: {
+              codigo: "STREAM_CONNECTION_ERROR",
+              mensaje: errorText("STREAM_CONNECTION_ERROR"),
+            },
           }));
           // Relanzar evita el retry automático de la librería — este stream
           // no es idempotente para reintentar solo (re-correría el pipeline).
@@ -234,7 +253,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
 
   const resolveOutlier = useCallback(
     async (decision: "rechazar" | "aceptar") => {
-      const { outlier } = internal;
+      const { outlier } = internalRef.current;
       if (!outlier) return;
       await postOutlierDecision({
         session_id: outlier.session_id,
@@ -243,7 +262,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
       });
       setInternal((prev) => ({ ...prev, fase: "streaming", outlier: null }));
     },
-    [internal],
+    [],
   );
 
   const abort = useCallback(() => {

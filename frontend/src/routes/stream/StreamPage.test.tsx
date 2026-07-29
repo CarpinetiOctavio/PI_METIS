@@ -68,7 +68,7 @@ function renderStreamPage(
     abort,
   });
 
-  render(
+  const { unmount } = render(
     <MemoryRouter
       initialEntries={[
         withForm
@@ -84,7 +84,7 @@ function renderStreamPage(
     </MemoryRouter>,
   );
 
-  return { start, resolveOutlier, abort };
+  return { start, resolveOutlier, abort, unmount };
 }
 
 describe("StreamPage", () => {
@@ -102,6 +102,16 @@ describe("StreamPage", () => {
       columna_x: "anio",
       columna_y: "caudal",
     });
+  });
+
+  // D2 (pasada de mejora): sin esto, navegar fuera de /stream a mitad de un
+  // análisis dejaba el fetch SSE vivo y la sesión colgada hasta el timeout de
+  // 300s del backend.
+  it("calls abort() on unmount", () => {
+    const { abort, unmount } = renderStreamPage();
+    expect(abort).not.toHaveBeenCalled();
+    unmount();
+    expect(abort).toHaveBeenCalledTimes(1);
   });
 
   it("shows a pill once a group's tests all arrive, and pending groups show none", () => {
