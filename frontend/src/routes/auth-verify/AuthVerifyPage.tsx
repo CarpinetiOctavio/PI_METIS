@@ -42,12 +42,15 @@ export function AuthVerifyPage() {
   return (
     <div className="card" style={{ maxWidth: 420, margin: "40px auto" }}>
       <h1 className="h">Verificación de cuenta</h1>
-      <div className={`banner ${bannerKind}`} role="status">
+      {/* N2 (limpieza SonarCloud): <output> ya tiene role="status" implícito
+          — el atributo explícito era ARIA redundante sobre un elemento
+          nativo que ya lo expresa. */}
+      <output className={`banner ${bannerKind}`}>
         <span className="ic">
           {status === "success" ? "✓" : status === "error" ? "!" : "…"}
         </span>{" "}
         {message}
-      </div>
+      </output>
       {status !== "checking" && (
         <Link to="/" className="b b-pri" style={{ marginTop: 12 }}>
           Ir a la puerta de entrada

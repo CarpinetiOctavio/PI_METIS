@@ -4,12 +4,14 @@ import { useAuth } from "./AuthProvider";
 
 // D7 (pasada de mejora): antes ambos guards devolvían null mientras
 // isLoading — pantalla completamente en blanco en cada carga de la app.
+// N2 (limpieza SonarCloud): <output> ya tiene role="status" implícito —
+// el role explícito era ARIA redundante sobre un elemento nativo.
 function AuthLoading() {
   return (
-    <div className="auth-loading" role="status" aria-live="polite">
+    <output className="auth-loading" aria-live="polite">
       <span className="spinner" aria-hidden="true" />
       <span className="visually-hidden">Cargando…</span>
-    </div>
+    </output>
   );
 }
 
