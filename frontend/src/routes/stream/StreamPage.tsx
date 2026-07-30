@@ -272,7 +272,7 @@ export function StreamPage() {
 
         {state.fase === "done" && (
           <div className="banner ok" style={{ marginTop: 14 }}>
-            <span className="ic">✓</span> Análisis completo.
+            <span className="ic">✓</span> Análisis completo.{" "}
             <button
               type="button"
               className="b b-pri"
