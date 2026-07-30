@@ -57,7 +57,7 @@ const PILL_LABEL: Record<Exclude<GroupStatus, "pending">, string> = {
 // se muestra en `Etapa1ResultView` — no acá.
 //
 // Mientras el stream está en curso, esta función solo agrega "hay algo para
-// mirar en este grupo" (warn) vs. "todo limpio" (ok) vs. "crítico" (crit) a
+// mirar en este grupo" (warn) vs. "limpio" (ok) vs. "crítico" (crit) a
 // partir de las pruebas individuales ya recibidas. Verificado que esto SÍ es
 // consistente con la jerarquía documentada para el límite crit/warn: en el
 // código real (`core/etapa1/independence.py`, `core/etapa1/homogeneity.py`),

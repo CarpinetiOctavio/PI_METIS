@@ -12,8 +12,7 @@ export function PendingBadge({ note }: Readonly<{ note?: string }>) {
   const text = note ?? "Etapa 2 no expuesta por API todavía — datos de ejemplo";
   return (
     <span className="tag pending-badge" title={text}>
-      pendiente · datos de ejemplo
-      <span className="visually-hidden">{`— ${text}`}</span>
+      {"pendiente · datos de ejemplo"}<span className="visually-hidden">{`— ${text}`}</span>
     </span>
   );
 }

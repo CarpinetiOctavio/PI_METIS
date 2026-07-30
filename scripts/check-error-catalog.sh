@@ -77,5 +77,5 @@ if [[ "$FAILED" -ne 0 ]]; then
   exit 1
 fi
 
-echo
-echo "Catálogo de códigos de error sincronizado en las tres direcciones."
+echo >&2
+echo "Catálogo de códigos de error sincronizado en las tres direcciones." >&2
