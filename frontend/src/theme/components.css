@@ -216,11 +216,25 @@
 
 .step {
   display: flex;
+  align-items: center;
   gap: 12px;
+  /* N1 (limpieza SonarCloud): .step ahora es un <button> nativo, no un
+     <div role="button">. Reset de los estilos por defecto del navegador
+     para que se vea igual que el div de antes. */
+  width: 100%;
+  appearance: none;
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.step[role="button"] {
-  cursor: pointer;
+.step:disabled {
+  cursor: default;
 }
 
 .step .node {

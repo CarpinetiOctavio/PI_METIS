@@ -224,23 +224,20 @@ export function StreamPage() {
 
                 return (
                   <div key={group.key}>
-                    <div
+                    {/* N1 (limpieza SonarCloud): antes era un <div role="button"
+                        tabIndex onClick onKeyDown> — un <button> nativo da lo
+                        mismo (Enter/Espacio, foco, disabled) con menos código. */}
+                    <button
+                      type="button"
                       className={STEP_CLASS[status]}
-                      role={expandable ? "button" : undefined}
-                      tabIndex={expandable ? 0 : undefined}
+                      disabled={!expandable}
                       onClick={() => toggleGroup(group.key, expandable)}
-                      onKeyDown={(event) => {
-                        if (expandable && (event.key === "Enter" || event.key === " ")) {
-                          event.preventDefault();
-                          toggleGroup(group.key, expandable);
-                        }
-                      }}
                     >
                       <div className="node">{status === "ok" ? "✓" : "▸"}</div>
                       <div style={{ flex: 1 }}>
                         <b>{group.label}</b> <StatusPill status={status} />
                       </div>
-                    </div>
+                    </button>
                     {expanded === group.key && results.length > 0 && (
                       <table className="t">
                         <thead>
