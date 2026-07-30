@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -79,22 +80,26 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setIsAnonymous(true);
   }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthed: user !== null,
-        isLoading,
-        isAnonymous,
-        login,
-        logout,
-        enterAnonymously,
-        refetch,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // R2 (limpieza SonarCloud): sin useMemo, este objeto se recrea en cada
+  // render de AuthProvider — y como envuelve toda la app, eso significa que
+  // cada pantalla re-renderiza aunque nada haya cambiado. Las funciones ya
+  // están en useCallback con deps estables, así que el array de abajo es
+  // seguro tal como lo valida react-hooks/exhaustive-deps.
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthed: user !== null,
+      isLoading,
+      isAnonymous,
+      login,
+      logout,
+      enterAnonymously,
+      refetch,
+    }),
+    [user, isLoading, isAnonymous, login, logout, enterAnonymously, refetch],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

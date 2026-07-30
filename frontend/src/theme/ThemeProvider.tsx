@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useLayoutEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -42,11 +43,11 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     setMode((current) => (current === "light" ? "dark" : "light"));
   }, []);
 
-  return (
-    <ThemeContext.Provider value={{ mode, toggleMode }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  // R2 (limpieza SonarCloud): ver AuthProvider.tsx — mismo motivo, el value
+  // se recrearía en cada render sin useMemo.
+  const value = useMemo(() => ({ mode, toggleMode }), [mode, toggleMode]);
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
