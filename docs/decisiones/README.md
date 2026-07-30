@@ -147,3 +147,4 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [041](decision041.md) | Estado de servidor sin TanStack Query; `vi.stubGlobal("fetch")` como patrón único de test | 22-28/07/2026 | Diferido (TanStack Query, con criterio de habilitación) — Establecido (patrón de test) |
 | [042](decision042.md) | Alcance de los mocks de Etapa 2 y rol de MSW | 22-28/07/2026 | Implementado — verificado manualmente |
 | [043](decision043.md) | Contraste WCAG AA del tema Instrumento: hallazgos y propuesta, no aplicada | 29/07/2026 | PENDIENTE DE DECISIÓN — Kevin/Octavio |
+| [044](decision044.md) | SonarCloud: quality gate, limpieza del PR #17/B, rechazo de `<dialog>` nativo, merge del PR #17 en rojo | 30/07/2026 | Aplicada — gate de gobernanza PENDIENTE DE DECISIÓN — Kevin/Octavio |
