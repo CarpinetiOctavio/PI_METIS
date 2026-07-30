@@ -48,9 +48,11 @@ check_direction() {
   local label="$1" left="$2" right="$3"
   local diff
   diff=$(comm -23 "$left" "$right" | comm -23 - "$TMPDIR/allow.txt" || true)
-  if [ -n "$diff" ]; then
-    echo "FAIL — $label:"
-    echo "$diff" | sed 's/^/  /'
+  if [[ -n "$diff" ]]; then
+    {
+      echo "FAIL — $label:"
+      echo "$diff" | sed 's/^/  /'
+    } >&2
     FAILED=1
   else
     echo "OK — $label"
@@ -64,12 +66,14 @@ check_direction "catálogo, ausente del diccionario del frontend" \
 check_direction "diccionario del frontend, ausente del catálogo" \
   "$TMPDIR/fe.txt" "$TMPDIR/cat.txt"
 
-if [ "$FAILED" -ne 0 ]; then
-  echo
-  echo "Hay códigos de error sin catalogar en alguna dirección. Agregarlos a"
-  echo ".claude/rules/architecture/api-contracts.md y/o frontend/src/i18n/errors.es.ts,"
-  echo "o a scripts/error-catalog-allowlist.txt con un comentario que justifique"
-  echo "por qué la excepción es legítima (ver DECISIÓN 038)."
+if [[ "$FAILED" -ne 0 ]]; then
+  {
+    echo
+    echo "Hay códigos de error sin catalogar en alguna dirección. Agregarlos a"
+    echo ".claude/rules/architecture/api-contracts.md y/o frontend/src/i18n/errors.es.ts,"
+    echo "o a scripts/error-catalog-allowlist.txt con un comentario que justifique"
+    echo "por qué la excepción es legítima (ver DECISIÓN 038)."
+  } >&2
   exit 1
 fi
 

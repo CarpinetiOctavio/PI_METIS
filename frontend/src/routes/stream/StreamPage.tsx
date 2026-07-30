@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAnalysisStream } from "../../api/sse";
 import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
@@ -153,21 +152,28 @@ export function StreamPage() {
     }
   }, [modalOpen]);
 
-  function handleDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== "Escape") return;
-    event.preventDefault();
-    // Decisión de producto, no de accesibilidad (M3.2): Escape NO cierra el
-    // modal ni descarta la decisión pendiente. El backend está bloqueado
-    // esperando (session_store, hasta 300s) y el pipeline no continúa sin
-    // una respuesta real — "rechazar" y "aceptar" son las dos únicas
-    // decisiones válidas, ninguna es un "cancelar" seguro para mapear un
-    // Escape accidental. Además cada una queda en el registro de auditoría
-    // (TEST_OUTLIER_REJECTED_BY_USER / TEST_OUTLIER_ACCEPTED_BY_USER) — un
-    // Escape sin querer no puede convertirse silenciosamente en una de las
-    // dos. Escape solo devuelve el foco al contenedor del diálogo; el modal
-    // sigue abierto y el usuario tiene que elegir explícitamente un botón.
-    dialogRef.current?.focus();
-  }
+  useEffect(() => {
+    if (!modalOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      // Decisión de producto, no de accesibilidad (M3.2): Escape NO cierra el
+      // modal ni descarta la decisión pendiente. El backend está bloqueado
+      // esperando (session_store, hasta 300s) y el pipeline no continúa sin
+      // una respuesta real — "rechazar" y "aceptar" son las dos únicas
+      // decisiones válidas, ninguna es un "cancelar" seguro para mapear un
+      // Escape accidental. Además cada una queda en el registro de auditoría
+      // (TEST_OUTLIER_REJECTED_BY_USER / TEST_OUTLIER_ACCEPTED_BY_USER) — un
+      // Escape sin querer no puede convertirse silenciosamente en una de las
+      // dos. Escape solo devuelve el foco al contenedor del diálogo; el modal
+      // sigue abierto y el usuario tiene que elegir explícitamente un botón.
+      dialogRef.current?.focus();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [modalOpen]);
 
   if (!form) return null;
 
@@ -299,7 +305,6 @@ export function StreamPage() {
             aria-modal="true"
             aria-labelledby="outlier-title"
             tabIndex={-1}
-            onKeyDown={handleDialogKeyDown}
           >
             <h2 id="outlier-title" className="h">
               Dato atípico detectado

@@ -105,6 +105,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
 
       switch (event.type) {
         case "contract_error":
+        case "error":
           return {
             ...base,
             fase: "error",
@@ -156,20 +157,6 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
           return base.fase === "error"
             ? base
             : { ...base, fase: "done", analysisId: event.analysis_id };
-        case "error":
-          // Criterio (DECISIÓN 038, D1 de la pasada de mejora): el texto
-          // mostrado siempre sale del diccionario curado (`errorText`), nunca
-          // de `event.mensaje` crudo del backend — mismo criterio que ya
-          // aplicaba `contract_error`. El backend no es consistente en lo que
-          // manda ahí (PARSE_ERROR manda `str(exc)` técnico sin traducir;
-          // SESSION_TIMEOUT manda español curado) — unificar en el frontend
-          // evita que el usuario vea texto técnico en algunos casos y
-          // traducido en otros.
-          return {
-            ...base,
-            fase: "error",
-            error: { codigo: event.codigo, mensaje: errorText(event.codigo) },
-          };
         default:
           return base;
       }

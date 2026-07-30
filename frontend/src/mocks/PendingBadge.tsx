@@ -13,7 +13,7 @@ export function PendingBadge({ note }: Readonly<{ note?: string }>) {
   return (
     <span className="tag pending-badge" title={text}>
       pendiente · datos de ejemplo
-      <span className="visually-hidden"> — {text}</span>
+      <span className="visually-hidden">{`— ${text}`}</span>
     </span>
   );
 }
