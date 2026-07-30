@@ -16,10 +16,10 @@ type Axis = "calendario" | "hidrologico";
 function RankingCard({
   item,
   onElegir,
-}: {
+}: Readonly<{
   item: RankingItem;
   onElegir: () => void;
-}) {
+}>) {
   const [axis, setAxis] = useState<Axis>("calendario");
 
   return (

@@ -39,7 +39,7 @@ export function EntryPage() {
   );
 }
 
-function LoginForm({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
+function LoginForm({ onSwitchToRegister }: Readonly<{ onSwitchToRegister: () => void }>) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -104,7 +104,7 @@ function LoginForm({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
   );
 }
 
-function RegisterForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
+function RegisterForm({ onSwitchToLogin }: Readonly<{ onSwitchToLogin: () => void }>) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");

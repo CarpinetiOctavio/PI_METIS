@@ -89,7 +89,7 @@ function summarizeGroup(
   return "ok";
 }
 
-function StatusPill({ status }: { status: GroupStatus }) {
+function StatusPill({ status }: Readonly<{ status: GroupStatus }>) {
   if (status === "pending") return null;
   const kind = status === "active" ? "wait" : status;
   return <span className={`pill ${kind}`}>{PILL_LABEL[status]}</span>;

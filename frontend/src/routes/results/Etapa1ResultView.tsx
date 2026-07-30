@@ -45,7 +45,7 @@ const HOMOG_LABEL: Record<NonNullable<Etapa1Result["nivel_homogeneidad"]>, strin
   homogeneidad_critica: "crítico",
 };
 
-function GroupTable({ items }: { items: TestResultDetail[] }) {
+function GroupTable({ items }: Readonly<{ items: TestResultDetail[] }>) {
   if (items.length === 0) {
     return <p className="fn">No ejecutada.</p>;
   }
@@ -94,7 +94,10 @@ function GroupTable({ items }: { items: TestResultDetail[] }) {
  * UX-D) — eso es responsabilidad de quien la use, según su propio
  * contexto de auth.
  */
-export function Etapa1ResultView({ result, modo }: { result: Etapa1Result; modo: Modo }) {
+export function Etapa1ResultView({
+  result,
+  modo,
+}: Readonly<{ result: Etapa1Result; modo: Modo }>) {
   const pasoAPaso = modo === "paso_a_paso";
 
   const groups: Group[] = [

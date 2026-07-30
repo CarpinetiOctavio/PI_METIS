@@ -16,7 +16,7 @@ function AuthLoading() {
 }
 
 /** Envuelve rutas exclusivas de CU-01 (docencia). Redirige a la puerta de entrada sin sesión. */
-export function RequireAuth({ children }: { children: ReactNode }) {
+export function RequireAuth({ children }: Readonly<{ children: ReactNode }>) {
   const { isAuthed, isLoading } = useAuth();
 
   if (isLoading) return <AuthLoading />;
@@ -25,7 +25,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 /** Envuelve la puerta de entrada: si ya hay sesión, saltea directo a config. */
-export function RedirectIfAuthed({ children }: { children: ReactNode }) {
+export function RedirectIfAuthed({ children }: Readonly<{ children: ReactNode }>) {
   const { isAuthed, isLoading } = useAuth();
 
   if (isLoading) return <AuthLoading />;

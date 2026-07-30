@@ -29,7 +29,7 @@ function readInitialMode(): ThemeMode {
     : "light";
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [mode, setMode] = useState<ThemeMode>(readInitialMode);
 
   useLayoutEffect(() => {
