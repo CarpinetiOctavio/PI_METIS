@@ -6,6 +6,21 @@ import { errorText } from "../../i18n/errors.es";
 
 type Status = "checking" | "success" | "error";
 
+// R4 (limpieza SonarCloud): reemplaza los dos ternarios anidados
+// (bannerKind e ícono) — mismo patrón Record<Status, X> que ya usa el
+// resto del proyecto (STEP_CLASS, PILL_LABEL, NIVEL_CONFIANZA_KIND).
+const BANNER_KIND: Record<Status, string> = {
+  success: "ok",
+  error: "crit",
+  checking: "info",
+};
+
+const STATUS_ICON: Record<Status, string> = {
+  success: "✓",
+  error: "!",
+  checking: "…",
+};
+
 export function AuthVerifyPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
@@ -37,19 +52,14 @@ export function AuthVerifyPage() {
     };
   }, [token]);
 
-  const bannerKind = status === "success" ? "ok" : status === "error" ? "crit" : "info";
-
   return (
     <div className="card" style={{ maxWidth: 420, margin: "40px auto" }}>
       <h1 className="h">Verificación de cuenta</h1>
       {/* N2 (limpieza SonarCloud): <output> ya tiene role="status" implícito
           — el atributo explícito era ARIA redundante sobre un elemento
           nativo que ya lo expresa. */}
-      <output className={`banner ${bannerKind}`}>
-        <span className="ic">
-          {status === "success" ? "✓" : status === "error" ? "!" : "…"}
-        </span>{" "}
-        {message}
+      <output className={`banner ${BANNER_KIND[status]}`}>
+        <span className="ic">{STATUS_ICON[status]}</span> {message}
       </output>
       {status !== "checking" && (
         <Link to="/" className="b b-pri" style={{ marginTop: 12 }}>
