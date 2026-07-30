@@ -8,12 +8,30 @@ Nunca merge directo de feature a main.
 
 **Pendiente — documentar formalmente (20/07/2026):** protección de
 ramas main/staging vía GitHub Ruleset ya configurada y activa
-(bloquea push directo, exige PR + CI). Falta: decisión completa con
+(bloquea push directo, exige PR). Falta: decisión completa con
 alternativas evaluadas (Rulesets vs. Classic, reglas activadas/
 descartadas con motivo) en `docs/decisiones/decision035.md` — no
 escrita todavía. También pendiente: chequeo custom en `ci.yml` para
 restringir que `main` sólo reciba PRs desde `staging` (ver discusión,
 diferido por bajo riesgo con equipo de dos personas).
+
+**Corrección 30/07/2026 (limpieza SonarCloud, D3):** esta sección decía "exige
+PR + CI", dando a entender que ningún check puede estar en rojo al mergear.
+Verificado contra el PR #17 real (`gh pr view 17 --json
+mergeStateStatus,reviewDecision,statusCheckRollup`): con el check de
+SonarCloud en `FAILURE`, `mergeStateStatus` es `UNSTABLE` (checks no
+requeridos fallando) y no `BLOCKED` (que es lo que devuelve GitHub cuando un
+check requerido falla) — el botón de merge sigue habilitado.
+`reviewDecision` está vacío pese a haber una revisión pendiente solicitada:
+tampoco la revisión es requerida. La parte verificable de la afirmación
+original —que el Ruleset bloquea push directo y exige pasar por PR— se
+sostiene; la parte de "exige CI" no se sostiene al menos para el check de
+SonarCloud, y no se pudo confirmar el estado de los tres checks de `ci.yml`
+como *required* porque este repo devuelve 404/lista vacía en los endpoints
+de Ruleset/branch-protection de la API para un token sin permiso `admin`
+(solo `push`/`maintain`) — pendiente de verificar con acceso admin real.
+Ver [DECISIÓN 044](../../docs/decisiones/decision044.md), sección "La
+pregunta de gobernanza abierta".
 
 ### Orden de implementación
 1. feature/db-models     — modelos SQLAlchemy + sesión  ✓ mergeado a staging
