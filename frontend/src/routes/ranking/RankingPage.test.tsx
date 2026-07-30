@@ -45,6 +45,19 @@ describe("RankingPage", () => {
     ).toBeGreaterThan(0);
   });
 
+  // D5 (pasada de mejora): el toggle calendario/hidrológico vivía en un solo
+  // estado a nivel página — tocarlo en una tarjeta cambiaba las ocho.
+  it("keeps the calendario/hidrológico toggle independent per card", () => {
+    renderRankingPage();
+    const hidrologicoButtons = screen.getAllByRole("button", { name: "Hidrológico" });
+    expect(hidrologicoButtons.length).toBeGreaterThan(1);
+
+    fireEvent.click(hidrologicoButtons[0]);
+
+    expect(hidrologicoButtons[0]).toHaveAttribute("aria-pressed", "true");
+    expect(hidrologicoButtons[1]).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("navigates to /design-events with the chosen distribucion/metodo when Elegir is clicked", () => {
     renderRankingPage();
     const elegirButtons = screen.getAllByRole("button", { name: "Elegir" });

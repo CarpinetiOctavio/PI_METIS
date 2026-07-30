@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -24,7 +25,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<UserMe | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnonymous, setIsAnonymous] = useState(
@@ -67,6 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await authApi.logout();
     setUser(null);
+    // D8 (pasada de mejora): antes no limpiaba el flag anónimo — un usuario
+    // que hizo login real y después logout podía quedar con
+    // metis-anon-session="true" residual de una sesión anónima anterior.
+    localStorage.removeItem(ANON_STORAGE_KEY);
+    setIsAnonymous(false);
   }, []);
 
   const enterAnonymously = useCallback(() => {
@@ -74,22 +80,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAnonymous(true);
   }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthed: user !== null,
-        isLoading,
-        isAnonymous,
-        login,
-        logout,
-        enterAnonymously,
-        refetch,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // R2 (limpieza SonarCloud): sin useMemo, este objeto se recrea en cada
+  // render de AuthProvider — y como envuelve toda la app, eso significa que
+  // cada pantalla re-renderiza aunque nada haya cambiado. Las funciones ya
+  // están en useCallback con deps estables, así que el array de abajo es
+  // seguro tal como lo valida react-hooks/exhaustive-deps.
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthed: user !== null,
+      isLoading,
+      isAnonymous,
+      login,
+      logout,
+      enterAnonymously,
+      refetch,
+    }),
+    [user, isLoading, isAnonymous, login, logout, enterAnonymously, refetch],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

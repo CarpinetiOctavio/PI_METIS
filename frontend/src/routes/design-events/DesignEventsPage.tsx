@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { postDesignEvents } from "../../api/etapa2";
 import { PendingBadge } from "../../mocks/PendingBadge";
+import { formatNum } from "../../i18n/format";
 import type { DesignEventsResponse } from "../../api/types";
 import "./DesignEventsPage.css";
 
@@ -83,7 +84,7 @@ export function DesignEventsPage() {
           Valor de diseño · T = {selectedPeriodo} años
         </div>
         <div className="num" style={{ fontSize: 38, fontWeight: 700 }}>
-          {selected ? selected.valor : "—"}
+          {selected ? formatNum(selected.valor) : "—"}
         </div>
       </div>
 

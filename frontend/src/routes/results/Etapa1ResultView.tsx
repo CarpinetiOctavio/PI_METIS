@@ -1,4 +1,5 @@
 import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
+import { formatInt, formatNum } from "../../i18n/format";
 import "./Etapa1ResultView.css";
 
 interface Group {
@@ -44,7 +45,7 @@ const HOMOG_LABEL: Record<NonNullable<Etapa1Result["nivel_homogeneidad"]>, strin
   homogeneidad_critica: "crítico",
 };
 
-function GroupTable({ items }: { items: TestResultDetail[] }) {
+function GroupTable({ items }: Readonly<{ items: TestResultDetail[] }>) {
   if (items.length === 0) {
     return <p className="fn">No ejecutada.</p>;
   }
@@ -62,14 +63,20 @@ function GroupTable({ items }: { items: TestResultDetail[] }) {
         {items.map((t) => (
           <tr key={t.prueba}>
             <td>{t.prueba}</td>
-            <td className="num">{t.estadistico ?? "—"}</td>
-            <td className="num">{t.valor_critico ?? "—"}</td>
+            <td className="num">{formatNum(t.estadistico)}</td>
+            <td className="num">{formatNum(t.valor_critico)}</td>
             <td>
               {t.veredicto ?? "—"}
+              {/* D6 (pasada de mejora): antes renderizaba literalmente
+                  "n2=null" cuando solo uno de los dos estaba presente —
+                  Cramer siempre reporta ambos, pero otras pruebas no
+                  reportan ninguno. Cada uno se muestra solo si no es null. */}
               {(t.n1 !== null || t.n2 !== null) && (
                 <span className="fn">
                   {" "}
-                  (n1={t.n1}, n2={t.n2})
+                  ({t.n1 !== null && `n1=${t.n1}`}
+                  {t.n1 !== null && t.n2 !== null && ", "}
+                  {t.n2 !== null && `n2=${t.n2}`})
                 </span>
               )}
             </td>
@@ -84,10 +91,13 @@ function GroupTable({ items }: { items: TestResultDetail[] }) {
  * Vista puramente presentacional de un `Etapa1Result` — reutilizada por
  * ResultsPage (stream en vivo, Fase 3) y HistoryDetailPage (historial
  * persistido, Fase 4). No decide el `modo` efectivo (anónimo=experto,
- * Decisión D) — eso es responsabilidad de quien la use, según su propio
+ * UX-D) — eso es responsabilidad de quien la use, según su propio
  * contexto de auth.
  */
-export function Etapa1ResultView({ result, modo }: { result: Etapa1Result; modo: Modo }) {
+export function Etapa1ResultView({
+  result,
+  modo,
+}: Readonly<{ result: Etapa1Result; modo: Modo }>) {
   const pasoAPaso = modo === "paso_a_paso";
 
   const groups: Group[] = [
@@ -137,36 +147,36 @@ export function Etapa1ResultView({ result, modo }: { result: Etapa1Result; modo:
           <table className="t">
             <tbody>
               <tr>
-                <td>n</td>
-                <td className="num">{result.descriptive.n}</td>
+                <th scope="row">n</th>
+                <td className="num">{formatInt(result.descriptive.n)}</td>
               </tr>
               <tr>
-                <td>media</td>
-                <td className="num">{result.descriptive.media}</td>
+                <th scope="row">media</th>
+                <td className="num">{formatNum(result.descriptive.media)}</td>
               </tr>
               <tr>
-                <td>mediana</td>
-                <td className="num">{result.descriptive.mediana}</td>
+                <th scope="row">mediana</th>
+                <td className="num">{formatNum(result.descriptive.mediana)}</td>
               </tr>
               <tr>
-                <td>desvío S</td>
-                <td className="num">{result.descriptive.desvio_estandar}</td>
+                <th scope="row">desvío S</th>
+                <td className="num">{formatNum(result.descriptive.desvio_estandar)}</td>
               </tr>
               <tr>
-                <td>CV</td>
-                <td className="num">{result.descriptive.coef_variacion}</td>
+                <th scope="row">CV</th>
+                <td className="num">{formatNum(result.descriptive.coef_variacion)}</td>
               </tr>
               <tr>
-                <td>asimetría</td>
-                <td className="num">{result.descriptive.coef_asimetria}</td>
+                <th scope="row">asimetría</th>
+                <td className="num">{formatNum(result.descriptive.coef_asimetria)}</td>
               </tr>
               <tr>
-                <td>mínimo</td>
-                <td className="num">{result.descriptive.minimo}</td>
+                <th scope="row">mínimo</th>
+                <td className="num">{formatNum(result.descriptive.minimo)}</td>
               </tr>
               <tr>
-                <td>máximo</td>
-                <td className="num">{result.descriptive.maximo}</td>
+                <th scope="row">máximo</th>
+                <td className="num">{formatNum(result.descriptive.maximo)}</td>
               </tr>
             </tbody>
           </table>

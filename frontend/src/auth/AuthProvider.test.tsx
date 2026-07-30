@@ -156,6 +156,38 @@ describe("AuthProvider", () => {
     );
   });
 
+  // D8 (pasada de mejora): logout() no limpiaba el flag anónimo residual —
+  // un usuario que entró anónimo, después inició sesión real, y volvió a
+  // hacer logout, quedaba con metis-anon-session="true" en localStorage.
+  it("logout() also clears a residual anonymous session flag", async () => {
+    localStorage.setItem("metis-anon-session", "true");
+    stubFetchSequence({
+      "/auth/logout": { ok: true, body: { ok: true } },
+      "/auth/me": {
+        ok: true,
+        body: { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true },
+      },
+    });
+
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("authed")).toHaveTextContent("true"),
+    );
+    expect(screen.getByTestId("anon")).toHaveTextContent("true");
+
+    fireEvent.click(screen.getByText("logout"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("anon")).toHaveTextContent("false"),
+    );
+    expect(localStorage.getItem("metis-anon-session")).toBeNull();
+  });
+
   it("enterAnonymously() sets isAnonymous and persists it to localStorage", async () => {
     stubFetchSequence({ "/auth/me": { ok: false, status: 401, body: {} } });
 

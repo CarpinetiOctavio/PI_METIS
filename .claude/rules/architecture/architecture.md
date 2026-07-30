@@ -1,6 +1,8 @@
 # Decisiones de Arquitectura — METIS
 
-**Última actualización: 17 de Julio de 2026.** Se agregó la justificación de nginx, se corrigió la duplicación de `backend:` en el YAML de Docker Compose, se movió el flujo de OAuth descartado a `docs/historico/oauth-descartado.md` (reemplazado por "Autenticación — flujo vigente"), se sumó `auth/` a la restricción de aislamiento de `core/`, y se incorporó acá la sección "Separación de responsabilidades — flujo de datos" (antes en `core-implementation.md`).
+**Última actualización: 29 de Julio de 2026.** Corregida la sección "Nginx como reverse proxy" — afirmaba que el frontend "entra en operación recién en la primera instancia de avance del proyecto (mediados de agosto de 2026)", falso desde el commit `2afcc5d` (Fase 1 del frontend, 28/07/2026). El frontend ya está integrado contra el backend real; lo que sigue sin existir es el build estático servido por nginx, que es otra cosa. Detectado en la pasada 2 de mejora del frontend (`docs/frontend/plan-mejora-frontend-pasada2.md`), corregido en la pasada 3 — `architecture.md` está en la lista de lectura obligatoria de `CLAUDE.md` al inicio de cada sesión, así que una afirmación falsa acá se propaga a cada sesión nueva.
+
+Actualización anterior — 17 de Julio de 2026: se agregó la justificación de nginx, se corrigió la duplicación de `backend:` en el YAML de Docker Compose, se movió el flujo de OAuth descartado a `docs/historico/oauth-descartado.md` (reemplazado por "Autenticación — flujo vigente"), se sumó `auth/` a la restricción de aislamiento de `core/`, y se incorporó acá la sección "Separación de responsabilidades — flujo de datos" (antes en `core-implementation.md`).
 
 ## Por qué estas decisiones existen (no cambiar sin justificación explícita)
 
@@ -26,7 +28,7 @@ CU-01 y CU-02 ejecutan exactamente el mismo pipeline estadístico. La diferencia
 El motor estadístico en core/ no importa nada de api/, services/, db/ ni auth/. Esto hace posible los tests de regresión matemática — se puede testear que Anderson calcula correctamente el estadístico sin levantar la aplicación completa. Es el argumento técnico más sólido ante el tribunal de ISI.
 
 ### Nginx como reverse proxy
-Único servicio expuesto al exterior — FastAPI y React nunca se exponen directamente. Sirve el build estático del frontend, actúa como reverse proxy hacia `/api` del backend, y termina HTTPS con certificado institucional. Relevante en particular por el despliegue dentro de la intranet de la UCC. El frontend entra en operación recién en la primera instancia de avance del proyecto (mediados de agosto de 2026) — hasta entonces, nginx no tiene build estático que servir, ver mapeo de puertos del backend más abajo para desarrollo sin nginx.
+Único servicio expuesto al exterior — FastAPI y React nunca se exponen directamente. Sirve el build estático del frontend, actúa como reverse proxy hacia `/api` del backend, y termina HTTPS con certificado institucional. Relevante en particular por el despliegue dentro de la intranet de la UCC. El frontend ya está integrado contra el backend real (Fases 1-5, ver `sprint.md` — "feature/frontend-fases1-5"); lo que todavía no existe es el build estático servido por nginx — hasta entonces, ver mapeo de puertos del backend más abajo para desarrollo sin nginx.
 
 ---
 

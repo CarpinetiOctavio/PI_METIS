@@ -93,6 +93,22 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
 - Con JWT válido (@ucc.edu.ar): persiste análisis, habilita exportación
 - Sin JWT: sesión efímera, sin persistencia
 
+**Nota de implementación — `cramer_particion` personalizada no implementada.**
+El contrato de arriba documenta `{n1_pct, n2_pct}` como valor válido, pero el
+endpoint real (`api/v1/analysis.py`) declara el campo como `Form(str)` — cualquier
+valor distinto del literal `"default"` llega como string a
+`core/etapa1/homogeneity.py::calcular_cramer` y produce un `TypeError` no
+manejado, no un 400 controlado. Hoy el frontend nunca envía otra cosa que
+`"default"`. Ver `docs/decisiones/decision036.md` — DECISIÓN 036.
+
+**Nota de implementación — `etapas` se recibe y se descarta.** El endpoint real
+declara `etapas: str = Form("1")` pero nunca lo pasa a `stream_etapa1()` — el
+frontend tampoco lo envía. `schemas/analysis.py::AnalysisRequest` (el modelo
+Pydantic que representaría este contrato completo, tipado) no lo importa ninguna
+ruta. Hoy es inocuo porque Etapa 2 está mockeada en el frontend; deja de serlo
+cuando Etapa 2 se exponga de verdad (M2/M3). Ver `docs/decisiones/decision037.md`
+— DECISIÓN 037.
+
 ---
 
 ### POST /api/v1/analysis/outlier-decision
@@ -248,13 +264,21 @@ TEST_CRITICAL_INDEPENDENCE       Anderson rechaza — CRÍTICO
 TEST_CRITICAL_HOMOGENEITY        Cramer rechaza — CRÍTICO
 TEST_WARNING_TREND               Mann-Kendall o KS detectan tendencia
 TEST_WARNING_HOMOGENEITY         Helmert o t de Student rechazan
-TEST_WARNING_SMALL_SAMPLE        Wald-Wolfowitz con n ≤ 40
+TEST_WARNING_SMALL_SAMPLE        Wald-Wolfowitz con n ≤ 40, o Mann-Kendall con 10 ≤ n ≤ 30 (*)
 TEST_WARNING_OUTLIER_DETECTED    Chow detecta atípico — decisión pendiente
 TEST_OUTLIER_REJECTED_BY_USER    Usuario rechazó el dato atípico
 TEST_OUTLIER_ACCEPTED_BY_USER    Usuario aceptó el dato como parte de la población
 TEST_NOT_EXECUTED_ZEROS          Chow no ejecutado por ceros en caudal_precipitacion
 TEST_NOT_EXECUTED_CONDITION      Prueba con condición no cumplida
+TEST_NOT_EXECUTED_MIN_SAMPLES    Mann-Kendall no ejecutado — serie con n < 10
 ```
+
+(*) `core/etapa1/independence.py::determinar_warnings_independencia` promueve el
+`warning_codigo` de Wald-Wolfowitz a `result.warnings` correctamente.
+`core/etapa1/trend.py::determinar_warnings_tendencia` **no** hace lo mismo con el
+de Mann-Kendall — el `TestResult` individual lo lleva, pero nunca llega a la lista
+agregada de warnings. Gap encontrado y documentado, no corregido — ver
+`docs/decisiones/decision038.md` — DECISIÓN 038.
 
 ### Etapa 2 — distribuciones
 ```
@@ -263,3 +287,31 @@ DIST_NOT_CONVERGED               Método iterativo sin solución estable
 DIST_HIGH_EEA                    EEA supera el 5% de la media
 DIST_DISABLED_ZEROS              Distribución deshabilitada por ceros en caudal_precipitacion
 ```
+
+### Stream / sesión
+```
+PARSE_ERROR                      No se pudo parsear el archivo subido (evento SSE "error")
+SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante un atípico (evento SSE "error")
+```
+Ambos son eventos SSE `error`, no respuestas HTTP de error — ver nota general al
+principio de este archivo. Emitidos por `services/analysis_service.py`. Agregados
+al catálogo en `docs/decisiones/decision038.md` — DECISIÓN 038, que también deja
+la regla: todo código nuevo emitido por `core/` o `services/` se agrega acá en el
+mismo commit que lo introduce.
+
+### Códigos originados en el frontend
+```
+VALIDATION_ERROR          Sintetizado por api/client.ts ante un 422 genérico de
+                           FastAPI/Pydantic sin código propio — no lo manda el backend.
+STREAM_CONNECTION_ERROR   Sintetizado por api/sse.ts::onerror ante una falla de red/
+                           conexión del stream SSE — condición client-side, el
+                           backend nunca la ve ni la emite.
+```
+Estos dos no tienen contraparte en `core/`/`services/` porque describen condiciones
+que solo el cliente puede detectar (fallo de red, 422 sin `codigo` propio del
+backend) — no es un gap de sincronización, es el catálogo reconociendo que no
+todo código de error se origina en el servidor. Agregados acá en el addendum
+del 29/07/2026 de `docs/decisiones/decision038.md` — DECISIÓN 038, que también
+deja la regla explícita en esta dirección: todo código nuevo que el frontend
+invente para una condición client-side se agrega acá en el mismo commit que lo
+introduce, igual que los de `core/`/`services/`.

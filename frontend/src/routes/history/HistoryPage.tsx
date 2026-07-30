@@ -59,11 +59,11 @@ function HistoryList({
   items,
   page,
   onPageChange,
-}: {
+}: Readonly<{
   items: HistoryItem[];
   page: number;
   onPageChange: (page: number) => void;
-}) {
+}>) {
   // El backend devuelve un array plano sin paginación (ver
   // frontend-integration.md §3, discrepancia de forma en GET /history/) —
   // paginamos acá para no renderizar listas enormes de una sola vez.

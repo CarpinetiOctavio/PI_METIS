@@ -72,11 +72,19 @@ function buildFormData(form: AnalysisStreamForm): FormData {
 /**
  * Corre un análisis de Etapa 1 y expone su progreso como estado React.
  * SSE-sobre-fetch (no EventSource nativo — el stream es un POST multipart,
- * ver frontend-implementation-plan.md §0/§2.3, Decisión D1).
+ * ver docs/decisiones/decision040.md — DECISIÓN 040).
  */
 export function useAnalysisStream(): UseAnalysisStreamResult {
   const [internal, setInternal] = useState<InternalState>(INITIAL_STATE);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Espejo síncrono de `internal` para lecturas fuera de un `setInternal`
+  // funcional (ej. `resolveOutlier`, que necesita `outlier` ANTES de la
+  // llamada de red, no dentro de un actualizador de estado). Evita que
+  // `resolveOutlier` dependa de `internal` completo — dependencia que
+  // recreaba el `useCallback` en cada evento SSE y arriesgaba closure
+  // obsoleta si dos actualizaciones de estado ocurrían entre renders.
+  const internalRef = useRef(internal);
+  internalRef.current = internal;
 
   const handleEvent = useCallback((event: SseEvent) => {
     setInternal((prev) => {
@@ -97,6 +105,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
 
       switch (event.type) {
         case "contract_error":
+        case "error":
           return {
             ...base,
             fase: "error",
@@ -142,18 +151,12 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
           return { ...base, result: event.result };
         case "complete":
           // `complete` SIEMPRE llega después de `contract_error` también
-          // (docs/frontend-integration.md §4: "Después de este evento el
+          // (docs/frontend/frontend-integration.md §4: "Después de este evento el
           // backend manda complete con analysis_id: null y cierra") — si ya
           // estamos en fase="error" no hay que pisarla con "done".
           return base.fase === "error"
             ? base
             : { ...base, fase: "done", analysisId: event.analysis_id };
-        case "error":
-          return {
-            ...base,
-            fase: "error",
-            error: { codigo: event.codigo, mensaje: event.mensaje },
-          };
         default:
           return base;
       }
@@ -218,7 +221,10 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
           setInternal((prev) => ({
             ...prev,
             fase: "error",
-            error: { codigo: "STREAM_CONNECTION_ERROR", mensaje: String(err) },
+            error: {
+              codigo: "STREAM_CONNECTION_ERROR",
+              mensaje: errorText("STREAM_CONNECTION_ERROR"),
+            },
           }));
           // Relanzar evita el retry automático de la librería — este stream
           // no es idempotente para reintentar solo (re-correría el pipeline).
@@ -234,7 +240,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
 
   const resolveOutlier = useCallback(
     async (decision: "rechazar" | "aceptar") => {
-      const { outlier } = internal;
+      const { outlier } = internalRef.current;
       if (!outlier) return;
       await postOutlierDecision({
         session_id: outlier.session_id,
@@ -243,7 +249,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
       });
       setInternal((prev) => ({ ...prev, fase: "streaming", outlier: null }));
     },
-    [internal],
+    [],
   );
 
   const abort = useCallback(() => {

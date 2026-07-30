@@ -8,12 +8,30 @@ Nunca merge directo de feature a main.
 
 **Pendiente — documentar formalmente (20/07/2026):** protección de
 ramas main/staging vía GitHub Ruleset ya configurada y activa
-(bloquea push directo, exige PR + CI). Falta: decisión completa con
+(bloquea push directo, exige PR). Falta: decisión completa con
 alternativas evaluadas (Rulesets vs. Classic, reglas activadas/
 descartadas con motivo) en `docs/decisiones/decision035.md` — no
 escrita todavía. También pendiente: chequeo custom en `ci.yml` para
 restringir que `main` sólo reciba PRs desde `staging` (ver discusión,
 diferido por bajo riesgo con equipo de dos personas).
+
+**Corrección 30/07/2026 (limpieza SonarCloud, D3):** esta sección decía "exige
+PR + CI", dando a entender que ningún check puede estar en rojo al mergear.
+Verificado contra el PR #17 real (`gh pr view 17 --json
+mergeStateStatus,reviewDecision,statusCheckRollup`): con el check de
+SonarCloud en `FAILURE`, `mergeStateStatus` es `UNSTABLE` (checks no
+requeridos fallando) y no `BLOCKED` (que es lo que devuelve GitHub cuando un
+check requerido falla) — el botón de merge sigue habilitado.
+`reviewDecision` está vacío pese a haber una revisión pendiente solicitada:
+tampoco la revisión es requerida. La parte verificable de la afirmación
+original —que el Ruleset bloquea push directo y exige pasar por PR— se
+sostiene; la parte de "exige CI" no se sostiene al menos para el check de
+SonarCloud, y no se pudo confirmar el estado de los tres checks de `ci.yml`
+como *required* porque este repo devuelve 404/lista vacía en los endpoints
+de Ruleset/branch-protection de la API para un token sin permiso `admin`
+(solo `push`/`maintain`) — pendiente de verificar con acceso admin real.
+Ver [DECISIÓN 044](../../docs/decisiones/decision044.md), sección "La
+pregunta de gobernanza abierta".
 
 ### Orden de implementación
 1. feature/db-models     — modelos SQLAlchemy + sesión  ✓ mergeado a staging
@@ -27,7 +45,10 @@ diferido por bajo riesgo con equipo de dos personas).
 
 ### Fuera de alcance en este sprint
 - Etapa 2 (distribuciones, ranking EEA, eventos de diseño)
-- Frontend React + TypeScript
+- ~~Frontend React + TypeScript~~ — alcance original de Sprint 1 (backend-only,
+  Etapa 1). Contradicho desde el 28/07/2026: ver
+  "feature/frontend-fases1-5 — COMPLETA" más abajo. Se deja tachado, no
+  eliminado, por trazabilidad del alcance histórico real de este sprint.
 - Exportación PDF
 - Endpoint /export/
 - Endpoint /analysis/design-events
@@ -42,6 +63,9 @@ diferido por bajo riesgo con equipo de dos personas).
 - feature/api-etapa1 — mergeado a staging
 - feature/services-sse — mergeado a staging
 - feature/github-actions — CI pipeline con ruff + pytest  ✓ completado
+- feature/frontend-fases1-5 — Fases 1-5 del frontend (Auth, Config+Stream,
+  Resultados, Historial, Mocks Etapa 2)  ✓ completado — ver sección propia
+  más abajo
 
 ### Archivos creados en feature/github-actions
 - `.github/workflows/ci.yml` — jobs lint (ruff check + format --check) y test (pytest unit+integration, exit code 5 tolerado)
@@ -451,9 +475,151 @@ Ninguno de los cuatro bloquea el cierre de Auth Parte 2 tal como está
 definida — son verificaciones de infraestructura, no de la
 implementación de auth en sí.
 
+### feature/frontend-fases1-5 — COMPLETA
+
+Implementación de Fases 1 a 5 del frontend (28-29/07/2026), sobre el scaffold de
+Fase 0 (`docs/superpowers/plans/2026-07-22-frontend-fase0-scaffold.md`, ya
+mergeado). Plan completo y decisión por decisión en
+`docs/frontend/frontend-implementation-plan.md` §10; resumen navegable en
+`docs/frontend/informe-implementacion-frontend-fase1-6.md`.
+
+**Nota de nomenclatura:** este proyecto ya usaba "Fase 1...Fase 6" para el
+desarrollo de Core Etapa 2 (ver más arriba, `feature/core-etapa2`). El frontend
+reutiliza los mismos números para una secuencia distinta. Toda mención nueva
+dice explícitamente "Fase N del frontend" para no confundir ambas — las
+entradas de esta sección son todas del frontend salvo que se aclare lo
+contrario.
+
+#### Fase 1 — Auth end-to-end
+Archivos clave: `src/auth/AuthProvider.tsx`, `src/auth/guards.tsx`,
+`src/api/auth.ts`, `src/api/client.ts` (agregó `ApiError`/`requestJson`),
+`src/routes/entry/EntryPage.tsx`, `src/routes/auth-verify/AuthVerifyPage.tsx`.
+Login/registro/anónimo en una sola pantalla, guards `RequireAuth`/
+`RedirectIfAuthed`, flag de sesión anónima persistido en `localStorage`
+(FE-7). Verificado contra Docker: login/logout/me reales; registro→verify
+bloqueado por falta de SMTP real en desarrollo (FE-6, límite conocido, no un
+bug de esta fase).
+
+#### Fase 2 — Config + stream de Etapa 1
+Archivos clave: `src/routes/config/ConfigPage.tsx`, `src/api/sse.ts` (hook
+`useAnalysisStream`, SSE-sobre-fetch — DECISIÓN 040), `src/routes/stream/StreamPage.tsx`.
+Timeline agrupado en 4 pasos (FE-11), modal de atípico de Chow real, router
+state para pasar el form completo a `/stream` (FE-9). Verificado con CSV
+sintético de 40 años contra el backend real, con un atípico forzado —
+**dos bugs reales encontrados y corregidos** en `useAnalysisStream`
+(`complete` pisando una `fase="error"` previa; `result_etapa1` sin desenvolver
+el payload crudo del evento), ambos con test de regresión en `sse.test.ts`.
+Detalle completo en `frontend-implementation-plan.md` §10, pendiente P5.
+
+#### Fase 3 — Resultados de Etapa 1
+Archivo clave: `src/routes/results/Etapa1ResultView.tsx` (componente
+presentacional puro, reutilizado en Fase 4). Tres modos de presentación sobre
+el mismo `Etapa1Result`: docencia+paso_a_paso (`<details>` colapsados, FE-15),
+docencia+experto (tarjetas siempre abiertas), anónimo (fuerza experto, UX-D).
+Sin sustitución de fórmulas (FE-14 — esa pieza es del PDF de exportación, no
+de esta pantalla) ni gráficos (FE-16 — `Etapa1Result` no expone la serie
+cruda). Verificado con datos reales en los tres modos.
+
+#### Fase 4 — Historial
+Archivos clave: `src/routes/history/HistoryPage.tsx`,
+`src/routes/history/HistoryDetailPage.tsx`. Paginación 100% client-side,
+tamaño de página 10 (FE-18 — sin volumen real que lo justifique todavía).
+`HistoryDetailPage` lee `modo` de `AnalysisDetail.modo` persistido, no de
+router state (ruta bookmarkeable). Verificado: lista y detalle reales
+coinciden exactamente con lo visto en vivo en Fase 2/3.
+
+#### Fase 5 — Mocks de Etapa 2
+Archivos clave: `src/routes/ranking/RankingPage.tsx`,
+`src/routes/design-events/DesignEventsPage.tsx`, `src/mocks/`. MSW intercepta
+solo `POST /analysis/design-events` (tiene contrato REST documentado); el
+ranking no tiene endpoint REST real (solo evento SSE nunca emitido) y
+`RankingPage` importa el mock directo, sin red de por medio — DECISIÓN 042.
+`PendingBadge` visible en ambas pantallas. Verificado manualmente en el
+navegador de dev (única fase que no depende de backend real, por diseño).
+
+#### Fase 6 — Pulido y accesibilidad — COMPLETA salvo D11
+Bloque D (`docs/frontend/plan-mejora-frontend-pasada2.md`) y M3
+(`docs/frontend/plan-mejora-frontend-pasada3.md`) cerraron las correcciones
+puntuales de código y accesibilidad. Con `inert` ya aplicado al contenedor
+de fondo (D10), el foco no podía escaparse del diálogo — el grueso del
+focus trap ya estaba resuelto de hecho. M3 cerró lo que faltaba en
+`StreamPage.tsx`, modal de atípico:
+- **Auto-foco al abrir** — al contenedor del diálogo (`tabIndex={-1}`), no
+  a ninguno de los dos botones. Foco en un botón sesgaría al usuario hacia
+  esa decisión ante un Enter apurado; ninguna de las dos es un "cancelar"
+  por defecto.
+- **Escape no cierra el modal ni descarta la decisión** — decisión de
+  producto, no de accesibilidad: el backend está bloqueado esperando
+  (`session_store`, hasta 300s) y "rechazar"/"aceptar" son las únicas dos
+  decisiones válidas, cada una con su propio código de auditoría
+  (`TEST_OUTLIER_REJECTED_BY_USER`/`TEST_OUTLIER_ACCEPTED_BY_USER`) — un
+  Escape accidental no puede convertirse silenciosamente en ninguna de las
+  dos. Escape solo devuelve el foco al contenedor del diálogo.
+- **Restaura el foco** al elemento que lo tenía cuando el modal se cierra.
+
+Las tres con test de regresión (`StreamPage.test.tsx`). Único pendiente real
+de Fase 6: `docs/decisiones/decision043.md` — DECISIÓN 043 (contraste WCAG
+del tema Instrumento) — identidad visual fijada, pendiente de decisión de
+Kevin/Octavio, no de implementación.
+
+#### Verificación E2E fuera de las 6 fases nominales (backlog P4-P7)
+Corrida contra `docker-compose up backend postgres` real, no mockeada. Login →
+`200` + cookie, `GET /me` → `200`, logout → `200` + cookie borrada
+verificada. Config→stream con CSV sintético de 40 años y atípico forzado,
+resultados en los tres modos, historial con 6 análisis reales — todo
+verificado punta a punta. Único tramo genuinamente bloqueado: registro→verify,
+por falta de SMTP real en desarrollo (no resoluble desde este backlog). Usuario
+de prueba y sus análisis borrados de Postgres al cerrar la verificación — no
+queda dato de prueba en la BD.
+
+#### Bugs corregidos como parte de esta rama
+- `useAnalysisStream`: `complete` pisaba una `fase="error"` previa con
+  `"done"` — corregido, `complete` ya no sobreescribe una fase de error.
+- `useAnalysisStream`: `result_etapa1` nunca llegaba a `state.result` porque
+  `onmessage` no desenvolvía ese evento en particular — corregido.
+
+#### Decisiones asociadas
+D1-D20 del plan original, migradas a `docs/decisiones/` según criterio
+explícito — ver DECISIÓN 039 (criterio de promoción y tabla de equivalencia
+completa), DECISIÓN 040 (SSE sobre fetch), DECISIÓN 041 (sin TanStack Query,
+patrón único de test), DECISIÓN 042 (alcance de mocks de Etapa 2). El resto
+(D2, D6-D18) quedan como notas `FE-NN` en `frontend-implementation-plan.md` §10.
+
+#### Pendiente
+- Fase 6 (pulido, accesibilidad) — ver Bloque D del plan de mejora.
+- Tres hallazgos de backend encontrados durante esta implementación pero no
+  escalados en su momento — registrados recién en la pasada de mejora
+  posterior: DECISIÓN 036 (partición de Cramer personalizada inalcanzable),
+  DECISIÓN 037 (`etapas` descartado, `AnalysisRequest` sin cablear),
+  DECISIÓN 038 (códigos de error fuera del catálogo).
+
 ---
 
 ## Decisiones pendientes — no implementar hasta confirmar
+
+- **Partición de Cramer personalizada** — inalcanzable hoy por el endpoint
+  `POST /api/v1/analysis/stream`: `cramer_particion` llega siempre como `str`
+  vía `multipart/form-data`, y `calcular_cramer` indexa `particion["n1_pct"]`
+  asumiendo `dict` en cualquier valor distinto de `"default"` → `TypeError`
+  no manejado. El botón "Personalizada" de `ConfigPage.tsx` está `disabled`
+  en consecuencia. Tres opciones evaluadas sin decisión cerrada — ver
+  `docs/decisiones/decision036.md` — DECISIÓN 036. No implementar ninguna
+  sin decidir entre las tres opciones primero.
+
+- **`etapas` se recibe y se descarta en `POST /analysis/stream`** —
+  `api/v1/analysis.py` declara `etapas: str = Form("1")` pero nunca lo pasa
+  a `stream_etapa1()`; el frontend tampoco lo envía.
+  `schemas/analysis.py::AnalysisRequest` (el modelo tipado que representaría
+  el contrato completo) no lo importa ninguna ruta — código muerto. Inocuo
+  mientras Etapa 2 esté mockeada en el frontend; **prioridad para M2/M3**,
+  cuando Etapa 2 se exponga de verdad y el backend necesite saber si el
+  usuario pidió `[1]` o `[1, 2]`. Ver `docs/decisiones/decision037.md` —
+  DECISIÓN 037.
+
+- **Contraste WCAG AA de `tokens.instrumento.css`** — pendiente heredado de
+  Fase 6 del frontend, hallazgos y propuesta calculada movidos a
+  `docs/decisiones/decision043.md` — DECISIÓN 043 (M1, pasada 3 de mejora).
+  Estado: PENDIENTE DE DECISIÓN — Kevin/Octavio.
 
 ---
 
@@ -493,7 +659,7 @@ huérfanos), `POST /register` **no crea ningún usuario ni token** — no hay na
 que rescatar de los logs. Sin credenciales SMTP reales, el flujo
 registro→verify no se puede probar localmente en absoluto (ni con este
 procedimiento ni con ningún otro atajo actual); solo queda cobertura de tests
-con `fetch` mockeado. Ver `docs/frontend-implementation-plan.md` §10, Decisión
+con `fetch` mockeado. Ver `docs/frontend/frontend-implementation-plan.md` §10, Decisión
 D6, para el detalle completo y por qué se decidió no tocar el backend para
 reintroducir un log dev-only.
 
@@ -520,8 +686,10 @@ Se destruye al hacer POST /logout o al borrar el archivo.
 /register (sigue sin haber SMTP real):** confirmado que sin SMTP,
 `POST /register` falla por completo (ver nota de arriba) — no hay forma de
 crear NINGÚN usuario verificado vía la API todavía. Para probar
-login/logout/me/historial del lado del frontend (Fase 6, verificación E2E
-contra `docker-compose up backend postgres`), se insertó un usuario ya
+login/logout/me/historial del lado del frontend (verificación E2E del backlog
+P4-P7, fuera de las 6 fases nominales del frontend — ver
+"feature/frontend-fases1-5 — COMPLETA" más abajo, contra
+`docker-compose up backend postgres`), se insertó un usuario ya
 verificado directo en Postgres, generando el hash bcrypt con el propio
 Python del contenedor backend (evita instalar `bcrypt` en el host):
 ```bash
@@ -604,7 +772,37 @@ completo — no sólo credenciales recibidas, como marcaba la nota del
 15/07. Quedan 2 criterios pendientes para cerrar M1: tests de
 regresión matemática y verificación E2E con CSV real.
 
-M1 no se cierra hasta que los tres criterios pendientes estén resueltos.
+**ACTUALIZACIÓN 29 de Julio de 2026:** Verificación end-to-end del pipeline
+con CSV real — **CERRADA.** El backlog P4-P7 de
+`docs/frontend/frontend-implementation-plan.md` §10 (pendiente P5) corrió un CSV
+sintético de 40 años contra el backend real (`docker-compose up backend
+postgres`, no mockeado), con un valor forzado a 6-7x el resto para disparar
+Chow: los 4 grupos de pruebas de Etapa 1 llegaron y se resolvieron
+correctamente, el atípico pausó el stream con el modal real, y
+`resolveOutlier("rechazar")` desbloqueó la `iteracion:2` con el reemplazo
+correcto de resultados (sin duplicar). Dos bugs reales de `useAnalysisStream`
+aparecieron recién en esta verificación — ver
+"feature/frontend-fases1-5 — COMPLETA" más abajo para el detalle. De los tres
+criterios pendientes originales de M1, quedan **2**: tests de regresión
+matemática (bloqueado externamente, esperando series de Facundo) y el tramo
+registro→verify de Auth (bloqueado por falta de SMTP real en desarrollo — no
+es un criterio de M1 en sí, pero es el único hueco real que queda en la
+superficie de auth verificada).
+
+**ACTUALIZACIÓN 29 de Julio de 2026 (pasada 3):** `pytest -m unit` corrido por
+primera vez de punta a punta contra un entorno real — vía Docker
+(`docker-compose up -d backend postgres`, `docker exec pi_metis-backend-1
+pytest -m unit -v`), no contra el Python del host (que no tiene las
+dependencias instaladas, ni `venv` en el repo — ver `CLAUDE.md`, sección de
+comandos, actualizada con el procedimiento). **131 passed, 1 skipped.**
+`ruff check`/`ruff format --check` también verificados dentro del
+contenedor, ambos limpios. Esto no cierra el criterio de "tests de regresión
+matemática" (sigue bloqueado esperando las series digitales de Facundo — son
+tests distintos, en `tests/regression/`), pero confirma que la suite
+`unit` existente corre reproduciblemente, cosa que nunca se había verificado
+de punta a punta en este repo antes de esta pasada.
+
+M1 no se cierra hasta que los criterios pendientes estén resueltos.
 El desarrollo continúa hacia M2 en paralelo.
 
 M2 — Etapa 2 operativa en staging

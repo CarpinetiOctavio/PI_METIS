@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import type { ReactNode } from "react";
 import { AuthProvider } from "./AuthProvider";
@@ -33,6 +33,22 @@ function renderAt(path: string, protectedElement: ReactNode) {
 describe("RequireAuth", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  // D7 (pasada de mejora): antes devolvía null mientras isLoading —
+  // pantalla completamente en blanco en cada carga de la app.
+  it("shows a loading indicator instead of a blank screen while isLoading", async () => {
+    stubMe(true, { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true });
+    renderAt(
+      "/protected",
+      <RequireAuth>
+        <div>secret</div>
+      </RequireAuth>,
+    );
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    // Deja resolver el fetch de /me antes de que termine el test, para no
+    // dejar un setState pendiente sin envolver en act().
+    expect(await screen.findByText("secret")).toBeInTheDocument();
+  });
+
   it("redirects to / when not authenticated", async () => {
     stubMe(false);
     renderAt(
@@ -41,7 +57,7 @@ describe("RequireAuth", () => {
         <div>secret</div>
       </RequireAuth>,
     );
-    await waitFor(() => expect(screen.getByText("entry")).toBeInTheDocument());
+    expect(await screen.findByText("entry")).toBeInTheDocument();
   });
 
   it("renders children when authenticated", async () => {
@@ -52,7 +68,7 @@ describe("RequireAuth", () => {
         <div>secret</div>
       </RequireAuth>,
     );
-    await waitFor(() => expect(screen.getByText("secret")).toBeInTheDocument());
+    expect(await screen.findByText("secret")).toBeInTheDocument();
   });
 });
 
@@ -67,7 +83,7 @@ describe("RedirectIfAuthed", () => {
         <div>public</div>
       </RedirectIfAuthed>,
     );
-    await waitFor(() => expect(screen.getByText("public")).toBeInTheDocument());
+    expect(await screen.findByText("public")).toBeInTheDocument();
   });
 
   it("redirects to /config when authenticated", async () => {
@@ -78,6 +94,6 @@ describe("RedirectIfAuthed", () => {
         <div>public</div>
       </RedirectIfAuthed>,
     );
-    await waitFor(() => expect(screen.getByText("config")).toBeInTheDocument());
+    expect(await screen.findByText("config")).toBeInTheDocument();
   });
 });

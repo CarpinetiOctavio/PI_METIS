@@ -2,13 +2,13 @@
 
 **Propósito.** Plan de trabajo para construir el frontend de METIS (React + TypeScript,
 tema visual **"Instrumento"**) contra el backend REAL descrito en
-[`docs/frontend-integration.md`](./frontend-integration.md). Este documento **no contiene
+[`docs/frontend/frontend-integration.md`](./frontend-integration.md). Este documento **no contiene
 código de producción** — describe qué construir, en qué orden, con qué criterios de "hecho"
 y qué se prueba contra el backend real vs. qué queda mockeado.
 
 **Fecha.** 22/07/2026 · Autores: Kevin / Octavio.
 **Depende de:**
-- [`docs/frontend-integration.md`](./frontend-integration.md) — contrato REAL del backend (fuente de verdad para lo implementado).
+- [`docs/frontend/frontend-integration.md`](./frontend-integration.md) — contrato REAL del backend (fuente de verdad para lo implementado).
 - `frontend/frontend-design/metis-wireframes-fase1-decisiones.md` — variantes elegidas (★) y Decisiones A / C / D.
 - `frontend/frontend-design/metis-prototipo-fase3.html` — identidad visual; tema "Instrumento" (claro y oscuro).
 - `.claude/rules/` (architecture, constraints, api-contracts, statistical-pipeline, sprint) y `CLAUDE.md`.
@@ -45,11 +45,11 @@ Esta decisión atraviesa toda la capa de streaming — ver §2.3 y la lista de r
 | Bundler/dev server | **Vite** | `.env.example` ya asume puerto **5173** (Vite), y `FRONTEND_ORIGIN` está seteado a `http://localhost:5173`. Cambiar el puerto obliga a cambiar `FRONTEND_ORIGIN` en el `.env` del backend. |
 | Framework | React 18 + TypeScript (strict) | Stack fijado en `CLAUDE.md` / `constraints.md` — no negociable. |
 | Ruteo | **React Router v6** | SPA con rutas por pantalla; guards de auth (§3). |
-| Estado servidor | **TanStack Query** (react-query) para REST (auth, history) | El stream SSE NO usa react-query — es un hook propio (§2.3). Query cubre `/me`, `/history`, `/analysis/{id}`. |
+| Estado servidor | ~~**TanStack Query** (react-query) para REST (auth, history)~~ → `fetch`+`useState`/`useEffect` | **DEROGADO — DECISIÓN 041.** Nunca se agregó; D4 prometió sumarla "en Fase 4" y no se cumplió. Diferido con criterio de habilitación explícito, no descartado por decreto. El stream SSE sigue sin usarla — es un hook propio (§2.3). |
 | Estado UI | Context API (auth, tema, modo de análisis) | No hace falta Redux para este alcance. |
-| Estilos | **CSS variables + CSS Modules** (o vanilla-extract) | Los tokens del tema son CSS vars (§4); componentes toman color de las vars. Evitar librerías de UI pesadas que impongan su propio look (choca con "Instrumento"). |
-| Linting | **ESLint** (config del repo) + Prettier | `constraints.md` exige ESLint; alinear con `cd frontend && npm run lint` que ya está referenciado en `CLAUDE.md`. |
-| Testing | Vitest + React Testing Library; MSW para mocks de red | Ver §9. |
+| Estilos | ~~**CSS variables + CSS Modules** (o vanilla-extract)~~ → CSS plano co-locado por ruta | **DEROGADO en la práctica** (Fase 1 en adelante) — `frontend/src/routes/*/*.css`, sin `.module.css`. Los tokens del tema siguen siendo CSS vars (§4); no se registró una decisión formal aparte, se deja constancia acá por ser una desviación real del stack originalmente elegido. |
+| Linting | **ESLint** (config del repo) + ~~Prettier~~ | **DEROGADO en la práctica** — `frontend/package.json` no lista `prettier` ni `eslint-config-prettier`. ESLint solo, alineado con `cd frontend && npm run lint`. |
+| Testing | Vitest + React Testing Library; ~~MSW para mocks de red~~ → `vi.stubGlobal("fetch")` en tests, MSW solo en navegador de dev | **DEROGADO — DECISIÓN 041** (D5/D20). Ver §9.1. |
 
 ### 1.2 Estructura de carpetas propuesta (`frontend/`)
 
@@ -256,10 +256,13 @@ entre chunks); respetar `prefers-reduced-motion` en las animaciones de "contador
 
 ### 3.1 AuthProvider
 
-- Al montar, `GET /api/v1/auth/me` (react-query). 200 → sesión CU-01 activa; 401 → anónimo.
+- Al montar, `GET /api/v1/auth/me` (~~react-query~~ `fetch`+`useState` — DEROGADO, ver
+  DECISIÓN 041 y §1.1). 200 → sesión CU-01 activa; 401 → anónimo.
 - Expone `{ user: UserMe | null, isAuthed: boolean, isLoading, login, logout, refetch }`.
-- `login()` → `POST /login` (setea cookie) → invalida/`refetch` de `/me`.
-- `logout()` → `POST /logout` (borra cookie) → limpia el cache y vuelve a estado anónimo.
+- `login()` → `POST /login` (setea cookie) → ~~invalida/`refetch`~~ vuelve a pedir `/me`
+  manualmente (sin cache de react-query que invalidar).
+- `logout()` → `POST /logout` (borra cookie) → ~~limpia el cache~~ resetea el estado local
+  y vuelve a estado anónimo.
 - No se guarda nada del JWT en JS (la cookie es HttpOnly; no es accesible ni necesario).
 
 ### 3.2 Determinación CU-01 vs CU-02 (Decisiones C y D)
@@ -269,7 +272,7 @@ entre chunks); respetar `prefers-reduced-motion` en las animaciones de "contador
   ThemeProvider/AuthProvider y navega a config.
 - **CU-01 (docencia)** = `isAuthed === true`. Habilita: historial, persistencia, exportación
   (mock), y **elección de modo** (paso a paso / experto) en config.
-- **CU-02 (anónimo)** = sin sesión. Por **Decisión D**, el anónimo usa **siempre la UI Experto**:
+- **CU-02 (anónimo)** = sin sesión. Por **UX-D**, el anónimo usa **siempre la UI Experto**:
   sin selector de modo (se fija `modo="experto"` internamente), sin historial, sin exportar. Las
   pantallas con "desarrollo paso a paso" colapsan a "solo resultados".
 - La distinción **no** se resuelve por ruta: la misma pantalla de config/stream/resultados se
@@ -358,16 +361,16 @@ Las 8 pantallas con su variante elegida (★) de `metis-wireframes-fase1-decisio
 
 | # | Pantalla | Ruta | Variante ★ | Backend | Notas de implementación |
 |---|----------|------|-----------|---------|-------------------------|
-| 1 | Puerta de entrada | `/` | **A** (login + botón anónimo) | Auth real | Decisión C. Botón "entrar como anónimo" → flag anónimo, sin endpoint. Ruta `/auth/verify` aparte para el link de mail. |
-| 2 | Carga y configuración | `/config` | **H** (2 col + modo + params) | — | Decisión A: toggle **modo** (paso_a_paso/experto) elegido acá, **una vez**, inmutable. En anónimo el toggle se reemplaza por etiqueta "solo resultados" (Decisión D). Partición Cramer custom = **MOCK/deshabilitada** (§6). |
+| 1 | Puerta de entrada | `/` | **A** (login + botón anónimo) | Auth real | UX-C. Botón "entrar como anónimo" → flag anónimo, sin endpoint. Ruta `/auth/verify` aparte para el link de mail. |
+| 2 | Carga y configuración | `/config` | **H** (2 col + modo + params) | — | UX-A: toggle **modo** (paso_a_paso/experto) elegido acá, **una vez**, inmutable. En anónimo el toggle se reemplaza por etiqueta "solo resultados" (UX-D). Partición Cramer custom = **MOCK/deshabilitada** (§6). |
 | 3 | Análisis en vivo | `/stream` | **A** (timeline vertical) | SSE real (Etapa 1) | Pasos completados **clickeables** → despliegan su `test_result`. Consume `useAnalysisStream` (§2.3). Modal de atípico (abajo). |
 | 4 | Resultados Etapa 1 | `/results` | **E** (resumen + tablero) | `result_etapa1` real | Fuente única: el objeto `Etapa1Result`. Muestra `nivel_confianza`, niveles de independencia/homogeneidad, tabla de pruebas, warnings con `descripcion`. |
-| 5 | Paso a paso vs Experto | (dentro de `/results`) | **D** (acordeón de pasos) | — | Decisión A: **no** es pantalla aparte conmutable; se renderiza según el `modo` ya elegido. Paso a paso = acordeón con fórmulas; Experto/anónimo = solo resultados. |
+| 5 | Paso a paso vs Experto | (dentro de `/results`) | **D** (acordeón de pasos) | — | UX-A: **no** es pantalla aparte conmutable; se renderiza según el `modo` ya elegido. Paso a paso = acordeón con fórmulas; Experto/anónimo = solo resultados. |
 | 6 | Ranking de distribuciones | `/ranking` | **D** (tarjetas + toggle cal/hidro) | **MOCK** | Etapa 2 no expuesta. Datos falsos + `PendingBadge`. Toggle año calendario/hidrológico obligatorio. **Nunca** etiquetar una distribución como "óptima/ganadora" (constraints.md). |
 | 7 | Eventos de diseño | `/design-events` | **B** (foco en período) | **MOCK** | `design-events` no implementado. Todo mock. |
 | 8 | Historial | `/history` | **B** (tarjetas resumen) | `/history` real | Solo CU-01 (`RequireAuth`). Sin paginación en backend — paginar client-side (§6/§9). |
 
-### 5.1 Decisión A — modo elegido una vez define la UI de las etapas
+### 5.1 UX-A — modo elegido una vez define la UI de las etapas
 
 - El `modo` se guarda en un context (`AnalysisConfigProvider`) al confirmar la config, y es
   **inmutable** durante el análisis. Las pantallas 3/4/5 leen ese modo para decidir su presentación
@@ -375,7 +378,7 @@ Las 8 pantallas con su variante elegida (★) de `metis-wireframes-fase1-decisio
 - Coherente con el backend: `modo` viaja en el form de `/stream` (aunque hoy solo afecta lo
   persistido, la UI ya respeta el modo localmente).
 
-### 5.2 Decisión D — anónimo = UI Experto
+### 5.2 UX-D — anónimo = UI Experto
 
 - En anónimo se fuerza `modo="experto"`: sin acordeón de fórmulas, sin historial, sin exportar.
 - Solo hay **dos presentaciones reales**: *con desarrollo* (docencia + paso a paso) y *solo
@@ -480,7 +483,7 @@ backend real** (Etapa 1) y qué queda **mockeado**.
   logout → `/me` 401. Rutas protegidas redirigen sin sesión. Probado contra el backend real.
 
 ### Fase 2 — Config + stream Etapa 1 (BACKEND REAL)
-- Pantalla config (var. H) con toggle de modo (Decisión A) y anónimo=experto (Decisión D).
+- Pantalla config (var. H) con toggle de modo (UX-A) y anónimo=experto (UX-D).
 - `useAnalysisStream` (SSE-sobre-fetch), pantalla stream (var. A, pasos clickeables), modal de
   atípico + reanudación, diccionario de errores en vivo.
 - **Hecho si:** subir un CSV real corre Etapa 1 completa; los 8 `test_result` aparecen; un caso con
@@ -519,11 +522,13 @@ backend real** (Etapa 1) y qué queda **mockeado**.
 |---|---|---|
 | Unit | Reducer de `useAnalysisStream` (parseo de frames, dedupe por `iteracion`, transiciones de fase), diccionario de errores, guards. | Vitest |
 | Componente | Pantallas con estados mockeados (resultados según modo, modal de atípico, PendingBadge en mocks). | React Testing Library |
-| Red mockeada | Flujos de auth y análisis con **MSW** simulando respuestas del backend, incluida una **secuencia SSE canned** (frames de ejemplo con atípico + iteracion:2). | MSW |
-| Integración real (manual) | Fases 1-4 recorridas contra el backend real (Docker local). No hay E2E automatizado — está **fuera de alcance V1.0** (`constraints.md`: sin Selenium/Playwright). | Manual |
+| Red mockeada | ~~Flujos de auth y análisis con **MSW** simulando respuestas del backend, incluida una **secuencia SSE canned**~~ → `vi.stubGlobal("fetch", ...)` para auth/history, mock directo del módulo `@microsoft/fetch-event-source` para el hook de SSE (secuencias sintéticas armadas a mano, no grabadas). **DEROGADO — DECISIÓN 041** (D5/D13/D20). MSW solo se usa en el navegador de dev para Etapa 2 (DECISIÓN 042), nunca en la suite de tests. | `vi.stubGlobal` / mock de módulo |
+| Integración real (manual) | Fases 1-5 recorridas contra el backend real (Docker local), incluido el backlog P4-P7. No hay E2E automatizado — está **fuera de alcance V1.0** (`constraints.md`: sin Selenium/Playwright). | Manual |
 
-Fixture recomendado: guardar una **grabación de una secuencia SSE real** (con y sin atípico) como
-archivo de frames para alimentar los tests del hook sin depender del backend.
+~~Fixture recomendado: guardar una grabación de una secuencia SSE real como archivo de frames.~~
+No se implementó así — `sse.test.ts` arma las secuencias de eventos a mano según los shapes de
+`frontend-integration.md` §4, coherente con el precedente ya establecido en el backend de series
+100% sintéticas con expectativa recomputada inline (`backend/tests/README.md`).
 
 ### 9.2 Riesgos de integración
 
@@ -560,28 +565,34 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
 
 ### Decisiones tomadas (22/07/2026)
 
-- **D1 — Librería SSE:** `@microsoft/fetch-event-source` (§0, §2.3). El reader manual queda como
-  fallback documentado.
-- **D2 — CORS en dev:** proxy de Vite (`/api` → `localhost:8000`), mismo origen, sin CORS en
+- **D1 (promovida a `docs/decisiones/decision040.md` — DECISIÓN 040) — Librería SSE:**
+  `@microsoft/fetch-event-source` (§0, §2.3). El reader manual queda como
+  fallback documentado. Detalle completo en la decisión, no duplicado acá.
+- **FE-2 — CORS en dev:** proxy de Vite (`/api` → `localhost:8000`), mismo origen, sin CORS en
   desarrollo (§9.2.2). Ver pendiente **P1**.
-- **D3 — Mocks:** MSW intercepta las rutas no implementadas y se reutiliza en tests (§6, §9.1).
+- **D3 (promovida a `docs/decisiones/decision042.md` — DECISIÓN 042) — Mocks:** MSW intercepta las
+  rutas no implementadas y se reutiliza en tests (§6, §9.1) — matizado por D19/D20, ver la decisión.
 
 ### Decisiones tomadas (28/07/2026 — inicio de Fase 1, Auth)
 
-- **D4 — Sin TanStack Query todavía.** `AuthProvider` usa `fetch` + `useState`/`useEffect` simple
-  (sin la dependencia de §1.1) para `/me`, `login` y `logout`. Menos superficie para arrancar Auth;
-  React Query se suma recién en Fase 4, cuando `/history` lo justifique más — no antes, para no
-  sumar una dependencia sin necesidad real todavía.
-- **D5 — Sin MSW todavía.** Los tests de Auth (Fase 1) siguen el patrón ya establecido en el repo
-  antes de esta fase (`vi.stubGlobal("fetch", ...)`, ver `ping.test.ts`/`useBackendPing.test.tsx`),
-  no MSW. La decisión D3 (MSW) sigue en pie para cuando Fase 5 la necesite de verdad con los mocks
-  de Etapa 2 — introducirla antes sería una dependencia nueva sin consumidor real todavía.
-- **D6 — Workaround de dev para el 500 de `register`, sin tocar el backend.** Al leer el código real
+- **D4 (promovida, junto con D5 y D20, a `docs/decisiones/decision041.md` — DECISIÓN 041) — Sin
+  TanStack Query todavía.** `AuthProvider` usa `fetch` + `useState`/`useEffect` simple (sin la
+  dependencia de §1.1) para `/me`, `login` y `logout`. Menos superficie para arrancar Auth; React
+  Query se suma recién en Fase 4, cuando `/history` lo justifique más — no antes, para no sumar una
+  dependencia sin necesidad real todavía. **Nota (29/07/2026): esa promesa no se cumplió — Fase 4
+  pasó sin agregar la dependencia. Ver DECISIÓN 041 para el cierre formal (diferido con criterio de
+  habilitación explícito, no descartado por decreto).**
+- **D5 (promovida a DECISIÓN 041) — Sin MSW todavía.** Los tests de Auth (Fase 1) siguen el patrón
+  ya establecido en el repo antes de esta fase (`vi.stubGlobal("fetch", ...)`, ver
+  `ping.test.ts`/`useBackendPing.test.tsx`), no MSW. La decisión D3 (MSW) sigue en pie para cuando
+  Fase 5 la necesite de verdad con los mocks de Etapa 2 — introducirla antes sería una dependencia
+  nueva sin consumidor real todavía.
+- **FE-6 — Workaround de dev para el 500 de `register`, sin tocar el backend.** Al leer el código real
   de `auth/router.py`/`auth/email.py` se confirmó que la nota original de este documento (§3.4,
   Opción B — "token de logs") **ya no aplica**: el mock que lo hacía posible
   (`print("MOCK SMTP...")`) fue reemplazado por completo en Auth Parte 2 (19/07/2026, ver
-  [DECISIÓN 032](../docs/decisiones/decision032.md) y
-  [DECISIÓN 034](../docs/decisiones/decision034.md)). Hoy, sin SMTP real configurado,
+  [DECISIÓN 032](../../docs/decisiones/decision032.md) y
+  [DECISIÓN 034](../../docs/decisiones/decision034.md)). Hoy, sin SMTP real configurado,
   `send_verification_email()` lanza `RuntimeError` **antes** de que el token se guarde en
   `_pending_tokens` o se loguee en ningún lado, y como el mail se manda antes de comitear el usuario
   (para evitar huérfanos, DECISIÓN 032), no queda ningún usuario ni token creado — no hay ningún
@@ -590,10 +601,10 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   "frontend Fase 1", no se tocó el backend. En su lugar, el banner de dev (bajo
   `import.meta.env.DEV`, ver `EntryPage.tsx`) es honesto sobre la limitación en vez de sugerir
   revisar logs que no van a tener nada. Ver pendiente **P4**.
-- **D7 — Persistencia del flag anónimo.** `enterAnonymously()` persiste en `localStorage`
+- **FE-7 — Persistencia del flag anónimo.** `enterAnonymously()` persiste en `localStorage`
   (clave `metis-anon-session`), mismo patrón que `metis-theme-mode` de `ThemeProvider`, para
   sobrevivir a un refresh de página. Se limpia al loguear con una cuenta real.
-- **D8 — Fidelidad visual de la Puerta de entrada.** El markup de `EntryPage` se adaptó
+- **FE-8 — Fidelidad visual de la Puerta de entrada.** El markup de `EntryPage` se adaptó
   directamente del HTML real de la variante A ★ en `frontend-design/metis-prototipo-fase3.html`
   (bloque `auth.variants[0]`), no de una estructura nueva — mismas clases genéricas (`.h`, `.sub`,
   `.fn`, `.logo`, `.row`, `.col`, `.field`, `.input`, `.b`/`.b-pri`/`.b-sec`, `.banner`), portadas a
@@ -602,39 +613,39 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
 
 ### Decisiones tomadas (28/07/2026 — Fase 2, Config + stream Etapa 1)
 
-- **D9 — Router state en vez de `AnalysisConfigProvider`.** `ConfigPage` arma el `AnalysisStreamForm`
+- **FE-9 — Router state en vez de `AnalysisConfigProvider`.** `ConfigPage` arma el `AnalysisStreamForm`
   completo (incluido el `File`) y lo pasa a `/stream` vía `navigate(path, {state})` de React Router,
   no vía un context dedicado. Es un hand-off de una sola vez que `StreamPage` consume una única vez
   al montar — un context solo se justifica si varios componentes desconectados necesitaran leer
   `modo` reactivamente entre renders, que no es el caso acá.
-- **D10 — Sin preview de CSV/Excel en Config.** `columna_x`/`columna_y` son inputs de texto plano,
+- **FE-10 — Sin preview de CSV/Excel en Config.** `columna_x`/`columna_y` son inputs de texto plano,
   fieles al contrato real (`Form(str)`, sin `Literal` — ver `frontend-integration.md` §3), en vez
   de la tabla de preview con columnas parseadas de la variante H. Parsear el archivo en el cliente
   para mostrar una preview real exigiría sumar una dependencia (`papaparse`/`xlsx`) sin necesidad
   probada todavía — el backend ya hace el parseo real y acepta cualquier nombre/índice de columna
   como string. Queda como posible pulido de Fase 6, no bloquea el flujo funcional.
-- **D11 — Agrupación por bloque, no lista plana de 8 pruebas.** El timeline de `StreamPage` agrupa
+- **FE-11 — Agrupación por bloque, no lista plana de 8 pruebas.** El timeline de `StreamPage` agrupa
   las 8 pruebas en 4 pasos conceptuales (Independencia, Homogeneidad, Tendencia, Atípicos), igual
   que la propia forma de `Etapa1Result` (`independencia[]`/`homogeneidad[]`/`tendencia[]`/
   `atipicos[]`) — cada paso se expande al hacer click una vez que tiene datos, mostrando el detalle
   prueba por prueba. Más fiel al concepto de "timeline" de la variante A que una lista de 8 filas
   sueltas.
-- **D12 — La finalización del stream es un paso manual, no un auto-redirect.** Al llegar
+- **FE-12 — La finalización del stream es un paso manual, no un auto-redirect.** Al llegar
   `fase="done"`, `StreamPage` muestra un banner de completado con un botón "Ver resultados ▸" en vez
   de navegar sola a `/results` — así se puede ver el timeline completo (todos los grupos con su
   veredicto) antes de pasar a la pantalla de resultados, útil para pruebas manuales/demo mientras
   `ResultsPage` siga siendo el stub de Fase 3.
-- **D13 — Mockeo de `sse.test.ts` a nivel de librería.** Los tests de `useAnalysisStream` mockean el
+- **FE-13 — Mockeo de `sse.test.ts` a nivel de librería.** Los tests de `useAnalysisStream` mockean el
   módulo `@microsoft/fetch-event-source` directamente (capturando `onopen`/`onmessage`/`onclose`/
   `onerror`) y disparan secuencias de eventos sintéticas armadas a mano según los shapes reales de
   `frontend-integration.md` §4, en vez de grabar una sesión SSE real contra el backend (no
-  disponible en esta sesión — ver P5). Coherente con D5 (sin MSW todavía) y con el precedente ya
+  disponible en esta sesión — ver P5). Coherente con DECISIÓN 041 (D5, sin MSW todavía) y con el precedente ya
   establecido en el backend de series 100% sintéticas con expectativa recomputada inline
   (`backend/tests/README.md`), no dato real.
 
 ### Decisiones tomadas (28/07/2026 — Fase 3, Resultados Etapa 1)
 
-- **D14 — Sin sustitución de fórmulas en la pantalla de resultados.** La variante D del wireframe
+- **FE-14 — Sin sustitución de fórmulas en la pantalla de resultados.** La variante D del wireframe
   ("Paso a paso vs Experto") muestra un acordeón con pasos tipo "Planteo y media", "Secuencias y
   cambios", "Fórmula y sustitución" — pero `TestResultDetail` (el shape real de cada prueba en
   `Etapa1Result`) solo trae `estadistico`/`valor_critico`/`veredicto`/`n1`/`n2`/`warning_*`, no las
@@ -646,34 +657,34 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
   explícita"). La sustitución de fórmulas con valores reales **sí** es un requisito real, pero
   específico del PDF de exportación (`constraints.md`, "PDF de exportación — CU-01"), no de esta
   pantalla — se implementará ahí cuando corresponda, no acá con datos inventados.
-- **D15 — El modo Paso a paso se expresa como divulgación progresiva (`<details>`), no como
+- **FE-15 — El modo Paso a paso se expresa como divulgación progresiva (`<details>`), no como
   contenido distinto.** Docencia+paso_a_paso envuelve cada grupo de pruebas
   (independencia/homogeneidad/tendencia/atípicos) en un `<details class="results-group">` nativo,
-  colapsado por defecto; docencia+experto y anónimo (Decisión D) muestran las mismas tarjetas
+  colapsado por defecto; docencia+experto y anónimo (UX-D) muestran las mismas tarjetas
   siempre abiertas, sin acordeón. Es la misma data en los tres modos — la única diferencia real es
   el widget de presentación, consistente con el criterio de "hecho" de Fase 3
   (`§8`: "los tres modos de presentación renderizan correctamente el mismo Etapa1Result").
-- **D16 — Sin gráficos (serie temporal, correlograma, boxplot).** La variante E del wireframe
+- **FE-16 — Sin gráficos (serie temporal, correlograma, boxplot).** La variante E del wireframe
   incluye gráficos, pero requieren la serie cruda de datos y estadísticos que `Etapa1Result` no
   expone (el evento `descriptive_stats` solo trae los 8 campos agregados, no la serie ni el
   correlograma — ver `frontend-integration.md` §4, nota sobre `DescriptiveStats`). No hay datos
   reales que graficar todavía; agregarlos requeriría o bien un gap de backend nuevo, o mockear datos
   falsos en una pantalla que sí tiene datos reales — deliberadamente no se mezclan ambas cosas acá.
 - **`modo` viaja de `ConfigPage` a `ResultsPage` a través de `StreamPage`** (router state en las tres
-  paradas, coherente con D9) — `StreamPage` no lo necesitaba para sí misma pero sí reenviarlo.
+  paradas, coherente con FE-9) — `StreamPage` no lo necesitaba para sí misma pero sí reenviarlo.
 
 ### Decisiones tomadas (28/07/2026 — Fase 4, Historial)
 
-- **D17 — `Etapa1ResultView` extraído de `ResultsPage` para reutilizar en el detalle de historial.**
+- **FE-17 — `Etapa1ResultView` extraído de `ResultsPage` para reutilizar en el detalle de historial.**
   `GET /history/{id}` devuelve el mismo shape de `Etapa1Result` que `result_etapa1` del stream (ver
   `frontend-integration.md` §3, "mismo shape que GET /analysis/{analysis_id}"). En vez de duplicar el
   banner/KPIs/descriptivos/warnings/grupos entre `ResultsPage` y `HistoryDetailPage`, esa parte se
   extrajo a un componente presentacional puro (`routes/results/Etapa1ResultView.tsx`, `{result,
   modo}`) que no sabe de dónde vino el dato (stream en vivo vs. historial persistido) ni decide el
-  `modo` efectivo — esa decisión (anónimo=experto, Decisión D) sigue siendo responsabilidad de quien
+  `modo` efectivo — esa decisión (anónimo=experto, UX-D) sigue siendo responsabilidad de quien
   lo usa, según su propio contexto de auth. `ResultsPage` quedó como un wrapper delgado (redirect si
   no hay `result` en el state + `modoEfectivo` derivado de `isAuthed`).
-- **D18 — Paginación 100% client-side, tamaño de página 10.** `GET /history/` devuelve un array
+- **FE-18 — Paginación 100% client-side, tamaño de página 10.** `GET /history/` devuelve un array
   plano sin paginación (`frontend-integration.md` §3, discrepancia de forma con `api-contracts.md`).
   Sin volumen real de análisis por usuario todavía, paginar de a 10 en el cliente es suficiente y no
   exige tocar el backend; si el volumen real lo justifica más adelante, paginar server-side es un
@@ -686,27 +697,28 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
 
 ### Decisiones tomadas (28/07/2026 — Fase 5, Mocks de Etapa 2)
 
-- **D19 — MSW solo intercepta `POST /analysis/design-events`, no el ranking.** De los dos gaps de
-  Etapa 2, solo `design-events` tiene un contrato REST documentado de verdad (`api-contracts.md`)
-  aunque no implementado — MSW interceptándolo es fiel a D3 (mockear la ruta real). El ranking, en
-  cambio, **nunca tuvo un endpoint REST documentado**: solo aparece como evento SSE
-  `result_etapa2_ranking` dentro del mismo stream de Etapa 1 (`statistical-pipeline.md`), evento que
-  el backend nunca emite porque Etapa 2 no está cableada del lado del servidor. Inventar una URL para
-  que MSW la intercepte habría fabricado un contrato que no existe en ningún documento del proyecto —
-  en cambio, `RankingPage` importa `mocks/etapa2.mock.ts` directo, sin capa de red de por medio. Esta
-  es la única desviación real de D3 tal como estaba escrita originalmente.
-- **D20 — MSW no se usa en los tests, solo en el navegador de dev.** El plan original (§9.1) preveía
-  reutilizar MSW en los tests. Al implementar `DesignEventsPage.test.tsx` se evaluó usar
-  `setupServer` de `msw/node`, pero comparte el mismo slot global (`fetch`) que el patrón
-  `vi.stubGlobal("fetch", ...)` ya establecido en todo el resto de la suite (D5) — mezclarlos en el
-  mismo archivo de test arriesga un conflicto real entre ambos interceptores sin aportar más
-  confianza que la que ya da mockear `fetch` directamente. Se mantuvo un solo mecanismo de mock en
-  toda la suite de tests; MSW se reserva para el valor que sí es exclusivo suyo: un humano
-  navegando la pantalla mock en el browser de dev sin tooling especial (verificado manualmente,
-  ver más abajo).
+- **D19 (promovida, junto con D3, a DECISIÓN 042) — MSW solo intercepta `POST
+  /analysis/design-events`, no el ranking.** De los dos gaps de Etapa 2, solo `design-events` tiene
+  un contrato REST documentado de verdad (`api-contracts.md`) aunque no implementado — MSW
+  interceptándolo es fiel a D3 (mockear la ruta real). El ranking, en cambio, **nunca tuvo un
+  endpoint REST documentado**: solo aparece como evento SSE `result_etapa2_ranking` dentro del mismo
+  stream de Etapa 1 (`statistical-pipeline.md`), evento que el backend nunca emite porque Etapa 2 no
+  está cableada del lado del servidor. Inventar una URL para que MSW la intercepte habría fabricado
+  un contrato que no existe en ningún documento del proyecto — en cambio, `RankingPage` importa
+  `mocks/etapa2.mock.ts` directo, sin capa de red de por medio. Esta es la única desviación real de
+  D3 tal como estaba escrita originalmente. Detalle completo en DECISIÓN 042.
+- **D20 (promovida, junto con D4 y D5, a DECISIÓN 041) — MSW no se usa en los tests, solo en el
+  navegador de dev.** El plan original (§9.1) preveía reutilizar MSW en los tests. Al implementar
+  `DesignEventsPage.test.tsx` se evaluó usar `setupServer` de `msw/node`, pero comparte el mismo
+  slot global (`fetch`) que el patrón `vi.stubGlobal("fetch", ...)` ya establecido en todo el resto
+  de la suite (D5) — mezclarlos en el mismo archivo de test arriesga un conflicto real entre ambos
+  interceptores sin aportar más confianza que la que ya da mockear `fetch` directamente. Se mantuvo
+  un solo mecanismo de mock en toda la suite de tests; MSW se reserva para el valor que sí es
+  exclusivo suyo: un humano navegando la pantalla mock en el browser de dev sin tooling especial
+  (verificado manualmente, ver más abajo). Detalle completo en DECISIÓN 041.
 - **Botón "Exportar PDF" ubicado solo en `DesignEventsPage`**, no repetido en `ResultsPage` ni
   `HistoryDetailPage` — mantiene `Etapa1ResultView` libre de lógica de auth (sigue sin saber de
-  `isAuthed`, consistente con D17) y evita duplicar el mismo botón deshabilitado en tres pantallas.
+  `isAuthed`, consistente con FE-17) y evita duplicar el mismo botón deshabilitado en tres pantallas.
   Visible únicamente si `isAuthed` (CU-02 anónimo y CU-03 no exportan, ver tabla de casos de uso de
   `CLAUDE.md`).
 - **Verificado manualmente en el navegador de dev** (única fase de esta ronda que no depende de un
@@ -717,18 +729,21 @@ archivo de frames para alimentar los tests del hook sin depender del backend.
 
 ### Pendientes
 
-- **P1 — CORS real para producción (bloquea deploy, no el desarrollo).** El proxy de Vite (D2) es
+- **P1 — CORS real para producción (bloquea deploy, no el desarrollo).** El proxy de Vite (FE-2) es
   solo de dev y NO ejercita el CORS real del backend. Antes de producción hay que implementar y
   probar el camino real: nginx sirviendo el build del front y proxyando `/api` (arquitectura
   definida en `architecture.md`), con cookie `Secure` (`ENV=production`) y `FRONTEND_ORIGIN`
   productivo. Agendar como tarea explícita al cerrar el desarrollo local.
-- **P2 — Puerto/herramienta del frontend.** Se asume **5173/Vite** (alineado con `FRONTEND_ORIGIN`
-  del `.env.example`). Confirmar antes del scaffold para no desalinear el CORS del backend.
+- **P2 — CERRADO desde Fase 0.** Puerto/herramienta del frontend confirmado: **5173/Vite**,
+  alineado con `FRONTEND_ORIGIN` del `.env.example`. Scaffold de Fase 0
+  (`docs/superpowers/plans/2026-07-22-frontend-fase0-scaffold.md`) lo fijó sin desalinear el
+  CORS del backend — sigue así desde entonces. Quedaba listado como abierto pese a estar
+  resuelto de hecho; corregido en la pasada de mejora del 29/07/2026.
 - **P3 — Azul institucional UCC** para las secciones con logo (blend UCC de Fase 2) — pendiente de
   confirmar contra el manual de marca. No bloquea el arranque; sí el pie de PDF/encabezados.
 - **P4 — CERRADO PARCIALMENTE 29/07/2026.** `docker-compose up backend postgres` levantado contra un
   `.env` recién creado (sin SMTP real) y migraciones (`alembic upgrade head`) aplicadas. Sin SMTP,
-  `register`→`verify` sigue sin poder probarse (D6 — no cambia, sigue siendo un límite real, no de
+  `register`→`verify` sigue sin poder probarse (FE-6 — no cambia, sigue siendo un límite real, no de
   esta sesión): en su lugar se insertó un usuario ya verificado directo en Postgres via `psql`
   (bcrypt hash generado con el propio Python del contenedor backend, `docker exec`) — mismo patrón
   que documenta `sprint.md` para el usuario de smoke test anterior. Con ese usuario: login → `200` +
@@ -787,8 +802,8 @@ con dos bugs reales corregidos en el proceso.
 
 - Frontend Vite+React+TS en `frontend/`, tema Instrumento (tokens en §4), 8 pantallas ★.
 - SSE **sobre fetch** (no EventSource) — es la decisión técnica que condiciona todo el streaming.
-- Auth por cookie; CU-01/CU-02 se decide por presencia de sesión; anónimo = experto (Decisión D);
-  modo elegido una vez en config (Decisión A).
+- Auth por cookie; CU-01/CU-02 se decide por presencia de sesión; anónimo = experto (UX-D);
+  modo elegido una vez en config (UX-A).
 - Etapa 1 se prueba contra el backend real; Etapa 2 / export / CU-03 son **mock con marca visual**.
 - Entrega en 6 fases incrementales, cada una con criterio de "hecho" y separación explícita real vs.
   mock.

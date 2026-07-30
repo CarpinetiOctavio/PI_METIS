@@ -39,7 +39,7 @@ export function EntryPage() {
   );
 }
 
-function LoginForm({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
+function LoginForm({ onSwitchToRegister }: Readonly<{ onSwitchToRegister: () => void }>) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -104,7 +104,7 @@ function LoginForm({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
   );
 }
 
-function RegisterForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
+function RegisterForm({ onSwitchToLogin }: Readonly<{ onSwitchToLogin: () => void }>) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
@@ -126,7 +126,7 @@ function RegisterForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
       setFeedback({ kind: "ok", text: response.mensaje });
     } catch (err) {
       if (err instanceof ApiError && err.codigo === "AUTH_VERIFICATION_EMAIL_FAILED" && import.meta.env.DEV) {
-        // Ver docs/frontend-implementation-plan.md §3.4 (Decisión D6) — sin
+        // Ver docs/frontend/frontend-implementation-plan.md §3.4 (FE-6) — sin
         // SMTP real configurado, register falla por completo (no se crea el
         // usuario, no queda token). No hay forma de rescatar un token de los
         // logs en este entorno; el aviso es honesto sobre esa limitación.

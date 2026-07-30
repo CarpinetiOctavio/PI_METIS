@@ -27,7 +27,7 @@ toda fórmula implementada). Incluye:
   pendientes de escalar a Facundo o Carlos Catalini.
 
 ### `decisiones/`
-Un archivo por decisión (`decision001.md` a `decision031.md`, número
+Un archivo por decisión (`decision001.md` a `decision043.md`, número
 inmutable — citado en código de producción y en toda la documentación),
 más `README.md` como índice. No es un ADR estándar en sentido estricto:
 mezcla decisiones de arquitectura de software con hallazgos de fidelidad
@@ -42,9 +42,31 @@ qué eran, cuándo se superaron, y qué los reemplaza. Mismo criterio de
 trazabilidad que rige el resto del proyecto: preservar el camino
 recorrido, no solo el estado final.
 
-Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`
-o `historico/` se discute antes de crear una carpeta nueva o forzarlo
-en la que más se le parezca.
+### `frontend/`
+Documentación de la implementación real del frontend — no encaja en
+`auditoria/` (no es fidelidad estadística) ni en `decisiones/` como archivo
+único (son documentos vivos que se actualizan fase a fase, no una decisión
+cerrada de una vez):
+- `frontend-implementation-plan.md` — plan de integración del frontend,
+  fuente de verdad decisión por decisión (§10).
+- `frontend-integration.md` — contrato real backend↔frontend observado
+  (shapes de eventos SSE, discrepancias con `api-contracts.md`).
+- `informe-implementacion-frontend-fase1-6.md` — informe consolidado de
+  Fases 1-6, punto único de retoma.
+- `plan-mejora-frontend-pasada2.md` — plan de la segunda pasada de revisión
+  sobre ese trabajo (29/07/2026).
+- `informe-pasada2-resultados.md` — resultado de esa pasada, ítem por ítem
+  (29/07/2026).
+- `plan-mejora-frontend-pasada3.md` — plan de cierre: verificación
+  independiente de la pasada 2, gaps encontrados, y merge a `staging`
+  (29/07/2026).
+- `informe-pasada3-resultados.md` — resultado de esa pasada. El merge a
+  `staging` quedó diferido — ver el documento para el estado real
+  (29/07/2026).
+
+Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`,
+`historico/` o `frontend/` se discute antes de crear una carpeta nueva o
+forzarlo en la que más se le parezca.
 
 ## Trazabilidad de requerimientos (`RF-XXX`)
 
@@ -102,3 +124,45 @@ registro de cuándo se estableció o modificó.
   `frontend-implementation-plan.md` §10 (fuente de detalle decisión por
   decisión) — pensado como punto único de retoma para una persona o para
   otra sesión de Claude Code sin contexto previo.
+- **29/07/2026 (pasada de mejora)** — `plan-mejora-frontend-pasada2.md`
+  agregado (diagnóstico y plan de una segunda revisión sobre el trabajo de
+  Fases 1-5). `frontend-implementation-plan.md` y `frontend-integration.md`
+  existían desde el 22-28/07/2026 sin estar listados en este README,
+  incumplimiento de la regla de abajo detectado y corregido en esta ronda.
+  `decisiones/` pasó de `decision001.md`-`034.md` a `decision001.md`-`042.md`
+  (036-042 de esta pasada — DECISIÓN 036/037/038 hallazgos de backend,
+  DECISIÓN 039/040/041/042 promoción de las decisiones de frontend).
+  `frontend/frontend-design/` (wireframes, identidad, prototipo, `versiones/`)
+  commiteado por primera vez — no es parte de `docs/` pero se registra acá
+  por ser el mismo evento de trazabilidad.
+- **29/07/2026 (pasada de mejora, misma ronda)** — Nueva carpeta `docs/frontend/`
+  creada: los cuatro archivos de arriba (`frontend-implementation-plan.md`,
+  `frontend-integration.md`, `informe-implementacion-frontend-fase1-6.md`,
+  `plan-mejora-frontend-pasada2.md`) movidos con `git mv` (historia
+  preservada) desde la raíz de `docs/`. Decisión de Kevin, no ejecutada
+  unilateralmente — ver la propuesta que motivó la pregunta en la entrada
+  anterior. Todas las referencias cruzadas del repo (`CLAUDE.md`,
+  `sprint.md`, `docs/decisiones/`, `frontend/src/`) actualizadas a la ruta
+  nueva en el mismo cambio, incluyendo dos enlaces relativos
+  (`../docs/decisiones/...` dentro del propio plan, `../plan-mejora...`
+  dentro de `decisiones/README.md`) que la profundidad extra de carpeta
+  hubiera dejado rotos si no se ajustaban.
+- **29/07/2026 (cierre de la pasada)** — `informe-pasada2-resultados.md`
+  agregado a `docs/frontend/`: resultado ítem por ítem de los Bloques A-E
+  del plan de mejora, con la salida real de la verificación final (lint,
+  123/123 tests, build, chequeo bidireccional de códigos de error, sweep
+  de enlaces del repo). Backend: `ruff` verificado real; `pytest -m unit`
+  no se pudo correr por dependencias faltantes en el Python local (sin
+  `venv`) — brecha de entorno preexistente, sin riesgo real porque esta
+  pasada no tocó ningún archivo `backend/metis/*.py`.
+- **29/07/2026 (pasada 3, cierre)** — `plan-mejora-frontend-pasada3.md` e
+  `informe-pasada3-resultados.md` agregados. `pytest -m unit` corrido por
+  primera vez de punta a punta vía Docker (131 passed, 1 skipped) — cierra
+  la brecha que la entrada anterior dejó pendiente. `decisiones/` pasó de
+  `decision001.md`-`042.md` a `decision001.md`-`043.md` (DECISIÓN 043 —
+  contraste WCAG del tema Instrumento, movida desde `sprint.md`). El merge
+  de `fix/frontend-pasada2` a `staging` quedó diferido por falta de acceso
+  a GitHub en esta máquina (`gh` no instalado, sin token) — decisión
+  explícita de Kevin de seguir con el resto del plan primero. Ver
+  `informe-pasada3-resultados.md` §2 para el estado real y los pasos
+  pendientes antes de que este trabajo sea visible fuera de este checkout.

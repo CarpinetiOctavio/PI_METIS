@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthVerifyPage } from "./AuthVerifyPage";
 
@@ -35,11 +35,9 @@ describe("AuthVerifyPage", () => {
     renderAt("/auth/verify?token=abc123");
 
     expect(screen.getByText("Verificando cuenta…")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.getByText("Cuenta verificada. Ya podés iniciar sesión."),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByText("Cuenta verificada. Ya podés iniciar sesión."),
+    ).toBeInTheDocument();
   });
 
   it("shows a legible error when the token is invalid", async () => {
@@ -56,10 +54,8 @@ describe("AuthVerifyPage", () => {
     );
     renderAt("/auth/verify?token=bad");
 
-    await waitFor(() =>
-      expect(
-        screen.getByText("El link de verificación es inválido o expiró."),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByText("El link de verificación es inválido o expiró."),
+    ).toBeInTheDocument();
   });
 });

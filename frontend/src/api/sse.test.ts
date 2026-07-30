@@ -216,17 +216,22 @@ describe("useAnalysisStream", () => {
     expect(result.current.state.error?.codigo).toBe("CONTRACT_NO_TEMPORAL_RESOLUTION");
   });
 
-  it("sets fase=error on a server error event (e.g. SESSION_TIMEOUT)", () => {
+  // D1 (pasada de mejora): el texto mostrado sale del diccionario curado
+  // (errorText), nunca del `mensaje` crudo que manda el backend — el
+  // backend no es consistente en qué manda ahí (str(exc) técnico en
+  // PARSE_ERROR, texto ya curado en SESSION_TIMEOUT). Unificado en el
+  // frontend, ver docs/decisiones/decision038.md.
+  it("sets fase=error on a server error event, using the curated dictionary text (e.g. SESSION_TIMEOUT)", () => {
     mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
     const { result } = renderHook(() => useAnalysisStream());
     act(() => result.current.start(makeForm()));
 
-    act(() => emit("error", { codigo: "SESSION_TIMEOUT", mensaje: "timeout real" }));
+    act(() => emit("error", { codigo: "SESSION_TIMEOUT", mensaje: "timeout real (crudo, no se usa)" }));
 
     expect(result.current.state.fase).toBe("error");
     expect(result.current.state.error).toEqual({
       codigo: "SESSION_TIMEOUT",
-      mensaje: "timeout real",
+      mensaje: "Se agotó el tiempo de espera para decidir sobre el dato atípico.",
     });
   });
 

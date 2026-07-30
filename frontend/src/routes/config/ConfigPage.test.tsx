@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { ConfigPage } from "./ConfigPage";
@@ -36,9 +36,9 @@ function renderConfigPage() {
 }
 
 async function waitForReady() {
-  await waitFor(() =>
-    expect(screen.getByRole("heading", { name: "Nuevo análisis" })).toBeInTheDocument(),
-  );
+  expect(
+    await screen.findByRole("heading", { name: "Nuevo análisis" }),
+  ).toBeInTheDocument();
 }
 
 describe("ConfigPage", () => {
@@ -85,7 +85,7 @@ describe("ConfigPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Experto" }));
     fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
 
-    await waitFor(() => expect(screen.getByTestId("stream-state")).toBeInTheDocument());
+    expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
     const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
     expect(form).toMatchObject({
       columna_x: "anio",
@@ -112,7 +112,7 @@ describe("ConfigPage", () => {
     fireEvent.change(screen.getByLabelText("Columna Y"), { target: { value: "caudal" } });
     fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
 
-    await waitFor(() => expect(screen.getByTestId("stream-state")).toBeInTheDocument());
+    expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
     const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
     expect(form.modo).toBe("experto");
   });

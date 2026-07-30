@@ -56,7 +56,12 @@ backend/metis/
 
 ## Comandos esenciales
 
-Backend — correr siempre con `backend/` como working directory:
+Backend — correr siempre con `backend/` como working directory. Los comandos de abajo asumen
+`pip install -r requirements.txt` corrido en el Python que los ejecuta — **no asumir que el
+Python del host lo tiene**: si no hay un `venv` del proyecto activado, corren contra el sistema
+sin `sqlalchemy`/`aiosmtplib`/etc. instalados y fallan en el import. Verificado el 29/07/2026
+(pasada 3): en esa máquina, sin `venv`, la ruta que sí corre reproduciblemente es dentro del
+contenedor Docker — 131 passed, 1 skipped.
 
 ```bash
 cd backend
@@ -79,6 +84,18 @@ ruff check metis/
 ruff format metis/
 ```
 
+**Sin `venv` local — correr todo lo de arriba dentro del contenedor:**
+
+```bash
+docker-compose up -d backend postgres
+docker ps  # confirmar el nombre real del contenedor — el prefijo lo decide Docker Compose
+           # a partir del nombre del directorio y ya cambió una vez en este repo
+           # (pi-postgres-1 vs. pi_metis-postgres-1, ver sprint.md)
+docker exec <backend> ruff check metis/
+docker exec <backend> ruff format --check metis/
+docker exec <backend> pytest -m unit -v
+```
+
 Frontend — correr siempre con `frontend/` como working directory (ver [frontend/README.md](frontend/README.md)):
 
 ```bash
@@ -87,7 +104,9 @@ npm install
 npm run dev       # Vite dev server, http://localhost:5173 — proxy /api y /ping hacia localhost:8000
 npm run build     # tsc -b + build de producción a dist/
 npm run lint      # ESLint
-npm test          # Vitest + Testing Library
+npm test          # Vitest + Testing Library, todos los tests (modo run, no watch)
+npm run test:watch                            # Vitest en modo watch
+npx vitest run src/routes/results/ResultsPage.test.tsx   # un solo archivo de test
 ```
 
 Entorno completo (Docker):
@@ -100,11 +119,17 @@ Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de pu
 
 **CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"`, exit code 5 tolerado — no hay tests de integración todavía), job `frontend` (lint + test + build). No mergear sin que los tres pasen.
 
+**SonarCloud** analiza cada PR además de estos jobs — no vía un paso propio de `ci.yml`, sino por
+Análisis Automático (App de GitHub de SonarCloud). Hoy el check no es *required* en el Ruleset, así
+que es consultivo, no bloqueante. Ver [decision044.md](docs/decisiones/decision044.md).
+
 ---
 
 ## Frontend — estado actual
 
-Scaffold de las 8 pantallas de CU-01/CU-02 con Vite + React + TypeScript + react-router-dom: `entry`, `config`, `stream`, `results`, `ranking`, `design-events`, `history`, `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`). Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`). El frontend entra en operación recién en la primera instancia de avance del proyecto (ver architecture.md) — por ahora es scaffold, no integración real con los endpoints de análisis.
+Vite + React + TypeScript + react-router-dom, 8 pantallas de CU-01/CU-02: `entry`, `config`, `stream`, `results`, `ranking`, `design-events`, `history`, `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`). Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`).
+
+**Ya no es scaffold** — Fases 1 a 5 del plan de integración están completas con integración real contra el backend (verificado contra Docker): auth end-to-end (`src/auth/`), stream de Etapa 1 vía SSE-sobre-fetch (`src/api/sse.ts`, hook `useAnalysisStream` — ver `docs/decisiones/decision040.md`), los tres modos de presentación de resultados de Etapa 1, historial con lista paginada y detalle. Etapa 2 (ranking, eventos de diseño) está mockeada con MSW (`src/mocks/`) y marca visual `PendingBadge` ("pendiente · datos de ejemplo") porque los endpoints reales de Etapa 2 todavía no existen en el backend — no confundir con "no implementado en el frontend"; ver `docs/decisiones/decision042.md` para el alcance exacto de qué es mock y qué no. Fase 6 (pulido y accesibilidad) quedó parcial. Verificación E2E contra backend real: login/logout/me, Config→stream con atípico real, los tres modos de Resultados e Historial cerrados; solo el tramo registro→verify de Auth sigue bloqueado por falta de SMTP real en desarrollo. Punto de entrada para retomar el estado exacto: [`docs/frontend/informe-implementacion-frontend-fase1-6.md`](docs/frontend/informe-implementacion-frontend-fase1-6.md) (resumen navegable) y [`docs/frontend/frontend-implementation-plan.md`](docs/frontend/frontend-implementation-plan.md) §10 (fuente de verdad decisión por decisión).
 
 ---
 

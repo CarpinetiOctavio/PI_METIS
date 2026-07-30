@@ -17,3 +17,21 @@
 .results-group[open] summary {
   margin-bottom: 10px;
 }
+
+/* S2 (limpieza SonarCloud): la tabla de descriptivos usa <th scope="row">
+   para el rótulo de cada fila (accesibilidad — antes era un <td>, un
+   lector de pantalla no podía asociar "40" con "n"). `table.t th` en
+   components.css está pensado para encabezados de columna (mayúsculas,
+   chico, mut, borde fuerte) — sin este override el rótulo de fila se
+   vería como un header, no como el <td> que reemplaza. Selector con
+   especificidad igual o mayor a `table.t th` para ganar sin depender del
+   orden de carga de los CSS. */
+.card table.t th[scope="row"] {
+  text-align: left;
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink);
+  font-weight: 400;
+  border-bottom: 1px solid var(--line);
+}

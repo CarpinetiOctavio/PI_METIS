@@ -1,0 +1,17 @@
+# Normaliza line endings a LF en el repositorio, independientemente del
+# checkout local (Windows con core.autocrlf=true vs. Linux/Mac). Sin esto,
+# un checkout desde un sistema distinto al que originó el commit reporta
+# el archivo entero como modificado por CRLF/LF aunque el contenido no
+# cambió — ver docs/plan-mejora-frontend-pasada2.md, Bloque E1.
+* text=auto
+
+# Binarios — nunca normalizar, git los debe tratar byte a byte.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary

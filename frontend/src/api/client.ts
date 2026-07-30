@@ -17,7 +17,7 @@ interface AppErrorBody {
 }
 
 // Body de error 422 de Pydantic/FastAPI — shape distinto, no pasa por AppErrorBody
-// (ver docs/frontend-integration.md §2 — register valida email/password a nivel
+// (ver docs/frontend/frontend-integration.md §2 — register valida email/password a nivel
 // Pydantic y responde 422, no 400).
 interface PydanticErrorBody {
   detail: Array<{ loc: unknown[]; msg: string; type: string }>;

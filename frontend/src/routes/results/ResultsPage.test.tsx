@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { ResultsPage } from "./ResultsPage";
@@ -94,14 +94,14 @@ describe("ResultsPage", () => {
 
   it("redirects to /config when there is no result in location.state", async () => {
     renderResultsPage(true, undefined);
-    await waitFor(() => expect(screen.getByText("config screen")).toBeInTheDocument());
+    expect(await screen.findByText("config screen")).toBeInTheDocument();
   });
 
   it("shows the nivel_confianza banner and the independencia/homogeneidad KPIs", async () => {
     renderResultsPage(true, makeResult(), "experto");
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Resultados de Etapa 1" })).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
+    ).toBeInTheDocument();
 
     expect(screen.getByText("validado")).toBeInTheDocument();
     expect(screen.getByText("independiente")).toBeInTheDocument();
@@ -120,14 +120,16 @@ describe("ResultsPage", () => {
       "experto",
     );
 
-    await waitFor(() => expect(screen.getByText("Se detectó tendencia.")).toBeInTheDocument());
+    expect(
+      await screen.findByText("Se detectó tendencia."),
+    ).toBeInTheDocument();
   });
 
   it("renders test groups as collapsed <details> accordions in docencia + paso_a_paso", async () => {
     const { container } = renderResultsPage(true, makeResult(), "paso_a_paso");
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Resultados de Etapa 1" })).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
+    ).toBeInTheDocument();
 
     const detailsElements = container.querySelectorAll("details.results-group");
     expect(detailsElements).toHaveLength(4);
@@ -136,18 +138,18 @@ describe("ResultsPage", () => {
 
   it("renders test groups as flat cards (no accordion) in docencia + experto", async () => {
     const { container } = renderResultsPage(true, makeResult(), "experto");
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Resultados de Etapa 1" })).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
+    ).toBeInTheDocument();
 
     expect(container.querySelectorAll("details")).toHaveLength(0);
   });
 
   it("forces the flat (experto) presentation for anonymous sessions even if modo says otherwise", async () => {
     const { container } = renderResultsPage(false, makeResult(), "paso_a_paso");
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Resultados de Etapa 1" })).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
+    ).toBeInTheDocument();
 
     expect(container.querySelectorAll("details")).toHaveLength(0);
   });

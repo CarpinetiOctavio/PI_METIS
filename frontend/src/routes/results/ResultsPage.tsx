@@ -25,7 +25,7 @@ export function ResultsPage() {
 
   if (!result) return null;
 
-  // Decisión D — anónimo siempre ve la presentación Experto, sin acordeón.
+  // UX-D — anónimo siempre ve la presentación Experto, sin acordeón.
   const modoEfectivo: Modo = isAuthed ? (locationState?.modo ?? "experto") : "experto";
 
   return (

@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision034.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision043.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -29,9 +29,18 @@ original de la decisión) vive dentro del mismo archivo que actualiza, no
 en uno nuevo — no es una decisión distinta, es la misma decisión con
 información más reciente. Addendums fechados existentes: `decision004.md`
 (17/07/2026), `decision010.md` (10/07/2026), `decision011.md`
-(18/07/2026), `decision023.md` (15/07/2026).
+(18/07/2026), `decision023.md` (15/07/2026), `decision038.md` (29/07/2026,
+dos addendums — pasada 2 y pasada 3, la de pasada 3 agrega la tercera
+dirección del chequeo de códigos de error).
 
 ## Historial de esta migración
+
+**29/07/2026 (reserva de números, previa a `decision036.md`-`decision042.md`)** —
+[`docs/frontend/plan-mejora-frontend-pasada2.md`](../frontend/plan-mejora-frontend-pasada2.md) (Bloque B0)
+reserva 035-042 en el índice antes de escribir ningún contenido, para que ningún
+trabajo paralelo pise un número. `035` ya estaba comprometido desde `sprint.md`
+(protección de ramas, 20/07/2026) sin archivo propio todavía — no se toca en esta
+pasada. `036`-`042` se completan en el mismo trabajo que reserva los números.
 
 **18/07/2026** — `decisions-log.md` (monolito de 29 entradas, algunas sin
 número de decisión) separado en archivos individuales. Cambios de
@@ -129,3 +138,13 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [032](decision032.md) | Auth: orden mail-antes-que-commit en `register`, ventana residual aceptada | 19/07/2026 | Implementado — pendiente de verificación exhaustiva por test |
 | [033](decision033.md) | Bump de FastAPI/Starlette diferido, con criterios explícitos de habilitación | 19/07/2026 | Diferido — condicionado a dos criterios explícitos |
 | [034](decision034.md) | Correcciones de configuración SMTP encontradas en smoke test real: hostname y separación de identidad de remitente | 20/07/2026 | Implementado y verificado — envío real de punta a punta confirmado |
+| 035 | *(reservado — GitHub Ruleset de protección de ramas, no tocar en esta pasada)* | — | Pendiente — ver `sprint.md`, sección "Estrategia de ramas", 20/07/2026 |
+| [036](decision036.md) | Partición de Cramer personalizada inalcanzable por el endpoint multipart | 29/07/2026 | Documentado — no implementado, requerimiento funcional caído |
+| [037](decision037.md) | Contrato de `/analysis/stream`: `etapas` descartado y `AnalysisRequest` sin cablear | 29/07/2026 | Documentado — inocuo hoy, prioridad M2/M3 |
+| [038](decision038.md) | Catálogo de códigos de error como fuente única, en ambas direcciones | 29/07/2026 | Aplicada — gap de propagación en `trend.py` documentado, no corregido |
+| [039](decision039.md) | Criterio de promoción de las decisiones de frontend y unificación de numeración | 29/07/2026 | Establecida |
+| [040](decision040.md) | SSE sobre fetch para el stream de Etapa 1 | 22/07/2026 | Implementado — verificado contra backend real |
+| [041](decision041.md) | Estado de servidor sin TanStack Query; `vi.stubGlobal("fetch")` como patrón único de test | 22-28/07/2026 | Diferido (TanStack Query, con criterio de habilitación) — Establecido (patrón de test) |
+| [042](decision042.md) | Alcance de los mocks de Etapa 2 y rol de MSW | 22-28/07/2026 | Implementado — verificado manualmente |
+| [043](decision043.md) | Contraste WCAG AA del tema Instrumento: hallazgos y propuesta, no aplicada | 29/07/2026 | PENDIENTE DE DECISIÓN — Kevin/Octavio |
+| [044](decision044.md) | SonarCloud: quality gate, limpieza del PR #17/B, rechazo de `<dialog>` nativo, merge del PR #17 en rojo | 30/07/2026 | Aplicada — gate de gobernanza PENDIENTE DE DECISIÓN — Kevin/Octavio |
