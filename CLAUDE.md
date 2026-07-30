@@ -119,6 +119,10 @@ Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de pu
 
 **CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"`, exit code 5 tolerado — no hay tests de integración todavía), job `frontend` (lint + test + build). No mergear sin que los tres pasen.
 
+**SonarCloud** analiza cada PR además de estos jobs — no vía un paso propio de `ci.yml`, sino por
+Análisis Automático (App de GitHub de SonarCloud). Hoy el check no es *required* en el Ruleset, así
+que es consultivo, no bloqueante. Ver [decision044.md](docs/decisiones/decision044.md).
+
 ---
 
 ## Frontend — estado actual

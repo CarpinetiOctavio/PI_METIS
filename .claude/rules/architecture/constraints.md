@@ -115,3 +115,9 @@ Flujo de tres niveles:
 
 Nunca merge directo de feature a main.
 CI corre en cada PR antes del merge. No mergear sin que CI pase.
+
+**SonarCloud** analiza cada PR además de los cuatro jobs de `ci.yml` (Análisis Automático, sin
+paso propio en el workflow). Hoy el check **no es required** en el Ruleset — el botón de merge
+queda habilitado con el gate en rojo — así que es consultivo de hecho, no bloqueante. Ver
+[DECISIÓN 044](../../../docs/decisiones/decision044.md), sección "La pregunta de gobernanza
+abierta", para el estado exacto y las opciones pendientes de decisión de Kevin/Octavio.
