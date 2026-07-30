@@ -1,0 +1,398 @@
+/*
+ * Clases genéricas portadas de frontend-design/metis-prototipo-fase3.html
+ * (variante A ★ de la Puerta de entrada). Todo el color viene de las CSS vars
+ * de tokens.instrumento.css, así que estas clases ya son theme-aware.
+ *
+ * Alcance: solo lo que Fase 1 (Auth) necesita. El resto de las clases del
+ * prototipo (.card ya vive en global.css, .kpi, .pill, .chart, .step, etc.)
+ * se suman página por página cuando esa pantalla se implemente de verdad —
+ * ver docs/frontend-implementation-plan.md, no todas de una.
+ */
+
+.h {
+  font-size: 18px;
+  margin: 0 0 3px;
+  color: var(--ink);
+  font-family: var(--f-head);
+}
+
+.sub {
+  color: var(--mut);
+  font-size: 12.5px;
+  margin: 0 0 16px;
+}
+
+.fn {
+  font-size: 11px;
+  color: var(--fnt);
+}
+
+.logo {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-family: var(--f-head);
+  color: var(--ink);
+}
+
+.row {
+  display: flex;
+  gap: 14px;
+}
+
+.col {
+  flex: 1;
+  min-width: 0;
+}
+
+.field {
+  margin-bottom: 11px;
+}
+
+.field label {
+  display: block;
+  font-size: 11.5px;
+  color: var(--mut);
+  margin-bottom: 5px;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surf);
+  height: 33px;
+  padding: 0 10px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.input::placeholder {
+  color: var(--fnt);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+.b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: var(--r-sm);
+  padding: 9px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  font-family: var(--f-body);
+  cursor: pointer;
+}
+
+.b:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.b-pri {
+  background: var(--acc);
+  color: var(--on-acc);
+}
+
+.b-sec {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.ct {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--mut);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.sp {
+  flex: 1;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--mut);
+  border: 1px dashed var(--line-strong);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.seg button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 6px 13px;
+  font-size: 12px;
+  color: var(--mut);
+  border-right: 1px solid var(--line);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.seg button:last-child {
+  border-right: 0;
+}
+
+.seg button.on {
+  background: var(--acc);
+  color: var(--on-acc);
+  font-weight: 600;
+}
+
+.seg button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.chips {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--mut);
+  background: var(--surf);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.chip.on {
+  border-color: var(--acc);
+  background: var(--acc-soft);
+  color: var(--acc);
+  font-weight: 600;
+}
+
+.chart {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surf2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fnt);
+  font-size: 11px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--acc);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.stack > * + * {
+  margin-top: 10px;
+}
+
+.step {
+  display: flex;
+  gap: 12px;
+}
+
+.step[role="button"] {
+  cursor: pointer;
+}
+
+.step .node {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--mut);
+  background: var(--surf);
+  flex-shrink: 0;
+}
+
+.step.done .node {
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.step.active .node {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--on-acc);
+}
+
+.step.warn .node {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.step.crit .node {
+  background: color-mix(in srgb, var(--crit) 18%, transparent);
+  border-color: var(--crit);
+  color: var(--crit);
+}
+
+.prog {
+  height: 8px;
+  background: var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.prog i {
+  display: block;
+  height: 100%;
+  background: var(--acc);
+  border-radius: 6px;
+  transition: width 0.4s ease;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pill.ok {
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  color: var(--ok);
+}
+
+.pill.warn {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: var(--warn);
+}
+
+.pill.crit {
+  background: color-mix(in srgb, var(--crit) 16%, transparent);
+  color: var(--crit);
+}
+
+.pill.wait {
+  background: color-mix(in srgb, var(--mut) 16%, transparent);
+  color: var(--mut);
+}
+
+.kpi {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  background: var(--surf);
+}
+
+.kpi .l {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mut);
+}
+
+.kpi .v {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--f-mono);
+}
+
+table.t {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+table.t th {
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mut);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-strong);
+  font-weight: 700;
+}
+
+table.t td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.banner {
+  border-radius: var(--r-sm);
+  padding: 10px 13px;
+  font-size: 12.5px;
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  border: 1px solid;
+  margin: 0 0 14px;
+}
+
+.banner .ic {
+  font-weight: 800;
+}
+
+.banner.info {
+  background: var(--acc-soft);
+  border-color: color-mix(in srgb, var(--acc) 35%, transparent);
+  color: var(--acc);
+}
+
+.banner.warn {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+  color: var(--warn);
+}
+
+.banner.crit {
+  background: color-mix(in srgb, var(--crit) 14%, transparent);
+  border-color: color-mix(in srgb, var(--crit) 40%, transparent);
+  color: var(--crit);
+}
+
+.banner.ok {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+  color: var(--ok);
+}

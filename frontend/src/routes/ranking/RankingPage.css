@@ -1,0 +1,15 @@
+.ranking-page {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.ranking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ranking-card.top {
+  border-color: var(--acc);
+}

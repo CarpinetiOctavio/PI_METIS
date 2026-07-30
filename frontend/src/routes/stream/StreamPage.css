@@ -1,0 +1,15 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.modal-backdrop .card {
+  max-width: 380px;
+  width: 100%;
+}

@@ -1,0 +1,53 @@
+/* Layout de dos columnas de la variante A ★ (frontend-design/metis-prototipo-fase3.html). */
+
+.entry {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  min-height: 480px;
+  display: flex;
+}
+
+.entry__brand,
+.entry__form {
+  flex: 1;
+  min-width: 0;
+  padding: 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.entry__brand {
+  background: var(--surf2);
+}
+
+.entry__brand .logo {
+  font-size: 24px;
+}
+
+.entry__brand p {
+  max-width: 240px;
+}
+
+.entry__form {
+  background: var(--surf);
+}
+
+.entry__switch {
+  text-align: center;
+  margin: 10px 0 0;
+}
+
+.entry__sep {
+  text-align: center;
+  margin: 2px 0 6px;
+  color: var(--fnt);
+  font-size: 11px;
+}
+
+@media (max-width: 640px) {
+  .entry {
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,43 @@
+:root[data-theme="instrumento"] {
+  --f-head: "JetBrains Mono", monospace;
+  --f-body: "JetBrains Mono", monospace;
+  --f-mono: "JetBrains Mono", monospace;
+  --r-sm: 3px;
+  --r-md: 4px;
+}
+
+:root[data-theme="instrumento"][data-mode="light"] {
+  --bg: #f3f6f8;
+  --surf: #ffffff;
+  --surf2: #e9eef2;
+  --ink: #0b0e12;
+  --mut: #5b6672;
+  --fnt: #9aa5b1;
+  --line: #dee5eb;
+  --line-strong: #c6d0d8;
+  --acc: #0e7490;
+  --acc-soft: #d4eef3;
+  --on-acc: #ffffff;
+  --acc2: #4d7c0f;
+  --ok: #128a4e;
+  --warn: #b5791a;
+  --crit: #c24444;
+}
+
+:root[data-theme="instrumento"][data-mode="dark"] {
+  --bg: #090c10;
+  --surf: #12171f;
+  --surf2: #191f29;
+  --ink: #e6edf3;
+  --mut: #8a97a6;
+  --fnt: #566270;
+  --line: #212a36;
+  --line-strong: #33404e;
+  --acc: #22d3ee;
+  --acc-soft: #0c2a33;
+  --on-acc: #04252b;
+  --acc2: #c6f84e;
+  --ok: #35d07a;
+  --warn: #f4b740;
+  --crit: #ff6a6a;
+}

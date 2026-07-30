@@ -29,40 +29,82 @@ Se defenderá ante un tribunal de ISI — todas las decisiones técnicas deben p
 ---
 
 ## Estructura de módulos del backend — respetar estrictamente
-metis/
-├── api/        # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
-├── core/       # Motores estadísticos Etapa 1 y Etapa 2. SIN conocimiento de HTTP ni BD.
-├── services/   # Orquestación del pipeline, lógica de negocio.
-├── db/         # Modelos SQLAlchemy, acceso a datos.
-├── schemas/    # Modelos Pydantic: validación de inputs y outputs.
-└── auth/       # Usuario/contraseña + JWT (HttpOnly Cookie). Google OAuth descartado — docs/decisiones/decision001.md, DECISIÓN 001 (flujo original evaluado: docs/historico/oauth-descartado.md). Envío real de mail (aiosmtplib) pendiente de credenciales IT — docs/decisiones/decision004.md, DECISIÓN 004.
 
-**Regla crítica:** `core/` no importa nada de `api/`, `services/`, ni `db/`. El motor estadístico es una librería pura — recibe datos, devuelve resultados. Esto es lo que hace posible los tests de regresión matemática.
+Todo el código Python vive bajo `backend/`; los comandos de este repo (pytest, ruff, uvicorn) se corren con `backend/` como working directory.
+
+```
+backend/metis/
+├── api/v1/               # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
+│   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /design-events, /{id}
+│   └── history.py        # /history/, /history/{id}
+├── core/                 # Motor estadístico. SIN conocimiento de HTTP, BD, ni sesiones.
+│   ├── estadistica_descriptiva/   # descriptive.py
+│   ├── etapa1/            # independence.py, homogeneity.py, trend.py, outliers.py (Chow)
+│   ├── etapa2/            # eea.py, empirical.py, utils.py, types.py, distributions/ (13 archivos)
+│   ├── pipeline/          # pipeline_etapa1.py, pipeline_etapa2.py, full_pipeline.py, types.py
+│   ├── validacion/        # contract.py (validación de contrato de datos), parser.py
+│   ├── types.py, utils.py
+├── services/              # Orquestación: analysis_service.py (pipeline + SSE + persistencia), session_store.py
+├── db/                    # models/ (user, analysis, result, api_client) + base.py, session.py
+├── schemas/               # Modelos Pydantic: analysis.py, auth.py, common.py
+└── auth/                  # router.py, jwt.py, email.py (aiosmtplib), dependencies.py
+```
+
+**Regla crítica:** `core/` no importa nada de `api/`, `services/`, `db/` ni `auth/`. El motor estadístico es una librería pura — recibe datos, devuelve resultados. Esto es lo que hace posible los tests de regresión matemática.
 
 ---
 
 ## Comandos esenciales
 
-```bash
-# Levantar entorno completo
-docker-compose up --build
+Backend — correr siempre con `backend/` como working directory:
 
-# Solo backend en desarrollo
+```bash
+cd backend
+
+# Servidor de desarrollo
 uvicorn metis.main:app --reload --port 8000
 
-# Tests
-pytest tests/ -v
+# Todos los tests
+pytest -v
 
-# Linting backend
+# Solo una capa (markers definidos en pytest.ini): unit | integration | e2e | regression
+pytest -m unit -v
+
+# Un solo archivo o test puntual
+pytest tests/unit/core/etapa1/test_independence.py -v
+pytest tests/unit/core/etapa1/test_independence.py::test_anderson_manda_sobre_wald -v
+
+# Linting — corre en CI (.github/workflows/ci.yml), correr antes de cada commit
 ruff check metis/
 ruff format metis/
-
-# Frontend
-cd frontend && npm install && npm run dev
-
-# Linting frontend
-cd frontend && npm run lint
 ```
+
+Frontend — correr siempre con `frontend/` como working directory (ver [frontend/README.md](frontend/README.md)):
+
+```bash
+cd frontend
+npm install
+npm run dev       # Vite dev server, http://localhost:5173 — proxy /api y /ping hacia localhost:8000
+npm run build     # tsc -b + build de producción a dist/
+npm run lint      # ESLint
+npm test          # Vitest + Testing Library
+```
+
+Entorno completo (Docker):
+
+```bash
+docker-compose up --build
+```
+
+Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de puertos en desarrollo" para por qué `backend` y `postgres` mapean puertos al host, y "DATABASE_URL — diferencia entre Docker y host" para el override de Alembic/psql desde la terminal local.
+
+**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"`, exit code 5 tolerado — no hay tests de integración todavía), job `frontend` (lint + test + build). No mergear sin que los tres pasen.
+
+---
+
+## Frontend — estado actual
+
+Scaffold de las 8 pantallas de CU-01/CU-02 con Vite + React + TypeScript + react-router-dom: `entry`, `config`, `stream`, `results`, `ranking`, `design-events`, `history`, `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`). Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`). El frontend entra en operación recién en la primera instancia de avance del proyecto (ver architecture.md) — por ahora es scaffold, no integración real con los endpoints de análisis.
 
 ---
 

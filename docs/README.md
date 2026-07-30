@@ -94,3 +94,11 @@ registro de cuándo se estableció o modificó.
   descartado por `DECISIÓN 001`): corregidas en `CLAUDE.md`, `sprint.md`,
   `decision001.md` (sección "Estado actual del código", que describía
   OAuth como vigente), `decision002.md` y `decision028.md`.
+- **29/07/2026** — `informe-implementacion-frontend-fase1-6.md` agregado:
+  informe consolidado de la implementación de Fases 1 a 5 del frontend
+  (Auth, Config+Stream, Resultados, Historial, Mocks de Etapa 2) y la
+  primera verificación E2E completa contra el backend real, con los 2
+  bugs reales encontrados y corregidos en el proceso. Resume y enlaza a
+  `frontend-implementation-plan.md` §10 (fuente de detalle decisión por
+  decisión) — pensado como punto único de retoma para una persona o para
+  otra sesión de Claude Code sin contexto previo.
