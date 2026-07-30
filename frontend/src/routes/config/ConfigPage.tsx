@@ -89,9 +89,9 @@ export function ConfigPage() {
             />
           </div>
         </div>
-        <div className="field">
-          <label id="tipo-variable-label">Tipo de variable</label>
-          <div className="seg" role="group" aria-labelledby="tipo-variable-label">
+        <fieldset className="field">
+          <legend>Tipo de variable</legend>
+          <div className="seg">
             <button
               type="button"
               className={tipoVariable === "caudal_precipitacion" ? "on" : ""}
@@ -109,11 +109,11 @@ export function ConfigPage() {
               Otro
             </button>
           </div>
-        </div>
+        </fieldset>
         {isAuthed ? (
-          <div className="field">
-            <label id="modo-label">Modo · se elige una vez</label>
-            <div className="seg" role="group" aria-labelledby="modo-label">
+          <fieldset className="field">
+            <legend>Modo · se elige una vez</legend>
+            <div className="seg">
               <button
                 type="button"
                 className={modo === "paso_a_paso" ? "on" : ""}
@@ -134,10 +134,14 @@ export function ConfigPage() {
             <p className="fn">
               Define la UI de todas las etapas. No se cambia después.
             </p>
-          </div>
+          </fieldset>
         ) : (
           <div className="field">
-            <label>Modo</label>
+            {/* S3 (limpieza SonarCloud): esto no es un <label> — no rotula
+                ningún control, es una nota informativa de que el modo está
+                fijo en anónimo. Sonar marcaba el <label> suelto anterior
+                como huérfano (no apuntaba a nada vía htmlFor/aria-labelledby). */}
+            <p className="ct">Modo</p>
             <div>
               <span className="tag">anónimo · solo resultados</span>
             </div>
