@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { EntryPage } from "./EntryPage";
@@ -43,11 +43,9 @@ describe("EntryPage", () => {
     stubFetch({ "/auth/me": { ok: false, status: 401, body: {} } });
     renderEntryPage();
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Iniciar sesión" }),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Iniciar sesión" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Registrate" }));
     expect(
@@ -70,11 +68,9 @@ describe("EntryPage", () => {
       },
     });
     renderEntryPage();
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Iniciar sesión" }),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Iniciar sesión" }),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Email institucional"), {
       target: { value: "a@ucc.edu.ar" },
@@ -84,10 +80,8 @@ describe("EntryPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Email o contraseña incorrectos.",
-      ),
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Email o contraseña incorrectos.",
     );
   });
 
@@ -100,11 +94,9 @@ describe("EntryPage", () => {
       },
     });
     renderEntryPage();
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Iniciar sesión" }),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Iniciar sesión" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Registrate" }));
 
     fireEvent.change(screen.getByLabelText("Email institucional"), {
@@ -115,10 +107,8 @@ describe("EntryPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta" }));
 
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Cuenta creada. Revisá tu mail.",
-      ),
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Cuenta creada. Revisá tu mail.",
     );
   });
 
@@ -134,11 +124,9 @@ describe("EntryPage", () => {
       },
     });
     renderEntryPage();
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Iniciar sesión" }),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Iniciar sesión" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Registrate" }));
     fireEvent.change(screen.getByLabelText("Email institucional"), {
       target: { value: "a@ucc.edu.ar" },
@@ -148,27 +136,21 @@ describe("EntryPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Crear cuenta" }));
 
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Modo dev: no hay SMTP configurado",
-      ),
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Modo dev: no hay SMTP configurado",
     );
   });
 
   it("enters anonymously, navigates to /config and persists the flag", async () => {
     stubFetch({ "/auth/me": { ok: false, status: 401, body: {} } });
     renderEntryPage();
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Iniciar sesión" }),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Iniciar sesión" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Entrar como anónimo/ }));
 
-    await waitFor(() =>
-      expect(screen.getByText("config screen")).toBeInTheDocument(),
-    );
+    expect(await screen.findByText("config screen")).toBeInTheDocument();
     expect(localStorage.getItem("metis-anon-session")).toBe("true");
   });
 });
