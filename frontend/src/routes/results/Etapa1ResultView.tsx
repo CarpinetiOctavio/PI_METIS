@@ -144,35 +144,35 @@ export function Etapa1ResultView({ result, modo }: { result: Etapa1Result; modo:
           <table className="t">
             <tbody>
               <tr>
-                <td>n</td>
+                <th scope="row">n</th>
                 <td className="num">{formatInt(result.descriptive.n)}</td>
               </tr>
               <tr>
-                <td>media</td>
+                <th scope="row">media</th>
                 <td className="num">{formatNum(result.descriptive.media)}</td>
               </tr>
               <tr>
-                <td>mediana</td>
+                <th scope="row">mediana</th>
                 <td className="num">{formatNum(result.descriptive.mediana)}</td>
               </tr>
               <tr>
-                <td>desvío S</td>
+                <th scope="row">desvío S</th>
                 <td className="num">{formatNum(result.descriptive.desvio_estandar)}</td>
               </tr>
               <tr>
-                <td>CV</td>
+                <th scope="row">CV</th>
                 <td className="num">{formatNum(result.descriptive.coef_variacion)}</td>
               </tr>
               <tr>
-                <td>asimetría</td>
+                <th scope="row">asimetría</th>
                 <td className="num">{formatNum(result.descriptive.coef_asimetria)}</td>
               </tr>
               <tr>
-                <td>mínimo</td>
+                <th scope="row">mínimo</th>
                 <td className="num">{formatNum(result.descriptive.minimo)}</td>
               </tr>
               <tr>
-                <td>máximo</td>
+                <th scope="row">máximo</th>
                 <td className="num">{formatNum(result.descriptive.maximo)}</td>
               </tr>
             </tbody>
