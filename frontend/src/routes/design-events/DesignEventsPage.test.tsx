@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { DesignEventsPage } from "./DesignEventsPage";
@@ -62,7 +62,7 @@ describe("DesignEventsPage", () => {
     renderDesignEvents();
 
     expect(screen.getByText("Calculando eventos de diseño…")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("312,70000")).toBeInTheDocument());
+    expect(await screen.findByText("312,70000")).toBeInTheDocument();
     expect(screen.getByText("Valor de diseño · T = 100 años")).toBeInTheDocument();
   });
 
@@ -70,7 +70,7 @@ describe("DesignEventsPage", () => {
     stubFetch(false);
     renderDesignEvents();
 
-    await waitFor(() => expect(screen.getByText("312,70000")).toBeInTheDocument());
+    expect(await screen.findByText("312,70000")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "50" }));
 
     expect(screen.getByText("290,90000")).toBeInTheDocument();
@@ -80,16 +80,14 @@ describe("DesignEventsPage", () => {
     stubFetch(false);
     renderDesignEvents();
 
-    await waitFor(() =>
-      expect(screen.getByText("pendiente · datos de ejemplo")).toBeInTheDocument(),
-    );
+    expect(await screen.findByText("pendiente · datos de ejemplo")).toBeInTheDocument();
   });
 
   it("hides the export button for anonymous sessions", async () => {
     stubFetch(false);
     renderDesignEvents();
 
-    await waitFor(() => expect(screen.getByText("312,70000")).toBeInTheDocument());
+    expect(await screen.findByText("312,70000")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Exportar PDF/ }),
     ).not.toBeInTheDocument();
@@ -99,7 +97,7 @@ describe("DesignEventsPage", () => {
     stubFetch(true);
     renderDesignEvents();
 
-    await waitFor(() => expect(screen.getByText("312,70000")).toBeInTheDocument());
+    expect(await screen.findByText("312,70000")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Exportar PDF/ })).toBeDisabled();
   });
 });
