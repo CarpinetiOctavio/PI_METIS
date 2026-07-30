@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { HistoryDetailPage } from "./HistoryDetailPage";
 import type { AnalysisDetail } from "../../api/types";
@@ -57,26 +57,24 @@ describe("HistoryDetailPage", () => {
     renderDetail();
 
     expect(screen.getByText("Cargando análisis…")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("validado")).toBeInTheDocument());
+    expect(await screen.findByText("validado")).toBeInTheDocument();
   });
 
   it("shows a legible error banner on failure", async () => {
     stubFetch(404, { error: { codigo: "AUTH_USER_NOT_FOUND", mensaje: "..." } });
     renderDetail();
 
-    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 
   it("shows a warning when the analysis has no etapa1 recorded", async () => {
     stubFetch(200, makeDetail({ etapa1: null }));
     renderDetail();
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          "Este análisis no tiene resultados de Etapa 1 registrados.",
-        ),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByText(
+        "Este análisis no tiene resultados de Etapa 1 registrados.",
+      ),
+    ).toBeInTheDocument();
   });
 });

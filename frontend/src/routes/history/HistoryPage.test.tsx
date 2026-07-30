@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { HistoryPage } from "./HistoryPage";
 import type { HistoryItem } from "../../api/types";
@@ -44,11 +44,9 @@ describe("HistoryPage", () => {
     renderHistoryPage();
 
     expect(screen.getByText("Cargando historial…")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.getByText("Todavía no tenés análisis guardados."),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByText("Todavía no tenés análisis guardados."),
+    ).toBeInTheDocument();
   });
 
   it("shows a legible error banner when the request fails", async () => {
@@ -57,10 +55,8 @@ describe("HistoryPage", () => {
     });
     renderHistoryPage();
 
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Email o contraseña incorrectos.",
-      ),
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Email o contraseña incorrectos.",
     );
   });
 
@@ -68,9 +64,7 @@ describe("HistoryPage", () => {
     stubFetch(200, makeItems(15));
     renderHistoryPage();
 
-    await waitFor(() =>
-      expect(screen.getByText("Página 1 de 2")).toBeInTheDocument(),
-    );
+    expect(await screen.findByText("Página 1 de 2")).toBeInTheDocument();
     expect(screen.getAllByRole("link")).toHaveLength(10);
     expect(screen.getByRole("button", { name: /Anterior/ })).toBeDisabled();
 
@@ -85,8 +79,9 @@ describe("HistoryPage", () => {
     stubFetch(200, makeItems(1));
     renderHistoryPage();
 
-    await waitFor(() =>
-      expect(screen.getByRole("link")).toHaveAttribute("href", "/history/id-0"),
+    expect(await screen.findByRole("link")).toHaveAttribute(
+      "href",
+      "/history/id-0",
     );
   });
 });
