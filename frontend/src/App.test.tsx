@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { ThemeProvider } from "./theme/ThemeProvider";
 import App from "./App";
 
@@ -33,18 +33,14 @@ describe("App", () => {
     );
     // AuthProvider arranca en isLoading=true (esperando /me) — RedirectIfAuthed
     // no renderiza la puerta de entrada hasta que esa carga inicial resuelve.
-    await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: "Puerta de entrada" }),
-      ).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "Puerta de entrada" }),
+    ).toBeInTheDocument();
     // "METIS" aparece tanto en el TopBar como en el panel de marca de
     // EntryPage — alcanza con confirmar que al menos una instancia rindió.
     expect(screen.getAllByText("METIS").length).toBeGreaterThan(0);
-    await waitFor(() =>
-      expect(screen.getByTestId("backend-status")).toHaveTextContent(
-        "Backend conectado",
-      ),
+    expect(await screen.findByTestId("backend-status")).toHaveTextContent(
+      "Backend conectado",
     );
   });
 });
