@@ -16,8 +16,10 @@ beforeEach(() => {
     matches: false,
   } as MediaQueryList);
   localStorage.clear();
-  document.documentElement.removeAttribute("data-theme");
-  document.documentElement.removeAttribute("data-mode");
+  // R3 (limpieza SonarCloud): dataset en vez de removeAttribute — mismo
+  // patrón que ThemeProvider.tsx usa para setear estos atributos.
+  delete document.documentElement.dataset.theme;
+  delete document.documentElement.dataset.mode;
 });
 
 afterEach(() => {
