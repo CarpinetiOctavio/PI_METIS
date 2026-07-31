@@ -5,8 +5,13 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.api.deps import get_current_user, get_db, get_optional_user
+from metis.core.validacion.parser import leer_columnas_preview
 from metis.db.models.user import User
-from metis.schemas.analysis import OutlierDecisionRequest, OutlierDecisionResponse
+from metis.schemas.analysis import (
+    OutlierDecisionRequest,
+    OutlierDecisionResponse,
+    PreviewColumnsResponse,
+)
 from metis.services.analysis_service import (
     get_analysis_by_id,
     registrar_outlier_decision,
@@ -14,6 +19,29 @@ from metis.services.analysis_service import (
 )
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
+
+
+@router.post("/preview-columns", response_model=PreviewColumnsResponse)
+async def preview_columns(archivo: UploadFile = File(...)):
+    # DECISIÓN 047 — stateless, sin dependencia de usuario: no hay ninguna
+    # diferencia de comportamiento según quién llama, así que "JWT opcional"
+    # se cumple por no inspeccionar la cookie en absoluto, no por leerla y
+    # descartarla. No toca session_store ni BD.
+    content = await archivo.read()
+    try:
+        columnas, filas = leer_columnas_preview(content, archivo.filename or "upload")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {
+                    "codigo": "PARSE_ERROR",
+                    "mensaje": "No se pudo leer el archivo. Verificá que sea un CSV o Excel válido.",
+                }
+            },
+        ) from exc
+
+    return PreviewColumnsResponse(columnas=columnas, filas=filas)
 
 
 @router.post("/stream")

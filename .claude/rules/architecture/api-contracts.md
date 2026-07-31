@@ -133,6 +133,44 @@ cuando Etapa 2 se exponga de verdad (M2/M3). Ver `docs/decisiones/decision037.md
 
 ---
 
+### POST /api/v1/analysis/preview-columns
+
+**Agregado en DECISIÓN 047 (pasada 4, Bloque D)** — previsualización de
+columnas para poblar los dropdowns de `ConfigPage`, reusando el mismo
+parser que `POST /analysis/stream` (`core/validacion/parser.py`).
+
+**Request (multipart/form-data):**
+```json
+{"archivo": "<file CSV o Excel>"}
+```
+
+**Auth:** Sin dependencia de usuario — no hay diferencia de comportamiento
+según quién llama, así que no inspecciona la cookie en absoluto (a
+diferencia de `/analysis/stream`, que sí declara `get_optional_user`).
+
+**Completamente stateless.** No genera `session_id`, no toca
+`session_store`, no escribe en BD.
+
+**Response 200:**
+```json
+{
+  "columnas": [
+    {"nombre": "anio", "indice": 0, "muestra": ["1980", "1981", "1982"]},
+    {"nombre": "caudal", "indice": 1, "muestra": ["94.71", "89.83", "105.13"]}
+  ],
+  "filas": 40
+}
+```
+
+**Errores:** 400 `PARSE_ERROR` para cualquier archivo no parseable
+(incluido vacío — `pandas.errors.EmptyDataError` es subclase de
+`ValueError`, capturado por el mismo `except`). No hay un segundo código
+para "sin columnas utilizables": verificado que pandas no puede devolver
+un DataFrame con cero columnas sin haber lanzado antes — ver DECISIÓN 047,
+addendum.
+
+---
+
 ### POST /api/v1/analysis/design-events
 
 **Request:**

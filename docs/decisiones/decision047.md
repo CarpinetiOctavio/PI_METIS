@@ -54,11 +54,15 @@ Solo lee cabeceras, muestra un puñado de valores por columna, y cuenta filas.
 - Archivo no parseable → `PARSE_ERROR` (ya catalogado, `api-contracts.md`),
   reusado acá como respuesta HTTP 400 en vez de evento SSE — el catálogo no
   ata un código a un transporte específico.
-- Sin ninguna columna utilizable (archivo vacío, cero columnas) → código
-  nuevo `PARSE_NO_USABLE_COLUMNS`, agregado a `api-contracts.md` en el mismo
-  commit (regla de DECISIÓN 038, verificada por `scripts/check-error-catalog.sh`).
-  Prefijo `PARSE_` reutilizado a propósito: el script ya reconoce esa familia,
-  no hace falta tocar su regex.
+- **Addendum (implementación):** el plan original preveía un código nuevo
+  `PARSE_NO_USABLE_COLUMNS` para "archivo sin ninguna columna utilizable".
+  Verificado con pandas real (`tests/unit/core/validacion/test_parser.py`):
+  para el camino CSV, `pd.read_csv` levanta `EmptyDataError` (subclase de
+  `ValueError`) para cualquier contenido vacío o solo-espacios *antes* de
+  devolver un `DataFrame` — no existe un contenido que produzca
+  `len(df.columns) == 0` sin haber lanzado ya. La guarda quedaría como código
+  muerto, así que no se agrega: `PARSE_ERROR` solo, sin un segundo código,
+  cubre el 100% de los casos reales de este endpoint.
 
 **El contrato de `/analysis/stream` no cambia** — `columna_x`/`columna_y`
 siguen viajando como string; el dropdown de `ConfigPage` solo mejora cómo se
@@ -70,8 +74,8 @@ elige ese string, no lo que el backend recibe.
   archivo válido.
 - `core/validacion/parser.py::leer_columnas_preview()` no importa nada de
   `core/etapa1`, `core/etapa2` ni `validacion/contract.py`.
-- `PARSE_NO_USABLE_COLUMNS` presente en `api-contracts.md` y en
-  `frontend/src/i18n/errors.es.ts`.
+- Ningún código nuevo agregado al catálogo — `PARSE_ERROR` cubre el único
+  camino de error real de este endpoint (ver addendum arriba).
 
 **Ver también:** [DECISIÓN 038](decision038.md) — regla de sincronización
 del catálogo de errores en las tres direcciones.

@@ -4,6 +4,42 @@ import pandas as pd
 
 from metis.core.types import ParsedData
 
+MUESTRA_MAX = 5
+
+
+def _leer_dataframe(content: bytes, filename: str) -> pd.DataFrame:
+    if filename.endswith(".xlsx") or filename.endswith(".xls"):
+        return pd.read_excel(io.BytesIO(content))
+    return pd.read_csv(io.BytesIO(content))
+
+
+def leer_columnas_preview(content: bytes, filename: str) -> tuple[list[dict], int]:
+    """Cabeceras + muestra de valores por columna, para POST /analysis/preview-columns
+    (DECISIÓN 047). Reusa el mismo parseo pandas que parse_file() para que el
+    dropdown de ConfigPage ofrezca exactamente las columnas que el pipeline
+    real va a leer — nunca dos lecturas de cabeceras que puedan divergir.
+
+    A diferencia de parse_file(), esto NO valida contrato ni corre ninguna
+    prueba estadística — es una previsualización, no un análisis (plan
+    pasada4 §6 D2).
+
+    No hay una guarda explícita de "sin columnas utilizables": pandas
+    levanta EmptyDataError (subclase de ValueError) antes de devolver un
+    DataFrame para cualquier CSV vacío o solo-espacios — verificado, no hay
+    forma de que este parseo devuelva un DataFrame con columnas=0 sin haber
+    lanzado ya. El único código de error real de este camino es PARSE_ERROR
+    (DECISIÓN 047, addendum).
+    """
+    df = _leer_dataframe(content, filename)
+
+    columnas = []
+    for indice, nombre in enumerate(df.columns):
+        valores = df[nombre].head(MUESTRA_MAX).tolist()
+        muestra = [str(v) for v in valores if pd.notna(v)]
+        columnas.append({"nombre": str(nombre), "indice": indice, "muestra": muestra})
+
+    return columnas, len(df)
+
 
 def parse_file(
     content: bytes,
@@ -11,10 +47,7 @@ def parse_file(
     columna_x: str,
     columna_y: str,
 ) -> ParsedData:
-    if filename.endswith(".xlsx") or filename.endswith(".xls"):
-        df = pd.read_excel(io.BytesIO(content))
-    else:
-        df = pd.read_csv(io.BytesIO(content))
+    df = _leer_dataframe(content, filename)
 
     col_x = _resolver_columna(df, columna_x)
     col_y = _resolver_columna(df, columna_y)
