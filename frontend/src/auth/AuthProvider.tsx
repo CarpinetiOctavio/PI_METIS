@@ -23,6 +23,7 @@ interface AuthContextValue {
   login: (body: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
   enterAnonymously: () => void;
+  exitAnonymously: () => void;
   refetch: () => Promise<void>;
 }
 
@@ -116,6 +117,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setIsAnonymous(true);
   }, []);
 
+  // F4/F6 (informe-diagnostico-ui-rota.md): antes solo logout() limpiaba el
+  // flag anónimo — un usuario que entró anónimo no tenía forma de "salir" y
+  // volver a la puerta de entrada, ni de que el flag se limpiara al hacerlo.
+  const exitAnonymously = useCallback(() => {
+    localStorage.removeItem(ANON_STORAGE_KEY);
+    setIsAnonymous(false);
+  }, []);
+
   // R2 (limpieza SonarCloud): sin useMemo, este objeto se recrea en cada
   // render de AuthProvider — y como envuelve toda la app, eso significa que
   // cada pantalla re-renderiza aunque nada haya cambiado. Las funciones ya
@@ -130,9 +139,19 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       login,
       logout,
       enterAnonymously,
+      exitAnonymously,
       refetch,
     }),
-    [user, isLoading, isAnonymous, login, logout, enterAnonymously, refetch],
+    [
+      user,
+      isLoading,
+      isAnonymous,
+      login,
+      logout,
+      enterAnonymously,
+      exitAnonymously,
+      refetch,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
