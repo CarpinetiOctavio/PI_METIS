@@ -233,7 +233,10 @@
   cursor: pointer;
 }
 
-.step:disabled {
+/* F8 (docs/frontend/informe-diagnostico-ui-rota.md): .step ya no usa el
+   atributo `disabled` nativo (StreamPage.tsx) — aria-disabled mantiene el
+   cursor "no interactivo" sin el aspecto grisado de un control roto. */
+.step[aria-disabled="true"] {
   cursor: default;
 }
 

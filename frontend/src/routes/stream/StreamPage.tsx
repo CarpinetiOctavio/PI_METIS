@@ -40,7 +40,8 @@ const STEP_CLASS: Record<GroupStatus, string> = {
   crit: "step crit",
 };
 
-const PILL_LABEL: Record<Exclude<GroupStatus, "pending">, string> = {
+const PILL_LABEL: Record<GroupStatus, string> = {
+  pending: "esperando resultados",
   active: "calculando…",
   ok: "aprobada",
   warn: "warning",
@@ -88,9 +89,12 @@ function summarizeGroup(
   return "ok";
 }
 
+// F8 (informe-diagnostico-ui-rota.md): antes "pending" no mostraba ninguna
+// pill — un paso sin resultados todavía y un botón roto se veían exactamente
+// igual (nada). "esperando resultados" dice explícitamente que es un estado
+// normal en curso, no una falla.
 function StatusPill({ status }: Readonly<{ status: GroupStatus }>) {
-  if (status === "pending") return null;
-  const kind = status === "active" ? "wait" : status;
+  const kind = status === "active" || status === "pending" ? "wait" : status;
   return <span className={`pill ${kind}`}>{PILL_LABEL[status]}</span>;
 }
 
@@ -243,11 +247,19 @@ export function StreamPage() {
                   <div key={group.key}>
                     {/* N1 (limpieza SonarCloud): antes era un <div role="button"
                         tabIndex onClick onKeyDown> — un <button> nativo da lo
-                        mismo (Enter/Espacio, foco, disabled) con menos código. */}
+                        mismo (Enter/Espacio, foco) con menos código.
+                        F8 (informe-diagnostico-ui-rota.md): antes usaba el
+                        atributo `disabled` nativo — un botón "no tiene nada
+                        que mostrar todavía" y uno "roto" se ven idénticos así
+                        (grisado, sin explicación). aria-disabled mantiene el
+                        botón fuera de la interacción real (toggleGroup ya
+                        ignora el click si !expandable) sin el aspecto de
+                        control roto; la pill "esperando resultados" de arriba
+                        es la que comunica por qué. */}
                     <button
                       type="button"
                       className={STEP_CLASS[status]}
-                      disabled={!expandable}
+                      aria-disabled={!expandable}
                       onClick={() => toggleGroup(group.key, expandable)}
                     >
                       <div className="node">{status === "ok" ? "✓" : "▸"}</div>

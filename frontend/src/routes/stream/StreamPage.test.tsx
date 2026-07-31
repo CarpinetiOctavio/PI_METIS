@@ -146,7 +146,10 @@ describe("StreamPage", () => {
     expect(start.mock.calls.length - abort.mock.calls.length).toBe(0);
   });
 
-  it("shows a pill once a group's tests all arrive, and pending groups show none", () => {
+  // F8 (informe-diagnostico-ui-rota.md): un grupo "pending" ahora muestra una
+  // pill explícita ("esperando resultados") en vez de nada — antes un paso
+  // sin resultados todavía y un botón roto se veían exactamente igual.
+  it("shows a pill once a group's tests all arrive, and an 'esperando resultados' pill while pending", () => {
     renderStreamPage({
       tests: {
         anderson: testResult({ prueba: "anderson" }),
@@ -158,7 +161,8 @@ describe("StreamPage", () => {
     expect(independenciaStep?.querySelector(".pill")).toHaveTextContent("aprobada");
 
     const homogeneidadStep = screen.getByText("Homogeneidad").closest(".step");
-    expect(homogeneidadStep?.querySelector(".pill")).toBeNull();
+    expect(homogeneidadStep?.querySelector(".pill")).toHaveTextContent("esperando resultados");
+    expect(homogeneidadStep).toHaveAttribute("aria-disabled", "true");
   });
 
   it("expands a completed group's detail table on click", () => {
