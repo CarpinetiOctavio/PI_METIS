@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
+import { renderPage } from "../../test/renderPage";
 import { DesignEventsPage } from "./DesignEventsPage";
 import { designEventsMock } from "../../mocks/designEvents.mock";
 
@@ -11,7 +12,7 @@ import { designEventsMock } from "../../mocks/designEvents.mock";
 // por el mismo slot global. MSW queda para el navegador en dev
 // (mocks/browser.ts), donde sí aporta valor real: un humano puede navegar
 // la pantalla mock sin tooling especial de test.
-function stubFetch(authed: boolean) {
+function stubFetch(authed: boolean, { failDesignEvents = false } = {}) {
   vi.stubGlobal(
     "fetch",
     vi.fn((input: RequestInfo | URL) => {
@@ -29,6 +30,13 @@ function stubFetch(authed: boolean) {
         });
       }
       if (url.includes("/analysis/design-events")) {
+        if (failDesignEvents) {
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+            json: () => Promise.resolve({}),
+          });
+        }
         return Promise.resolve({
           ok: true,
           status: 200,
@@ -41,7 +49,7 @@ function stubFetch(authed: boolean) {
 }
 
 function renderDesignEvents() {
-  return render(
+  return renderPage(
     <MemoryRouter initialEntries={["/design-events"]}>
       <AuthProvider>
         <Routes>
@@ -99,5 +107,17 @@ describe("DesignEventsPage", () => {
 
     expect(await screen.findByText("312,70000")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Exportar PDF/ })).toBeDisabled();
+  });
+
+  // F12 (informe-diagnostico-ui-rota.md): antes postDesignEvents(...).then(...)
+  // no tenía .catch() — un rechazo dejaba la pantalla colgada para siempre en
+  // "Calculando eventos de diseño…" con un unhandled rejection en consola.
+  it("shows an error banner instead of hanging forever when the request fails", async () => {
+    stubFetch(false, { failDesignEvents: true });
+    renderDesignEvents();
+
+    expect(screen.getByText("Calculando eventos de diseño…")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("Calculando eventos de diseño…")).not.toBeInTheDocument();
   });
 });

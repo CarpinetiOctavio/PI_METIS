@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { postDesignEvents } from "../../api/etapa2";
+import { ApiError } from "../../api/client";
+import { errorText } from "../../i18n/errors.es";
 import { PendingBadge } from "../../mocks/PendingBadge";
 import { formatNum } from "../../i18n/format";
 import type { DesignEventsResponse } from "../../api/types";
@@ -24,23 +26,44 @@ export function DesignEventsPage() {
   const metodo = state?.metodo ?? "Momentos";
 
   const [data, setData] = useState<DesignEventsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPeriodo, setSelectedPeriodo] = useState(100);
   const [axis, setAxis] = useState<Axis>("calendario");
 
   useEffect(() => {
     let cancelled = false;
+    setData(null);
+    setError(null);
     postDesignEvents({
       session_id: "mock-session",
       distribucion,
       metodo,
       periodos_retorno: PERIODOS,
-    }).then((response) => {
-      if (!cancelled) setData(response);
-    });
+    })
+      .then((response) => {
+        if (!cancelled) setData(response);
+      })
+      .catch((err) => {
+        // F12 (informe-diagnostico-ui-rota.md): sin este .catch(), un
+        // rechazo acá (MSW sin arrancar en el build de producción, por
+        // ejemplo) dejaba la pantalla colgada para siempre en "Calculando
+        // eventos de diseño…" con un unhandled rejection en consola.
+        if (!cancelled) {
+          setError(err instanceof ApiError ? errorText(err.codigo) : errorText(""));
+        }
+      });
     return () => {
       cancelled = true;
     };
   }, [distribucion, metodo]);
+
+  if (error) {
+    return (
+      <div className="banner crit" role="alert">
+        <span className="ic">!</span> {error}
+      </div>
+    );
+  }
 
   if (!data) {
     return <p className="sub">Calculando eventos de diseño…</p>;

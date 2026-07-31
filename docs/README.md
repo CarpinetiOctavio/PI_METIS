@@ -63,6 +63,18 @@ cerrada de una vez):
 - `informe-pasada3-resultados.md` — resultado de esa pasada. El merge a
   `staging` quedó diferido — ver el documento para el estado real
   (29/07/2026).
+- `informe-diagnostico-ui-rota.md` — diagnóstico de doce defectos (F1-F12)
+  encontrados al probar la app en uso real pese a dos PRs mergeados con CI
+  verde (31/07/2026).
+- `plan-arreglo-ui-rota.md` — plan de arreglo priorizado en 4 bloques sobre
+  ese diagnóstico, con estrategia de testing anti-regresión (31/07/2026).
+- `informe-resultados-arreglo-ui-rota.md` — resultado ítem por ítem de los
+  Bloques 0-3 de ese plan. La rama (`fix/frontend-ui-integracion`) quedó sin
+  pushear — ver el documento para el estado real (31/07/2026).
+- `feedback-ux-pendiente-analisis.md` — relevamiento de feedback de UX/diseño
+  recibido al probar esa rama en vivo. Explícitamente no es un plan ni una
+  decisión — para analizar antes de decidir qué hacer con cada ítem
+  (31/07/2026).
 
 Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`,
 `historico/` o `frontend/` se discute antes de crear una carpeta nueva o
@@ -166,3 +178,16 @@ registro de cuándo se estableció o modificó.
   explícita de Kevin de seguir con el resto del plan primero. Ver
   `informe-pasada3-resultados.md` §2 para el estado real y los pasos
   pendientes antes de que este trabajo sea visible fuera de este checkout.
+- **31/07/2026** — `informe-diagnostico-ui-rota.md`, `plan-arreglo-ui-rota.md`
+  e `informe-resultados-arreglo-ui-rota.md` agregados a `docs/frontend/`:
+  doce defectos (F1-F12) encontrados al probar en vivo el resultado de
+  `fix/frontend-pasada2` (ya mergeada a `staging` vía PR #18) — dos PRs con
+  CI verde y 98 tests en verde, pero el stream se abortaba a sí mismo bajo
+  `StrictMode` y la navegación entre pantallas estaba rota. Los cuatro
+  bloques del plan (reproducir, bloqueantes, navegación, infraestructura)
+  se cerraron en la rama `fix/frontend-ui-integracion`, incluyendo el
+  primer `frontend/Dockerfile` del proyecto y la primera verificación
+  end-to-end del stack completo vía nginx en la historia del repo. Rama sin
+  pushear todavía — ver el informe de resultados §2. `feedback-ux-pendiente-analisis.md`
+  también agregado: relevamiento de feedback de UX/diseño recibido al
+  probar esa rama, explícitamente para analizar después, no un plan.

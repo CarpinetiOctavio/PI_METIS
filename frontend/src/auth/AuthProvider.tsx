@@ -4,10 +4,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import * as authApi from "../api/auth";
+import { ApiError } from "../api/client";
+import { errorText } from "../i18n/errors.es";
 import type { LoginRequest, UserMe } from "../api/types";
 
 const ANON_STORAGE_KEY = "metis-anon-session";
@@ -20,6 +23,7 @@ interface AuthContextValue {
   login: (body: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
   enterAnonymously: () => void;
+  exitAnonymously: () => void;
   refetch: () => Promise<void>;
 }
 
@@ -32,22 +36,46 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     () => localStorage.getItem(ANON_STORAGE_KEY) === "true",
   );
 
+  // Espejo síncrono de `user`, actualizado dentro de refetch() mismo (no en
+  // un efecto) — login() necesita saber si la sesión quedó abierta
+  // inmediatamente después de esperar refetch(), y el estado de React no se
+  // actualiza sincrónicamente con el setUser de más abajo.
+  const userRef = useRef<UserMe | null>(null);
+
   const refetch = useCallback(async () => {
     try {
       const currentUser = await authApi.me();
+      userRef.current = currentUser;
       setUser(currentUser);
-    } catch {
-      // 401 (sin cookie) o error de red — ambos significan "no autenticado"
-      // para efectos de esta fase, ver frontend-implementation-plan.md §3.1.
+    } catch (err) {
+      userRef.current = null;
+      if (err instanceof ApiError && err.status === 401) {
+        // Sin cookie: no hay sesión, estado normal, no es un error real.
+        setUser(null);
+        return;
+      }
+      // Red caída, CORS, 500 — F3 (informe-diagnostico-ui-rota.md): antes
+      // este catch colapsaba estos casos junto al 401 legítimo, y como
+      // login() no verificaba el resultado, un fallo acá se veía desde la
+      // UI como "aprieto el botón y no pasa nada". El llamador tiene que
+      // enterarse.
       setUser(null);
+      throw err;
     }
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await refetch();
-      if (!cancelled) setIsLoading(false);
+      try {
+        await refetch();
+      } catch {
+        // Backend caído / CORS en el arranque — TopBar ya informa ese
+        // estado independientemente vía useBackendPing. Acá solo evitamos
+        // que la carga inicial quede colgada en el spinner para siempre.
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -58,7 +86,16 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const login = useCallback(
     async (body: LoginRequest) => {
       await authApi.login(body);
-      await refetch();
+      await refetch(); // ahora sí puede lanzar (red caída, CORS, 500)
+      if (!userRef.current) {
+        // POST /auth/login respondió 200 pero GET /auth/me no confirmó la
+        // sesión — F3: antes login() resolvía igual, sin lanzar.
+        throw new ApiError(
+          0,
+          "SESSION_NOT_ESTABLISHED",
+          errorText("SESSION_NOT_ESTABLISHED"),
+        );
+      }
       localStorage.removeItem(ANON_STORAGE_KEY);
       setIsAnonymous(false);
     },
@@ -80,6 +117,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setIsAnonymous(true);
   }, []);
 
+  // F4/F6 (informe-diagnostico-ui-rota.md): antes solo logout() limpiaba el
+  // flag anónimo — un usuario que entró anónimo no tenía forma de "salir" y
+  // volver a la puerta de entrada, ni de que el flag se limpiara al hacerlo.
+  const exitAnonymously = useCallback(() => {
+    localStorage.removeItem(ANON_STORAGE_KEY);
+    setIsAnonymous(false);
+  }, []);
+
   // R2 (limpieza SonarCloud): sin useMemo, este objeto se recrea en cada
   // render de AuthProvider — y como envuelve toda la app, eso significa que
   // cada pantalla re-renderiza aunque nada haya cambiado. Las funciones ya
@@ -94,9 +139,19 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       login,
       logout,
       enterAnonymously,
+      exitAnonymously,
       refetch,
     }),
-    [user, isLoading, isAnonymous, login, logout, enterAnonymously, refetch],
+    [
+      user,
+      isLoading,
+      isAnonymous,
+      login,
+      logout,
+      enterAnonymously,
+      exitAnonymously,
+      refetch,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

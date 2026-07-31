@@ -40,7 +40,8 @@ const STEP_CLASS: Record<GroupStatus, string> = {
   crit: "step crit",
 };
 
-const PILL_LABEL: Record<Exclude<GroupStatus, "pending">, string> = {
+const PILL_LABEL: Record<GroupStatus, string> = {
+  pending: "esperando resultados",
   active: "calculando…",
   ok: "aprobada",
   warn: "warning",
@@ -88,9 +89,12 @@ function summarizeGroup(
   return "ok";
 }
 
+// F8 (informe-diagnostico-ui-rota.md): antes "pending" no mostraba ninguna
+// pill — un paso sin resultados todavía y un botón roto se veían exactamente
+// igual (nada). "esperando resultados" dice explícitamente que es un estado
+// normal en curso, no una falla.
 function StatusPill({ status }: Readonly<{ status: GroupStatus }>) {
-  if (status === "pending") return null;
-  const kind = status === "active" ? "wait" : status;
+  const kind = status === "active" || status === "pending" ? "wait" : status;
   return <span className={`pill ${kind}`}>{PILL_LABEL[status]}</span>;
 }
 
@@ -98,28 +102,39 @@ export function StreamPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { start, state, resolveOutlier, abort } = useAnalysisStream();
-  const startedRef = useRef(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
 
   const form = (location.state as { form?: AnalysisStreamForm } | null)?.form;
+  // El form se congela en el primer render: location.state es estable dentro
+  // de una misma entrada del historial, pero no queremos reintentar el
+  // análisis si cambia la referencia. StreamPage lo consume una sola vez.
+  const formRef = useRef(form);
 
+  // F1 (docs/frontend/informe-diagnostico-ui-rota.md): un solo efecto, con
+  // la limpieza en el MISMO efecto que arranca. En el doble montaje de
+  // StrictMode se aborta el primer stream y la segunda pasada arranca uno
+  // nuevo — eso es lo correcto. La versión anterior separaba "arrancar" de
+  // "limpiar" en dos efectos con una guarda `startedRef`: la limpieza fantasma
+  // de StrictMode abortaba el stream recién abierto, y la segunda pasada de
+  // montaje salía por la guarda sin volver a arrancarlo — cero streams vivos.
+  //
+  // Costo aceptado y explícito: en desarrollo, StrictMode dispara dos veces
+  // POST /analysis/stream; el primero se aborta a los pocos milisegundos y
+  // el backend limpia esa sesión en el `finally` de stream_etapa1 — no queda
+  // basura. En producción StrictMode no corre.
   useEffect(() => {
-    if (!form) {
+    const f = formRef.current;
+    if (!f) {
       navigate("/config", { replace: true });
       return;
     }
-    if (startedRef.current) return;
-    startedRef.current = true;
-    start(form);
-  }, [form, start, navigate]);
-
-  useEffect(() => {
+    start(f);
     // Si el usuario navega a mitad de stream, sin esto el fetch queda vivo
     // (setState sobre componente desmontado) y la sesión queda colgada hasta
     // el timeout de 300s en session_store del backend.
     return () => abort();
-  }, [abort]);
+  }, [start, abort, navigate]);
 
   const modalOpen = state.fase === "waiting_outlier" && Boolean(state.outlier);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -232,11 +247,19 @@ export function StreamPage() {
                   <div key={group.key}>
                     {/* N1 (limpieza SonarCloud): antes era un <div role="button"
                         tabIndex onClick onKeyDown> — un <button> nativo da lo
-                        mismo (Enter/Espacio, foco, disabled) con menos código. */}
+                        mismo (Enter/Espacio, foco) con menos código.
+                        F8 (informe-diagnostico-ui-rota.md): antes usaba el
+                        atributo `disabled` nativo — un botón "no tiene nada
+                        que mostrar todavía" y uno "roto" se ven idénticos así
+                        (grisado, sin explicación). aria-disabled mantiene el
+                        botón fuera de la interacción real (toggleGroup ya
+                        ignora el click si !expandable) sin el aspecto de
+                        control roto; la pill "esperando resultados" de arriba
+                        es la que comunica por qué. */}
                     <button
                       type="button"
                       className={STEP_CLASS[status]}
-                      disabled={!expandable}
+                      aria-disabled={!expandable}
                       onClick={() => toggleGroup(group.key, expandable)}
                     >
                       <div className="node">{status === "ok" ? "✓" : "▸"}</div>

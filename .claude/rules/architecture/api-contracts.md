@@ -306,12 +306,22 @@ VALIDATION_ERROR          Sintetizado por api/client.ts ante un 422 genérico de
 STREAM_CONNECTION_ERROR   Sintetizado por api/sse.ts::onerror ante una falla de red/
                            conexión del stream SSE — condición client-side, el
                            backend nunca la ve ni la emite.
+STREAM_CLOSED_EARLY       Sintetizado por api/sse.ts::onclose cuando el servidor
+                           cierra la conexión sin haber emitido `complete` antes —
+                           sin esto la fase quedaba en "streaming"/"waiting_outlier"
+                           para siempre y en silencio (F1, informe-diagnostico-ui-rota.md).
+SESSION_NOT_ESTABLISHED   Sintetizado por auth/AuthProvider.tsx::login cuando
+                           POST /auth/login respondió 200 pero el GET /auth/me
+                           posterior no pudo confirmar la sesión — antes login()
+                           resolvía igual sin lanzar, y el botón se veía "muerto"
+                           (F3, informe-diagnostico-ui-rota.md).
 ```
-Estos dos no tienen contraparte en `core/`/`services/` porque describen condiciones
+Estos cuatro no tienen contraparte en `core/`/`services/` porque describen condiciones
 que solo el cliente puede detectar (fallo de red, 422 sin `codigo` propio del
-backend) — no es un gap de sincronización, es el catálogo reconociendo que no
-todo código de error se origina en el servidor. Agregados acá en el addendum
-del 29/07/2026 de `docs/decisiones/decision038.md` — DECISIÓN 038, que también
-deja la regla explícita en esta dirección: todo código nuevo que el frontend
-invente para una condición client-side se agrega acá en el mismo commit que lo
-introduce, igual que los de `core/`/`services/`.
+backend, cierre de conexión sin `complete`, login aceptado sin sesión confirmada) — no es un gap de sincronización, es
+el catálogo reconociendo que no todo código de error se origina en el servidor.
+Los dos primeros se agregaron en el addendum del 29/07/2026 de
+`docs/decisiones/decision038.md` — DECISIÓN 038, que también deja la regla
+explícita en esta dirección: todo código nuevo que el frontend invente para una
+condición client-side se agrega acá en el mismo commit que lo introduce, igual
+que los de `core/`/`services/`.

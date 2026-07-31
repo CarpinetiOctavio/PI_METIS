@@ -214,8 +214,24 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
           }
         },
         onclose() {
-          // Cierre normal del server tras `complete` o `contract_error` — no
-          // se reintenta nada acá, la fase ya quedó resuelta por handleEvent.
+          // Cierre normal del server tras `complete` o `contract_error` deja
+          // fase="done"/"error" ya resuelta por handleEvent — el `prev.fase`
+          // de abajo no la pisa. Pero si el server cierra la conexión SIN
+          // haber emitido `complete` (F1, informe-diagnostico-ui-rota.md
+          // §1.2), sin esto la fase quedaba en "streaming"/"waiting_outlier"
+          // para siempre y silenciosamente.
+          setInternal((prev) =>
+            prev.fase === "streaming" || prev.fase === "waiting_outlier"
+              ? {
+                  ...prev,
+                  fase: "error",
+                  error: {
+                    codigo: "STREAM_CLOSED_EARLY",
+                    mensaje: errorText("STREAM_CLOSED_EARLY"),
+                  },
+                }
+              : prev,
+          );
         },
         onerror(err) {
           setInternal((prev) => ({

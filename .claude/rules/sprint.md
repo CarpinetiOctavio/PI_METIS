@@ -563,14 +563,29 @@ del tema Instrumento) — identidad visual fijada, pendiente de decisión de
 Kevin/Octavio, no de implementación.
 
 #### Verificación E2E fuera de las 6 fases nominales (backlog P4-P7)
-Corrida contra `docker-compose up backend postgres` real, no mockeada. Login →
+~~Corrida contra `docker-compose up backend postgres` real, no mockeada. Login →
 `200` + cookie, `GET /me` → `200`, logout → `200` + cookie borrada
 verificada. Config→stream con CSV sintético de 40 años y atípico forzado,
 resultados en los tres modos, historial con 6 análisis reales — todo
-verificado punta a punta. Único tramo genuinamente bloqueado: registro→verify,
+verificado punta a punta.~~ Único tramo genuinamente bloqueado: registro→verify,
 por falta de SMTP real en desarrollo (no resoluble desde este backlog). Usuario
 de prueba y sus análisis borrados de Postgres al cerrar la verificación — no
 queda dato de prueba en la BD.
+
+**Corrección 31/07/2026 (`fix/frontend-ui-integracion`, informe de diagnóstico
+de UI rota):** el párrafo de arriba tachado quedó invalidado el mismo día que
+se escribió — el commit `c27d6ac` (más abajo, "Bugs corregidos como parte de
+esta rama") cambió el ciclo de vida de `StreamPage` horas después de esta
+verificación, e introdujo F1 (`docs/frontend/informe-diagnostico-ui-rota.md`):
+bajo `<StrictMode>` (el modo real de desarrollo), el stream se abortaba a sí
+mismo al montar y nunca avanzaba. Dos PRs se mergearon a `staging` con CI
+verde y 98 tests en verde sin que nadie volviera a abrir el navegador después
+de ese commit. La verificación "Config→stream... verificado punta a punta"
+citada arriba corresponde a un estado del código anterior a `c27d6ac`, no al
+que terminó mergeado. F1 fue diagnosticado y corregido en
+`fix/frontend-ui-integracion` — ver ese informe y
+`docs/frontend/plan-arreglo-ui-rota.md` para el detalle completo y el resto de
+los once defectos encontrados en la misma pasada (F2-F12).
 
 #### Bugs corregidos como parte de esta rama
 - `useAnalysisStream`: `complete` pisaba una `fase="error"` previa con
@@ -592,6 +607,72 @@ patrón único de test), DECISIÓN 042 (alcance de mocks de Etapa 2). El resto
   posterior: DECISIÓN 036 (partición de Cramer personalizada inalcanzable),
   DECISIÓN 037 (`etapas` descartado, `AnalysisRequest` sin cablear),
   DECISIÓN 038 (códigos de error fuera del catálogo).
+
+---
+
+### fix/frontend-ui-integracion — Bloques 0-3 completos
+
+Rama de arreglo abierta tras el hallazgo de que la app estaba rota en uso
+real pese a dos PRs mergeados con CI verde (ver la corrección de 31/07/2026
+más arriba). Punto de entrada completo:
+`docs/frontend/informe-diagnostico-ui-rota.md` (diagnóstico, doce defectos
+F1-F12) y `docs/frontend/plan-arreglo-ui-rota.md` (plan priorizado en 4
+bloques). Sale de `staging` (no de `fix/frontend-pasada2`, que ya estaba
+mergeado a `staging` vía PR #18 al momento de abrir esta rama).
+
+**Bloque 0 — reproducir antes de arreglar:** `StreamPage.lifecycle.test.tsx`
+escrito en rojo contra el código real, confirmando F1. Confirmación manual en
+navegador (Network tab: `POST /analysis/stream` en `net::ERR_ABORTED`) y
+contraprueba diferencial (sacar `<StrictMode>` temporalmente, ver que el
+stream avanza, revertir de inmediato).
+
+**Bloque 1 — bloqueantes (P0):**
+- 1.3(a): `scripts/seed-dev-user.sh` + `clean-dev-user.sh` — automatiza el
+  INSERT bcrypt que este archivo ya documentaba en prosa, vía `docker compose
+  exec` (no nombres de contenedor hardcodeados).
+- 1.1+1.2 (F1): `StreamPage.tsx` pasa a un solo efecto con limpieza
+  colocada — la guarda `startedRef` de dos efectos separados es lo que
+  rompía bajo el doble montaje de StrictMode. `sse.ts::onclose` ahora mueve
+  la fase a `error` con código nuevo `STREAM_CLOSED_EARLY` si el servidor
+  cierra sin `complete`.
+- 1.4 (F3): `AuthProvider.refetch()` distingue 401 legítimo de un fallo real
+  (red caída, CORS, 500); `login()` ahora puede lanzar y lo hace con
+  `SESSION_NOT_ESTABLISHED` si `/me` no confirma la sesión tras un login
+  200.
+
+**Capa 2 de testing (4.1+4.2):** `src/test/renderPage.tsx` — toda página se
+renderiza bajo `StrictMode` desde ahora (regla, no algo que recordar por
+archivo). `StreamPage.integration.test.tsx` — componente y hook reales, solo
+la red interceptada en el borde (mock de `fetchEventSource`, no MSW — ver
+nota inline sobre por qué, coherente con DECISIÓN 041). `routes.navigation.test.tsx` —
+grafo de navegación sobre el array `routes` real, no rutas de mentira.
+
+**Bloque 2 — navegación (F4-F8):** `TopBar` con links reales según sesión
+(`enterAnonymously`/`exitAnonymously` en `AuthProvider`), "Cerrar
+sesión"/"Salir" navegan a `/` en vez de dejar al usuario en la misma
+pantalla. Botón "Continuar a Etapa 2" en `ResultsPage` (con `PendingBadge`).
+Guard nuevo `RequireSession` (auth o anónimo) en `/config`, `/stream`,
+`/results`, `/ranking`, `/design-events`. Timeline de `StreamPage` reemplaza
+`disabled` nativo por `aria-disabled` + pill "esperando resultados" — un
+paso sin resultados todavía y uno roto se veían idénticos antes.
+
+**Bloque 3 — infraestructura (F9-F12):** `frontend/Dockerfile` (multi-stage,
+nginx sirviendo el build estático) — verificado end-to-end por primera vez
+en la historia del proyecto: `docker-compose up -d` levanta los cuatro
+servicios, `http://localhost/` responde 200, `/ping` proxea al backend real,
+`/config` sirve la SPA vía `try_files` fallback, login real funciona same-origin
+a través de nginx. Default de CORS en `main.py` corregido de `:3000` a
+`:5173` (F10 — el resto de "unificar FRONTEND_ORIGIN/FRONTEND_URL" resultó
+innecesario: `.env`/`.env.example` ya las documentaban como dos variables
+intencionalmente separadas, con valores ya correctos). `nginx.conf` proxea
+`/ping` (F11). `.catch()` agregado al `postDesignEvents(...)` de
+`DesignEventsPage` (F12).
+
+**Pendiente de esta rama:** Bloque 4.3 (E2E con Playwright) y 1.3(b)
+(escotilla SMTP en desarrollo) — ambos requieren escribir una DECISIÓN nueva
+primero (046 y 045 respectivamente) antes de implementarse; no se avanzó
+sobre ninguno de los dos. `testing.md` y `architecture.md` actualizados en
+consecuencia (ver sus propias notas de corrección).
 
 ---
 

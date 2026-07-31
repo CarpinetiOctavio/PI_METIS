@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
+import { renderPage } from "../../test/renderPage";
 import { StreamPage } from "./StreamPage";
 import { useAnalysisStream, type StreamState } from "../../api/sse";
 import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
@@ -91,7 +93,7 @@ function renderStreamPage(
     );
   }
 
-  const { unmount, rerender } = render(makeTree());
+  const { unmount, rerender } = renderPage(makeTree());
 
   // Para simular una transición de estado del hook mockeado (ej. el modal
   // cerrándose) — actualiza el mock y vuelve a renderizar un árbol nuevo.
@@ -102,7 +104,7 @@ function renderStreamPage(
       resolveOutlier,
       abort,
     });
-    rerender(makeTree());
+    rerender(<StrictMode>{makeTree()}</StrictMode>);
   }
 
   return { start, resolveOutlier, abort, unmount, rerenderWithState };
@@ -116,9 +118,17 @@ describe("StreamPage", () => {
     expect(screen.getByText("config screen")).toBeInTheDocument();
   });
 
-  it("calls start() once on mount with the form from location.state", () => {
-    const { start } = renderStreamPage();
-    expect(start).toHaveBeenCalledTimes(1);
+  // F1 (docs/frontend/informe-diagnostico-ui-rota.md): esta página se
+  // renderiza bajo StrictMode (renderPage, capa 1 del plan de arreglo)
+  // porque es exactamente el modo en que la app corre en desarrollo. Bajo
+  // el doble montaje de StrictMode, start() puede llamarse dos veces —
+  // costo aceptado y documentado en StreamPage.tsx, la primera pasada se
+  // aborta sola. Lo que este test protege es que, al final, quede
+  // exactamente UN stream vivo (start - abort === 1) y que el form que
+  // llegó a start() sea el correcto.
+  it("calls start() with the form from location.state, leaving exactly one stream open under StrictMode", () => {
+    const { start, abort } = renderStreamPage();
+    expect(start.mock.calls.length - abort.mock.calls.length).toBe(1);
     expect(start.mock.calls[0][0]).toMatchObject({
       columna_x: "anio",
       columna_y: "caudal",
@@ -127,15 +137,19 @@ describe("StreamPage", () => {
 
   // D2 (pasada de mejora): sin esto, navegar fuera de /stream a mitad de un
   // análisis dejaba el fetch SSE vivo y la sesión colgada hasta el timeout de
-  // 300s del backend.
-  it("calls abort() on unmount", () => {
-    const { abort, unmount } = renderStreamPage();
-    expect(abort).not.toHaveBeenCalled();
+  // 300s del backend. F1: bajo StrictMode, abort() ya se llamó una vez antes
+  // del desmontaje real (limpieza fantasma) — lo que importa es que, tras el
+  // desmontaje real, no quede ningún stream vivo sin abortar.
+  it("aborts on unmount, leaving no stream unaccounted for", () => {
+    const { start, abort, unmount } = renderStreamPage();
     unmount();
-    expect(abort).toHaveBeenCalledTimes(1);
+    expect(start.mock.calls.length - abort.mock.calls.length).toBe(0);
   });
 
-  it("shows a pill once a group's tests all arrive, and pending groups show none", () => {
+  // F8 (informe-diagnostico-ui-rota.md): un grupo "pending" ahora muestra una
+  // pill explícita ("esperando resultados") en vez de nada — antes un paso
+  // sin resultados todavía y un botón roto se veían exactamente igual.
+  it("shows a pill once a group's tests all arrive, and an 'esperando resultados' pill while pending", () => {
     renderStreamPage({
       tests: {
         anderson: testResult({ prueba: "anderson" }),
@@ -147,7 +161,8 @@ describe("StreamPage", () => {
     expect(independenciaStep?.querySelector(".pill")).toHaveTextContent("aprobada");
 
     const homogeneidadStep = screen.getByText("Homogeneidad").closest(".step");
-    expect(homogeneidadStep?.querySelector(".pill")).toBeNull();
+    expect(homogeneidadStep?.querySelector(".pill")).toHaveTextContent("esperando resultados");
+    expect(homogeneidadStep).toHaveAttribute("aria-disabled", "true");
   });
 
   it("expands a completed group's detail table on click", () => {
