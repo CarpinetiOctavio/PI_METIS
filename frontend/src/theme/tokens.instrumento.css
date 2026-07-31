@@ -1,7 +1,7 @@
 :root[data-theme="instrumento"] {
-  --f-head: "JetBrains Mono", monospace;
-  --f-body: "JetBrains Mono", monospace;
-  --f-mono: "JetBrains Mono", monospace;
+  --f-head: "JetBrains Mono Variable", "JetBrains Mono", monospace;
+  --f-body: "JetBrains Mono Variable", "JetBrains Mono", monospace;
+  --f-mono: "JetBrains Mono Variable", "JetBrains Mono", monospace;
   --r-sm: 3px;
   --r-md: 4px;
 }
