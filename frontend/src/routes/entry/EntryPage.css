@@ -26,6 +26,35 @@
   font-size: 24px;
 }
 
+/* C3 (plan pasada4 §5) — mismo tratamiento de glow que Fase 3 ya define para
+   .num en oscuro (global.css), aplicado acá al wordmark de la primera
+   pantalla. */
+:root[data-theme="instrumento"][data-mode="dark"] .entry__brand .logo {
+  text-shadow: 0 0 13px color-mix(in srgb, var(--acc) 55%, transparent);
+}
+
+/* Cursor que parpadea — elemento de la identidad Fase 2 (G3) que nunca se
+   implementó. La regla global de prefers-reduced-motion (A3) ya cubre esta
+   animación sin necesidad de una excepción acá. */
+.entry__brand .logo::after {
+  content: "_";
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--acc);
+  animation: blink-cursor 1s steps(1) infinite;
+}
+
+@keyframes blink-cursor {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
 .entry__brand p {
   max-width: 240px;
 }

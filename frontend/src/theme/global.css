@@ -70,6 +70,22 @@ body {
   background-size: 28px 28px;
 }
 
+/* C2 (plan pasada4 §5) — entrada de pantalla al montar cada ruta */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.route-enter {
+  animation: fade-up var(--t-slow) var(--ease-out);
+}
+
 /* Esquinas tipo corchete (HUD) en tarjetas — Instrumento (Fase 3, líneas 145-147) */
 .card {
   position: relative;
