@@ -49,3 +49,6 @@ Thumbs.db
 
 # Commits
 commit_msg.txt
+
+# Worktrees (superpowers:using-git-worktrees)
+.worktrees/
