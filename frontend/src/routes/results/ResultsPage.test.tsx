@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { renderPage } from "../../test/renderPage";
@@ -84,6 +84,7 @@ function renderResultsPage(
         <Routes>
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/config" element={<div>config screen</div>} />
+          <Route path="/ranking" element={<div>ranking screen</div>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -153,5 +154,19 @@ describe("ResultsPage", () => {
     ).toBeInTheDocument();
 
     expect(container.querySelectorAll("details")).toHaveLength(0);
+  });
+
+  // F5 (informe-diagnostico-ui-rota.md): antes ninguna pantalla navegaba a
+  // /ranking — Etapa 2 era inalcanzable salvo tipeando la URL a mano.
+  it("shows a 'Continuar a Etapa 2' button with the PendingBadge, and navigates to /ranking", async () => {
+    renderResultsPage(true, makeResult(), "experto");
+    expect(
+      await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
+    ).toBeInTheDocument();
+
+    expect(screen.getByText("pendiente · datos de ejemplo")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar a Etapa 2 ▸" }));
+
+    expect(await screen.findByText("ranking screen")).toBeInTheDocument();
   });
 });
