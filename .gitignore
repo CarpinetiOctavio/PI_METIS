@@ -49,3 +49,9 @@ Thumbs.db
 
 # Commits
 commit_msg.txt
+
+# Worktrees (superpowers:using-git-worktrees)
+.worktrees/
+
+# Subagent-driven-development progress ledger (scratch, not a deliverable)
+.superpowers/

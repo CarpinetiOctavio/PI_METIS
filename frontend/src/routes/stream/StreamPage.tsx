@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAnalysisStream } from "../../api/sse";
 import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
-import { formatNum } from "../../i18n/format";
+import { CountUp } from "../../components/CountUp";
 import "./StreamPage.css";
 
 interface Group {
@@ -93,6 +93,13 @@ function summarizeGroup(
 // pill — un paso sin resultados todavía y un botón roto se veían exactamente
 // igual (nada). "esperando resultados" dice explícitamente que es un estado
 // normal en curso, no una falla.
+// A5 (plan pasada4 §3): el llamador pasa key={status} — key solo importa
+// para cómo el PADRE reconcilia, así que ponerlo acá adentro no haría nada.
+// Con esa key, React reemplaza el nodo entero en cada transición de estado
+// en vez de mutar el existente, y la animación de entrada que .pill ya trae
+// (components.css) se re-dispara como cross-fade en vez de salto seco. El
+// texto sigue siendo correcto de inmediato en cada render — nada que
+// testear con waitFor.
 function StatusPill({ status }: Readonly<{ status: GroupStatus }>) {
   const kind = status === "active" || status === "pending" ? "wait" : status;
   return <span className={`pill ${kind}`}>{PILL_LABEL[status]}</span>;
@@ -216,7 +223,17 @@ export function StreamPage() {
           mientras el modal de atípico está abierto, para que el foco y el
           lector de pantalla no puedan "escaparse" del diálogo. */}
       <div ref={contentRef} aria-hidden={modalOpen || undefined}>
-        <h1 className="h">Análisis en vivo</h1>
+        <div className="row" style={{ alignItems: "center", marginBottom: 3 }}>
+          <h1 className="h" style={{ margin: 0 }}>
+            Análisis en vivo
+          </h1>
+          {/* A5 (plan pasada4 §3) — el "REC" que la identidad Instrumento
+              especifica (Fase 2, G3): .badge-live existía en el CSS desde
+              antes pero ningún componente lo usaba todavía. */}
+          {state.fase === "streaming" && (
+            <span className="badge-live">en vivo</span>
+          )}
+        </div>
 
         {state.fase === "error" && state.error && (
           <div className="banner crit" role="alert">
@@ -233,7 +250,13 @@ export function StreamPage() {
         {state.fase !== "error" && (
           <>
             <div className="prog" style={{ marginBottom: 20 }}>
-              <i style={{ width: `${progressPct}%` }} />
+              {/* A5 — el highlight que barre en la dirección del avance
+                  mientras la Etapa 1 sigue en curso; la transición de width
+                  ya existía, esto solo se agrega mientras fase==="streaming". */}
+              <i
+                style={{ width: `${progressPct}%` }}
+                className={state.fase === "streaming" ? "prog__live" : undefined}
+              />
             </div>
             <div className="stack">
               {GROUPS.map((group) => {
@@ -263,7 +286,12 @@ export function StreamPage() {
                       onClick={() => toggleGroup(group.key, expandable)}
                     >
                       <div className="node">{status === "ok" ? "✓" : "▸"}</div>
-                      <div style={{ flex: 1 }}>
+                      {/* A5 — key={status}: cuando llega un test_result nuevo
+                          y el grupo cambia de estado, React reemplaza este
+                          nodo en vez de mutarlo, y .step-entrance dispara el
+                          fade-up (components.css). El texto sigue correcto
+                          de inmediato, no hay nada que testear con waitFor. */}
+                      <div style={{ flex: 1 }} className="step-entrance" key={status}>
                         <b>{group.label}</b> <StatusPill status={status} />
                       </div>
                     </button>
@@ -281,8 +309,12 @@ export function StreamPage() {
                           {results.map((t) => (
                             <tr key={t.prueba}>
                               <td>{t.prueba}</td>
-                              <td className="num">{formatNum(t.estadistico)}</td>
-                              <td className="num">{formatNum(t.valor_critico)}</td>
+                              <td className="num">
+                                <CountUp value={t.estadistico} />
+                              </td>
+                              <td className="num">
+                                <CountUp value={t.valor_critico} />
+                              </td>
                               <td>{t.veredicto ?? "—"}</td>
                             </tr>
                           ))}
@@ -334,8 +366,10 @@ export function StreamPage() {
             </h2>
             <p className="sub">
               Chow detectó un valor atípico:{" "}
-              <span className="num">{formatNum(state.outlier.valor_atipico)}</span>. ¿Qué
-              hacemos con este dato?
+              <span className="num">
+                <CountUp value={state.outlier.valor_atipico} />
+              </span>
+              . ¿Qué hacemos con este dato?
             </p>
             <div className="row">
               <button

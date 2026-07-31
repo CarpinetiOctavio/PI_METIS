@@ -1,7 +1,7 @@
 import { StrictMode, type ReactElement } from "react";
 import { render, type RenderResult } from "@testing-library/react";
 
-// Capa 1 de testing (docs/frontend/plan-arreglo-ui-rota.md §4.1): todo test
+// Capa 1 de testing (docs/frontend/plan-arreglo-ui-rota.md §4.1): cada test
 // que renderiza una PÁGINA lo hace bajo StrictMode. Cierra §5.2 del informe
 // de diagnóstico — F1 solo era visible bajo StrictMode (el modo en el que la
 // app corre de verdad en desarrollo), y ningún test lo usaba antes de esto.

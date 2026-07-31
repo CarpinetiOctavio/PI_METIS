@@ -88,6 +88,7 @@
   border: 1px solid transparent;
   font-family: var(--f-body);
   cursor: pointer;
+  transition: transform var(--t-fast) var(--ease-out);
 }
 
 .b:disabled {
@@ -98,12 +99,44 @@
 .b-pri {
   background: var(--acc);
   color: var(--on-acc);
+  box-shadow: 0 0 0 0 transparent;
+  transition:
+    filter var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out);
+}
+
+.b-pri:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 25%, transparent);
+}
+
+.b-pri:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 0 0 transparent;
+}
+
+.b-pri:focus-visible,
+.b-sec:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
 }
 
 .b-sec {
   background: transparent;
   color: var(--ink);
   border-color: var(--line-strong);
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    color var(--t-fast) var(--ease-out);
+}
+
+.b-sec:hover:not(:disabled) {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+.b-sec:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .ct {
@@ -147,10 +180,20 @@
   border-right: 1px solid var(--line);
   cursor: pointer;
   font-family: inherit;
+  transition: background var(--t-fast) var(--ease-out);
 }
 
 .seg button:last-child {
   border-right: 0;
+}
+
+.seg button:hover:not(:disabled):not(.on) {
+  background: var(--acc-soft);
+}
+
+.seg button:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
 }
 
 .seg button.on {
@@ -179,6 +222,22 @@
   background: var(--surf);
   cursor: pointer;
   font-family: inherit;
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--acc);
+}
+
+.chip:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
 }
 
 .chip.on {
@@ -210,6 +269,11 @@
   text-decoration: underline;
 }
 
+.link-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
 .stack > * + * {
   margin-top: 10px;
 }
@@ -224,13 +288,61 @@
   width: 100%;
   appearance: none;
   background: none;
-  border: none;
+  /* border transparente (no `none`) para que el hover solo cambie el color,
+     nunca el tamaño ocupado — con box-sizing: border-box (global.css) no
+     hay layout shift entre estado normal y hover. */
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
   margin: 0;
   padding: 0;
   font: inherit;
   color: inherit;
   text-align: left;
   cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+
+.step:not([aria-disabled="true"]):hover {
+  border-color: var(--line-strong);
+}
+
+/* Esquinas HUD — mismo patrón que .card (global.css), pero invisibles en
+   reposo (0 → 100% de opacidad en hover) para no ensuciar visualmente una
+   lista de varios pasos a la vez. */
+.step::before,
+.step::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--acc);
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease-out);
+}
+
+.step::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.step::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.step:not([aria-disabled="true"]):hover::before,
+.step:not([aria-disabled="true"]):hover::after {
+  opacity: 1;
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
 }
 
 /* F8 (docs/frontend/informe-diagnostico-ui-rota.md): .step ya no usa el
@@ -238,6 +350,14 @@
    cursor "no interactivo" sin el aspecto grisado de un control roto. */
 .step[aria-disabled="true"] {
   cursor: default;
+}
+
+/* A5 (plan pasada4 §3) — entrada de pasos del timeline: cuando llega un
+   test_result nuevo, el paso correspondiente hace fade-up. StreamPage.tsx
+   le da key={status} a este wrapper para que se remonte (y así se
+   re-dispare la animación) en cada transición de estado del grupo. */
+.step-entrance {
+  animation: fade-up var(--t-mid) var(--ease-out);
 }
 
 .step .node {
@@ -290,7 +410,34 @@
   height: 100%;
   background: var(--acc);
   border-radius: 6px;
-  transition: width 0.4s ease;
+  /* Era `0.4s ease` hardcodeado — fuera del radar del grep de A2 (busca
+     cubic-bezier/Nms, no Ns), pero la misma regla aplica: nada de duración
+     hardcodeada fuera de tokens.instrumento.css. */
+  transition: width var(--t-slow) var(--ease-out);
+}
+
+/* A5 (plan pasada4 §3) — highlight que barre en la dirección del avance
+   mientras la Etapa 1 sigue en curso (StreamPage.tsx aplica esta clase solo
+   con fase==="streaming"). */
+.prog i.prog__live {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--on-acc) 55%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 60% 100%;
+  background-repeat: no-repeat;
+  animation: prog-sweep 1.4s linear infinite;
+}
+
+@keyframes prog-sweep {
+  from {
+    background-position: -60% 0;
+  }
+  to {
+    background-position: 160% 0;
+  }
 }
 
 .pill {
@@ -301,6 +448,20 @@
   border-radius: 12px;
   font-size: 10.5px;
   font-weight: 700;
+  /* A5 (plan pasada4 §3) — "calculando… → aprobada/warning/crítico" con
+     cross-fade, no salto seco. Se dispara sola en cada montaje; el llamador
+     (StreamPage.tsx) le da key={status} para que cambie de nodo, no de
+     atributos, en cada transición de estado. */
+  animation: pill-fade var(--t-mid) var(--ease-out);
+}
+
+@keyframes pill-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .pill::before {

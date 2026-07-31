@@ -168,9 +168,9 @@ describe("TopBar", () => {
     stubFetch();
 
     renderTopBar();
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Salir" })).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole("button", { name: "Salir" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Salir" }));
 
