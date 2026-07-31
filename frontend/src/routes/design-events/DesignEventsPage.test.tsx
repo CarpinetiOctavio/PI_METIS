@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
+import { renderPage } from "../../test/renderPage";
 import { DesignEventsPage } from "./DesignEventsPage";
 import { designEventsMock } from "../../mocks/designEvents.mock";
 
@@ -41,7 +42,7 @@ function stubFetch(authed: boolean) {
 }
 
 function renderDesignEvents() {
-  return render(
+  return renderPage(
     <MemoryRouter initialEntries={["/design-events"]}>
       <AuthProvider>
         <Routes>

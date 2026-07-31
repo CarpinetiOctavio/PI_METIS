@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
+import { renderPage } from "../../test/renderPage";
 import { RankingPage } from "./RankingPage";
 
 function DesignEventsProbe() {
@@ -9,7 +10,7 @@ function DesignEventsProbe() {
 }
 
 function renderRankingPage() {
-  return render(
+  return renderPage(
     <MemoryRouter initialEntries={["/ranking"]}>
       <Routes>
         <Route path="/ranking" element={<RankingPage />} />

@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { renderPage } from "../../test/renderPage";
 import { AuthVerifyPage } from "./AuthVerifyPage";
 
 function renderAt(path: string) {
-  return render(
+  return renderPage(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/auth/verify" element={<AuthVerifyPage />} />

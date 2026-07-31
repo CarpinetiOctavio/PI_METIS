@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { renderPage } from "../../test/renderPage";
 import { HistoryDetailPage } from "./HistoryDetailPage";
 import type { AnalysisDetail } from "../../api/types";
 
@@ -40,7 +41,7 @@ function makeDetail(overrides: Partial<AnalysisDetail> = {}): AnalysisDetail {
 }
 
 function renderDetail(id = "an-1") {
-  return render(
+  return renderPage(
     <MemoryRouter initialEntries={[`/history/${id}`]}>
       <Routes>
         <Route path="/history/:id" element={<HistoryDetailPage />} />

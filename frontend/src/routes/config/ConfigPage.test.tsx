@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
+import { renderPage } from "../../test/renderPage";
 import { ConfigPage } from "./ConfigPage";
 import type { AnalysisStreamForm } from "../../api/types";
 
@@ -23,7 +24,7 @@ function stubMe(ok: boolean, body: unknown = {}) {
 }
 
 function renderConfigPage() {
-  return render(
+  return renderPage(
     <MemoryRouter initialEntries={["/config"]}>
       <AuthProvider>
         <Routes>

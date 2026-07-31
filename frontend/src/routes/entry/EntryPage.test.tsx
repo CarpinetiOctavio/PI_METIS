@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
+import { renderPage } from "../../test/renderPage";
 import { EntryPage } from "./EntryPage";
 
 function stubFetch(
@@ -24,7 +25,7 @@ function stubFetch(
 }
 
 function renderEntryPage() {
-  return render(
+  return renderPage(
     <MemoryRouter initialEntries={["/"]}>
       <AuthProvider>
         <Routes>

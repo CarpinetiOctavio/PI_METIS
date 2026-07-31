@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
+import { renderPage } from "../../test/renderPage";
 import { ResultsPage } from "./ResultsPage";
 import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
 
@@ -71,7 +72,7 @@ function renderResultsPage(
     stubMe(false);
   }
 
-  return render(
+  return renderPage(
     <MemoryRouter
       initialEntries={[
         result

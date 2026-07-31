@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { renderPage } from "../../test/renderPage";
 import { HistoryPage } from "./HistoryPage";
 import type { HistoryItem } from "../../api/types";
 
@@ -26,7 +27,7 @@ function makeItems(n: number): HistoryItem[] {
 }
 
 function renderHistoryPage() {
-  return render(
+  return renderPage(
     <MemoryRouter initialEntries={["/history"]}>
       <Routes>
         <Route path="/history" element={<HistoryPage />} />
