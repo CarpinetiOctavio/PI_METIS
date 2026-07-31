@@ -85,6 +85,37 @@ describe("EntryPage", () => {
     );
   });
 
+  // F3 (informe-diagnostico-ui-rota.md): antes, si POST /auth/login
+  // respondía 200 pero el GET /auth/me posterior no confirmaba la sesión
+  // (acá /me devuelve 401 tanto antes como después del login — nunca hay
+  // sesión real), login() resolvía igual sin lanzar. Desde la UI eso se veía
+  // como "aprieto Ingresar y no pasa nada": sin banner, sin redirect, sin
+  // pista de qué falló. Ahora un banner explícito.
+  it("shows a legible error banner when login succeeds but the session can't be confirmed", async () => {
+    stubFetch({
+      "/auth/me": { ok: false, status: 401, body: {} },
+      "/auth/login": { ok: true, status: 200, body: { ok: true } },
+    });
+    renderEntryPage();
+    expect(
+      await screen.findByRole("heading", { name: "Iniciar sesión" }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Email institucional"), {
+      target: { value: "a@ucc.edu.ar" },
+    });
+    fireEvent.change(screen.getByLabelText("Contraseña"), {
+      target: { value: "correctpass" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "El login fue aceptado pero no se pudo abrir la sesión. Revisá la conexión con el backend.",
+    );
+    // No quedó "colgado": el botón sigue siendo clickeable, no en isSubmitting.
+    expect(screen.getByRole("button", { name: "Ingresar" })).toBeEnabled();
+  });
+
   it("shows the success message after a successful registration", async () => {
     stubFetch({
       "/auth/me": { ok: false, status: 401, body: {} },

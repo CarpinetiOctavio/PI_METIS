@@ -310,10 +310,15 @@ STREAM_CLOSED_EARLY       Sintetizado por api/sse.ts::onclose cuando el servidor
                            cierra la conexión sin haber emitido `complete` antes —
                            sin esto la fase quedaba en "streaming"/"waiting_outlier"
                            para siempre y en silencio (F1, informe-diagnostico-ui-rota.md).
+SESSION_NOT_ESTABLISHED   Sintetizado por auth/AuthProvider.tsx::login cuando
+                           POST /auth/login respondió 200 pero el GET /auth/me
+                           posterior no pudo confirmar la sesión — antes login()
+                           resolvía igual sin lanzar, y el botón se veía "muerto"
+                           (F3, informe-diagnostico-ui-rota.md).
 ```
-Estos tres no tienen contraparte en `core/`/`services/` porque describen condiciones
+Estos cuatro no tienen contraparte en `core/`/`services/` porque describen condiciones
 que solo el cliente puede detectar (fallo de red, 422 sin `codigo` propio del
-backend, cierre de conexión sin `complete`) — no es un gap de sincronización, es
+backend, cierre de conexión sin `complete`, login aceptado sin sesión confirmada) — no es un gap de sincronización, es
 el catálogo reconociendo que no todo código de error se origina en el servidor.
 Los dos primeros se agregaron en el addendum del 29/07/2026 de
 `docs/decisiones/decision038.md` — DECISIÓN 038, que también deja la regla
