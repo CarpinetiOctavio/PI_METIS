@@ -98,28 +98,39 @@ export function StreamPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { start, state, resolveOutlier, abort } = useAnalysisStream();
-  const startedRef = useRef(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
 
   const form = (location.state as { form?: AnalysisStreamForm } | null)?.form;
+  // El form se congela en el primer render: location.state es estable dentro
+  // de una misma entrada del historial, pero no queremos reintentar el
+  // análisis si cambia la referencia. StreamPage lo consume una sola vez.
+  const formRef = useRef(form);
 
+  // F1 (docs/frontend/informe-diagnostico-ui-rota.md): un solo efecto, con
+  // la limpieza en el MISMO efecto que arranca. En el doble montaje de
+  // StrictMode se aborta el primer stream y la segunda pasada arranca uno
+  // nuevo — eso es lo correcto. La versión anterior separaba "arrancar" de
+  // "limpiar" en dos efectos con una guarda `startedRef`: la limpieza fantasma
+  // de StrictMode abortaba el stream recién abierto, y la segunda pasada de
+  // montaje salía por la guarda sin volver a arrancarlo — cero streams vivos.
+  //
+  // Costo aceptado y explícito: en desarrollo, StrictMode dispara dos veces
+  // POST /analysis/stream; el primero se aborta a los pocos milisegundos y
+  // el backend limpia esa sesión en el `finally` de stream_etapa1 — no queda
+  // basura. En producción StrictMode no corre.
   useEffect(() => {
-    if (!form) {
+    const f = formRef.current;
+    if (!f) {
       navigate("/config", { replace: true });
       return;
     }
-    if (startedRef.current) return;
-    startedRef.current = true;
-    start(form);
-  }, [form, start, navigate]);
-
-  useEffect(() => {
+    start(f);
     // Si el usuario navega a mitad de stream, sin esto el fetch queda vivo
     // (setState sobre componente desmontado) y la sesión queda colgada hasta
     // el timeout de 300s en session_store del backend.
     return () => abort();
-  }, [abort]);
+  }, [start, abort, navigate]);
 
   const modalOpen = state.fase === "waiting_outlier" && Boolean(state.outlier);
   const contentRef = useRef<HTMLDivElement>(null);

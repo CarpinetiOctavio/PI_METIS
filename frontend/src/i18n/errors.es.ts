@@ -56,6 +56,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "Se agotó el tiempo de espera para decidir sobre el dato atípico.",
   STREAM_CONNECTION_ERROR:
     "Se perdió la conexión con el servidor durante el análisis.",
+  STREAM_CLOSED_EARLY:
+    "El servidor cerró la conexión antes de terminar el análisis.",
 };
 
 const FALLBACK_TEXT = "Ocurrió un error inesperado. Probá de nuevo.";
