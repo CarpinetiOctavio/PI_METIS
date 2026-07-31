@@ -1,5 +1,6 @@
 import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
 import { formatInt, formatNum } from "../../i18n/format";
+import { CountUp } from "../../components/CountUp";
 import "./Etapa1ResultView.css";
 
 interface Group {
@@ -63,8 +64,12 @@ function GroupTable({ items }: Readonly<{ items: TestResultDetail[] }>) {
         {items.map((t) => (
           <tr key={t.prueba}>
             <td>{t.prueba}</td>
-            <td className="num">{formatNum(t.estadistico)}</td>
-            <td className="num">{formatNum(t.valor_critico)}</td>
+            <td className="num">
+              <CountUp value={t.estadistico} />
+            </td>
+            <td className="num">
+              <CountUp value={t.valor_critico} />
+            </td>
             <td>
               {t.veredicto ?? "—"}
               {/* D6 (pasada de mejora): antes renderizaba literalmente

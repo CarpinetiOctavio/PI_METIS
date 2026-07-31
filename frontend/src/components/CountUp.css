@@ -1,0 +1,25 @@
+.count-up {
+  position: relative;
+  display: inline-block;
+}
+
+.count-up__overlay {
+  display: none;
+}
+
+/* Mientras cuenta: el texto real queda invisible pero sigue en el DOM
+   (nunca display:none — el layout no debe saltar), y el overlay decorativo
+   se muestra encima con el valor interpolado del cuadro actual. */
+.count-up--animating .count-up__real {
+  opacity: 0;
+}
+
+.count-up--animating .count-up__overlay {
+  display: inline-block;
+  position: absolute;
+  inset: 0;
+}
+
+.count-up--animating .count-up__overlay::before {
+  content: attr(data-count);
+}

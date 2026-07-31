@@ -1,4 +1,7 @@
 // Compartido por DotFieldBackground y GridScanBackground.
+import { prefersReducedMotion } from "../motion";
+
+export { prefersReducedMotion };
 
 /** --acc/--line etc. siempre son hex en tokens.instrumento.css — sin eso
  * color-mix() no está disponible dentro de un contexto Canvas 2D. */
@@ -23,10 +26,6 @@ export function readCssVar(name: string, fallback: string): string {
     .getPropertyValue(name)
     .trim();
   return value || fallback;
-}
-
-export function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /** DPR + tamaño del contenedor — evita el fondo borroso en pantallas HiDPI

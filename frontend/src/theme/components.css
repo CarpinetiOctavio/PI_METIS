@@ -352,6 +352,14 @@
   cursor: default;
 }
 
+/* A5 (plan pasada4 §3) — entrada de pasos del timeline: cuando llega un
+   test_result nuevo, el paso correspondiente hace fade-up. StreamPage.tsx
+   le da key={status} a este wrapper para que se remonte (y así se
+   re-dispare la animación) en cada transición de estado del grupo. */
+.step-entrance {
+  animation: fade-up var(--t-mid) var(--ease-out);
+}
+
 .step .node {
   width: 26px;
   height: 26px;
@@ -402,7 +410,34 @@
   height: 100%;
   background: var(--acc);
   border-radius: 6px;
-  transition: width 0.4s ease;
+  /* Era `0.4s ease` hardcodeado — fuera del radar del grep de A2 (busca
+     cubic-bezier/Nms, no Ns), pero la misma regla aplica: nada de duración
+     hardcodeada fuera de tokens.instrumento.css. */
+  transition: width var(--t-slow) var(--ease-out);
+}
+
+/* A5 (plan pasada4 §3) — highlight que barre en la dirección del avance
+   mientras la Etapa 1 sigue en curso (StreamPage.tsx aplica esta clase solo
+   con fase==="streaming"). */
+.prog i.prog__live {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--on-acc) 55%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 60% 100%;
+  background-repeat: no-repeat;
+  animation: prog-sweep 1.4s linear infinite;
+}
+
+@keyframes prog-sweep {
+  from {
+    background-position: -60% 0;
+  }
+  to {
+    background-position: 160% 0;
+  }
 }
 
 .pill {
@@ -413,6 +448,20 @@
   border-radius: 12px;
   font-size: 10.5px;
   font-weight: 700;
+  /* A5 (plan pasada4 §3) — "calculando… → aprobada/warning/crítico" con
+     cross-fade, no salto seco. Se dispara sola en cada montaje; el llamador
+     (StreamPage.tsx) le da key={status} para que cambie de nodo, no de
+     atributos, en cada transición de estado. */
+  animation: pill-fade var(--t-mid) var(--ease-out);
+}
+
+@keyframes pill-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .pill::before {
