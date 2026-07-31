@@ -88,6 +88,7 @@
   border: 1px solid transparent;
   font-family: var(--f-body);
   cursor: pointer;
+  transition: transform var(--t-fast) var(--ease-out);
 }
 
 .b:disabled {
@@ -98,12 +99,44 @@
 .b-pri {
   background: var(--acc);
   color: var(--on-acc);
+  box-shadow: 0 0 0 0 transparent;
+  transition:
+    filter var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out);
+}
+
+.b-pri:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 25%, transparent);
+}
+
+.b-pri:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 0 0 transparent;
+}
+
+.b-pri:focus-visible,
+.b-sec:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
 }
 
 .b-sec {
   background: transparent;
   color: var(--ink);
   border-color: var(--line-strong);
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    color var(--t-fast) var(--ease-out);
+}
+
+.b-sec:hover:not(:disabled) {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+.b-sec:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .ct {
@@ -147,10 +180,20 @@
   border-right: 1px solid var(--line);
   cursor: pointer;
   font-family: inherit;
+  transition: background var(--t-fast) var(--ease-out);
 }
 
 .seg button:last-child {
   border-right: 0;
+}
+
+.seg button:hover:not(:disabled):not(.on) {
+  background: var(--acc-soft);
+}
+
+.seg button:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
 }
 
 .seg button.on {
@@ -179,6 +222,22 @@
   background: var(--surf);
   cursor: pointer;
   font-family: inherit;
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--acc);
+}
+
+.chip:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
 }
 
 .chip.on {
@@ -210,6 +269,11 @@
   text-decoration: underline;
 }
 
+.link-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
 .stack > * + * {
   margin-top: 10px;
 }
@@ -224,13 +288,61 @@
   width: 100%;
   appearance: none;
   background: none;
-  border: none;
+  /* border transparente (no `none`) para que el hover solo cambie el color,
+     nunca el tamaño ocupado — con box-sizing: border-box (global.css) no
+     hay layout shift entre estado normal y hover. */
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
   margin: 0;
   padding: 0;
   font: inherit;
   color: inherit;
   text-align: left;
   cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+
+.step:not([aria-disabled="true"]):hover {
+  border-color: var(--line-strong);
+}
+
+/* Esquinas HUD — mismo patrón que .card (global.css), pero invisibles en
+   reposo (0 → 100% de opacidad en hover) para no ensuciar visualmente una
+   lista de varios pasos a la vez. */
+.step::before,
+.step::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--acc);
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease-out);
+}
+
+.step::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.step::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.step:not([aria-disabled="true"]):hover::before,
+.step:not([aria-disabled="true"]):hover::after {
+  opacity: 1;
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
 }
 
 /* F8 (docs/frontend/informe-diagnostico-ui-rota.md): .step ya no usa el
