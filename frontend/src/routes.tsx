@@ -9,7 +9,7 @@ import { DesignEventsPage } from "./routes/design-events/DesignEventsPage";
 import { HistoryPage } from "./routes/history/HistoryPage";
 import { HistoryDetailPage } from "./routes/history/HistoryDetailPage";
 import { AuthVerifyPage } from "./routes/auth-verify/AuthVerifyPage";
-import { RedirectIfAuthed, RequireAuth } from "./auth/guards";
+import { RedirectIfAuthed, RequireAuth, RequireSession } from "./auth/guards";
 
 export const routes: RouteObject[] = [
   {
@@ -23,11 +23,46 @@ export const routes: RouteObject[] = [
           </RedirectIfAuthed>
         ),
       },
-      { path: "/config", element: <ConfigPage /> },
-      { path: "/stream", element: <StreamPage /> },
-      { path: "/results", element: <ResultsPage /> },
-      { path: "/ranking", element: <RankingPage /> },
-      { path: "/design-events", element: <DesignEventsPage /> },
+      {
+        path: "/config",
+        element: (
+          <RequireSession>
+            <ConfigPage />
+          </RequireSession>
+        ),
+      },
+      {
+        path: "/stream",
+        element: (
+          <RequireSession>
+            <StreamPage />
+          </RequireSession>
+        ),
+      },
+      {
+        path: "/results",
+        element: (
+          <RequireSession>
+            <ResultsPage />
+          </RequireSession>
+        ),
+      },
+      {
+        path: "/ranking",
+        element: (
+          <RequireSession>
+            <RankingPage />
+          </RequireSession>
+        ),
+      },
+      {
+        path: "/design-events",
+        element: (
+          <RequireSession>
+            <DesignEventsPage />
+          </RequireSession>
+        ),
+      },
       {
         path: "/history",
         element: (
