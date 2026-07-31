@@ -1,6 +1,6 @@
 # DECISIÓN 045 — Fondos animados en Canvas 2D sin dependencias, WebGL descartado
 **Fecha:** 31 de Julio de 2026
-**Estado:** Decidida — implementación en curso (Bloque B, pasada 4)
+**Estado:** Implementada, bundle medido — falta verificación visual final (Bloque G, cierre de PR1)
 
 ### Contexto
 `docs/frontend/plan-mejora-frontend-pasada4.md` (G3) encontró que la identidad
@@ -46,13 +46,19 @@ arrancar el loop, cancelar `requestAnimationFrame` en la limpieza del efecto
 pestaña oculta, escalar por `devicePixelRatio`.
 
 ### Costo en bundle — medido
-Comparación de `npm run build` antes (commit `9f6d5f5`, A1-A4 sin fondos) y
-después de implementar B2/B3 (Canvas 2D, cero dependencias nuevas — la única
-adición de `package.json` en toda la pasada hasta este punto fue
-`@fontsource-variable/jetbrains-mono` en A1, ya contabilizada). Como no se
-agrega ninguna librería para los fondos, el costo es exactamente el peso del
-código propio de `DotFieldBackground.tsx`/`GridScanBackground.tsx` — sin
-overhead de dependencia externa. Cifras exactas en el commit que cierra B7.
+`npm run build` antes (commit `2cc3ef9`, A1-A4 + esta decisión, sin fondos
+todavía cableados) vs. después de B2/B3 (DotFieldBackground +
+GridScanBackground + canvasUtils, montados en RootLayout/EntryPage):
+
+| | Antes | Después | Delta |
+|---|---|---|---|
+| JS (gzip) | 79.07 KB | 80.44 KB | **+1.37 KB** |
+| CSS (gzip) | 6.09 KB | 6.09 KB | sin cambio |
+
+Muy por debajo del presupuesto de 8 KB gzip (B7). `frontend/package.json` no
+ganó ninguna dependencia nueva — el delta es exactamente el peso del código
+propio de los dos componentes y `canvasUtils.ts`, sin overhead de librería
+externa, confirmando la premisa de esta decisión.
 
 ### Criterio de hecho
 - `frontend/package.json` no gana ninguna dependencia nueva por los fondos

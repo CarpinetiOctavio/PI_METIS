@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { register as registerRequest } from "../../api/auth";
 import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
+import { GridScanBackground } from "../../theme/backgrounds/GridScanBackground";
 import "./EntryPage.css";
 
 type Mode = "login" | "register";
@@ -13,6 +14,7 @@ export function EntryPage() {
 
   return (
     <>
+      <GridScanBackground />
       {/* Encabezado accesible único de la pantalla — el título visible de cada
           formulario (h3 "Iniciar sesión" / "Crear cuenta") vive más abajo,
           fiel a la variante A del prototipo. */}
