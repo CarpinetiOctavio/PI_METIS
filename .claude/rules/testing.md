@@ -76,6 +76,62 @@ def test_regresion_etapa1(estacion):
 
 ---
 
+## Testing del frontend
+
+Estrategia separada de los cuatro niveles de arriba — esos son el compromiso
+del anteproyecto para el motor estadístico del backend. El frontend tiene su
+propia estrategia en capas, escrita como consecuencia directa de
+`docs/frontend/informe-diagnostico-ui-rota.md`: dos PRs de frontend se
+mergearon a `staging` con CI verde y 98 tests en verde, y la aplicación
+estaba rota en uso real (F1 — el stream se abortaba a sí mismo bajo
+`StrictMode`, el único modo en que la app corre de verdad en desarrollo, y
+ningún test lo ejercitaba). El plan completo de arreglo, con la
+justificación detallada de cada capa, vive en
+`docs/frontend/plan-arreglo-ui-rota.md` §4.
+
+### Capa 1 — unitarios, bajo StrictMode por regla
+
+`vitest` + Testing Library, un solo mecanismo de mock de red en toda la
+suite (`vi.stubGlobal("fetch", ...)` / `vi.mock("@microsoft/fetch-event-source")`
+— MSW queda reservado al navegador de dev, nunca a un test, ver DECISIÓN
+041). Todo test que renderiza una **página completa** lo hace envuelto en
+`<StrictMode>` vía el helper `frontend/src/test/renderPage.tsx` — no opcional
+por archivo, es la regla desde `fix/frontend-ui-integracion`. Antes de esto,
+`grep -rn "StrictMode" frontend/src` devolvía una sola coincidencia
+(`main.tsx`) — el modo en que la app corre en desarrollo no estaba cubierto
+por ningún test, y F1 vivía exactamente ahí.
+
+### Capa 2 — integración, componente + hook reales
+
+La capa que faltaba entre "mockeo el hook entero" (`StreamPage.test.tsx`) y
+"testeo el hook sin ningún componente" (`sse.test.ts`) — F1 vivía en esa
+franja. `StreamPage.integration.test.tsx` monta el componente y el hook
+reales, con la red interceptada únicamente en el borde
+(`@microsoft/fetch-event-source` mockeado, no MSW — logra lo mismo que el
+plan original proponía con MSW-sobre-Node sin apartarse del patrón único de
+mock de la Capa 1). `routes.navigation.test.tsx` recorre con clicks el
+array `routes` REAL (no rutas de mentira por archivo) — con ese patrón,
+"¿existe algún camino de clicks que lleve a `/history`?" pasó de ser una
+pregunta imposible de formular a un test real.
+
+### Capa 3 — E2E con Playwright contra Docker (no implementada, requiere decisión)
+
+Propuesta por el plan de arreglo para los defectos que solo son detectables
+con el sistema completo corriendo junto (F1, F4, F5, F6, F9 del informe de
+diagnóstico). Contradice `constraints.md` — "Scope V1.0 — lo que NO entra"
+excluye explícitamente los tests E2E automatizados. **No implementar sin
+escribir primero `docs/decisiones/decision046.md`** revisando esa exclusión.
+
+### Capa 4 — cambio de proceso (gratis, y la que más importa)
+
+Definition of done para todo PR que toque `frontend/`: evidencia de haber
+corrido el flujo en el navegador después del último commit del PR (captura
+o log de la pestaña Network). Ninguna herramienta automática iba a avisar
+que `c27d6ac` rompió el stream después de que la verificación manual previa
+lo diera por bueno — una casilla en la plantilla de PR, sí.
+
+---
+
 ## Análisis estático (también obligatorio)
 
 ```bash
