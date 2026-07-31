@@ -1,7 +1,8 @@
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useTheme } from "../theme/ThemeProvider";
 import { useBackendPing } from "../api/useBackendPing";
 import { useAuth } from "../auth/AuthProvider";
+import "./TopBar.css";
 
 const MODE_LABEL: Record<"light" | "dark", string> = {
   light: "Claro",
@@ -13,6 +14,10 @@ const BACKEND_LABEL: Record<"loading" | "ok" | "error", string> = {
   ok: "Backend conectado",
   error: "Backend no disponible",
 };
+
+function navLinkClassName({ isActive }: { isActive: boolean }): string {
+  return `topbar__link${isActive ? " topbar__link--active" : ""}`;
+}
 
 export function TopBar() {
   const { mode, toggleMode } = useTheme();
@@ -34,37 +39,75 @@ export function TopBar() {
   }
 
   return (
-    <header
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 20px",
-        borderBottom: "1px solid var(--line)",
-      }}
-    >
-      <span style={{ fontWeight: 700, letterSpacing: "0.5px" }}>METIS</span>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <span data-testid="backend-status">{BACKEND_LABEL[state]}</span>
-        {(isAuthed || isAnonymous) && <Link to="/config">Nuevo análisis</Link>}
+    <header className="topbar">
+      <span className="logo">METIS</span>
+
+      <nav className="topbar__nav">
+        {(isAuthed || isAnonymous) && (
+          <NavLink to="/config" className={navLinkClassName}>
+            Nuevo análisis
+          </NavLink>
+        )}
+        {isAuthed && user && (
+          <NavLink to="/history" className={navLinkClassName}>
+            Historial
+          </NavLink>
+        )}
+      </nav>
+
+      <div className="topbar__indicators">
+        {/* C1 (G5): el estado deja de comunicarse solo por color — el texto
+            de BACKEND_LABEL sigue presente siempre, el punto es un refuerzo
+            visual, no el único portador de la información (regla de
+            accesibilidad de Fase 2, la misma que rige A4). */}
+        <span
+          className={`topbar__status${state === "ok" ? " badge-live" : ""}`}
+          data-testid="backend-status"
+        >
+          {state !== "ok" && (
+            <span
+              className={`topbar__dot topbar__dot--${state}`}
+              aria-hidden="true"
+            />
+          )}
+          {BACKEND_LABEL[state]}
+        </span>
+
         {isAuthed && user && (
           <>
-            <Link to="/history">Historial</Link>
-            <span data-testid="user-email">{user.email}</span>
-            <button type="button" onClick={() => void handleLogout()}>
+            <span className="topbar__sep" aria-hidden="true" />
+            <span data-testid="user-email" className="fn">
+              {user.email}
+            </span>
+            <button type="button" className="link-btn" onClick={() => void handleLogout()}>
               Cerrar sesión
             </button>
           </>
         )}
         {isAnonymous && !isAuthed && (
-          <button type="button" onClick={handleExitAnonymous}>
-            Salir
-          </button>
+          <>
+            <span className="topbar__sep" aria-hidden="true" />
+            <button type="button" className="link-btn" onClick={handleExitAnonymous}>
+              Salir
+            </button>
+          </>
         )}
-        <span data-testid="mode-badge">{MODE_LABEL[mode]}</span>
-        <button type="button" onClick={toggleMode}>
-          Cambiar tema
-        </button>
+
+        <span className="topbar__sep" aria-hidden="true" />
+
+        <span className="topbar__theme-toggle">
+          <span data-testid="mode-badge" className="fn">
+            {MODE_LABEL[mode]}
+          </span>
+          <button
+            type="button"
+            className="topbar__toggle-btn"
+            aria-label="Cambiar tema"
+            onClick={toggleMode}
+          >
+            <span className="topbar__toggle-knob" />
+          </button>
+        </span>
       </div>
     </header>
   );

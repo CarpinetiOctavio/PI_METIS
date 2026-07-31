@@ -1,0 +1,123 @@
+/* C1 (plan pasada4 §5, G5) — TopBar rehecha dentro del design system. Antes
+   era el único componente de src/ maquetado enteramente con style={{...}}
+   inline, sin una sola clase de components.css. */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: 24px;
+  margin-right: auto;
+}
+
+.topbar__link {
+  color: var(--mut);
+  text-decoration: none;
+  font-size: 13px;
+  padding: 3px 1px;
+  border-bottom: 2px solid transparent;
+  transition:
+    color var(--t-fast) var(--ease-out),
+    border-color var(--t-fast) var(--ease-out);
+}
+
+.topbar__link:hover {
+  color: var(--ink);
+}
+
+.topbar__link:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.topbar__link--active {
+  color: var(--acc);
+  border-bottom-color: var(--acc);
+  font-weight: 600;
+}
+
+.topbar__indicators {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--mut);
+}
+
+.topbar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mut);
+  flex-shrink: 0;
+}
+
+.topbar__dot--error {
+  background: var(--crit);
+}
+
+.topbar__sep {
+  width: 1px;
+  height: 14px;
+  background: var(--line);
+}
+
+/* Toggle de tema de dos estados — reemplaza el botón "Cambiar tema" suelto.
+   El nombre accesible ("Cambiar tema") vive en aria-label, no en texto
+   visible: TopBar.test.tsx lo busca por /cambiar tema/i como nombre de
+   rol, y sigue siendo válido aunque el control ya no muestre esas palabras. */
+.topbar__theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar__toggle-btn {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  width: 34px;
+  height: 18px;
+  padding: 2px;
+  background: var(--surf2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+
+.topbar__toggle-btn:hover {
+  border-color: var(--acc);
+}
+
+.topbar__toggle-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.topbar__toggle-knob {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--acc);
+  transform: translateX(0);
+  transition: transform var(--t-fast) var(--ease-out);
+}
+
+:root[data-mode="dark"] .topbar__toggle-knob {
+  transform: translateX(16px);
+}
