@@ -48,9 +48,7 @@ async def archive_history_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    ok = await archive_analysis(
-        analysis_id=analysis_id, user_id=current_user.id, db=db
-    )
+    ok = await archive_analysis(analysis_id=analysis_id, user_id=current_user.id, db=db)
     if not ok:
         raise HTTPException(status_code=404, detail="Análisis no encontrado")
     return {"ok": True}
