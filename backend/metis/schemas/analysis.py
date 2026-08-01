@@ -43,6 +43,20 @@ class OutlierDecisionResponse(BaseModel):
     pipeline_continua: bool
 
 
+# --- Response: POST /analysis/preview-columns (DECISIÓN 047) ---
+
+
+class ColumnaPreview(BaseModel):
+    nombre: str
+    indice: int
+    muestra: list[str]
+
+
+class PreviewColumnsResponse(BaseModel):
+    columnas: list[ColumnaPreview]
+    filas: int
+
+
 # --- Payloads de eventos SSE ---
 
 
