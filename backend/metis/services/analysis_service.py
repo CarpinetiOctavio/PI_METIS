@@ -1,6 +1,7 @@
 import json
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -457,12 +458,12 @@ async def get_analysis_by_id(
 async def get_history(
     user_id: uuid.UUID,
     db: AsyncSession,
+    incluir_archivados: bool = False,
 ) -> list[dict]:
-    stmt = (
-        select(Analysis)
-        .where(Analysis.user_id == user_id)
-        .order_by(Analysis.created_at.desc())
-    )
+    stmt = select(Analysis).where(Analysis.user_id == user_id)
+    if not incluir_archivados:
+        stmt = stmt.where(Analysis.archivado_at.is_(None))
+    stmt = stmt.order_by(Analysis.created_at.desc())
     rows = (await db.execute(stmt)).scalars().all()
     return [
         {
@@ -471,6 +472,41 @@ async def get_history(
             "modo": a.modo,
             "etapas": a.etapas,
             "created_at": a.created_at.isoformat(),
+            "archivado_at": a.archivado_at.isoformat() if a.archivado_at else None,
         }
         for a in rows
     ]
+
+
+async def archive_analysis(
+    analysis_id: uuid.UUID,
+    user_id: uuid.UUID,
+    db: AsyncSession,
+) -> bool:
+    """Marca un análisis como archivado. Retorna False si no existe o no pertenece al usuario."""
+    stmt = select(Analysis).where(
+        Analysis.id == analysis_id, Analysis.user_id == user_id
+    )
+    analysis = (await db.execute(stmt)).scalar_one_or_none()
+    if analysis is None:
+        return False
+    analysis.archivado_at = datetime.utcnow()
+    await db.commit()
+    return True
+
+
+async def unarchive_analysis(
+    analysis_id: uuid.UUID,
+    user_id: uuid.UUID,
+    db: AsyncSession,
+) -> bool:
+    """Revierte el archivado de un análisis. Retorna False si no existe o no pertenece al usuario."""
+    stmt = select(Analysis).where(
+        Analysis.id == analysis_id, Analysis.user_id == user_id
+    )
+    analysis = (await db.execute(stmt)).scalar_one_or_none()
+    if analysis is None:
+        return False
+    analysis.archivado_at = None
+    await db.commit()
+    return True

@@ -171,6 +171,59 @@ addendum.
 
 ---
 
+### GET /api/v1/history/
+
+**Agregado el parámetro `archivados` en DECISIÓN 048 (pasada 4, Bloque E)** —
+por defecto excluye los análisis archivados; `?archivados=true` los incluye.
+Cada item del array ahora expone `archivado_at` (`null` si no está archivado).
+
+**Auth:** JWT en HttpOnly Cookie (requerido)
+
+**Response 200:**
+```json
+[
+  {
+    "id": "uuid",
+    "tipo_variable": "otro",
+    "modo": "experto",
+    "etapas": ["1"],
+    "created_at": "2026-07-31T01:19:27.556471",
+    "archivado_at": null
+  }
+]
+```
+
+---
+
+### POST /api/v1/history/{id}/archive
+
+**Agregado en DECISIÓN 048 (pasada 4, Bloque E)** — soft-delete de un
+análisis: marca `archivado_at` con la fecha/hora actual. No borra la fila
+— ver `docs/decisiones/decision048.md` para la justificación (trazabilidad
+de auditoría, `constraints.md`).
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Verifica pertenencia
+(`user_id`) igual que `GET /history/{id}` — un análisis ajeno responde 404,
+no 403 (no se revela si el id existe).
+
+**Response 200:** `{"ok": true}`
+**Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
+### POST /api/v1/history/{id}/unarchive
+
+**Agregado en DECISIÓN 048 (pasada 4, Bloque E)** — inverso de `/archive`:
+limpia `archivado_at` (vuelve a `null`).
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Misma verificación de
+pertenencia que `/archive`.
+
+**Response 200:** `{"ok": true}`
+**Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
 ### POST /api/v1/analysis/design-events
 
 **Request:**

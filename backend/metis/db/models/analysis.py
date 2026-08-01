@@ -21,6 +21,7 @@ class Analysis(Base):
     modo: Mapped[str | None] = mapped_column(String(20))
     configuracion: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    archivado_at: Mapped[datetime | None] = mapped_column(DateTime)
 
     __table_args__ = (
         Index("idx_analyses_user_id", "user_id"),

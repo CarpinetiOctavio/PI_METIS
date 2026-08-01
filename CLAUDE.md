@@ -36,7 +36,7 @@ Todo el código Python vive bajo `backend/`; los comandos de este repo (pytest, 
 backend/metis/
 ├── api/v1/               # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
 │   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /preview-columns, /design-events, /{id}
-│   └── history.py        # /history/, /history/{id}
+│   └── history.py        # /history/, /history/{id}, /history/{id}/archive|unarchive
 ├── core/                 # Motor estadístico. SIN conocimiento de HTTP, BD, ni sesiones.
 │   ├── estadistica_descriptiva/   # descriptive.py
 │   ├── etapa1/            # independence.py, homogeneity.py, trend.py, outliers.py (Chow)
@@ -161,8 +161,10 @@ POST   /api/v1/analysis/outlier-decision  # Decisión ante atípico Chow — CU-
 POST   /api/v1/analysis/preview-columns   # Columnas + muestra para los dropdowns de ConfigPage (DECISIÓN 047)
 POST   /api/v1/analysis/design-events     # Eventos de diseño por distribución — CU-01 y CU-02
 GET    /api/v1/analysis/{id}              # Consulta análisis persistido — CU-01
-GET    /api/v1/history/
+GET    /api/v1/history/                   # ?archivados=true incluye archivados (DECISIÓN 048)
 GET    /api/v1/history/{id}
+POST   /api/v1/history/{id}/archive       # soft-delete — DECISIÓN 048
+POST   /api/v1/history/{id}/unarchive
 GET    /api/v1/export/{id}                # PDF on-demand
 POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1
 
