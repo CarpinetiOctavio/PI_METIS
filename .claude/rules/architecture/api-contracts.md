@@ -133,6 +133,97 @@ cuando Etapa 2 se exponga de verdad (M2/M3). Ver `docs/decisiones/decision037.md
 
 ---
 
+### POST /api/v1/analysis/preview-columns
+
+**Agregado en DECISIÓN 047 (pasada 4, Bloque D)** — previsualización de
+columnas para poblar los dropdowns de `ConfigPage`, reusando el mismo
+parser que `POST /analysis/stream` (`core/validacion/parser.py`).
+
+**Request (multipart/form-data):**
+```json
+{"archivo": "<file CSV o Excel>"}
+```
+
+**Auth:** Sin dependencia de usuario — no hay diferencia de comportamiento
+según quién llama, así que no inspecciona la cookie en absoluto (a
+diferencia de `/analysis/stream`, que sí declara `get_optional_user`).
+
+**Completamente stateless.** No genera `session_id`, no toca
+`session_store`, no escribe en BD.
+
+**Response 200:**
+```json
+{
+  "columnas": [
+    {"nombre": "anio", "indice": 0, "muestra": ["1980", "1981", "1982"]},
+    {"nombre": "caudal", "indice": 1, "muestra": ["94.71", "89.83", "105.13"]}
+  ],
+  "filas": 40
+}
+```
+
+**Errores:** 400 `PARSE_ERROR` para cualquier archivo no parseable
+(incluido vacío — `pandas.errors.EmptyDataError` es subclase de
+`ValueError`, capturado por el mismo `except`). No hay un segundo código
+para "sin columnas utilizables": verificado que pandas no puede devolver
+un DataFrame con cero columnas sin haber lanzado antes — ver DECISIÓN 047,
+addendum.
+
+---
+
+### GET /api/v1/history/
+
+**Agregado el parámetro `archivados` en DECISIÓN 048 (pasada 4, Bloque E)** —
+por defecto excluye los análisis archivados; `?archivados=true` los incluye.
+Cada item del array ahora expone `archivado_at` (`null` si no está archivado).
+
+**Auth:** JWT en HttpOnly Cookie (requerido)
+
+**Response 200:**
+```json
+[
+  {
+    "id": "uuid",
+    "tipo_variable": "otro",
+    "modo": "experto",
+    "etapas": ["1"],
+    "created_at": "2026-07-31T01:19:27.556471",
+    "archivado_at": null
+  }
+]
+```
+
+---
+
+### POST /api/v1/history/{id}/archive
+
+**Agregado en DECISIÓN 048 (pasada 4, Bloque E)** — soft-delete de un
+análisis: marca `archivado_at` con la fecha/hora actual. No borra la fila
+— ver `docs/decisiones/decision048.md` para la justificación (trazabilidad
+de auditoría, `constraints.md`).
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Verifica pertenencia
+(`user_id`) igual que `GET /history/{id}` — un análisis ajeno responde 404,
+no 403 (no se revela si el id existe).
+
+**Response 200:** `{"ok": true}`
+**Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
+### POST /api/v1/history/{id}/unarchive
+
+**Agregado en DECISIÓN 048 (pasada 4, Bloque E)** — inverso de `/archive`:
+limpia `archivado_at` (vuelve a `null`).
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Misma verificación de
+pertenencia que `/archive`.
+
+**Response 200:** `{"ok": true}`
+**Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
 ### POST /api/v1/analysis/design-events
 
 **Request:**

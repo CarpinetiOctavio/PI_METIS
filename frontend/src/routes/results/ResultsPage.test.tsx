@@ -164,7 +164,7 @@ describe("ResultsPage", () => {
       await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText("pendiente · datos de ejemplo")).toBeInTheDocument();
+    expect(screen.getByText("Vista previa · datos de demostración")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Continuar a Etapa 2 ▸" }));
 
     expect(await screen.findByText("ranking screen")).toBeInTheDocument();

@@ -35,8 +35,8 @@ Todo el código Python vive bajo `backend/`; los comandos de este repo (pytest, 
 ```
 backend/metis/
 ├── api/v1/               # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
-│   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /design-events, /{id}
-│   └── history.py        # /history/, /history/{id}
+│   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /preview-columns, /design-events, /{id}
+│   └── history.py        # /history/, /history/{id}, /history/{id}/archive|unarchive
 ├── core/                 # Motor estadístico. SIN conocimiento de HTTP, BD, ni sesiones.
 │   ├── estadistica_descriptiva/   # descriptive.py
 │   ├── etapa1/            # independence.py, homogeneity.py, trend.py, outliers.py (Chow)
@@ -129,7 +129,9 @@ que es consultivo, no bloqueante. Ver [decision044.md](docs/decisiones/decision0
 
 Vite + React + TypeScript + react-router-dom, 8 pantallas de CU-01/CU-02: `entry`, `config`, `stream`, `results`, `ranking`, `design-events`, `history`, `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`). Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`).
 
-**Ya no es scaffold** — Fases 1 a 5 del plan de integración están completas con integración real contra el backend (verificado contra Docker): auth end-to-end (`src/auth/`), stream de Etapa 1 vía SSE-sobre-fetch (`src/api/sse.ts`, hook `useAnalysisStream` — ver `docs/decisiones/decision040.md`), los tres modos de presentación de resultados de Etapa 1, historial con lista paginada y detalle. Etapa 2 (ranking, eventos de diseño) está mockeada con MSW (`src/mocks/`) y marca visual `PendingBadge` ("pendiente · datos de ejemplo") porque los endpoints reales de Etapa 2 todavía no existen en el backend — no confundir con "no implementado en el frontend"; ver `docs/decisiones/decision042.md` para el alcance exacto de qué es mock y qué no. Fase 6 (pulido y accesibilidad) quedó parcial. Verificación E2E contra backend real: login/logout/me, Config→stream con atípico real, los tres modos de Resultados e Historial cerrados; solo el tramo registro→verify de Auth sigue bloqueado por falta de SMTP real en desarrollo. Punto de entrada para retomar el estado exacto: [`docs/frontend/informe-implementacion-frontend-fase1-6.md`](docs/frontend/informe-implementacion-frontend-fase1-6.md) (resumen navegable) y [`docs/frontend/frontend-implementation-plan.md`](docs/frontend/frontend-implementation-plan.md) §10 (fuente de verdad decisión por decisión).
+**Ya no es scaffold** — Fases 1 a 5 del plan de integración están completas con integración real contra el backend (verificado contra Docker): auth end-to-end (`src/auth/`), stream de Etapa 1 vía SSE-sobre-fetch (`src/api/sse.ts`, hook `useAnalysisStream` — ver `docs/decisiones/decision040.md`), los tres modos de presentación de resultados de Etapa 1, historial con lista paginada y detalle. Etapa 2 (ranking, eventos de diseño) está mockeada con MSW (`src/mocks/`) y marca visual `PendingBadge` ("Vista previa · datos de demostración", texto reformulado en F1 de la pasada 4 — ver `docs/frontend/plan-mejora-frontend-pasada4.md`) porque los endpoints reales de Etapa 2 todavía no existen en el backend — no confundir con "no implementado en el frontend"; ver `docs/decisiones/decision042.md` para el alcance exacto de qué es mock y qué no. Fase 6 (pulido y accesibilidad) quedó parcial. Verificación E2E contra backend real: login/logout/me, Config→stream con atípico real, los tres modos de Resultados e Historial cerrados; solo el tramo registro→verify de Auth sigue bloqueado por falta de SMTP real en desarrollo. Punto de entrada para retomar el estado exacto: [`docs/frontend/informe-implementacion-frontend-fase1-6.md`](docs/frontend/informe-implementacion-frontend-fase1-6.md) (resumen navegable) y [`docs/frontend/frontend-implementation-plan.md`](docs/frontend/frontend-implementation-plan.md) §10 (fuente de verdad decisión por decisión).
+
+**Pasada 4 de mejora (31/07-01/08/2026):** tipografía real (JetBrains Mono cargada de verdad, no solo declarada en tokens), tokens de movimiento + regla universal de `prefers-reduced-motion`, estados de interacción (hover/active/focus-visible) en todo el design system, dos fondos animados en Canvas 2D (`DotFieldBackground`, `GridScanBackground` — DECISIÓN 045), `TopBar` reescrito dentro del design system, columnas de `ConfigPage` pobladas por dropdown real vía `POST /analysis/preview-columns` (DECISIÓN 047), archivado de historial por soft-delete (DECISIÓN 048) y texto de `PendingBadge` reformulado. Tres PRs apilados — ver [`docs/frontend/informe-resultados-pasada4.md`](docs/frontend/informe-resultados-pasada4.md) para el detalle completo y el estado exacto de verificación de cada bloque.
 
 **Testing del frontend — un solo mecanismo de mock de red.** Toda la suite usa `vi.stubGlobal("fetch", ...)` (Vitest + Testing Library) — MSW (`src/mocks/`) corre únicamente en el navegador de dev para las pantallas mock de Etapa 2, nunca dentro de un test. No introducir MSW en un test nuevo; seguir el patrón de mock manual existente. Ver `docs/decisiones/decision041.md` y [frontend/README.md](frontend/README.md) — sección "Testing".
 
@@ -158,10 +160,13 @@ POST   /api/v1/auth/logout
 GET    /api/v1/auth/me
 POST   /api/v1/analysis/stream            # SSE — CU-01 y CU-02
 POST   /api/v1/analysis/outlier-decision  # Decisión ante atípico Chow — CU-01 y CU-02
+POST   /api/v1/analysis/preview-columns   # Columnas + muestra para los dropdowns de ConfigPage (DECISIÓN 047)
 POST   /api/v1/analysis/design-events     # Eventos de diseño por distribución — CU-01 y CU-02
 GET    /api/v1/analysis/{id}              # Consulta análisis persistido — CU-01
-GET    /api/v1/history/
+GET    /api/v1/history/                   # ?archivados=true incluye archivados (DECISIÓN 048)
 GET    /api/v1/history/{id}
+POST   /api/v1/history/{id}/archive       # soft-delete — DECISIÓN 048
+POST   /api/v1/history/{id}/unarchive
 GET    /api/v1/export/{id}                # PDF on-demand
 POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1
 

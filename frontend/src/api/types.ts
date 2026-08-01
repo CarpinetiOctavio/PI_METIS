@@ -62,6 +62,18 @@ export interface OutlierDecisionResponse {
   pipeline_continua: boolean;
 }
 
+// DECISIÓN 047 — POST /analysis/preview-columns
+export interface ColumnaPreview {
+  nombre: string;
+  indice: number;
+  muestra: string[];
+}
+
+export interface PreviewColumnsResponse {
+  columnas: ColumnaPreview[];
+  filas: number;
+}
+
 export type Veredicto = "aprobada" | "rechazada" | "no_ejecutada";
 export type WarningNivel = "critico" | "normal";
 
@@ -188,12 +200,14 @@ export type SseEvent =
 // --- Historial (CU-01) — ver frontend-integration.md §3. Array plano, sin
 // envoltura ni paginación de parte del backend (paginación client-side).
 
+// archivado_at (DECISIÓN 048) — null si el análisis no está archivado.
 export interface HistoryItem {
   id: string;
   tipo_variable: string;
   modo: string | null;
   etapas: string[] | null;
   created_at: string;
+  archivado_at: string | null;
 }
 
 export interface AnalysisDetail {
