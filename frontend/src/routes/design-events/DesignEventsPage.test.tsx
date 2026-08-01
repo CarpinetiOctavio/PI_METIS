@@ -88,7 +88,9 @@ describe("DesignEventsPage", () => {
     stubFetch(false);
     renderDesignEvents();
 
-    expect(await screen.findByText("pendiente · datos de ejemplo")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Vista previa · datos de demostración"),
+    ).toBeInTheDocument();
   });
 
   it("hides the export button for anonymous sessions", async () => {

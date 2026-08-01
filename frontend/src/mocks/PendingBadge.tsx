@@ -9,10 +9,17 @@ export function PendingBadge({ note }: Readonly<{ note?: string }>) {
   // confiable ni para teclado ni para lector de pantalla. La nota ahora
   // también existe como texto real (visualmente oculto con .visually-hidden,
   // no con title) para que forme parte del nombre accesible del elemento.
-  const text = note ?? "Etapa 2 no expuesta por API todavía — datos de ejemplo";
+  // F1 (pasada 4, plan-mejora-frontend-pasada4.md): el texto anterior
+  // ("pendiente · datos de ejemplo") no dejaba claro si "pendiente" se
+  // refería al análisis del usuario o a la feature — se reformula para que
+  // quede inequívoco que Etapa 2 en sí es lo que falta, no el resultado.
+  const text =
+    note ??
+    "Esta pantalla muestra un ejemplo de cómo se presentarán los resultados. El análisis de frecuencia todavía no se calcula sobre tus datos.";
   return (
     <span className="tag pending-badge" title={text}>
-      {"pendiente · datos de ejemplo"}<span className="visually-hidden">{`— ${text}`}</span>
+      {"Vista previa · datos de demostración"}
+      <span className="visually-hidden">{`— ${text}`}</span>
     </span>
   );
 }

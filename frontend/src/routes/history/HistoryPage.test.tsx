@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { renderPage } from "../../test/renderPage";
 import { HistoryPage } from "./HistoryPage";
@@ -16,6 +16,52 @@ function stubFetch(status: number, body: unknown) {
   );
 }
 
+/** Enruta por URL — necesario para los tests que ejercitan archive/unarchive
+ * además del listado inicial (mismo patrón que ConfigPage.test.tsx). */
+function stubFetchRouted({
+  activos,
+  archivados = [],
+}: {
+  activos: HistoryItem[];
+  archivados?: HistoryItem[];
+}) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/history/") && url.includes("archivados=true")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(archivados),
+        });
+      }
+      if (url.match(/\/history\/[^/]+\/archive$/)) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ ok: true }),
+        });
+      }
+      if (url.match(/\/history\/[^/]+\/unarchive$/)) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ ok: true }),
+        });
+      }
+      if (url.endsWith("/history/") && (!init || init.method === undefined)) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(activos),
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+    }),
+  );
+}
+
 function makeItems(n: number): HistoryItem[] {
   return Array.from({ length: n }, (_, i) => ({
     id: `id-${i}`,
@@ -23,6 +69,7 @@ function makeItems(n: number): HistoryItem[] {
     modo: "experto",
     etapas: ["1"],
     created_at: new Date(2026, 0, i + 1).toISOString(),
+    archivado_at: null,
   }));
 }
 
@@ -84,5 +131,60 @@ describe("HistoryPage", () => {
       "href",
       "/history/id-0",
     );
+  });
+
+  // ── DECISIÓN 048 — archivado ────────────────────────────────────────────
+
+  it("archives an item after confirmation, removing it from the active list", async () => {
+    stubFetchRouted({ activos: makeItems(1) });
+    renderHistoryPage();
+
+    await screen.findByRole("link");
+    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Sí, archivar" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Todavía no tenés análisis guardados.")).toBeInTheDocument(),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Análisis archivado.");
+  });
+
+  it("cancelling the confirmation keeps the item in the list", async () => {
+    stubFetchRouted({ activos: makeItems(1) });
+    renderHistoryPage();
+
+    await screen.findByRole("link");
+    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar" }));
+
+    expect(screen.getByRole("link")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Archivar" })).toBeInTheDocument();
+  });
+
+  it("undo re-adds the item to the active list", async () => {
+    stubFetchRouted({ activos: makeItems(1) });
+    renderHistoryPage();
+
+    await screen.findByRole("link");
+    fireEvent.click(screen.getByRole("button", { name: "Archivar" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Sí, archivar" }));
+    await screen.findByRole("status");
+
+    fireEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+
+    expect(await screen.findByRole("link")).toHaveAttribute("href", "/history/id-0");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("toggling 'Ver archivados' fetches and lists archived items with an unarchive action", async () => {
+    const archivado = makeItems(1).map((i) => ({ ...i, archivado_at: "2026-07-31T00:00:00" }));
+    stubFetchRouted({ activos: [], archivados: archivado });
+    renderHistoryPage();
+
+    await screen.findByText("Todavía no tenés análisis guardados.");
+    fireEvent.click(screen.getByRole("button", { name: "Ver archivados" }));
+
+    expect(await screen.findByRole("link")).toHaveAttribute("href", "/history/id-0");
+    expect(screen.getByRole("button", { name: "Desarchivar" })).toBeInTheDocument();
   });
 });

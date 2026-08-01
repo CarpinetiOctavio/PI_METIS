@@ -23,7 +23,7 @@ function renderRankingPage() {
 describe("RankingPage", () => {
   it("renders the mock ranking with the PendingBadge visible", () => {
     renderRankingPage();
-    expect(screen.getByText("pendiente · datos de ejemplo")).toBeInTheDocument();
+    expect(screen.getByText("Vista previa · datos de demostración")).toBeInTheDocument();
     expect(screen.getByText("Gumbel")).toBeInTheDocument();
     expect(screen.getByText("GVE")).toBeInTheDocument();
     expect(screen.getByText("Gamma 2p")).toBeInTheDocument();

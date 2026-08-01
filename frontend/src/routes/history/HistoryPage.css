@@ -3,7 +3,7 @@
   margin: 0 auto;
 }
 
-.history-item {
+.history-item-link {
   display: block;
   text-decoration: none;
   color: inherit;
@@ -13,4 +13,32 @@
   align-items: center;
   gap: 12px;
   margin-top: 14px;
+}
+
+.history-header {
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.history-item-actions {
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.history-undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  background: var(--surf2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 40;
 }
