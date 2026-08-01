@@ -1,14 +1,57 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
-import type { AnalysisStreamForm, Modo, TipoVariable } from "../../api/types";
+import { postPreviewColumns } from "../../api/analysis";
+import type { AnalysisStreamForm, ColumnaPreview, Modo, TipoVariable } from "../../api/types";
 import "./ConfigPage.css";
+
+// D3 (plan pasada4 §6) — preselección heurística, nunca obligatoria: el
+// usuario siempre puede cambiar el <select> a mano. "Parece fecha/año" es
+// deliberadamente laxo (4 dígitos, o cualquier cosa que Date.parse entienda)
+// porque es solo una sugerencia de arranque, no una validación de contrato
+// — esa la sigue haciendo el backend en el pipeline real.
+function pareceFechaOAnio(muestra: string[]): boolean {
+  if (muestra.length === 0) return false;
+  return muestra.every((v) => /^\d{4}$/.test(v) || !Number.isNaN(Date.parse(v)));
+}
+
+function esNumerica(muestra: string[]): boolean {
+  if (muestra.length === 0) return false;
+  return muestra.every((v) => v.trim() !== "" && !Number.isNaN(Number(v)));
+}
+
+function preseleccionar(columnas: ColumnaPreview[]): { x: string; y: string } {
+  const colX = columnas.find((c) => pareceFechaOAnio(c.muestra));
+  const colY = columnas.find((c) => c !== colX && esNumerica(c.muestra));
+  return {
+    x: colX ? String(colX.indice) : "",
+    y: colY ? String(colY.indice) : "",
+  };
+}
+
+// Siempre se manda el índice como value (nunca el nombre) — _resolver_columna
+// en el backend acepta un índice numérico igual que un nombre, y así un
+// mismo esquema cubre nombres duplicados y archivos sin cabecera real sin
+// necesitar dos caminos distintos (plan §6 D3, "caminos de error").
+function etiquetaColumna(col: ColumnaPreview, todas: ColumnaPreview[]): string {
+  const duplicado = todas.filter((c) => c.nombre === col.nombre).length > 1;
+  const nombre = duplicado ? `${col.nombre} (col. ${col.indice + 1})` : col.nombre;
+  const muestra = col.muestra.slice(0, 3).join(", ");
+  return muestra ? `${nombre} — ${muestra}` : nombre;
+}
+
+type PreviewState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; columnas: ColumnaPreview[] }
+  | { status: "error" };
 
 export function ConfigPage() {
   const { isAuthed } = useAuth();
   const navigate = useNavigate();
 
   const [archivo, setArchivo] = useState<File | null>(null);
+  const [preview, setPreview] = useState<PreviewState>({ status: "idle" });
   const [columnaX, setColumnaX] = useState("");
   const [columnaY, setColumnaY] = useState("");
   const [tipoVariable, setTipoVariable] = useState<TipoVariable>(
@@ -20,6 +63,35 @@ export function ConfigPage() {
   // UX-D — el anónimo siempre usa la UI Experto, sin selector de modo
   // (frontend/frontend-design/metis-wireframes-fase1-decisiones.md, "UX-D").
   const modoEfectivo: Modo = isAuthed ? modo : "experto";
+
+  async function handleFileChange(file: File | null) {
+    setArchivo(file);
+    // Las columnas de un archivo anterior no tienen por qué existir en el
+    // nuevo — nunca dejar un índice/nombre stale seleccionado.
+    setColumnaX("");
+    setColumnaY("");
+
+    if (!file) {
+      setPreview({ status: "idle" });
+      return;
+    }
+
+    setPreview({ status: "loading" });
+    try {
+      const response = await postPreviewColumns(file);
+      if (!Array.isArray(response.columnas) || response.columnas.length === 0) {
+        throw new Error("respuesta de preview-columns sin columnas utilizables");
+      }
+      setPreview({ status: "ready", columnas: response.columnas });
+      const heuristica = preseleccionar(response.columnas);
+      setColumnaX(heuristica.x);
+      setColumnaY(heuristica.y);
+    } catch {
+      // "La previsualización falla → degradar a los inputs de texto
+      // actuales con un aviso, nunca bloquear la ejecución del análisis."
+      setPreview({ status: "error" });
+    }
+  }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -63,32 +135,77 @@ export function ConfigPage() {
             id="config-archivo"
             type="file"
             accept=".csv,.xlsx,.xls"
-            onChange={(event) => setArchivo(event.target.files?.[0] ?? null)}
+            onChange={(event) => void handleFileChange(event.target.files?.[0] ?? null)}
           />
           {archivo && <p className="fn">{archivo.name}</p>}
         </div>
         <div className="row">
           <div className="col field">
             <label htmlFor="config-columna-x">Columna X</label>
-            <input
-              id="config-columna-x"
-              className="input"
-              type="text"
-              value={columnaX}
-              onChange={(event) => setColumnaX(event.target.value)}
-            />
+            {preview.status === "ready" ? (
+              <select
+                id="config-columna-x"
+                className="input"
+                value={columnaX}
+                onChange={(event) => setColumnaX(event.target.value)}
+              >
+                <option value="">Elegir columna…</option>
+                {preview.columnas.map((col) => (
+                  <option key={col.indice} value={col.indice}>
+                    {etiquetaColumna(col, preview.columnas)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="config-columna-x"
+                className="input"
+                type="text"
+                value={columnaX}
+                onChange={(event) => setColumnaX(event.target.value)}
+              />
+            )}
+            {preview.status === "loading" && (
+              <p className="fn">Buscando columnas…</p>
+            )}
           </div>
           <div className="col field">
             <label htmlFor="config-columna-y">Columna Y</label>
-            <input
-              id="config-columna-y"
-              className="input"
-              type="text"
-              value={columnaY}
-              onChange={(event) => setColumnaY(event.target.value)}
-            />
+            {preview.status === "ready" ? (
+              <select
+                id="config-columna-y"
+                className="input"
+                value={columnaY}
+                onChange={(event) => setColumnaY(event.target.value)}
+              >
+                <option value="">Elegir columna…</option>
+                {preview.columnas.map((col) => (
+                  <option key={col.indice} value={col.indice}>
+                    {etiquetaColumna(col, preview.columnas)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="config-columna-y"
+                className="input"
+                type="text"
+                value={columnaY}
+                onChange={(event) => setColumnaY(event.target.value)}
+              />
+            )}
+            {preview.status === "loading" && (
+              <p className="fn">Buscando columnas…</p>
+            )}
           </div>
         </div>
+        {preview.status === "error" && (
+          <div className="banner warn" style={{ marginBottom: 11 }}>
+            <span className="ic">▲</span> No pudimos leer las columnas del
+            archivo automáticamente. Completalas a mano — el análisis no se
+            bloquea por esto.
+          </div>
+        )}
         <fieldset className="field">
           <legend>Tipo de variable</legend>
           <div className="seg">

@@ -12,13 +12,38 @@ function StreamProbe() {
   return <pre data-testid="stream-state">{JSON.stringify(form ?? null)}</pre>;
 }
 
-function stubMe(ok: boolean, body: unknown = {}) {
+// Dos endpoints distintos por detrás de un solo fetch mockeado — necesita
+// distinguir por URL (mismo patrón que TopBar.test.tsx). preview por
+// defecto en 500: los tests que no le importa el resultado de la
+// previsualización (los cuatro heredados de antes de D3) así ejercitan el
+// camino de degradación a inputs de texto sin tener que pensarlo — es
+// literalmente el comportamiento esperado si preview-columns falla.
+function stubFetch({
+  me = { ok: false, status: 401, body: {} },
+  preview = { ok: false, status: 500, body: {} },
+}: {
+  me?: { ok: boolean; status?: number; body: unknown };
+  preview?: { ok: boolean; status?: number; body: unknown };
+} = {}) {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue({
-      ok,
-      status: ok ? 200 : 401,
-      json: () => Promise.resolve(body),
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/auth/me")) {
+        return Promise.resolve({
+          ok: me.ok,
+          status: me.status ?? (me.ok ? 200 : 401),
+          json: () => Promise.resolve(me.body),
+        });
+      }
+      if (url.includes("/analysis/preview-columns")) {
+        return Promise.resolve({
+          ok: preview.ok,
+          status: preview.status ?? (preview.ok ? 200 : 500),
+          json: () => Promise.resolve(preview.body),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     }),
   );
 }
@@ -46,7 +71,7 @@ describe("ConfigPage", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("shows a validation error when submitting without a file", async () => {
-    stubMe(false);
+    stubFetch();
     renderConfigPage();
     await waitForReady();
 
@@ -58,7 +83,7 @@ describe("ConfigPage", () => {
   });
 
   it("shows a validation error when the columns are empty", async () => {
-    stubMe(false);
+    stubFetch();
     renderConfigPage();
     await waitForReady();
 
@@ -66,13 +91,22 @@ describe("ConfigPage", () => {
     fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
       target: { files: [file] },
     });
+    // Deja asentarse el preview fallido (stub por defecto en 500) antes de
+    // seguir — si no, la actualización de estado llega después de terminado
+    // el test y Testing Library se queja con un warning de act().
+    await screen.findByText(/No pudimos leer las columnas/);
     fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("Completá las dos columnas");
   });
 
   it("navigates to /stream with the assembled form when authenticated (docencia)", async () => {
-    stubMe(true, { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true });
+    stubFetch({
+      me: {
+        ok: true,
+        body: { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true },
+      },
+    });
     renderConfigPage();
     await waitForReady();
 
@@ -98,7 +132,7 @@ describe("ConfigPage", () => {
   });
 
   it("forces modo=experto and hides the toggle for anonymous sessions", async () => {
-    stubMe(false);
+    stubFetch();
     renderConfigPage();
     await waitForReady();
 
@@ -116,5 +150,124 @@ describe("ConfigPage", () => {
     expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
     const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
     expect(form.modo).toBe("experto");
+  });
+
+  // D3 (plan pasada4 §6) — a partir de acá, los cuatro caminos que el plan
+  // pide cubrir explícitamente.
+
+  it("preselects Columna X (fecha/año) and Columna Y (numérica) heurísticamente", async () => {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "anio", indice: 0, muestra: ["1980", "1981", "1982"] },
+            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["anio,caudal\n1980,94.71\n"], "serie.csv", {
+      type: "text/csv",
+    });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    // findByLabelText resolvería de inmediato contra el <input> que ya
+    // existe desde "loading" — hace falta el rol específico de <select>
+    // (combobox) para esperar de verdad a que preview llegue a "ready".
+    const selectX = await screen.findByRole("combobox", { name: "Columna X" });
+    expect(selectX.tagName).toBe("SELECT");
+    expect(selectX).toHaveValue("0");
+    expect(screen.getByLabelText("Columna Y")).toHaveValue("1");
+  });
+
+  it("lets the user override the heuristic preselection by hand", async () => {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "anio", indice: 0, muestra: ["1980", "1981", "1982"] },
+            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
+            { nombre: "temperatura", indice: 2, muestra: ["18.2", "19.1", "17.5"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["a"], "serie.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    await screen.findByRole("combobox", { name: "Columna X" });
+    // La heurística eligió "caudal" (índice 1) para Y — el usuario prefiere
+    // "temperatura" (índice 2) en su lugar.
+    fireEvent.change(screen.getByLabelText("Columna Y"), { target: { value: "2" } });
+
+    expect(screen.getByLabelText("Columna Y")).toHaveValue("2");
+  });
+
+  it("desambigua nombres de columna duplicados con el índice en la etiqueta", async () => {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "valor", indice: 0, muestra: ["1980", "1981"] },
+            { nombre: "valor", indice: 1, muestra: ["94.71", "89.83"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["a"], "sin-cabecera.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    const selectX = await screen.findByRole("combobox", { name: "Columna X" });
+    const options = Array.from(selectX.querySelectorAll("option")).map(
+      (o) => o.textContent,
+    );
+    expect(options).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("valor (col. 1)"),
+        expect.stringContaining("valor (col. 2)"),
+      ]),
+    );
+  });
+
+  it("degrada a inputs de texto y avisa, sin bloquear el análisis, si la previsualización falla", async () => {
+    stubFetch({ preview: { ok: false, status: 500, body: {} } });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["a"], "serie.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    await screen.findByText(/No pudimos leer las columnas/);
+    const inputX = screen.getByLabelText("Columna X");
+    expect(inputX.tagName).toBe("INPUT");
+
+    fireEvent.change(inputX, { target: { value: "anio" } });
+    fireEvent.change(screen.getByLabelText("Columna Y"), { target: { value: "caudal" } });
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
   });
 });

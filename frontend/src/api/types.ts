@@ -62,6 +62,18 @@ export interface OutlierDecisionResponse {
   pipeline_continua: boolean;
 }
 
+// DECISIÓN 047 — POST /analysis/preview-columns
+export interface ColumnaPreview {
+  nombre: string;
+  indice: number;
+  muestra: string[];
+}
+
+export interface PreviewColumnsResponse {
+  columnas: ColumnaPreview[];
+  filas: number;
+}
+
 export type Veredicto = "aprobada" | "rechazada" | "no_ejecutada";
 export type WarningNivel = "critico" | "normal";
 
