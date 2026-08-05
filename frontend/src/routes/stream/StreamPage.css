@@ -1,12 +1,20 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--ink) 35%, transparent);
-  /* Feedback de verificación manual (Bloque C, 05/08/2026): el tinte plano
-     se veía "feo" — un leve desenfoque del contenido de atrás separa mejor
-     el modal sin necesitar más opacidad. -webkit- para Safari. */
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  /* Feedback de verificación manual (Bloque C, 05/08/2026), dos rondas:
+     1) el tinte plano se veía feo — un desenfoque separa mejor el modal sin
+        subir la opacidad.
+     2) `--ink` es un token de TEXTO, no de scrim — se invierte por tema (casi
+        negro en claro, casi blanco en oscuro). Con el tema oscuro activo
+        (--ink: #e6edf3) el resultado era un lavado blancuzco, no un fondo que
+        se oscurece — exactamente el "tinte blanco raro" reportado. Un scrim
+        de modal tiene que oscurecer el fondo en los dos temas por igual, así
+        que usa un rgba fijo, no un token que cambia de dirección.
+     Resultado: más transparente (18%, antes 35-45%) + blur más fuerte para
+     una terminación tipo glassmorphism en vez de un tinte plano. */
+  background: rgba(9, 12, 16, 0.18);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
   display: flex;
   align-items: center;
   justify-content: center;
