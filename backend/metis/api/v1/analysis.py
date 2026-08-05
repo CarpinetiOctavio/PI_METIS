@@ -20,6 +20,40 @@ from metis.services.analysis_service import (
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
+# DECISIÓN 050 — mismo valor que client_max_body_size en nginx/nginx.conf y
+# frontend/nginx.conf. nginx no es el único camino: :8000 está mapeado al
+# host por diseño (architecture.md, "Exposición de puertos en desarrollo"),
+# así que un cliente que salte el proxy tiene que encontrar el mismo límite acá.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+_CHUNK_SIZE = 1024 * 1024
+
+_ARCHIVO_DEMASIADO_GRANDE = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "PARSE_FILE_TOO_LARGE",
+            "mensaje": f"El archivo supera el límite de {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+        }
+    },
+)
+
+
+async def _leer_archivo_limitado(archivo: UploadFile) -> bytes:
+    """Lee un UploadFile en chunks, cortando apenas se supera MAX_UPLOAD_BYTES
+    — nunca buferea un archivo entero por encima del límite en memoria, ni
+    siquiera si el cliente miente el Content-Length (DECISIÓN 050)."""
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await archivo.read(_CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_UPLOAD_BYTES:
+            raise _ARCHIVO_DEMASIADO_GRANDE
+        chunks.append(chunk)
+    return b"".join(chunks)
+
 
 @router.post("/preview-columns", response_model=PreviewColumnsResponse)
 async def preview_columns(archivo: UploadFile = File(...)):
@@ -27,7 +61,7 @@ async def preview_columns(archivo: UploadFile = File(...)):
     # diferencia de comportamiento según quién llama, así que "JWT opcional"
     # se cumple por no inspeccionar la cookie en absoluto, no por leerla y
     # descartarla. No toca session_store ni BD.
-    content = await archivo.read()
+    content = await _leer_archivo_limitado(archivo)
     try:
         columnas, filas = leer_columnas_preview(content, archivo.filename or "upload")
     except Exception as exc:
@@ -56,7 +90,7 @@ async def stream_analysis(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
-    content = await archivo.read()
+    content = await _leer_archivo_limitado(archivo)
     session_id = str(uuid.uuid4())
 
     return StreamingResponse(
