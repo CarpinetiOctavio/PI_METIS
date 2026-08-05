@@ -109,6 +109,14 @@ ruta. Hoy es inocuo porque Etapa 2 está mockeada en el frontend; deja de serlo
 cuando Etapa 2 se exponga de verdad (M2/M3). Ver `docs/decisiones/decision037.md`
 — DECISIÓN 037.
 
+**Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
+050. Excepción a la regla general de esta sección: como el archivo se lee
+completo (en chunks, con corte temprano) **antes** de construir el
+`StreamingResponse`, este código nunca llega como evento SSE — es una
+respuesta HTTP 400 estándar, igual que cualquier otro 400 de este catálogo.
+El resto de los errores de parseo/contrato sí llegan como eventos SSE
+(ver "Stream / sesión" en el catálogo, más abajo).
+
 ---
 
 ### POST /api/v1/analysis/outlier-decision
@@ -167,7 +175,8 @@ diferencia de `/analysis/stream`, que sí declara `get_optional_user`).
 `ValueError`, capturado por el mismo `except`). No hay un segundo código
 para "sin columnas utilizables": verificado que pandas no puede devolver
 un DataFrame con cero columnas sin haber lanzado antes — ver DECISIÓN 047,
-addendum.
+addendum. 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN 050,
+el mismo cap que `/analysis/stream`.
 
 ---
 
@@ -383,12 +392,20 @@ DIST_DISABLED_ZEROS              Distribución deshabilitada por ceros en caudal
 ```
 PARSE_ERROR                      No se pudo parsear el archivo subido (evento SSE "error")
 SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante un atípico (evento SSE "error")
+PARSE_FILE_TOO_LARGE             El archivo supera el límite de subida — respuesta HTTP 400, no evento SSE
 ```
-Ambos son eventos SSE `error`, no respuestas HTTP de error — ver nota general al
-principio de este archivo. Emitidos por `services/analysis_service.py`. Agregados
-al catálogo en `docs/decisiones/decision038.md` — DECISIÓN 038, que también deja
-la regla: todo código nuevo emitido por `core/` o `services/` se agrega acá en el
-mismo commit que lo introduce.
+`PARSE_ERROR` y `SESSION_TIMEOUT` son eventos SSE `error`, no respuestas HTTP
+de error — ver nota general al principio de este archivo. Emitidos por
+`services/analysis_service.py`. Agregados al catálogo en
+`docs/decisiones/decision038.md` — DECISIÓN 038, que también deja la regla:
+todo código nuevo emitido por `core/` o `services/` se agrega acá en el mismo
+commit que lo introduce.
+
+`PARSE_FILE_TOO_LARGE` es la excepción del grupo: se detecta en `api/v1/analysis.py`
+**antes** de que exista un stream SSE (en `/analysis/stream`) o directamente en un
+endpoint sincrónico (`/analysis/preview-columns`), así que siempre es una respuesta
+HTTP 400 estándar — DECISIÓN 050. Se agrupa acá por dominio (falla al ingerir el
+archivo subido), no por transporte.
 
 ### Códigos originados en el frontend
 ```
