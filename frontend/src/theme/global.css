@@ -10,7 +10,22 @@ body,
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* Retícula técnica de fondo — Instrumento (Fase 3, línea 143 del prototipo).
+     Vivía en .app-shell hasta el 05/08/2026: .app-shell es un <div> normal,
+     no posicionado, dentro del stacking context raíz — su propio fondo
+     (opaco) pinta DESPUÉS (encima) de cualquier descendiente con z-index
+     negativo (CSS2.1 Apéndice E), así que los fondos animados
+     (DotFieldBackground, GridScanBackground — fixed, z-index:-1, pensados
+     para quedar detrás de todo) quedaban tapados por completo, sin
+     excepción, sin importar ningún otro fix de tamaño o de stacking
+     context. Moviendo el fondo acá (el elemento raíz real de la página) los
+     canvas fixed quedan por delante de este fondo y por detrás del
+     contenido normal — la capa intermedia que la identidad visual pide. */
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 28px 28px;
   color: var(--ink);
   font-family: var(--f-body);
 }
@@ -60,14 +75,11 @@ body {
   border: 0;
 }
 
-/* Retícula técnica de fondo — Instrumento (Fase 3, línea 143 del prototipo) */
 .app-shell {
   min-height: 100%;
-  background-color: var(--bg);
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 28px 28px;
+  /* Sin background propio a propósito — ver el comentario en `body` de
+     arriba (05/08/2026). Un fondo opaco acá vuelve a tapar los canvas
+     animados sin importar nada más. */
 }
 
 /* C2 (plan pasada4 §5) — entrada de pantalla al montar cada ruta */
