@@ -115,6 +115,18 @@ Entorno completo (Docker):
 docker-compose up --build
 ```
 
+**Correr las migraciones después de levantar `postgres` — no es automático.** Nada en
+`backend/Dockerfile`, `docker-compose.yml` ni `metis/main.py` corre `alembic upgrade head`
+ni crea tablas al arrancar (confirmado: `db/session.py` solo abre el engine, no llama
+`Base.metadata.create_all()`). Una base de datos nueva queda sin ninguna tabla hasta que se
+corre manualmente. Encontrado el 05/08/2026 en una BD local desactualizada (parada en la
+migración `003`, sin `analyses.archivado_at` de `DECISIÓN 048`): `GET /history/` respondía
+500 `UndefinedColumnError` en vez de un error controlado.
+
+```bash
+docker exec <backend> alembic upgrade head
+```
+
 Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de puertos en desarrollo" para por qué `backend` y `postgres` mapean puertos al host, y "DATABASE_URL — diferencia entre Docker y host" para el override de Alembic/psql desde la terminal local.
 
 **CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"`, exit code 5 tolerado — no hay tests de integración todavía), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test + build). No mergear sin que los cuatro pasen.
