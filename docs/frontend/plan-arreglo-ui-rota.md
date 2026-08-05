@@ -168,7 +168,7 @@ Automatiza el INSERT que `sprint.md` ya documenta en prosa (actualización 29/07
 
 **(b) Requiere DECISIÓN nueva — escotilla de desarrollo en `auth/email.py`**
 
-Si `ENV != "production"` y faltan las credenciales SMTP, en vez de levantar `RuntimeError`, loggear el token con `print(flush=True)` y devolver éxito — restaurando el comportamiento del mock de la Parte 1 pero acotado a desarrollo. Esto toca DECISIÓN 032 (mandar el mail antes del commit), así que **no se implementa sin escribirlo como decisión primero** (`docs/decisiones/decision045.md`), con las alternativas evaluadas: escotilla por `ENV`, servidor SMTP de captura local tipo MailHog en `docker-compose`, o dejarlo como está y depender sólo del script (a). Mi recomendación es MailHog: no toca el código de producción, no introduce una rama `if dev` en el camino crítico de autenticación, y ejercita `aiosmtplib` de verdad.
+Si `ENV != "production"` y faltan las credenciales SMTP, en vez de levantar `RuntimeError`, loggear el token con `print(flush=True)` y devolver éxito — restaurando el comportamiento del mock de la Parte 1 pero acotado a desarrollo. Esto toca DECISIÓN 032 (mandar el mail antes del commit), así que **no se implementa sin escribirlo como decisión primero** (`docs/decisiones/decision045.md` [corrección 05/08/2026: 045 la tomó "Fondos animados en Canvas 2D" antes de que esta se escribiera — la escotilla SMTP queda reasignada a **049**, ver `docs/decisiones/README.md`]), con las alternativas evaluadas: escotilla por `ENV`, servidor SMTP de captura local tipo MailHog en `docker-compose`, o dejarlo como está y depender sólo del script (a). Mi recomendación es MailHog: no toca el código de producción, no introduce una rama `if dev` en el camino crítico de autenticación, y ejercita `aiosmtplib` de verdad.
 
 **Cubierto por:** E2E-1 y E2E-4 del Bloque 4 dependen de que exista una cuenta. Con (a) alcanza para desbloquearlos.
 
@@ -389,7 +389,9 @@ Los pasos 1-4 son un PR. Los 5-7, otro. Los 8-10, un tercero. **No meter los tre
 - `api-contracts.md` — `STREAM_CLOSED_EARLY` y `SESSION_NOT_ESTABLISHED` en "Códigos originados en el frontend" (regla de DECISIÓN 038, verificada por el job `error-catalog`).
 - `testing.md` — sumar las capas 2 y 3 a los cuatro niveles obligatorios; hoy sólo contempla backend.
 - `architecture.md` — al cerrar 3.1, actualizar la nota de "Nginx como reverse proxy" que dice que el build estático todavía no existe.
-- `docs/decisiones/` — 045 (SMTP en desarrollo) y 046 (E2E en scope), si se aprueban.
+- `docs/decisiones/` — 045 (SMTP en desarrollo) y 046 (E2E en scope), si se aprueban
+  [corrección 05/08/2026: 045 terminó tomada por "Fondos animados en Canvas 2D" — la
+  escotilla SMTP queda reasignada a **049**, ver `docs/decisiones/README.md`].
 
 ---
 

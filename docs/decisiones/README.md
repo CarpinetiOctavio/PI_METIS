@@ -149,5 +149,7 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [043](decision043.md) | Contraste WCAG AA del tema Instrumento: hallazgos y propuesta, no aplicada | 29/07/2026 | PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [044](decision044.md) | SonarCloud: quality gate, limpieza del PR #17/B, rechazo de `<dialog>` nativo, merge del PR #17 en rojo | 30/07/2026 | Aplicada — gate de gobernanza PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [045](decision045.md) | Fondos animados en Canvas 2D sin dependencias, WebGL descartado | 31/07/2026 | Decidida — implementación en curso |
+| 046 | *(reservado — E2E con Playwright, revisa la exclusión de `constraints.md`)* | — | Pendiente — ver `docs/plan-post-pasada4-roadmap.md` §3, Bloque C1b |
 | [047](decision047.md) | Endpoint `preview-columns`: parseo de cabeceras del lado del servidor, no del cliente | 31/07/2026 | Decidida — implementación en curso |
 | [048](decision048.md) | Archivado de análisis por soft-delete, no borrado físico | 31/07/2026 | Decidida — implementación en curso |
+| 049 | *(reservado — escotilla SMTP de desarrollo en `auth/email.py`. Corrección 05/08/2026: el plan de arreglo de UI y su informe de resultados citaban 045 para esto, pero 045 quedó asignada a "Fondos animados en Canvas 2D" antes de que la escotilla SMTP se escribiera — ver `docs/plan-post-pasada4-roadmap.md`, H1)* | — | Pendiente — ver `sprint.md`, "Pendiente de esta rama" |

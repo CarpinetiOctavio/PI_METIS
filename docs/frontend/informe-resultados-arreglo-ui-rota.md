@@ -32,7 +32,7 @@ componente de F2 que requiere decisión (ver Bloque 1.3(b) en la tabla).
 | # | Estado | Resultado |
 |---|---|---|
 | 1.3(a) | Hecho | `scripts/seed-dev-user.sh` + `scripts/clean-dev-user.sh` — automatizan el INSERT bcrypt que `sprint.md` ya documentaba en prosa, vía `docker compose exec <servicio>` (no nombres de contenedor hardcodeados, evita la trampa de prefijo que `sprint.md` ya había documentado una vez). Verificado end-to-end: login real contra el backend con el usuario sembrado. |
-| 1.3(b) | **Diferido — requiere DECISIÓN.** | Escotilla de desarrollo en `auth/email.py` para no depender solo del script (a). Toca DECISIÓN 032 (mandar el mail antes del commit) — no se implementa sin escribir `docs/decisiones/decision045.md` primero, con las alternativas evaluadas (escotilla por `ENV`, MailHog en `docker-compose`, o dejarlo como está). No escrita todavía. |
+| 1.3(b) | **Diferido — requiere DECISIÓN.** | Escotilla de desarrollo en `auth/email.py` para no depender solo del script (a). Toca DECISIÓN 032 (mandar el mail antes del commit) — no se implementa sin escribir `docs/decisiones/decision045.md` primero [corrección 05/08/2026: 045 la tomó "Fondos animados en Canvas 2D" — la escotilla SMTP queda reasignada a **049**, ver `docs/decisiones/README.md`], con las alternativas evaluadas (escotilla por `ENV`, MailHog en `docker-compose`, o dejarlo como está). No escrita todavía. |
 | 1.1+1.2 (F1) | Hecho | `StreamPage.tsx`: un solo efecto, limpieza colocada en el mismo efecto — la guarda `startedRef` de dos efectos separados es lo que rompía bajo el doble montaje de StrictMode. `sse.ts::onclose`: pasa a `fase="error"` con código nuevo `STREAM_CLOSED_EARLY` si el servidor cierra sin `complete` antes. Catálogo (`api-contracts.md` + `i18n/errors.es.ts`) actualizado en el mismo commit (DECISIÓN 038), verificado por `scripts/check-error-catalog.sh`. Verificado en vivo: patrón `ERR_ABORTED`→`200` esperado bajo StrictMode, stream llega a "Análisis completo". |
 | 1.4 (F3) | Hecho | `AuthProvider.refetch()` distingue 401 legítimo (no hay sesión) de un fallo real (red caída, CORS, 500) — solo el segundo caso relanza. `login()` ahora puede lanzar y lo hace con `SESSION_NOT_ESTABLISHED` (código nuevo, mismo catálogo) si `/me` no confirma la sesión tras un `POST /login` 200. El efecto de montaje envuelto en su propio `try/catch` para no dejar la app colgada en el spinner si el backend está caído al arrancar. |
 
@@ -69,7 +69,9 @@ componente de F2 que requiere decisión (ver Bloque 1.3(b) en la tabla).
 | Docs | Hecho | `sprint.md` — tachada (no borrada) la verificación E2E de "feature/frontend-fases1-5" invalidada por `c27d6ac`, nueva sección resumiendo esta rama. `testing.md` — sección nueva "Testing del frontend" (separada de los cuatro niveles del anteproyecto, que son del backend). `architecture.md` — nota de "Nginx como reverse proxy" actualizada: el build estático ya existe y corre. `api-contracts.md` — `STREAM_CLOSED_EARLY` y `SESSION_NOT_ESTABLISHED` catalogados (ya reflejado en los ítems 1.1/1.2 y 1.4 de arriba). |
 
 **Números de decisión:** ninguno nuevo escrito en esta pasada (045 y 046 quedan reservados
-conceptualmente por el plan, sin archivo — ver §4).
+conceptualmente por el plan, sin archivo — ver §4) [corrección 05/08/2026: 045 terminó
+asignado a otra decisión ("Fondos animados en Canvas 2D") antes de que esta se escribiera —
+la escotilla SMTP queda reservada en **049** en su lugar, ver `docs/decisiones/README.md`].
 
 ---
 
@@ -194,7 +196,9 @@ mensajes de commit de la lista de §2.
 ## 4. Qué queda pendiente
 
 - **Pushear la rama y abrir PR(s) hacia `staging`** — no hecho en esta pasada, ver §2.
-- **DECISIÓN 045** (escotilla SMTP de desarrollo, ítem 1.3(b) del plan) — no escrita. Sin ella,
+- **DECISIÓN 045** (escotilla SMTP de desarrollo, ítem 1.3(b) del plan) — no escrita
+  [corrección 05/08/2026: 045 ya está tomada por "Fondos animados en Canvas 2D"; la escotilla
+  SMTP queda reasignada a **049**, ver `docs/decisiones/README.md`]. Sin ella,
   `auth/email.py` sigue sin una vía de desarrollo alternativa al script de seed; el script ya
   desbloquea CU-01 completo, así que esto no es bloqueante para nada más.
 - **DECISIÓN 046** (E2E con Playwright, Bloque 4.3 del plan) — no escrita. Contradice
