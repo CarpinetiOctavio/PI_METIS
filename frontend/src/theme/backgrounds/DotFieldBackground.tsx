@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { hexToRgba, prefersReducedMotion, readCssVar, sizeCanvasToParent } from "./canvasUtils";
+import { hexToRgba, prefersReducedMotion, readCssVar, sizeCanvasToViewport } from "./canvasUtils";
 
 // Fondo de la aplicación (B2, plan pasada4 §4). Refuerza el paso de 28px de
 // la retícula técnica que ya existe en .app-shell (global.css) — no la
@@ -31,7 +31,7 @@ export function DotFieldBackground() {
     let inViewport = true;
 
     function resize() {
-      const size = sizeCanvasToParent(canvas!);
+      const size = sizeCanvasToViewport(canvas!);
       width = size.width;
       height = size.height;
     }
@@ -78,8 +78,10 @@ export function DotFieldBackground() {
       rafId = window.requestAnimationFrame(loop);
     }
 
-    const resizeObserver = new ResizeObserver(() => resize());
-    if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);
+    // window resize, no ResizeObserver sobre el padre — el canvas es
+    // fixed/inset:0, lo que le importa es el viewport, no el layout del
+    // padre (ver comentario de sizeCanvasToViewport en canvasUtils.ts).
+    window.addEventListener("resize", resize);
 
     function handlePointerMove(e: PointerEvent) {
       pointerX = e.clientX;
@@ -110,7 +112,7 @@ export function DotFieldBackground() {
       // siempre. Misma clase de bug que F1
       // (docs/frontend/informe-diagnostico-ui-rota.md).
       if (rafId !== null) window.cancelAnimationFrame(rafId);
-      resizeObserver.disconnect();
+      window.removeEventListener("resize", resize);
       intersectionObserver.disconnect();
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerleave", handlePointerLeave);
