@@ -670,9 +670,12 @@ intencionalmente separadas, con valores ya correctos). `nginx.conf` proxea
 
 **Pendiente de esta rama:** Bloque 4.3 (E2E con Playwright) y 1.3(b)
 (escotilla SMTP en desarrollo) — ambos requieren escribir una DECISIÓN nueva
-primero (046 y 045 respectivamente) antes de implementarse; no se avanzó
-sobre ninguno de los dos. `testing.md` y `architecture.md` actualizados en
-consecuencia (ver sus propias notas de corrección).
+primero (046 y 045 respectivamente [corrección 05/08/2026, H1 del roadmap
+post-pasada4: 045 la tomó "Fondos animados en Canvas 2D" — la escotilla SMTP
+queda reasignada a **049**, ver `docs/decisiones/README.md`]) antes de
+implementarse; no se avanzó sobre ninguno de los dos. `testing.md` y
+`architecture.md` actualizados en consecuencia (ver sus propias notas de
+corrección).
 
 ---
 
