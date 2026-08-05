@@ -2,6 +2,24 @@
 **Fecha:** 31 de Julio de 2026
 **Estado:** Implementada, bundle medido — falta verificación visual final (Bloque G, cierre de PR1)
 
+### Addendum (05/08/2026) — presupuesto de CPU (B7) sin medir
+
+`docs/plan-post-pasada4-roadmap.md` (§1.2, "debilidades reales del proceso")
+registra que la verificación final del Bloque G quedó a mitad: **5 de 14
+puntos sin evidencia directa**, por límites de la herramienta de navegador de
+esa sesión — entre ellos, el **ítem 14 de la tabla G2**
+(`plan-mejora-frontend-pasada4.md` línea 430): "CPU — Performance monitor en
+reposo en `/config`: fondo por debajo del presupuesto de B7".
+
+De los tres criterios medibles de B7 (línea 303-309 de ese plan), solo el del
+bundle quedó verificado con números reales en la sección "Costo en bundle —
+medido" de más abajo (+1.37 KB gzip, muy por debajo de los 8 KB de
+presupuesto). **El criterio de CPU en reposo (~2% en un equipo de escritorio
+normal, medido con el Performance monitor de DevTools) no se midió** — se
+declaró pendiente en su momento, no se ocultó, pero sigue siendo deuda real
+hasta que el Bloque C de la Pasada 5 (`docs/plan-post-pasada4-roadmap.md`
+§3) lo cierre con evidencia (vía C1a manual o C1b Playwright).
+
 ### Contexto
 `docs/frontend/plan-mejora-frontend-pasada4.md` (G3) encontró que la identidad
 visual "Instrumento" (`docs/frontend-design/metis-identidad-fase2.md`,
