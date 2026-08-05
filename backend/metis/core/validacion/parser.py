@@ -82,7 +82,7 @@ def _inferir_resolucion(timestamps: list) -> str | None:
     if len(timestamps) < 2:
         return None
     try:
-        ts = pd.to_datetime(timestamps)
+        ts = _parsear_timestamps(timestamps)
         delta = (ts[-1] - ts[0]) / (len(ts) - 1)
         if delta.days >= 300:
             return "anual"
@@ -91,3 +91,27 @@ def _inferir_resolucion(timestamps: list) -> str | None:
         return None
     except Exception:
         return None
+
+
+def _parsear_timestamps(timestamps: list) -> pd.DatetimeIndex:
+    # Bug encontrado en verificación manual (05/08/2026): una columna de año
+    # puro (ej. "anio": 1980, 1981, ...) es el caso MÁS común de este dominio
+    # — series anuales de máximos hidrológicos, exactamente el formato de la
+    # tesis de Facundo. pd.to_datetime() sin `format` interpreta enteros como
+    # nanosegundos desde epoch, no como años: toda la serie colapsaba a
+    # timestamps a nanosegundos de 1970-01-01, delta.days siempre 0, y
+    # CONTRACT_NO_TEMPORAL_RESOLUTION bloqueaba el pipeline para el caso de
+    # uso más común del sistema. Detectar el patrón (todos los valores son
+    # años de 4 dígitos plausibles) y parsear explícitamente con format="%Y".
+    valores = list(timestamps)
+    if all(_es_anio_plausible(v) for v in valores):
+        return pd.to_datetime([int(v) for v in valores], format="%Y")
+    return pd.to_datetime(valores)
+
+
+def _es_anio_plausible(valor) -> bool:
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        return False
+    return numero == int(numero) and 1000 <= numero <= 9999

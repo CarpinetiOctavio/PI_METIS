@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from metis.core.validacion.parser import leer_columnas_preview
+from metis.core.validacion.parser import leer_columnas_preview, parse_file
 
 
 @pytest.mark.unit
@@ -57,3 +57,61 @@ def test_archivo_no_parseable_propaga_la_excepcion_de_pandas():
 
     with pytest.raises(Exception):  # noqa: B017 — cualquier excepción de pandas, el endpoint la mapea a PARSE_ERROR
         leer_columnas_preview(contenido_binario_no_csv, "corrupto.csv")
+
+
+@pytest.mark.unit
+def test_columna_de_anio_puro_infiere_resolucion_anual():
+    # Bug encontrado en verificación manual (05/08/2026): pd.to_datetime()
+    # sin `format` interpreta enteros como nanosegundos desde epoch, no como
+    # años — este es el caso MÁS común del dominio (series anuales con una
+    # columna "anio" de 4 dígitos, exactamente el formato de la tesis de
+    # Facundo) y antes de este fix bloqueaba TODO el pipeline con
+    # CONTRACT_NO_TEMPORAL_RESOLUTION.
+    filas_csv = "\n".join(f"{1980 + i},{100 + i}.5" for i in range(40))
+    csv = f"anio,caudal\n{filas_csv}\n".encode()
+
+    resultado = parse_file(csv, "serie.csv", columna_x="anio", columna_y="caudal")
+
+    assert resultado.resolucion_temporal == "anual"
+    assert len(resultado.serie) == 40
+
+
+@pytest.mark.unit
+def test_columna_de_anio_puro_con_pocos_anios_no_confunde_con_mensual():
+    # Guarda de no-regresión: con años consecutivos el delta real es de un
+    # año (>=300 días), nunca debería caer en la rama "mensual" (25-299 días).
+    csv = b"anio,caudal\n1980,94.71\n1981,89.83\n1982,105.13\n"
+
+    resultado = parse_file(csv, "serie.csv", columna_x="anio", columna_y="caudal")
+
+    assert resultado.resolucion_temporal == "anual"
+
+
+@pytest.mark.unit
+def test_columna_de_fechas_reales_sigue_funcionando():
+    # No-regresión: el camino de fechas ISO reales (no años puros) no debe
+    # verse afectado por la detección de años puros.
+    csv = (
+        b"fecha,caudal\n"
+        b"1980-01-01,94.71\n1981-01-01,89.83\n1982-01-01,105.13\n"
+        b"1983-01-01,110.2\n1984-01-01,120.4\n"
+    )
+
+    resultado = parse_file(csv, "serie.csv", columna_x="fecha", columna_y="caudal")
+
+    assert resultado.resolucion_temporal == "anual"
+
+
+@pytest.mark.unit
+def test_columna_de_anio_y_mes_como_fecha_sigue_siendo_mensual():
+    # No-regresión: fechas mensuales en formato ISO (no años puros de 4
+    # dígitos como valor completo) deben seguir infiriendo "mensual".
+    fechas = pd.date_range("1980-01-01", periods=24, freq="MS")
+    filas_csv = "\n".join(
+        f"{fecha.date()},{100 + i}" for i, fecha in enumerate(fechas)
+    )
+    csv = f"fecha,caudal\n{filas_csv}\n".encode()
+
+    resultado = parse_file(csv, "serie.csv", columna_x="fecha", columna_y="caudal")
+
+    assert resultado.resolucion_temporal == "mensual"
