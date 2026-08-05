@@ -79,3 +79,23 @@ elige ese string, no lo que el backend recibe.
 
 **Ver también:** [DECISIÓN 038](decision038.md) — regla de sincronización
 del catálogo de errores en las tres direcciones.
+
+### Addendum (05/08/2026) — la desviación de `nrows` ya tiene un techo duro
+
+`docs/plan-post-pasada4-roadmap.md` (H2.2, debilidad de proceso) señaló que
+la desviación de la letra del plan original (leer `_leer_dataframe(content)`
+completo en vez de solo las primeras filas con `nrows`, porque la respuesta
+necesita `filas=len(df)`) no tenía consecuencia de memoria acotada en ningún
+lado — el párrafo de "Decisión" de arriba ya la documentaba como consciente,
+pero la justificaba solo por características típicas del dominio ("series
+hidrológicas... nunca datasets masivos"), no por un límite garantizado.
+
+**Con [DECISIÓN 050](decision050.md) (Bloque A, Pasada 5) el costo deja de
+depender de que el dominio se comporte como se espera.** `preview-columns`
+ahora lee el `UploadFile` a través de `_leer_archivo_limitado()`
+(`api/v1/analysis.py`) antes de llegar a `leer_columnas_preview()` — ningún
+archivo por encima de 10 MB llega a `_leer_dataframe()` en absoluto. Leer el
+DataFrame completo para poder devolver `filas=len(df)` sigue siendo la
+implementación real (no se cambia a `nrows` acá, sigue sin hacer falta), pero
+ya no es "barato en la práctica para este dominio" — es "acotado por
+contrato" en el peor caso, con el mismo límite que protege `/analysis/stream`.

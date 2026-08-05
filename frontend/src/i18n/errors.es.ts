@@ -58,6 +58,7 @@ export const ERROR_TEXT: Record<string, string> = {
   // Stream
   PARSE_ERROR:
     "No se pudo leer el archivo. Revisá el formato y las columnas seleccionadas.",
+  PARSE_FILE_TOO_LARGE: "El archivo supera el límite de 10 MB permitido.",
   SESSION_TIMEOUT:
     "Se agotó el tiempo de espera para decidir sobre el dato atípico.",
   STREAM_CONNECTION_ERROR:
