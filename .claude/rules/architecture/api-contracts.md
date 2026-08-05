@@ -95,11 +95,15 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
 
 **Nota de implementación — `cramer_particion` personalizada no implementada.**
 El contrato de arriba documenta `{n1_pct, n2_pct}` como valor válido, pero el
-endpoint real (`api/v1/analysis.py`) declara el campo como `Form(str)` — cualquier
-valor distinto del literal `"default"` llega como string a
-`core/etapa1/homogeneity.py::calcular_cramer` y produce un `TypeError` no
-manejado, no un 400 controlado. Hoy el frontend nunca envía otra cosa que
-`"default"`. Ver `docs/decisiones/decision036.md` — DECISIÓN 036.
+endpoint real (`api/v1/analysis.py`) declara el campo como `Form(str)`.
+**Corrección 05/08/2026 (DECISIÓN 036, Bloque D):** cualquier valor distinto
+del literal `"default"` ahora responde 400 `CONTRACT_CRAMER_PARTICION_UNSUPPORTED`
+en el borde del endpoint, **antes** de llegar a
+`core/etapa1/homogeneity.py::calcular_cramer` — ya no produce un `TypeError`
+no manejado / 500. Esto no implementa la partición personalizada (sigue sin
+existir ninguna de las tres opciones evaluadas en la decisión), solo cierra
+el 500. Hoy el frontend nunca envía otra cosa que `"default"`. Ver
+`docs/decisiones/decision036.md` — DECISIÓN 036.
 
 **Nota de implementación — `etapas` se recibe y se descarta.** El endpoint real
 declara `etapas: str = Form("1")` pero nunca lo pasa a `stream_etapa1()` — el
@@ -357,6 +361,15 @@ CONTRACT_WRONG_ORDER             Orden cronológico incorrecto
 CONTRACT_IRREGULAR_SPACING       Espaciado temporal irregular
 CONTRACT_NON_NUMERIC_VALUES      Valores no numéricos mezclados
 ```
+
+### Contrato — parámetros de request (no de la serie)
+```
+CONTRACT_CRAMER_PARTICION_UNSUPPORTED  cramer_particion distinto de "default" (DECISIÓN 036)
+```
+A diferencia de los dos grupos de arriba (series de datos), este código valida
+un parámetro del request en `POST /analysis/stream` antes de tocar el archivo
+subido o el pipeline — 400, no bloquea una serie válida, bloquea una opción
+todavía no implementada.
 
 ### Etapa 1 — pruebas
 ```

@@ -18,6 +18,10 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_NO_TEMPORAL_RESOLUTION:
     "No se pudo determinar la resolución temporal de la serie.",
 
+  // Contrato — parámetros de request
+  CONTRACT_CRAMER_PARTICION_UNSUPPORTED:
+    "La partición personalizada de Cramer todavía no está disponible. Usá la partición por defecto.",
+
   // Contrato — warnings
   CONTRACT_LENGTH_WARNING:
     "Serie con menos de 30 datos — los resultados no son certificables.",

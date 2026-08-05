@@ -1,6 +1,27 @@
 # DECISIÓN 036 — Partición de Cramer personalizada inalcanzable por el endpoint multipart
 **Fecha:** 29 de Julio de 2026
-**Estado:** DOCUMENTADO — no implementado en esta pasada, requerimiento funcional caído
+**Estado:** DOCUMENTADO — no implementado en esta pasada, requerimiento funcional caído.
+Addendum 05/08/2026: el 500 está cerrado (ver abajo), la partición personalizada
+en sí sigue sin implementar — **PENDIENTE DE DECISIÓN** entre las tres opciones.
+
+### Addendum (05/08/2026) — Bloque D, Pasada 5: el 500 queda cerrado, no la funcionalidad
+
+`docs/plan-post-pasada4-roadmap.md` (H4) encontró que este `TypeError` no
+manejado ya no es solo una limitación conocida del frontend (el botón
+"Personalizada" deshabilitado) — es alcanzable por **cualquier cliente HTTP**
+que le pegue directo a `POST /api/v1/analysis/stream` con `cramer_particion`
+distinto de `"default"`, frontend propio o no, incluido CU-03 el día que
+exista.
+
+`backend/metis/api/v1/analysis.py::stream_analysis` ahora valida
+`cramer_particion` en el borde, antes de leer el archivo o tocar
+`core/`: si no es exactamente `"default"`, responde 400 con el código nuevo
+`CONTRACT_CRAMER_PARTICION_UNSUPPORTED` (catalogado en `api-contracts.md` y
+`frontend/src/i18n/errors.es.ts`). **Esto no es la opción 1 ni la opción 2
+de más abajo** — no se agregó parseo de JSON ni campos `Form` nuevos, solo
+una guarda que rechaza cualquier valor no soportado con un error controlado
+en vez de un crash. Las tres opciones evaluadas siguen abiertas, ninguna
+descartada; sigue pendiente que Kevin/Octavio decidan cuál implementar.
 
 ### Contexto
 `api-contracts.md` y `statistical-pipeline.md` documentan `cramer_particion` como

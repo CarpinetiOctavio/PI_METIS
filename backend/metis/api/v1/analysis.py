@@ -90,6 +90,25 @@ async def stream_analysis(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
+    # DECISIÓN 036 (Bloque D) — cramer_particion distinto de "default" llega
+    # como str vía multipart y calcular_cramer() indexa particion["n1_pct"]
+    # asumiendo dict, lo que producía TypeError -> 500 no manejado. Esto NO
+    # implementa la partición personalizada (ninguna de las tres opciones de
+    # la decisión fue elegida) — solo cierra el 500 con un 400 controlado.
+    if cramer_particion != "default":
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {
+                    "codigo": "CONTRACT_CRAMER_PARTICION_UNSUPPORTED",
+                    "mensaje": (
+                        "La partición personalizada de Cramer todavía no está"
+                        " implementada. Usá 'default'."
+                    ),
+                }
+            },
+        )
+
     content = await _leer_archivo_limitado(archivo)
     session_id = str(uuid.uuid4())
 
