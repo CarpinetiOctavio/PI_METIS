@@ -151,3 +151,4 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [045](decision045.md) | Fondos animados en Canvas 2D sin dependencias, WebGL descartado | 31/07/2026 | Decidida — implementación en curso |
 | [047](decision047.md) | Endpoint `preview-columns`: parseo de cabeceras del lado del servidor, no del cliente | 31/07/2026 | Decidida — implementación en curso |
 | [048](decision048.md) | Archivado de análisis por soft-delete, no borrado físico | 31/07/2026 | Decidida — implementación en curso |
+| [050](decision050.md) | Límite de tamaño de subida: valor (10 MB), nginx + backend, código de error nuevo | 05/08/2026 | Decidida — implementación en curso |
