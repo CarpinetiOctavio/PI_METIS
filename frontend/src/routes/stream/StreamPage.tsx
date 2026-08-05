@@ -166,7 +166,14 @@ export function StreamPage() {
       // un Enter apurado. El contenedor es neutral y de todas formas mete el
       // foco (y al lector de pantalla) adentro del diálogo.
       previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-      dialogRef.current?.focus();
+      // preventScroll: true — feedback de verificación manual (Bloque C,
+      // 05/08/2026): "el aviso de atípico carga más arriba y después se
+      // ajusta". El modal es position:fixed (ya centrado en el viewport),
+      // pero .focus() por defecto pide al navegador desplazar los
+      // contenedores con scroll para "revelar" el elemento enfocado — sin
+      // preventScroll, el scroll de la página salta aunque el modal en sí
+      // nunca se mueva, dando la sensación de que el modal "se reacomoda".
+      dialogRef.current?.focus({ preventScroll: true });
     } else if (previouslyFocusedRef.current) {
       // Restaurar el foco al elemento que lo tenía cuando el modal se cierra.
       previouslyFocusedRef.current.focus();
