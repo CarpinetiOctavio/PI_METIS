@@ -1,7 +1,12 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+  /* Feedback de verificación manual (Bloque C, 05/08/2026): el tinte plano
+     se veía "feo" — un leve desenfoque del contenido de atrás separa mejor
+     el modal sin necesitar más opacidad. -webkit- para Safari. */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
