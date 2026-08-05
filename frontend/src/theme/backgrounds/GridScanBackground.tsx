@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { hexToRgba, prefersReducedMotion, readCssVar, sizeCanvasToParent } from "./canvasUtils";
+import { hexToRgba, prefersReducedMotion, readCssVar, sizeCanvasToViewport } from "./canvasUtils";
 
 // Fondo de la puerta de entrada (B3, plan pasada4 §4). Hermano de
 // DotFieldBackground: misma retícula de 28px y el mismo acento, pero acá el
@@ -29,7 +29,7 @@ export function GridScanBackground() {
     let inViewport = true;
 
     function resize() {
-      const size = sizeCanvasToParent(canvas!);
+      const size = sizeCanvasToViewport(canvas!);
       width = size.width;
       height = size.height;
     }
@@ -87,8 +87,10 @@ export function GridScanBackground() {
       rafId = window.requestAnimationFrame(loop);
     }
 
-    const resizeObserver = new ResizeObserver(() => resize());
-    if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);
+    // window resize, no ResizeObserver sobre el padre — el canvas es
+    // fixed/inset:0, lo que le importa es el viewport, no el layout del
+    // padre (ver comentario de sizeCanvasToViewport en canvasUtils.ts).
+    window.addEventListener("resize", resize);
 
     function handleVisibilityChange() {
       tabVisible = document.visibilityState === "visible";
@@ -102,7 +104,7 @@ export function GridScanBackground() {
 
     return () => {
       if (rafId !== null) window.cancelAnimationFrame(rafId);
-      resizeObserver.disconnect();
+      window.removeEventListener("resize", resize);
       intersectionObserver.disconnect();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
