@@ -4,6 +4,8 @@ import { rankingMock } from "../../mocks/etapa2.mock";
 import { PendingBadge } from "../../mocks/PendingBadge";
 import { formatNum } from "../../i18n/format";
 import type { RankingItem } from "../../api/types";
+import { Magnet } from "../../components/Magnet";
+import { SpecularHighlight } from "../../components/SpecularHighlight";
 import "./RankingPage.css";
 
 type Axis = "calendario" | "hidrologico";
@@ -60,14 +62,26 @@ function RankingCard({
       <p className="fn">
         EEA <span className="num">{formatNum(item.eea)}</span>
       </p>
-      <button
-        type="button"
-        className={`b ${item.rank === 1 ? "b-pri" : "b-sec"}`}
-        style={{ width: "100%", marginTop: 9 }}
-        onClick={onElegir}
-      >
-        Elegir
-      </button>
+      {item.rank === 1 ? (
+        // Magnet + Specular Highlight — solo botones primarios (05/08/2026,
+        // veredicto final). El de mayor rank siempre es b-sec, sin envolver.
+        <Magnet style={{ width: "100%", marginTop: 9 }}>
+          <SpecularHighlight style={{ width: "100%" }}>
+            <button type="button" className="b b-pri" style={{ width: "100%" }} onClick={onElegir}>
+              Elegir
+            </button>
+          </SpecularHighlight>
+        </Magnet>
+      ) : (
+        <button
+          type="button"
+          className="b b-sec"
+          style={{ width: "100%", marginTop: 9 }}
+          onClick={onElegir}
+        >
+          Elegir
+        </button>
+      )}
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { postPreviewColumns } from "../../api/analysis";
 import type { AnalysisStreamForm, ColumnaPreview, Modo, TipoVariable } from "../../api/types";
+import { Magnet } from "../../components/Magnet";
+import { SpecularHighlight } from "../../components/SpecularHighlight";
 import "./ConfigPage.css";
 
 // D3 (plan pasada4 §6) — preselección heurística, nunca obligatoria: el
@@ -280,13 +282,13 @@ export function ConfigPage() {
           </div>
           <p className="fn">La partición personalizada no está disponible todavía.</p>
         </div>
-        <button
-          type="submit"
-          className="b b-pri"
-          style={{ width: "100%", marginTop: 12 }}
-        >
-          Ejecutar análisis ▸
-        </button>
+        <Magnet style={{ width: "100%", marginTop: 12 }}>
+          <SpecularHighlight style={{ width: "100%" }}>
+            <button type="submit" className="b b-pri" style={{ width: "100%" }}>
+              Ejecutar análisis ▸
+            </button>
+          </SpecularHighlight>
+        </Magnet>
       </form>
     </div>
   );

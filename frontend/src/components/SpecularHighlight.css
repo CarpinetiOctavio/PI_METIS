@@ -1,0 +1,31 @@
+/* Ver SpecularHighlight.tsx. border-radius acá tiene que coincidir con
+   var(--r-sm), el que usa .b/.b-pri (components.css) — no se puede usar
+   `inherit` desde un <span> envolvente, el radio del botón no se hereda. */
+.specular-highlight {
+  position: relative;
+  display: inline-flex;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  --spec-x: 50%;
+  --spec-y: 50%;
+}
+
+.specular-highlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* 60px de radio, mezcla acotada a 65% — mismo ajuste "más débil" pedido
+     en la verificación manual (05/08/2026, ronda 4). */
+  background: radial-gradient(
+    60px circle at var(--spec-x) var(--spec-y),
+    color-mix(in srgb, color-mix(in srgb, var(--acc) 55%, white) 65%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease-out);
+  pointer-events: none;
+}
+
+.specular-highlight:hover::before {
+  opacity: 1;
+}

@@ -4,6 +4,8 @@ import { useAuth } from "../../auth/AuthProvider";
 import { register as registerRequest } from "../../api/auth";
 import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
+import { Magnet } from "../../components/Magnet";
+import { SpecularHighlight } from "../../components/SpecularHighlight";
 import "./EntryPage.css";
 
 type Mode = "login" | "register";
@@ -91,9 +93,13 @@ function LoginForm({ onSwitchToRegister }: Readonly<{ onSwitchToRegister: () => 
           required
         />
       </div>
-      <button type="submit" className="b b-pri" disabled={isSubmitting}>
-        {isSubmitting ? "Ingresando…" : "Ingresar"}
-      </button>
+      <Magnet>
+        <SpecularHighlight>
+          <button type="submit" className="b b-pri" disabled={isSubmitting}>
+            {isSubmitting ? "Ingresando…" : "Ingresar"}
+          </button>
+        </SpecularHighlight>
+      </Magnet>
       <p className="entry__switch">
         ¿No tenés cuenta?{" "}
         <button type="button" className="link-btn" onClick={onSwitchToRegister}>
@@ -191,9 +197,13 @@ function RegisterForm({ onSwitchToLogin }: Readonly<{ onSwitchToLogin: () => voi
           onChange={(event) => setNombre(event.target.value)}
         />
       </div>
-      <button type="submit" className="b b-pri" disabled={isSubmitting}>
-        {isSubmitting ? "Creando cuenta…" : "Crear cuenta"}
-      </button>
+      <Magnet>
+        <SpecularHighlight>
+          <button type="submit" className="b b-pri" disabled={isSubmitting}>
+            {isSubmitting ? "Creando cuenta…" : "Crear cuenta"}
+          </button>
+        </SpecularHighlight>
+      </Magnet>
       <p className="entry__switch">
         ¿Ya tenés cuenta?{" "}
         <button type="button" className="link-btn" onClick={onSwitchToLogin}>
