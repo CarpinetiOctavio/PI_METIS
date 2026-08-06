@@ -9,10 +9,10 @@ import { prefersReducedMotion, readCssVar, secureRandom } from "./canvasUtils";
 // esa decisión — acotada a una sola ruta vía carga diferida (React.lazy en
 // RootLayout), así que ninguna pantalla autenticada paga el costo.
 //
-// 18 hilos, paleta de 5 tonos interpolados entre --acc y --acc2 (los dos
-// acentos que el sistema de diseño ya define) — pedido explícito de
-// verificación manual (05/08/2026): "que se vieran más líneas y de
-// distintos colores", sin salirse de la paleta de la identidad
+// 18 hilos, paleta de 5 tonos interpolados entre --glow y --acc2 (para que
+// en tema claro el inicio de la paleta sea luminoso, no oscuro) — pedido
+// explícito de verificación manual (05/08/2026): "que se vieran más líneas y
+// de distintos colores", sin salirse de la paleta de la identidad
 // "Instrumento".
 const THREAD_COUNT = 18;
 const POINTS_PER_THREAD = 64;
@@ -44,7 +44,7 @@ export function ThreadsBackground() {
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     container.appendChild(renderer.domElement);
 
-    const accent = new THREE.Color(readCssVar("--acc", "#22d3ee"));
+    const accent = new THREE.Color(readCssVar("--glow", "#22d3ee"));
     const accent2 = new THREE.Color(readCssVar("--acc2", "#c6f84e"));
     const palette: THREE.Color[] = [];
     for (let i = 0; i < PALETTE_STEPS; i++) {

@@ -37,7 +37,7 @@ export function DotFieldBackground() {
     }
 
     function draw(t: number) {
-      const accent = readCssVar("--acc", "#0e7490");
+      const accent = readCssVar("--glow", "#7dd3e8");
       ctx!.clearRect(0, 0, width, height);
       const cols = Math.ceil(width / GRID_STEP) + 1;
       const rows = Math.ceil(height / GRID_STEP) + 1;

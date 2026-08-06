@@ -14,18 +14,19 @@
 }
 
 :root[data-theme="instrumento"][data-mode="light"] {
-  --bg: #f3f6f8;
+  --bg: #edf1f5;
   --surf: #ffffff;
   --surf2: #e9eef2;
   --ink: #0b0e12;
   --mut: #5b6672;
   --fnt: #9aa5b1;
-  --line: #dee5eb;
+  --line: #d7dfe7;
   --line-strong: #c6d0d8;
   --acc: #0e7490;
   --acc-soft: #d4eef3;
   --on-acc: #ffffff;
   --acc2: #4d7c0f;
+  --glow: #7dd3e8;
   --ok: #128a4e;
   --warn: #b5791a;
   --crit: #c24444;
@@ -44,6 +45,7 @@
   --acc-soft: #0c2a33;
   --on-acc: #04252b;
   --acc2: #c6f84e;
+  --glow: #22d3ee;
   --ok: #35d07a;
   --warn: #f4b740;
   --crit: #ff6a6a;

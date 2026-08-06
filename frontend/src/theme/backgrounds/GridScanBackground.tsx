@@ -22,6 +22,10 @@ const BEAM_OPACITY = 0.9;
 // como una sombra/mancha oscura sobre fondo claro, no como un brillo. Un
 // núcleo blanco en el centro del gradiente, con el acento del tema en los
 // bordes, se lee como una fuente de luz real en los dos temas.
+// Núcleo blanco-caliente del barrido — en tema claro, --glow es un cian claro
+// que se lee como luz sobre fondo claro. Un núcleo blanco en el centro del
+// gradiente con --glow en los bordes se lee como una fuente de luz real en los
+// dos temas.
 const CORE_COLOR = "#ffffff";
 
 export function GridScanBackground() {
@@ -46,8 +50,8 @@ export function GridScanBackground() {
     }
 
     function draw(t: number) {
-      const accent = readCssVar("--acc", "#0e7490");
-      const line = readCssVar("--line", "#dee5eb");
+      const accent = readCssVar("--glow", "#7dd3e8");
+      const line = readCssVar("--line", "#d7dfe7");
       ctx!.clearRect(0, 0, width, height);
 
       const progress = (t % CYCLE_MS) / CYCLE_MS;
