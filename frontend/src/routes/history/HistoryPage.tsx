@@ -4,6 +4,7 @@ import { archiveAnalysis, listHistory, unarchiveAnalysis } from "../../api/histo
 import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
 import type { HistoryItem } from "../../api/types";
+import { SpotlightCard } from "../../components/SpotlightCard";
 import "./HistoryPage.css";
 
 const PAGE_SIZE = 10;
@@ -227,7 +228,7 @@ function HistoryRow({
     // sin producir HTML inválido / comportamiento de foco inconsistente
     // entre navegadores. El <Link> cubre solo el contenido no interactivo;
     // los botones son hermanos, no hijos.
-    <div className="card history-item">
+    <SpotlightCard className="history-item">
       <Link to={`/history/${item.id}`} className="history-item-link">
         <div className="row" style={{ alignItems: "center" }}>
           <b>{item.tipo_variable}</b>
@@ -273,6 +274,6 @@ function HistoryRow({
           </button>
         )}
       </div>
-    </div>
+    </SpotlightCard>
   );
 }

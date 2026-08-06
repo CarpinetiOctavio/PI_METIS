@@ -4,6 +4,7 @@ import { rankingMock } from "../../mocks/etapa2.mock";
 import { PendingBadge } from "../../mocks/PendingBadge";
 import { formatNum } from "../../i18n/format";
 import type { RankingItem } from "../../api/types";
+import { SpotlightCard } from "../../components/SpotlightCard";
 import "./RankingPage.css";
 
 type Axis = "calendario" | "hidrologico";
@@ -23,7 +24,7 @@ function RankingCard({
   const [axis, setAxis] = useState<Axis>("calendario");
 
   return (
-    <div className={`card ranking-card${item.rank === 1 ? " top" : ""}`}>
+    <SpotlightCard className={`ranking-card${item.rank === 1 ? " top" : ""}`}>
       <div className="row">
         <span className={`pill ${item.rank === 1 ? "ok" : "wait"}`}>
           #{item.rank}
@@ -68,7 +69,7 @@ function RankingCard({
       >
         Elegir
       </button>
-    </div>
+    </SpotlightCard>
   );
 }
 

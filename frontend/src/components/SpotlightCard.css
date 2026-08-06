@@ -1,0 +1,32 @@
+/* Ver SpotlightCard.tsx para el porqué del <div> real en vez de ::before. */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+  --spot-x: 50%;
+  --spot-y: 50%;
+}
+
+.spotlight-card__glow {
+  position: absolute;
+  inset: 0;
+  /* Mismo ajuste "más débil" pedido en la verificación manual (05/08/2026,
+     ronda 4): 200px de radio, 22% de mezcla, núcleo blanco al 30% — igual
+     que el spotlight de la exploración una vez corregida la intensidad. */
+  background: radial-gradient(
+    200px circle at var(--spot-x) var(--spot-y),
+    color-mix(in srgb, white 30%, var(--acc)) 0%,
+    color-mix(in srgb, var(--acc) 22%, transparent) 35%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity var(--t-mid) var(--ease-out);
+  pointer-events: none;
+}
+
+.spotlight-card:hover .spotlight-card__glow {
+  opacity: 1;
+}
+
+.spotlight-card__content {
+  position: relative;
+}
