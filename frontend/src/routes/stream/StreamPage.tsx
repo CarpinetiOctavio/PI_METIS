@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAnalysisStream } from "../../api/sse";
 import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
 import { CountUp } from "../../components/CountUp";
+import { Magnet } from "../../components/Magnet";
+import { SpecularHighlight } from "../../components/SpecularHighlight";
 import "./StreamPage.css";
 
 interface Group {
@@ -338,22 +340,25 @@ export function StreamPage() {
         {state.fase === "done" && (
           <div className="banner ok" style={{ marginTop: 14 }}>
             <span className="ic">✓</span> Análisis completo.{" "}
-            <button
-              type="button"
-              className="b b-pri"
-              style={{ marginLeft: "auto" }}
-              onClick={() =>
-                navigate("/results", {
-                  state: {
-                    result: state.result,
-                    analysisId: state.analysisId,
-                    modo: form.modo,
-                  },
-                })
-              }
-            >
-              Ver resultados ▸
-            </button>
+            <Magnet style={{ marginLeft: "auto" }}>
+              <SpecularHighlight>
+                <button
+                  type="button"
+                  className="b b-pri"
+                  onClick={() =>
+                    navigate("/results", {
+                      state: {
+                        result: state.result,
+                        analysisId: state.analysisId,
+                        modo: form.modo,
+                      },
+                    })
+                  }
+                >
+                  Ver resultados ▸
+                </button>
+              </SpecularHighlight>
+            </Magnet>
           </div>
         )}
       </div>
@@ -387,14 +392,18 @@ export function StreamPage() {
               >
                 Rechazar
               </button>
-              <button
-                type="button"
-                className="b b-pri"
-                disabled={resolving}
-                onClick={() => handleOutlierDecision("aceptar")}
-              >
-                Aceptar
-              </button>
+              <Magnet>
+                <SpecularHighlight>
+                  <button
+                    type="button"
+                    className="b b-pri"
+                    disabled={resolving}
+                    onClick={() => handleOutlierDecision("aceptar")}
+                  >
+                    Aceptar
+                  </button>
+                </SpecularHighlight>
+              </Magnet>
             </div>
           </div>
         </div>
