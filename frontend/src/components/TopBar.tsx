@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { useLayoutEffect, useRef, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../theme/ThemeProvider";
 import { useBackendPing } from "../api/useBackendPing";
 import { useAuth } from "../auth/AuthProvider";
@@ -24,6 +25,7 @@ export function TopBar() {
   const { state } = useBackendPing();
   const { user, isAuthed, isAnonymous, logout, exitAnonymously } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   // F4/F5/F6 (informe-diagnostico-ui-rota.md): antes esta barra no tenía un
   // solo link — /history y /ranking eran alcanzables únicamente tipeando la
@@ -38,11 +40,45 @@ export function TopBar() {
     navigate("/", { replace: true });
   }
 
+  const navRef = useRef<HTMLElement>(null);
+  const [pillStyle, setPillStyle] = useState<{ left: number; width: number; visible: boolean }>({
+    left: 0,
+    width: 0,
+    visible: false,
+  });
+
+  // Pill Nav (05/08/2026, veredicto final tras la exploración de
+  // frontend/src/experimental/ — ver README.md ahí): la cápsula desliza
+  // detrás del NavLink activo. A diferencia de la demo experimental (que
+  // usaba botones con estado interno, un tab-switcher de mentira), acá los
+  // links son NavLink reales — la ruta manda, no un estado local — así que
+  // la posición de la cápsula se mide del DOM real después de cada render
+  // en vez de derivarse de un índice. Ninguno de los dos links coincide con
+  // rutas como /stream, /results, /ranking (TopBar nunca linkeó a esas) —
+  // la cápsula se oculta en vez de quedarse en una posición vieja.
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const active = nav.querySelector<HTMLElement>(".topbar__link--active");
+    if (!active) {
+      setPillStyle((prev) => ({ ...prev, visible: false }));
+      return;
+    }
+    setPillStyle({ left: active.offsetLeft, width: active.offsetWidth, visible: true });
+  }, [pathname, isAuthed, isAnonymous, user]);
+
   return (
     <header className="topbar">
       <span className="logo">METIS</span>
 
-      <nav className="topbar__nav">
+      <nav ref={navRef} className="topbar__nav">
+        {pillStyle.visible && (
+          <span
+            className="topbar__pill-indicator"
+            style={{ left: pillStyle.left, width: pillStyle.width }}
+            aria-hidden="true"
+          />
+        )}
         {(isAuthed || isAnonymous) && (
           <NavLink to="/config" className={navLinkClassName}>
             Nuevo análisis

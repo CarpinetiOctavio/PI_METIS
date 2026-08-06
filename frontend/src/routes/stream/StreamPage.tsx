@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAnalysisStream } from "../../api/sse";
 import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
 import { CountUp } from "../../components/CountUp";
+import { Magnet } from "../../components/Magnet";
+import { SpecularHighlight } from "../../components/SpecularHighlight";
 import "./StreamPage.css";
 
 interface Group {
@@ -166,7 +168,14 @@ export function StreamPage() {
       // un Enter apurado. El contenedor es neutral y de todas formas mete el
       // foco (y al lector de pantalla) adentro del diálogo.
       previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-      dialogRef.current?.focus();
+      // preventScroll: true — feedback de verificación manual (Bloque C,
+      // 05/08/2026): "el aviso de atípico carga más arriba y después se
+      // ajusta". El modal es position:fixed (ya centrado en el viewport),
+      // pero .focus() por defecto pide al navegador desplazar los
+      // contenedores con scroll para "revelar" el elemento enfocado — sin
+      // preventScroll, el scroll de la página salta aunque el modal en sí
+      // nunca se mueva, dando la sensación de que el modal "se reacomoda".
+      dialogRef.current?.focus({ preventScroll: true });
     } else if (previouslyFocusedRef.current) {
       // Restaurar el foco al elemento que lo tenía cuando el modal se cierra.
       previouslyFocusedRef.current.focus();
@@ -331,22 +340,25 @@ export function StreamPage() {
         {state.fase === "done" && (
           <div className="banner ok" style={{ marginTop: 14 }}>
             <span className="ic">✓</span> Análisis completo.{" "}
-            <button
-              type="button"
-              className="b b-pri"
-              style={{ marginLeft: "auto" }}
-              onClick={() =>
-                navigate("/results", {
-                  state: {
-                    result: state.result,
-                    analysisId: state.analysisId,
-                    modo: form.modo,
-                  },
-                })
-              }
-            >
-              Ver resultados ▸
-            </button>
+            <Magnet style={{ marginLeft: "auto" }}>
+              <SpecularHighlight>
+                <button
+                  type="button"
+                  className="b b-pri"
+                  onClick={() =>
+                    navigate("/results", {
+                      state: {
+                        result: state.result,
+                        analysisId: state.analysisId,
+                        modo: form.modo,
+                      },
+                    })
+                  }
+                >
+                  Ver resultados ▸
+                </button>
+              </SpecularHighlight>
+            </Magnet>
           </div>
         )}
       </div>
@@ -380,14 +392,18 @@ export function StreamPage() {
               >
                 Rechazar
               </button>
-              <button
-                type="button"
-                className="b b-pri"
-                disabled={resolving}
-                onClick={() => handleOutlierDecision("aceptar")}
-              >
-                Aceptar
-              </button>
+              <Magnet>
+                <SpecularHighlight>
+                  <button
+                    type="button"
+                    className="b b-pri"
+                    disabled={resolving}
+                    onClick={() => handleOutlierDecision("aceptar")}
+                  >
+                    Aceptar
+                  </button>
+                </SpecularHighlight>
+              </Magnet>
             </div>
           </div>
         </div>

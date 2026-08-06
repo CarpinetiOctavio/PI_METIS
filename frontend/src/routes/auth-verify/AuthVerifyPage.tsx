@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { verify } from "../../api/auth";
 import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
+import { Magnet } from "../../components/Magnet";
+import { SpecularHighlight } from "../../components/SpecularHighlight";
 
 type Status = "checking" | "success" | "error";
 
@@ -62,9 +64,13 @@ export function AuthVerifyPage() {
         <span className="ic">{STATUS_ICON[status]}</span> {message}
       </output>
       {status !== "checking" && (
-        <Link to="/" className="b b-pri" style={{ marginTop: 12 }}>
-          Ir a la puerta de entrada
-        </Link>
+        <Magnet style={{ marginTop: 12 }}>
+          <SpecularHighlight>
+            <Link to="/" className="b b-pri">
+              Ir a la puerta de entrada
+            </Link>
+          </SpecularHighlight>
+        </Magnet>
       )}
     </div>
   );

@@ -4,6 +4,8 @@ import { useAuth } from "../../auth/AuthProvider";
 import { Etapa1ResultView } from "./Etapa1ResultView";
 import { PendingBadge } from "../../mocks/PendingBadge";
 import type { Etapa1Result, Modo } from "../../api/types";
+import { Magnet } from "../../components/Magnet";
+import { SpecularHighlight } from "../../components/SpecularHighlight";
 import "./ResultsPage.css";
 
 interface ResultsLocationState {
@@ -40,13 +42,13 @@ export function ResultsPage() {
           tribunal necesita ver el flujo completo de CU-01; el badge deja
           explícito qué parte es mock. */}
       <div className="row" style={{ marginTop: 20, alignItems: "center", gap: 10 }}>
-        <button
-          type="button"
-          className="b b-pri"
-          onClick={() => navigate("/ranking")}
-        >
-          Continuar a Etapa 2 ▸
-        </button>
+        <Magnet>
+          <SpecularHighlight>
+            <button type="button" className="b b-pri" onClick={() => navigate("/ranking")}>
+              Continuar a Etapa 2 ▸
+            </button>
+          </SpecularHighlight>
+        </Magnet>
         <PendingBadge note="Etapa 2 no expuesta por API todavía — ranking de ejemplo" />
       </div>
     </div>

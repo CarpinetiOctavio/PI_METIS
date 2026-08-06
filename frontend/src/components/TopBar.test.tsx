@@ -36,14 +36,16 @@ function EntryProbe() {
   return <div>entry screen</div>;
 }
 
-function renderTopBar() {
+function renderTopBar(initialPath = "/config") {
   return renderPage(
-    <MemoryRouter initialEntries={["/config"]}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <ThemeProvider>
         <AuthProvider>
           <Routes>
             <Route path="/" element={<EntryProbe />} />
             <Route path="/config" element={<TopBar />} />
+            <Route path="/history" element={<TopBar />} />
+            <Route path="/stream" element={<TopBar />} />
           </Routes>
         </AuthProvider>
       </ThemeProvider>
@@ -176,5 +178,36 @@ describe("TopBar", () => {
 
     expect(await screen.findByText("entry screen")).toBeInTheDocument();
     expect(localStorage.getItem("metis-anon-session")).toBeNull();
+  });
+
+  // Pill Nav (05/08/2026): la cápsula desliza detrás del NavLink activo. A
+  // diferencia de la demo experimental (botones + estado interno), acá la
+  // posición se deriva de qué NavLink real tiene aria-current="page" — el
+  // caso a cubrir es que se oculte en vez de quedarse en una posición vieja
+  // cuando la ruta actual no coincide con ninguno de los dos links.
+  it("shows the pill indicator behind the active NavLink", async () => {
+    stubFetch({
+      ok: true,
+      body: { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true },
+    });
+
+    const { container } = renderTopBar("/config");
+    const configLink = await screen.findByRole("link", { name: "Nuevo análisis" });
+
+    expect(configLink).toHaveAttribute("aria-current", "page");
+    expect(container.querySelector(".topbar__pill-indicator")).toBeInTheDocument();
+  });
+
+  it("hides the pill indicator on a route that matches neither nav link", async () => {
+    stubFetch({
+      ok: true,
+      body: { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true },
+    });
+
+    const { container } = renderTopBar("/stream");
+    await screen.findByRole("link", { name: "Nuevo análisis" });
+
+    expect(screen.queryByRole("link", { current: "page" })).not.toBeInTheDocument();
+    expect(container.querySelector(".topbar__pill-indicator")).not.toBeInTheDocument();
   });
 });
