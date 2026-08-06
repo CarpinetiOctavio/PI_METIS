@@ -8,10 +8,21 @@ import { hexToRgba, prefersReducedMotion, readCssVar, sizeCanvasToViewport } fro
 // DotFieldBackground: es la primera pantalla, no protege tablas de datos.
 const GRID_STEP = 28;
 const CYCLE_MS = 6000;
-const TRAIL_WIDTH = 240;
+// Feedback de verificación manual (Bloque C, 05/08/2026): el trail se veía
+// débil y se apagaba muy rápido — TRAIL_WIDTH 240 -> 360 (persiste más
+// distancia detrás del barrido), SWEEP_LINE_OPACITY 0.75 -> 0.92 (color más
+// fuerte cerca del barrido).
+const TRAIL_WIDTH = 360;
 const BASE_LINE_OPACITY = 0.12;
-const SWEEP_LINE_OPACITY = 0.75;
+const SWEEP_LINE_OPACITY = 0.92;
 const BEAM_OPACITY = 0.9;
+// Núcleo blanco-caliente del barrido — mismo motivo que el punto anterior:
+// en tema claro, --acc es oscuro (necesita contraste como texto/ícono en
+// otros lugares), así que una banda "glow" pintada solo con --acc se lee
+// como una sombra/mancha oscura sobre fondo claro, no como un brillo. Un
+// núcleo blanco en el centro del gradiente, con el acento del tema en los
+// bordes, se lee como una fuente de luz real en los dos temas.
+const CORE_COLOR = "#ffffff";
 
 export function GridScanBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -64,9 +75,13 @@ export function GridScanBackground() {
       }
 
       // El barrido en sí — banda vertical con glow, encima de la grilla.
+      // Núcleo blanco al centro, acento del tema en los bordes (ver
+      // CORE_COLOR más arriba) — se lee como brillo real en los dos temas.
       const gradient = ctx!.createLinearGradient(beamX - 14, 0, beamX + 14, 0);
       gradient.addColorStop(0, hexToRgba(accent, 0));
-      gradient.addColorStop(0.5, hexToRgba(accent, BEAM_OPACITY));
+      gradient.addColorStop(0.35, hexToRgba(accent, BEAM_OPACITY * 0.55));
+      gradient.addColorStop(0.5, hexToRgba(CORE_COLOR, BEAM_OPACITY));
+      gradient.addColorStop(0.65, hexToRgba(accent, BEAM_OPACITY * 0.55));
       gradient.addColorStop(1, hexToRgba(accent, 0));
       ctx!.fillStyle = gradient;
       ctx!.fillRect(beamX - 14, 0, 28, height);

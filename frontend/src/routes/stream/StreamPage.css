@@ -1,20 +1,12 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  /* Feedback de verificación manual (Bloque C, 05/08/2026), dos rondas:
-     1) el tinte plano se veía feo — un desenfoque separa mejor el modal sin
-        subir la opacidad.
-     2) `--ink` es un token de TEXTO, no de scrim — se invierte por tema (casi
-        negro en claro, casi blanco en oscuro). Con el tema oscuro activo
-        (--ink: #e6edf3) el resultado era un lavado blancuzco, no un fondo que
-        se oscurece — exactamente el "tinte blanco raro" reportado. Un scrim
-        de modal tiene que oscurecer el fondo en los dos temas por igual, así
-        que usa un rgba fijo, no un token que cambia de dirección.
-     Resultado: más transparente (18%, antes 35-45%) + blur más fuerte para
-     una terminación tipo glassmorphism en vez de un tinte plano. */
-  background: rgba(9, 12, 16, 0.18);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  /* Feedback de verificación manual (Bloque C, 05/08/2026), tres rondas —
+     ver decisiones acumuladas en .modal-backdrop .card de abajo, que es
+     donde terminó viviendo el efecto real. Acá solo queda un scrim de
+     oscurecimiento simple, fijo (no `--ink`, que se invierte por tema —
+     ronda 2) e igual en los dos temas. */
+  background: rgba(9, 12, 16, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -29,6 +21,22 @@
 .modal-backdrop .card {
   max-width: 380px;
   width: 100%;
+  /* Ronda 3 (05/08/2026): el desenfoque vivía en el SCRIM de fondo, con la
+     tarjeta encima totalmente opaca (var(--surf)) — arquitectura invertida
+     respecto de lo que "glassmorphism" pide en la práctica (ej. reactbits
+     "Glass Surface"): el panel en primer plano es el que tiene que ser
+     semitransparente y desenfocar lo que hay DETRÁS SUYO, no el scrim de
+     atrás. Ahora la tarjeta misma es el panel de vidrio — semitransparente
+     con blur propio + borde e inset highlight sutiles para el filo del
+     vidrio + sombra para la elevación. `color-mix(var(--surf) ...)` se
+     adapta solo a los dos temas, igual que el resto del sistema de diseño. */
+  background: color-mix(in srgb, var(--surf) 55%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent);
   animation: modal-card-in var(--t-mid) var(--ease-out);
 }
 
