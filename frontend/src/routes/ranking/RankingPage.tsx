@@ -63,15 +63,6 @@ function RankingCard({
       <p className="fn">
         EEA <span className="num">{formatNum(item.eea)}</span>
       </p>
-      <button
-        type="button"
-        className={`b ${item.rank === 1 ? "b-pri" : "b-sec"}`}
-        style={{ width: "100%", marginTop: 9 }}
-        onClick={onElegir}
-      >
-        Elegir
-      </button>
-    </SpotlightCard>
       {item.rank === 1 ? (
         // Magnet + Specular Highlight — solo botones primarios (05/08/2026,
         // veredicto final). El de mayor rank siempre es b-sec, sin envolver.
@@ -92,7 +83,7 @@ function RankingCard({
           Elegir
         </button>
       )}
-    </div>
+    </SpotlightCard>
   );
 }
 
