@@ -12,6 +12,7 @@
 // WebGL) se adapta a la guarda equivalente de Canvas 2D
 // (`getContext("2d")` devolviendo null).
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { StrictMode } from "react";
 import { render } from "@testing-library/react";
 import { ThreadsBackground } from "./ThreadsBackground";
 
@@ -67,5 +68,42 @@ describe("ThreadsBackground — sin contexto 2D (jsdom real, sin el mock global)
 
     expect(() => render(<ThreadsBackground />)).not.toThrow();
     expect(rafSpy).not.toHaveBeenCalled();
+  });
+});
+
+// Guardas 2 (StrictMode monta dos veces, debe quedar un solo loop vivo) y 4
+// (cleanup completo al desmontar) — cubiertas hoy en DotFieldBackground.lifecycle.test.tsx
+// y GridScanBackground.lifecycle.test.tsx, pero faltaban acá (B6 del brief
+// las exige para los cuatro fondos). Acá el contexto 2D SÍ está disponible
+// (el mock global de vitest.setup.ts, sin pisar), así que el componente
+// recorre el camino real de dibujo y pide rAF como en producción.
+describe("ThreadsBackground — ciclo de vida bajo StrictMode", () => {
+  beforeEach(() => {
+    mockReducedMotion(false);
+  });
+
+  it("deja exactamente un loop vivo tras el doble montaje de StrictMode", () => {
+    const { requested, canceled } = mockRaf();
+
+    render(
+      <StrictMode>
+        <ThreadsBackground />
+      </StrictMode>,
+    );
+
+    expect(requested.length - canceled.length).toBe(1);
+  });
+
+  it("cancela el loop al desmontar — cero loops vivos", () => {
+    const { requested, canceled } = mockRaf();
+
+    const { unmount } = render(
+      <StrictMode>
+        <ThreadsBackground />
+      </StrictMode>,
+    );
+    unmount();
+
+    expect(requested.length - canceled.length).toBe(0);
   });
 });

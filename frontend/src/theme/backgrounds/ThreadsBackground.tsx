@@ -63,15 +63,17 @@ export function ThreadsBackground() {
       height = size.height;
     }
 
-    const accent = readCssVar("--glow", "#22d3ee");
-    const accent2 = readCssVar("--acc2", "#c6f84e");
-    const palette: string[] = [];
-    for (let i = 0; i < PALETTE_STEPS; i++) {
-      palette.push(lerpHex(accent, accent2, i / (PALETTE_STEPS - 1)));
-    }
-
+    // accent/accent2/paleta se calculan en draw(), no acá — el efecto corre
+    // una sola vez (deps []), pero ThreadsBackground se monta siempre en
+    // RootLayout y ThemeProvider cambia de tema pisando `data-mode` en vivo,
+    // sin desmontar/remontar nada. Calcular la paleta una sola vez al montar
+    // dejaba los hilos con los colores del tema con el que se cargó la
+    // página hasta un F5 — mismo bug que P2 del diagnóstico, reintroducido
+    // acá. DotFieldBackground/GridScanBackground ya resuelven esto
+    // correctamente llamando a readCssVar dentro de draw() en cada frame
+    // (ver DotFieldBackground.tsx / GridScanBackground.tsx); acá se sigue
+    // el mismo patrón.
     const threads = Array.from({ length: THREAD_COUNT }, (_, i) => ({
-      color: palette[i % palette.length],
       opacity: 0.14 + (i / THREAD_COUNT) * 0.14,
       seed: secureRandom() * 1000,
       yOffset: (i / (THREAD_COUNT - 1)) * 2 - 1,
@@ -88,10 +90,20 @@ export function ThreadsBackground() {
 
     function draw(t: number) {
       const time = t / 1000;
+      // Leídos en cada frame — no en el cuerpo del efecto — para que un
+      // toggle de tema en caliente (ThemeProvider pisa `data-mode`, no
+      // remonta el componente) se refleje sin esperar a un reload.
+      const accent = readCssVar("--glow", "#22d3ee");
+      const accent2 = readCssVar("--acc2", "#c6f84e");
+      const palette: string[] = [];
+      for (let i = 0; i < PALETTE_STEPS; i++) {
+        palette.push(lerpHex(accent, accent2, i / (PALETTE_STEPS - 1)));
+      }
+
       ctx!.clearRect(0, 0, width, height);
       ctx!.lineWidth = 1;
-      for (const { color, opacity, seed, yOffset, speed } of threads) {
-        ctx!.strokeStyle = hexToRgba(color, opacity);
+      threads.forEach(({ opacity, seed, yOffset, speed }, i) => {
+        ctx!.strokeStyle = hexToRgba(palette[i % palette.length], opacity);
         ctx!.beginPath();
         for (let p = 0; p < POINTS_PER_THREAD; p++) {
           const xNdc = (p / (POINTS_PER_THREAD - 1)) * 2 - 1;
@@ -106,7 +118,7 @@ export function ThreadsBackground() {
           }
         }
         ctx!.stroke();
-      }
+      });
     }
 
     function loop(t: number) {
@@ -142,10 +154,10 @@ export function ThreadsBackground() {
     intersectionObserver.observe(canvas);
 
     return () => {
-      // Guarda 4: cleanup completo — rAF cancelado, los tres listeners
-      // desregistrados, observer desconectado. Bajo StrictMode (que monta
-      // dos veces) sin esto quedan loops duplicados corriendo para siempre
-      // — misma clase de bug que F1
+      // Guarda 4: cleanup completo — rAF cancelado, los dos listeners
+      // (resize, visibilitychange) desregistrados, IntersectionObserver
+      // desconectado. Bajo StrictMode (que monta dos veces) sin esto quedan
+      // loops duplicados corriendo para siempre — misma clase de bug que F1
       // (docs/frontend/informe-diagnostico-ui-rota.md).
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
