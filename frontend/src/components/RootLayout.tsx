@@ -1,7 +1,17 @@
+import { lazy, Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { TopBar } from "./TopBar";
 import { DotFieldBackground } from "../theme/backgrounds/DotFieldBackground";
 import { GridScanBackground } from "../theme/backgrounds/GridScanBackground";
+
+// DECISIÓN 045 (addendum 05/08/2026) — three.js queda excluido del bundle
+// principal vía import dinámico: solo la puerta de entrada ("/") paga el
+// costo, ninguna pantalla autenticada carga el chunk de three.js.
+const ThreadsBackground = lazy(() =>
+  import("../theme/backgrounds/ThreadsBackground").then((m) => ({
+    default: m.ThreadsBackground,
+  })),
+);
 
 export function RootLayout() {
   // La puerta de entrada ("/") tiene su propio fondo (GridScanBackground) —
@@ -26,6 +36,11 @@ export function RootLayout() {
 
   return (
     <div className="app-shell">
+      {showGridScan && (
+        <Suspense fallback={null}>
+          <ThreadsBackground />
+        </Suspense>
+      )}
       {showDotField && <DotFieldBackground />}
       {showGridScan && <GridScanBackground />}
       <TopBar />

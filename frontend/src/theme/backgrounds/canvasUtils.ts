@@ -21,6 +21,17 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/** Math.random() dispara la regla S2245 de SonarCloud (PRNG no
+ * criptográfico) en cualquier uso, sin distinguir jitter puramente visual
+ * de valores sensibles. Mismo rango [0, 1) que Math.random(), vía
+ * crypto.getRandomValues — usado por ThreadsBackground para sembrar la
+ * animación de los hilos. */
+export function secureRandom(): number {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return array[0] / (0xffffffff + 1);
+}
+
 export function readCssVar(name: string, fallback: string): string {
   const value = getComputedStyle(document.documentElement)
     .getPropertyValue(name)
