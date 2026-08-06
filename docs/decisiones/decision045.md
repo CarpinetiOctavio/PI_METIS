@@ -1,8 +1,63 @@
 # DECISIÓN 045 — Fondos animados en Canvas 2D sin dependencias, WebGL descartado
 **Fecha:** 31 de Julio de 2026
-**Estado:** Implementada, bundle medido — falta verificación visual final (Bloque G, cierre de PR1)
+**Estado:** Implementada, bundle medido — falta verificación visual final (Bloque G, cierre de PR1).
+Addendum 05/08/2026 (segundo): excepción puntual a "WebGL descartado" para
+`ThreadsBackground` en la puerta de entrada, acotada por code-splitting —
+ver abajo. La decisión original (Canvas 2D sin dependencias para
+`DotFieldBackground`/`GridScanBackground`) sigue vigente sin cambios.
 
-### Addendum (05/08/2026) — presupuesto de CPU (B7) sin medir
+### Addendum (05/08/2026, segundo) — excepción acotada: Threads (three.js) en la puerta de entrada
+
+Verificación manual de Bloque C (`docs/plan-post-pasada4-roadmap.md` §3)
+pidió explorar fondos más elaborados con three.js (referencias reactbits.dev
+"Threads"/"Beams"), comparando fidelidad real, no una aproximación — ver
+`frontend/src/experimental/README.md` (exploración descartable, no
+comiteada) para el detalle de las dos rondas de feedback. Veredicto final:
+**Threads queda confirmado para la puerta de entrada, `three`/`gsap` pasan a
+dependencias reales.**
+
+**Por qué esto no contradice la decisión original.** El argumento de más
+arriba ("Opciones evaluadas", opción 1) fue "~600 KB adicionales al bundle
+de producción... el costo no es proporcional al efecto buscado" — ese
+argumento asumía que el costo se paga en **el bundle principal**, cargado
+por **todas** las pantallas. `RootLayout.tsx` ahora importa
+`ThreadsBackground` con `React.lazy()` + `import()` dinámico, montado
+únicamente cuando `pathname === "/"` — el chunk de three.js nunca se
+descarga para ninguna pantalla autenticada (config, stream, resultados,
+ranking, historial, etc.), que es donde vive el 90% del uso real de la app.
+
+**Costo en bundle — medido** (`npm run build`, antes vs. después de este
+addendum):
+
+| | Antes | Después | Delta |
+|---|---|---|---|
+| `index.js` (bundle principal, gzip) | 82.53 KB | 83.05 KB | **+0.52 KB** |
+| `ThreadsBackground-*.js` (chunk aparte, gzip) | — | 128.37 KB | solo carga en `/` |
+
+El bundle principal —el que paga cada pantalla autenticada— prácticamente
+no se movió. Los 128 KB de three.js quedan aislados en un chunk que un
+usuario que solo usa CU-01/CU-02 después de loguearse jamás descarga.
+
+**Guardas obligatorias** (mismas que B4 exige para los otros dos fondos,
+aplicadas acá también — ver `ThreadsBackground.tsx`): respeta
+`prefers-reduced-motion` sin arrancar el loop, cancela `requestAnimationFrame`
+en la limpieza (StrictMode monta dos veces), pausa fuera de viewport o
+pestaña oculta, escala por `devicePixelRatio`. Guarda adicional propia de
+este componente: `new THREE.WebGLRenderer()` está en un `try/catch` — WebGL
+no está garantizado (GPU deshabilitada, navegador viejo, o directamente
+jsdom en la suite de tests) y sin la guarda tira una excepción que rompe el
+render de la puerta de entrada entera en vez de degradar a "sin Threads,
+GridScanBackground sigue andando encima" (`ThreadsBackground.lifecycle.test.tsx`
+cubre este caso explícitamente).
+
+**Alcance de la excepción — no es un cambio general de postura.**
+`DotFieldBackground` y `GridScanBackground` (las pantallas autenticadas y el
+resto de la puerta de entrada) siguen en Canvas 2D puro, sin dependencias,
+sin cambios. Esto no reabre la puerta a WebGL en cualquier lugar — es una
+excepción puntual, justificada con números reales, para un solo componente
+en una sola ruta, con el costo medido y aislado por diseño.
+
+### Addendum (05/08/2026, primero) — presupuesto de CPU (B7) sin medir
 
 `docs/plan-post-pasada4-roadmap.md` (§1.2, "debilidades reales del proceso")
 registra que la verificación final del Bloque G quedó a mitad: **5 de 14
