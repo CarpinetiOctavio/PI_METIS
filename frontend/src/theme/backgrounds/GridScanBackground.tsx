@@ -16,12 +16,6 @@ const TRAIL_WIDTH = 360;
 const BASE_LINE_OPACITY = 0.12;
 const SWEEP_LINE_OPACITY = 0.92;
 const BEAM_OPACITY = 0.9;
-// Núcleo blanco-caliente del barrido — mismo motivo que el punto anterior:
-// en tema claro, --acc es oscuro (necesita contraste como texto/ícono en
-// otros lugares), así que una banda "glow" pintada solo con --acc se lee
-// como una sombra/mancha oscura sobre fondo claro, no como un brillo. Un
-// núcleo blanco en el centro del gradiente, con el acento del tema en los
-// bordes, se lee como una fuente de luz real en los dos temas.
 // Núcleo blanco-caliente del barrido — en tema claro, --glow es un cian claro
 // que se lee como luz sobre fondo claro. Un núcleo blanco en el centro del
 // gradiente con --glow en los bordes se lee como una fuente de luz real en los
