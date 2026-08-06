@@ -45,7 +45,7 @@ describe("ThreadsBackground — sin WebGL (jsdom real, sin mockear three)", () =
 
     expect(() => render(<ThreadsBackground />)).not.toThrow();
     // La guarda corta ANTES de pedir cualquier rAF — no hay loop que limpiar.
-    expect(requested.length).toBe(0);
+    expect(requested).toHaveLength(0);
   });
 
   it("con prefers-reduced-motion tampoco rompe ni pide rAF", () => {

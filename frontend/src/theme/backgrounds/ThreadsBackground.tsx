@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { prefersReducedMotion, readCssVar } from "./canvasUtils";
+import { prefersReducedMotion, readCssVar, secureRandom } from "./canvasUtils";
 
 // Puerta de entrada únicamente (RootLayout, pathname === "/") — hermano de
 // GridScanBackground, va DEBAJO (mismo z-index negativo). DECISIÓN 045
@@ -66,9 +66,9 @@ export function ThreadsBackground() {
       scene.add(line);
       lines.push({
         line,
-        seed: Math.random() * 1000,
+        seed: secureRandom() * 1000,
         yOffset: (i / (THREAD_COUNT - 1)) * 2 - 1,
-        speed: 0.15 + Math.random() * 0.15,
+        speed: 0.15 + secureRandom() * 0.15,
       });
     }
 
@@ -135,7 +135,7 @@ export function ThreadsBackground() {
         (line.material as THREE.Material).dispose();
       }
       renderer.dispose();
-      container!.removeChild(renderer.domElement);
+      renderer.domElement.remove();
     };
   }, []);
 
