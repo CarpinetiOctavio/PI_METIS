@@ -154,3 +154,4 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [048](decision048.md) | Archivado de análisis por soft-delete, no borrado físico | 31/07/2026 | Decidida — implementación en curso |
 | 049 | *(reservado — escotilla SMTP de desarrollo en `auth/email.py`. Corrección 05/08/2026: el plan de arreglo de UI y su informe de resultados citaban 045 para esto, pero 045 quedó asignada a "Fondos animados en Canvas 2D" antes de que la escotilla SMTP se escribiera — ver `docs/plan-post-pasada4-roadmap.md`, H1)* | — | Pendiente — ver `sprint.md`, "Pendiente de esta rama" |
 | [050](decision050.md) | Límite de tamaño de subida: valor (10 MB), nginx + backend, código de error nuevo | 05/08/2026 | Decidida — implementación en curso |
+| [051](decision051.md) | ThreadsBackground pasa de Three.js a Canvas 2D; Three.js sale del proyecto — supera el addendum de la excepción de DECISIÓN 045 | 06/08/2026 | Implementada |

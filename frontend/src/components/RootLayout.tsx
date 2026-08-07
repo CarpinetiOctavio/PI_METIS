@@ -1,22 +1,16 @@
-import { lazy, Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { TopBar } from "./TopBar";
+import { ThreadsBackground } from "../theme/backgrounds/ThreadsBackground";
 import { DotFieldBackground } from "../theme/backgrounds/DotFieldBackground";
 import { GridScanBackground } from "../theme/backgrounds/GridScanBackground";
-
-// DECISIÓN 045 (addendum 05/08/2026) — three.js queda excluido del bundle
-// principal vía import dinámico: solo la puerta de entrada ("/") paga el
-// costo, ninguna pantalla autenticada carga el chunk de three.js.
-const ThreadsBackground = lazy(() =>
-  import("../theme/backgrounds/ThreadsBackground").then((m) => ({
-    default: m.ThreadsBackground,
-  })),
-);
 
 export function RootLayout() {
   // La puerta de entrada ("/") tiene su propio fondo (GridScanBackground) —
   // son hermanos, nunca los dos fondos a la vez (plan pasada4 §4: "distinto
-  // protagonismo" en cada pantalla).
+  // protagonismo" en cada pantalla). ThreadsBackground (strands) es el
+  // tercer fondo y, a diferencia de los otros dos, se monta siempre en
+  // todas las pantallas — desde DECISIÓN 051 es Canvas 2D puro, ya no paga
+  // el costo de un chunk de Three.js con lazy/Suspense.
   //
   // Bug encontrado en verificación manual (05/08/2026): GridScanBackground
   // vivía montado DENTRO de EntryPage, que renderiza dentro de `.route-enter`
@@ -27,7 +21,7 @@ export function RootLayout() {
   // contexto en vez de cubrir la página entera: pintaba detrás de sus propios
   // hermanos (`.entry`) y desplazado del viewport real. Confirmado con
   // elementFromPoint() incluso pintando el canvas a mano — nunca era el
-  // elemento superior. Los dos fondos ahora viven acá, hermanos de TopBar/main,
+  // elemento superior. Los tres fondos ahora viven acá, hermanos de TopBar/main,
   // nunca dentro del wrapper animado de cada ruta — igual que ya estaba
   // DotFieldBackground, que por eso nunca tuvo este problema.
   const { pathname, key } = useLocation();
@@ -36,11 +30,7 @@ export function RootLayout() {
 
   return (
     <div className="app-shell">
-      {showGridScan && (
-        <Suspense fallback={null}>
-          <ThreadsBackground />
-        </Suspense>
-      )}
+      <ThreadsBackground />
       {showDotField && <DotFieldBackground />}
       {showGridScan && <GridScanBackground />}
       <TopBar />

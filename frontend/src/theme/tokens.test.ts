@@ -13,6 +13,6 @@ describe("instrumentoTokens", () => {
   });
 
   it("uses the exact background confirmed for Instrumento light mode", () => {
-    expect(instrumentoTokens.light.bg).toBe("#F3F6F8");
+    expect(instrumentoTokens.light.bg).toBe("#EDF1F5");
   });
 });

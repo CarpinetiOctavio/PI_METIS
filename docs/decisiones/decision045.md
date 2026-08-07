@@ -142,3 +142,19 @@ externa, confirmando la premisa de esta decisión.
 
 **Ver también:** `docs/frontend/plan-mejora-frontend-pasada4.md` §4 (Bloque B
 completo, guardas B4, presupuesto de rendimiento B7).
+
+### Nota de superación (06/08/2026)
+
+El addendum de arriba ("excepción acotada: Threads (three.js) en la puerta
+de entrada") queda **superado por [DECISIÓN 051](decision051.md)**.
+`docs/frontend/plan-mejora-frontend-pasada5.md` (Bloque B) necesitó strands
+también en `/config` — montar la versión Three.js en más de una pantalla
+invalidaba la premisa que sostenía esta excepción ("ninguna pantalla
+autenticada paga el costo del chunk"), así que `ThreadsBackground` se
+reescribió en Canvas 2D (mismos parámetros visuales, misma función de onda)
+y `three`/`@types/three` salieron por completo del proyecto. La decisión
+original de este archivo (Canvas 2D sin dependencias para
+`DotFieldBackground`/`GridScanBackground`) no cambia — al contrario, ahora
+es el criterio que rige los tres fondos, no solo dos. Ningún contenido de
+este archivo se borra; esta nota queda como registro de que el addendum de
+arriba ya no describe el estado real del código.

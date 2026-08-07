@@ -1,9 +1,18 @@
 // Mismo riesgo que DotFieldBackground/GridScanBackground (fuga de rAF bajo
-// StrictMode) + una guarda propia de este componente: WebGL no está
-// garantizado (GPU deshabilitada, navegador viejo, o jsdom mismo — ver
-// ThreadsBackground.tsx). Sin esa guarda, `new THREE.WebGLRenderer()` tira
-// y rompe el render de la puerta de entrada entera.
+// StrictMode) + una guarda propia de este componente: un contexto 2D no
+// está garantizado (navegador sin soporte de canvas, o directamente el
+// mock global de vitest.setup.ts deshabilitado a mano — ver el primer test
+// de abajo). Sin esa guarda (`if (!ctx) return`), el resto del efecto
+// asumiría un contexto válido y rompería el render de la app entera en vez
+// de degradar a "sin Threads, los otros fondos siguen andando encima".
+//
+// DECISIÓN 051: este archivo se conserva sin modificar sus aserciones —
+// solo lo que era específico de WebGL (el try/catch de
+// `new THREE.WebGLRenderer()`, que tiraba solo porque jsdom no implementa
+// WebGL) se adapta a la guarda equivalente de Canvas 2D
+// (`getContext("2d")` devolviendo null).
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { StrictMode } from "react";
 import { render } from "@testing-library/react";
 import { ThreadsBackground } from "./ThreadsBackground";
 
@@ -35,12 +44,17 @@ function mockReducedMotion(reduce: boolean) {
   );
 }
 
-describe("ThreadsBackground — sin WebGL (jsdom real, sin mockear three)", () => {
+describe("ThreadsBackground — sin contexto 2D (jsdom real, sin el mock global)", () => {
   beforeEach(() => {
     mockReducedMotion(false);
   });
 
-  it("no rompe el render cuando WebGLRenderer tira (jsdom no tiene WebGL real)", () => {
+  it("no rompe el render cuando getContext(\"2d\") devuelve null", () => {
+    // vitest.setup.ts mockea getContext("2d") globalmente para que los tres
+    // fondos animados no ensucien stderr en el resto de la suite — este
+    // test necesita el caso contrario (contexto no disponible) para
+    // ejercitar la guarda real del componente, así que lo pisa localmente.
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
     const { requested } = mockRaf();
 
     expect(() => render(<ThreadsBackground />)).not.toThrow();
@@ -54,5 +68,42 @@ describe("ThreadsBackground — sin WebGL (jsdom real, sin mockear three)", () =
 
     expect(() => render(<ThreadsBackground />)).not.toThrow();
     expect(rafSpy).not.toHaveBeenCalled();
+  });
+});
+
+// Guardas 2 (StrictMode monta dos veces, debe quedar un solo loop vivo) y 4
+// (cleanup completo al desmontar) — cubiertas hoy en DotFieldBackground.lifecycle.test.tsx
+// y GridScanBackground.lifecycle.test.tsx, pero faltaban acá (B6 del brief
+// las exige para los cuatro fondos). Acá el contexto 2D SÍ está disponible
+// (el mock global de vitest.setup.ts, sin pisar), así que el componente
+// recorre el camino real de dibujo y pide rAF como en producción.
+describe("ThreadsBackground — ciclo de vida bajo StrictMode", () => {
+  beforeEach(() => {
+    mockReducedMotion(false);
+  });
+
+  it("deja exactamente un loop vivo tras el doble montaje de StrictMode", () => {
+    const { requested, canceled } = mockRaf();
+
+    render(
+      <StrictMode>
+        <ThreadsBackground />
+      </StrictMode>,
+    );
+
+    expect(requested.length - canceled.length).toBe(1);
+  });
+
+  it("cancela el loop al desmontar — cero loops vivos", () => {
+    const { requested, canceled } = mockRaf();
+
+    const { unmount } = render(
+      <StrictMode>
+        <ThreadsBackground />
+      </StrictMode>,
+    );
+    unmount();
+
+    expect(requested.length - canceled.length).toBe(0);
   });
 });
