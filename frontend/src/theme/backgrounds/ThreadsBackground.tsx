@@ -1,12 +1,6 @@
-import { useEffect, useRef } from "react";
-import {
-  hexToRgba,
-  lerpHex,
-  prefersReducedMotion,
-  readCssVar,
-  secureRandom,
-  sizeCanvasToViewport,
-} from "./canvasUtils";
+import { useRef } from "react";
+import { hexToRgba, lerpHex, readCssVar, secureRandom } from "./canvasUtils";
+import { useCanvasAnimationLoop } from "./useCanvasAnimationLoop";
 
 // Fondo de todas las pantallas (DECISIÓN 051) — hermano de
 // DotFieldBackground/GridScanBackground, mismo z-index negativo, montado
@@ -40,131 +34,62 @@ function ndcToPixel(xNdc: number, yNdc: number, width: number, height: number) {
   };
 }
 
+interface Thread {
+  opacity: number;
+  seed: number;
+  yOffset: number;
+  speed: number;
+}
+
 export function ThreadsBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    // Guarda equivalente a la que protegía `new THREE.WebGLRenderer()`: un
-    // contexto 2D no está garantizado (navegador sin soporte, o jsdom sin
-    // el mock global de vitest.setup.ts). Sin esto, el resto del efecto
-    // asumiría un contexto válido y rompería el render de toda la app en
-    // vez de degradar a "sin Threads, los otros fondos siguen andando".
-    if (!ctx) return;
+  // Generado una sola vez por instancia del componente, no en cada frame —
+  // mismo criterio que la versión no extraída (el array vivía fuera de
+  // draw(), dentro del efecto que corre una sola vez por montaje). Un
+  // useRef con init perezoso logra lo mismo sin depender de la vida del
+  // efecto del hook: los seeds/velocidades de cada hilo se sortean al
+  // montar y se mantienen fijos mientras el componente esté vivo.
+  const threadsRef = useRef<Thread[]>();
+  threadsRef.current ??= Array.from({ length: THREAD_COUNT }, (_, i) => ({
+    opacity: 0.14 + (i / THREAD_COUNT) * 0.14,
+    seed: secureRandom() * 1000,
+    yOffset: (i / (THREAD_COUNT - 1)) * 2 - 1,
+    speed: 0.15 + secureRandom() * 0.15,
+  }));
 
-    let width = 0;
-    let height = 0;
-
-    function resize() {
-      const size = sizeCanvasToViewport(canvas!);
-      width = size.width;
-      height = size.height;
+  useCanvasAnimationLoop(canvasRef, (t, ctx, width, height) => {
+    const time = t / 1000;
+    // Leídos en cada frame — no en el cuerpo del efecto — para que un
+    // toggle de tema en caliente (ThemeProvider pisa `data-mode`, no
+    // remonta el componente) se refleje sin esperar a un reload.
+    const accent = readCssVar("--glow", "#22d3ee");
+    const accent2 = readCssVar("--acc2", "#c6f84e");
+    const palette: string[] = [];
+    for (let i = 0; i < PALETTE_STEPS; i++) {
+      palette.push(lerpHex(accent, accent2, i / (PALETTE_STEPS - 1)));
     }
 
-    // accent/accent2/paleta se calculan en draw(), no acá — el efecto corre
-    // una sola vez (deps []), pero ThreadsBackground se monta siempre en
-    // RootLayout y ThemeProvider cambia de tema pisando `data-mode` en vivo,
-    // sin desmontar/remontar nada. Calcular la paleta una sola vez al montar
-    // dejaba los hilos con los colores del tema con el que se cargó la
-    // página hasta un F5 — mismo bug que P2 del diagnóstico, reintroducido
-    // acá. DotFieldBackground/GridScanBackground ya resuelven esto
-    // correctamente llamando a readCssVar dentro de draw() en cada frame
-    // (ver DotFieldBackground.tsx / GridScanBackground.tsx); acá se sigue
-    // el mismo patrón.
-    const threads = Array.from({ length: THREAD_COUNT }, (_, i) => ({
-      opacity: 0.14 + (i / THREAD_COUNT) * 0.14,
-      seed: secureRandom() * 1000,
-      yOffset: (i / (THREAD_COUNT - 1)) * 2 - 1,
-      speed: 0.15 + secureRandom() * 0.15,
-    }));
-
-    // Mismas guardas que DotFieldBackground/GridScanBackground (B3): sin
-    // esto, un rAF corriendo en pestaña oculta o fuera de viewport es el
-    // mismo desperdicio de CPU/batería que ya se evitó para los otros dos
-    // fondos.
-    let tabVisible = document.visibilityState === "visible";
-    let inViewport = true;
-    let rafId: number | null = null;
-
-    function draw(t: number) {
-      const time = t / 1000;
-      // Leídos en cada frame — no en el cuerpo del efecto — para que un
-      // toggle de tema en caliente (ThemeProvider pisa `data-mode`, no
-      // remonta el componente) se refleje sin esperar a un reload.
-      const accent = readCssVar("--glow", "#22d3ee");
-      const accent2 = readCssVar("--acc2", "#c6f84e");
-      const palette: string[] = [];
-      for (let i = 0; i < PALETTE_STEPS; i++) {
-        palette.push(lerpHex(accent, accent2, i / (PALETTE_STEPS - 1)));
-      }
-
-      ctx!.clearRect(0, 0, width, height);
-      ctx!.lineWidth = 1;
-      threads.forEach(({ opacity, seed, yOffset, speed }, i) => {
-        ctx!.strokeStyle = hexToRgba(palette[i % palette.length], opacity);
-        ctx!.beginPath();
-        for (let p = 0; p < POINTS_PER_THREAD; p++) {
-          const xNdc = (p / (POINTS_PER_THREAD - 1)) * 2 - 1;
-          const wave =
-            Math.sin(xNdc * 3 + time * speed + seed) * 0.15 +
-            Math.sin(xNdc * 7 - time * speed * 1.7 + seed) * 0.05;
-          const { x, y } = ndcToPixel(xNdc, yOffset + wave, width, height);
-          if (p === 0) {
-            ctx!.moveTo(x, y);
-          } else {
-            ctx!.lineTo(x, y);
-          }
+    ctx.clearRect(0, 0, width, height);
+    ctx.lineWidth = 1;
+    threadsRef.current!.forEach(({ opacity, seed, yOffset, speed }, i) => {
+      ctx.strokeStyle = hexToRgba(palette[i % palette.length], opacity);
+      ctx.beginPath();
+      for (let p = 0; p < POINTS_PER_THREAD; p++) {
+        const xNdc = (p / (POINTS_PER_THREAD - 1)) * 2 - 1;
+        const wave =
+          Math.sin(xNdc * 3 + time * speed + seed) * 0.15 +
+          Math.sin(xNdc * 7 - time * speed * 1.7 + seed) * 0.05;
+        const { x, y } = ndcToPixel(xNdc, yOffset + wave, width, height);
+        if (p === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
         }
-        ctx!.stroke();
-      });
-    }
-
-    function loop(t: number) {
-      if (tabVisible && inViewport) draw(t);
-      rafId = window.requestAnimationFrame(loop);
-    }
-
-    resize();
-
-    if (prefersReducedMotion()) {
-      // Guarda 1: un frame estático, sin arrancar el loop.
-      draw(0);
-    } else {
-      rafId = window.requestAnimationFrame(loop);
-    }
-
-    // window resize, no ResizeObserver sobre el padre — mismo motivo que
-    // DotFieldBackground/GridScanBackground (ver sizeCanvasToViewport en
-    // canvasUtils.ts): el canvas es fixed/inset:0, lo que le importa es el
-    // viewport, no el layout del padre.
-    window.addEventListener("resize", resize);
-
-    function handleVisibilityChange() {
-      // Guarda 2: no dibujar en pestaña oculta.
-      tabVisible = document.visibilityState === "visible";
-    }
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    // Guarda 3: no dibujar fuera del viewport.
-    const intersectionObserver = new IntersectionObserver(([entry]) => {
-      inViewport = entry?.isIntersecting ?? true;
+      }
+      ctx.stroke();
     });
-    intersectionObserver.observe(canvas);
-
-    return () => {
-      // Guarda 4: cleanup completo — rAF cancelado, los dos listeners
-      // (resize, visibilitychange) desregistrados, IntersectionObserver
-      // desconectado. Bajo StrictMode (que monta dos veces) sin esto quedan
-      // loops duplicados corriendo para siempre — misma clase de bug que F1
-      // (docs/frontend/informe-diagnostico-ui-rota.md).
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-      window.removeEventListener("resize", resize);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      intersectionObserver.disconnect();
-    };
-  }, []);
+  });
 
   return (
     <canvas

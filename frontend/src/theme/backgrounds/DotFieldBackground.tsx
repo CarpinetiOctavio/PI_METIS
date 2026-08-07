@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
-import { hexToRgba, prefersReducedMotion, readCssVar, sizeCanvasToViewport } from "./canvasUtils";
+import { useRef } from "react";
+import { hexToRgba, readCssVar } from "./canvasUtils";
+import { useCanvasAnimationLoop } from "./useCanvasAnimationLoop";
 
 // Fondo de la aplicación (B2, plan pasada4 §4). Refuerza el paso de 28px de
 // la retícula técnica que ya existe en .app-shell (global.css) — no la
@@ -15,30 +16,20 @@ const DRIFT_AMPLITUDE = 2;
 
 export function DotFieldBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // pointer-events: none en el canvas — escuchar en window, el puntero
+  // siempre está "sobre" el contenido real que está encima. Vive en un ref
+  // (no en el hook compartido) porque el tracking de puntero es específico
+  // de este fondo — DotFieldBackground es el único de los tres cuyo dibujo
+  // reacciona a dónde está el mouse; GridScanBackground/ThreadsBackground no
+  // tienen ningún concepto de puntero, y el hook no debe adquirirlo solo
+  // para este consumidor.
+  const pointerRef = useRef({ x: -9999, y: -9999 });
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let width = 0;
-    let height = 0;
-    let pointerX = -9999;
-    let pointerY = -9999;
-    let rafId: number | null = null;
-    let tabVisible = document.visibilityState === "visible";
-    let inViewport = true;
-
-    function resize() {
-      const size = sizeCanvasToViewport(canvas!);
-      width = size.width;
-      height = size.height;
-    }
-
-    function draw(t: number) {
+  useCanvasAnimationLoop(
+    canvasRef,
+    (t, ctx, width, height) => {
       const accent = readCssVar("--glow", "#7dd3e8");
-      ctx!.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, width, height);
       const cols = Math.ceil(width / GRID_STEP) + 1;
       const rows = Math.ceil(height / GRID_STEP) + 1;
       for (let row = 0; row < rows; row++) {
@@ -47,78 +38,37 @@ export function DotFieldBackground() {
           const baseY = row * GRID_STEP;
           const x = baseX + Math.sin(t / 4000 + row) * DRIFT_AMPLITUDE;
           const y = baseY + Math.cos(t / 4000 + col) * DRIFT_AMPLITUDE;
-          const dx = x - pointerX;
-          const dy = y - pointerY;
+          const dx = x - pointerRef.current.x;
+          const dy = y - pointerRef.current.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const influence = Math.max(0, 1 - dist / INFLUENCE_RADIUS);
           const radius = BASE_RADIUS + (HOVER_RADIUS - BASE_RADIUS) * influence;
           const opacity = BASE_OPACITY + (HOVER_OPACITY - BASE_OPACITY) * influence;
-          ctx!.beginPath();
-          ctx!.arc(x, y, radius, 0, Math.PI * 2);
-          ctx!.fillStyle = hexToRgba(accent, opacity);
-          ctx!.fill();
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(accent, opacity);
+          ctx.fill();
         }
       }
-    }
-
-    function loop(t: number) {
-      if (tabVisible && inViewport) {
-        draw(t);
+    },
+    // setupExtra: registrado por el hook solo si hay contexto 2D disponible
+    // (mismo punto en el que vivía este registro antes de la extracción) —
+    // ver useCanvasAnimationLoop.ts para el contrato completo.
+    () => {
+      function handlePointerMove(e: PointerEvent) {
+        pointerRef.current = { x: e.clientX, y: e.clientY };
       }
-      rafId = window.requestAnimationFrame(loop);
-    }
-
-    resize();
-
-    if (prefersReducedMotion()) {
-      // Guarda 1 (B4): un frame estático, sin arrancar el loop — no basta
-      // con acelerar la animación, hay que no gastar CPU en absoluto.
-      draw(0);
-    } else {
-      rafId = window.requestAnimationFrame(loop);
-    }
-
-    // window resize, no ResizeObserver sobre el padre — el canvas es
-    // fixed/inset:0, lo que le importa es el viewport, no el layout del
-    // padre (ver comentario de sizeCanvasToViewport en canvasUtils.ts).
-    window.addEventListener("resize", resize);
-
-    function handlePointerMove(e: PointerEvent) {
-      pointerX = e.clientX;
-      pointerY = e.clientY;
-    }
-    function handlePointerLeave() {
-      pointerX = -9999;
-      pointerY = -9999;
-    }
-    // pointer-events: none en el canvas — escuchar en window, el puntero
-    // siempre está "sobre" el contenido real que está encima.
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerleave", handlePointerLeave);
-
-    function handleVisibilityChange() {
-      tabVisible = document.visibilityState === "visible";
-    }
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    const intersectionObserver = new IntersectionObserver(([entry]) => {
-      inViewport = entry?.isIntersecting ?? true;
-    });
-    intersectionObserver.observe(canvas);
-
-    return () => {
-      // Guarda 2 (B4): cancelar el rAF en la limpieza — sin esto, bajo
-      // StrictMode (que monta dos veces) quedan dos loops corriendo para
-      // siempre. Misma clase de bug que F1
-      // (docs/frontend/informe-diagnostico-ui-rota.md).
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-      window.removeEventListener("resize", resize);
-      intersectionObserver.disconnect();
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerleave", handlePointerLeave);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
+      function handlePointerLeave() {
+        pointerRef.current = { x: -9999, y: -9999 };
+      }
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerleave", handlePointerLeave);
+      return () => {
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerleave", handlePointerLeave);
+      };
+    },
+  );
 
   return (
     <canvas
