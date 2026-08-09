@@ -709,6 +709,46 @@ vidrio, dropzone real + panel de muestra de columnas en `ConfigPage`
 
 ---
 
+## Plan de implementación de Etapa 2 de punta a punta — EN CURSO
+
+Ver `docs/plan-etapa2-implementacion.md` (se borra cuando los siete PRs
+cierren) para el detalle completo. Progreso real, PR por PR:
+
+- **PR 1 — Bloque 0 (higiene de documentación).** Mergeado (#42, 09/08/2026).
+  `docs/superpowers/` reubicado a `docs/historico/`, `.superpowers/` de la
+  raíz eliminado, guard p∈(0,1) registrado como test real
+  (`tests/unit/core/etapa2/test_cuantil_guard.py`, ver corrección más arriba
+  en este archivo), `docs/pendientes-tecnicos.md` creado.
+- **PR 2 — Bloque A0 (decisiones 052-055).** Mergeado (#43, 09/08/2026).
+  Contrato SSE de Etapa 2 con pausa, `session_store` con TTL, `etapas` de
+  punta a punta (cierra DECISIÓN 037), por qué `full_pipeline.py` no se usa
+  desde `services/`.
+- **PR 3 — Bloque A1-A3 (contrato SSE, session_store, etapas).** EN CURSO.
+  `session_store.py` reescrito a `SessionState` con TTL y barrido perezoso
+  (interfaz pública sin cambios, Chow no se tocó). Endpoint nuevo
+  `POST /analysis/distribution-decision` (404 `SESSION_NOT_FOUND`, 400
+  `DIST_SELECTION_INVALID`), reemplaza a `design-events` en
+  `api-contracts.md`. `etapas` parseado y validado en el borde (400
+  `CONTRACT_ETAPAS_INVALID`), `stream_etapa1()` renombrado a
+  `stream_analysis()` — con alias de import en `api/v1/analysis.py` porque
+  la ruta FastAPI ya se llama igual (`stream_analysis`), sin el alias el
+  segundo `def` pisa el nombre importado y la ruta terminaría
+  llamándose a sí misma. `AnalysisRequest`/`CramerParticionCustom` borrados
+  de `schemas/analysis.py` (código muerto, ninguna ruta los importaba).
+  Frontend: `AnalysisStreamForm` manda `etapas` (default `"1"`, sin selector
+  de alcance todavía — eso es Bloque B4). **Lo que este PR no hace:** la
+  orquestación real de Etapa 2 (llamar `ejecutar_etapa2()`, emitir
+  `result_etapa2_ranking`, pausar de verdad) — con `etapas=1,2` el stream
+  corre exactamente igual que con `etapas=1`. Eso es el Bloque A5
+  ("orquestación"), deliberadamente en el próximo PR junto con A4 (eventos
+  de diseño) y A6 (persistencia real, tests de integración). Verificado:
+  `pytest -m unit` 237 passed, 1 skipped; `ruff check`/`format --check
+  metis/` limpio; `check-error-catalog.sh` sincronizado con los tres códigos
+  nuevos.
+- **PR 4 — Bloque A4-A6.** No empezado.
+
+---
+
 ## Decisiones pendientes — no implementar hasta confirmar
 
 - **Partición de Cramer personalizada** — inalcanzable hoy por el endpoint
@@ -720,7 +760,7 @@ vidrio, dropzone real + panel de muestra de columnas en `ConfigPage`
   `docs/decisiones/decision036.md` — DECISIÓN 036. No implementar ninguna
   sin decidir entre las tres opciones primero.
 
-- **`etapas` se recibe y se descarta en `POST /analysis/stream`** —
+- ~~**`etapas` se recibe y se descarta en `POST /analysis/stream`** —
   `api/v1/analysis.py` declara `etapas: str = Form("1")` pero nunca lo pasa
   a `stream_etapa1()`; el frontend tampoco lo envía.
   `schemas/analysis.py::AnalysisRequest` (el modelo tipado que representaría
@@ -728,7 +768,15 @@ vidrio, dropzone real + panel de muestra de columnas en `ConfigPage`
   mientras Etapa 2 esté mockeada en el frontend; **prioridad para M2/M3**,
   cuando Etapa 2 se exponga de verdad y el backend necesite saber si el
   usuario pidió `[1]` o `[1, 2]`. Ver `docs/decisiones/decision037.md` —
-  DECISIÓN 037.
+  DECISIÓN 037.~~ **CERRADO 09/08/2026 por DECISIÓN 054** (Bloque A1-A3 del
+  plan de implementación de Etapa 2): `etapas` se parsea a `list[int]` en el
+  borde del endpoint (`"1"`/`"1,2"`, cualquier otro valor → 400
+  `CONTRACT_ETAPAS_INVALID`), `stream_etapa1()` se renombró a
+  `stream_analysis()`, `AnalysisRequest` se borró, el frontend ya lo manda.
+  Lo que sigue sin existir es la orquestación real de Etapa 2 (llamar
+  `ejecutar_etapa2()`, emitir `result_etapa2_ranking`) — con `etapas=1,2` el
+  stream hoy corre igual que con `etapas=1`. Eso es el Bloque A5, todavía no
+  implementado.
 
 - **Contraste WCAG AA de `tokens.instrumento.css`** — pendiente heredado de
   Fase 6 del frontend, hallazgos y propuesta calculada movidos a
