@@ -105,10 +105,22 @@ body {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   padding: 16px;
+  /* Bloque C2 (pasada 5) — eleva la card contra el fondo animado. En claro
+     --surf es blanco puro, sin sombra no tiene contra qué recortarse. */
+  box-shadow: var(--elev-1);
+}
+
+/* Bloque C2 — en oscuro --line ya funciona; en claro --surf (blanco) contra
+   --bg (#edf1f5) queda a un paso de contraste sin este refuerzo. */
+:root[data-theme="instrumento"][data-mode="light"] .card {
+  border-color: var(--line-strong);
 }
 
 .card.soft {
   background: var(--surf2);
+  /* Card *dentro* de otra card (.config-cramer) — elevarla rompe la
+     jerarquía visual del padre. */
+  box-shadow: none;
 }
 
 .card::before,

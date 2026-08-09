@@ -30,6 +30,11 @@
   --ok: #128a4e;
   --warn: #b5791a;
   --crit: #c24444;
+
+  /* Elevación (pasada 5, Bloque C1) — no van a tokens.ts: no son un valor
+     hex, tokenParity.test.ts las ignora sin necesitar cambios. */
+  --elev-1: 0 1px 2px rgba(11, 14, 18, 0.06), 0 4px 12px rgba(11, 14, 18, 0.05);
+  --elev-2: 0 2px 4px rgba(11, 14, 18, 0.07), 0 12px 32px rgba(11, 14, 18, 0.09);
 }
 
 :root[data-theme="instrumento"][data-mode="dark"] {
@@ -49,4 +54,9 @@
   --ok: #35d07a;
   --warn: #f4b740;
   --crit: #ff6a6a;
+
+  /* En oscuro la sombra aporta poco (fondo casi negro) pero se define
+     igual para que ningún consumidor tenga que preguntar por el modo. */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.3);
+  --elev-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.38);
 }
