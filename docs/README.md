@@ -76,9 +76,16 @@ cerrada de una vez):
   decisión — para analizar antes de decidir qué hacer con cada ítem
   (31/07/2026).
 
+### `pendientes-tecnicos.md`
+Registro vivo de deuda técnica conocida y sin dueño — lo que no es ni una
+decisión ya tomada (`decisiones/`) ni una pregunta de dominio para Facundo o
+Carlos (`auditoria/pendientes/`) ni parte de un plan que se borra al
+cerrarse. Cada entrada dice qué falta, qué bloquea y quién la cierra; las
+que se cierran se tachan con la fecha, no se borran.
+
 Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`,
-`historico/` o `frontend/` se discute antes de crear una carpeta nueva o
-forzarlo en la que más se le parezca.
+`historico/`, `frontend/` o `pendientes-tecnicos.md` se discute antes de
+crear una carpeta nueva o forzarlo en la que más se le parezca.
 
 ## Trazabilidad de requerimientos (`RF-XXX`)
 
@@ -191,3 +198,10 @@ registro de cuándo se estableció o modificó.
   pushear todavía — ver el informe de resultados §2. `feedback-ux-pendiente-analisis.md`
   también agregado: relevamiento de feedback de UX/diseño recibido al
   probar esa rama, explícitamente para analizar después, no un plan.
+- **09/08/2026 (Bloque 0 del plan de implementación de Etapa 2)** —
+  `pendientes-tecnicos.md` creado: registro vivo de deuda técnica sin dueño
+  (los tres directorios de test vacíos, `resolucion_temporal` sin consumir,
+  `AnalysisRequest` muerto, entre otros), que hasta ahora no tenía dónde
+  vivir. `docs/superpowers/` (un solo archivo, el plan ya ejecutado de la
+  Fase 0 del frontend) reubicado a `historico/` — encajaba en su criterio de
+  documento superado conservado por trazabilidad.
