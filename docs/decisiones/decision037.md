@@ -1,6 +1,13 @@
 # DECISIÓN 037 — Contrato de `/analysis/stream`: `etapas` descartado y `AnalysisRequest` sin cablear
 **Fecha:** 29 de Julio de 2026
-**Estado:** DOCUMENTADO — no implementado en esta pasada, hoy inocuo, deja de serlo en M2
+**Estado:** ~~DOCUMENTADO — no implementado en esta pasada, hoy inocuo, deja de serlo en M2~~ **CERRADA 09/08/2026 por [DECISIÓN 054](decision054.md)**
+
+**Cierre 09/08/2026:** "deja de serlo en M2" (línea de abajo) se cumplió — Etapa 2
+se cablea al stream en esta pasada. De las tres opciones que este archivo
+dejaba abiertas, se eligió la opción 2 (`AnalysisRequest` se borra, los
+`Form(...)` sueltos quedan como el modelo real). Ver DECISIÓN 054 para el
+razonamiento completo del cierre; este archivo se conserva sin reescribir
+por trazabilidad del diagnóstico original.
 
 ### Contexto
 `api-contracts.md` documenta `POST /api/v1/analysis/stream` con un campo `etapas:

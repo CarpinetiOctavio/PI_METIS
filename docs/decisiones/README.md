@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision048.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision055.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -100,6 +100,17 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 (`CLAUDE.md`, `sprint.md`, `decision002.md`, `decision028.md`,
 `historico/README.md` — que no listaba ese archivo en absoluto).
 
+**09/08/2026 (A0 del plan de implementación de Etapa 2)** —
+`decision052.md`-`decision055.md` agregadas: las cuatro decisiones que el
+Bloque A del [plan de implementación de Etapa 2](../plan-etapa2-implementacion.md)
+exige escribir antes de tocar código (contrato SSE con pausa,
+`session_store` con TTL, `etapas` de punta a punta, y por qué
+`full_pipeline.py` no se usa desde `services/`). `DECISIÓN 037` marcada como
+cerrada por `DECISIÓN 054` — mismo criterio que `DECISIÓN 011`/`DECISIÓN 038`
+para addendums, salvo que acá el cierre completo es una decisión nueva, no
+una ampliación de la original, así que se referencia en vez de editarse in
+situ.
+
 ## Índice
 
 | # | Título | Fecha | Estado |
@@ -140,7 +151,7 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | [034](decision034.md) | Correcciones de configuración SMTP encontradas en smoke test real: hostname y separación de identidad de remitente | 20/07/2026 | Implementado y verificado — envío real de punta a punta confirmado |
 | 035 | *(reservado — GitHub Ruleset de protección de ramas, no tocar en esta pasada)* | — | Pendiente — ver `sprint.md`, sección "Estrategia de ramas", 20/07/2026 |
 | [036](decision036.md) | Partición de Cramer personalizada inalcanzable por el endpoint multipart | 29/07/2026 | Documentado — no implementado, requerimiento funcional caído |
-| [037](decision037.md) | Contrato de `/analysis/stream`: `etapas` descartado y `AnalysisRequest` sin cablear | 29/07/2026 | Documentado — inocuo hoy, prioridad M2/M3 |
+| [037](decision037.md) | Contrato de `/analysis/stream`: `etapas` descartado y `AnalysisRequest` sin cablear | 29/07/2026 | Cerrada por [DECISIÓN 054](decision054.md) (09/08/2026) |
 | [038](decision038.md) | Catálogo de códigos de error como fuente única, en ambas direcciones | 29/07/2026 | Aplicada — gap de propagación en `trend.py` documentado, no corregido |
 | [039](decision039.md) | Criterio de promoción de las decisiones de frontend y unificación de numeración | 29/07/2026 | Establecida |
 | [040](decision040.md) | SSE sobre fetch para el stream de Etapa 1 | 22/07/2026 | Implementado — verificado contra backend real |
@@ -155,3 +166,7 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 | 049 | *(reservado — escotilla SMTP de desarrollo en `auth/email.py`. Corrección 05/08/2026: el plan de arreglo de UI y su informe de resultados citaban 045 para esto, pero 045 quedó asignada a "Fondos animados en Canvas 2D" antes de que la escotilla SMTP se escribiera — ver `docs/plan-post-pasada4-roadmap.md`, H1)* | — | Pendiente — ver `sprint.md`, "Pendiente de esta rama" |
 | [050](decision050.md) | Límite de tamaño de subida: valor (10 MB), nginx + backend, código de error nuevo | 05/08/2026 | Decidida — implementación en curso |
 | [051](decision051.md) | ThreadsBackground pasa de Three.js a Canvas 2D; Three.js sale del proyecto — supera el addendum de la excepción de DECISIÓN 045 | 06/08/2026 | Implementada |
+| [052](decision052.md) | Transporte de Etapa 2 por SSE con pausa; `distribution-decision` reemplaza `design-events` | 09/08/2026 | Decidida — implementación en curso |
+| [053](decision053.md) | `session_store` pasa a un estado con TTL, no dos diccionarios sueltos | 09/08/2026 | Decidida — implementación en curso |
+| [054](decision054.md) | `etapas` cableado de punta a punta — cierra DECISIÓN 037 | 09/08/2026 | Decidida — implementación en curso |
+| [055](decision055.md) | `full_pipeline.py` no se usa desde `services/`, y para qué queda | 09/08/2026 | Decidida — implementación en curso |
