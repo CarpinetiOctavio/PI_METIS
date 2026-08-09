@@ -270,4 +270,102 @@ describe("ConfigPage", () => {
 
     expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
   });
+
+  // Bloque E (plan pasada5 §5) — dropzone + panel de muestra de columnas.
+
+  it("soltar un archivo en la dropzone dispara preview-columns y puebla los selects, igual que elegirlo por el input", async () => {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "anio", indice: 0, muestra: ["1980", "1981", "1982"] },
+            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["anio,caudal\n1980,94.71\n"], "serie.csv", {
+      type: "text/csv",
+    });
+    fireEvent.drop(screen.getByTestId("config-dropzone"), {
+      dataTransfer: { files: [file] },
+    });
+
+    const selectX = await screen.findByRole("combobox", { name: "Columna X" });
+    expect(selectX).toHaveValue("0");
+    expect(screen.getByLabelText("Columna Y")).toHaveValue("1");
+  });
+
+  it("el panel de muestra se puebla; el <option> del select no repite la muestra (P8)", async () => {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "anio", indice: 0, muestra: ["1980", "1981", "1982"] },
+            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["anio,caudal\n1980,94.71\n"], "serie.csv", {
+      type: "text/csv",
+    });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    const selectX = await screen.findByRole("combobox", { name: "Columna X" });
+    const optionsText = Array.from(selectX.querySelectorAll("option"))
+      .map((o) => o.textContent)
+      .join(" ");
+    expect(optionsText).not.toContain("94.71");
+
+    expect(screen.getByText("94.71")).toBeInTheDocument();
+    expect(screen.getByText("40 filas en el archivo")).toBeInTheDocument();
+  });
+
+  it("focus en un select resalta la columna correspondiente en el panel; blur la desresalta", async () => {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "anio", indice: 0, muestra: ["1980", "1981", "1982"] },
+            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["anio,caudal\n1980,94.71\n"], "serie.csv", {
+      type: "text/csv",
+    });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    // La heurística preselecciona "anio" (índice 0) en Columna X.
+    const selectX = await screen.findByRole("combobox", { name: "Columna X" });
+    const header = screen.getByRole("columnheader", { name: "anio" });
+    expect(header).not.toHaveClass("column-preview-panel__col--activa");
+
+    fireEvent.focus(selectX);
+    expect(header).toHaveClass("column-preview-panel__col--activa");
+
+    fireEvent.blur(selectX);
+    expect(header).not.toHaveClass("column-preview-panel__col--activa");
+  });
 });
