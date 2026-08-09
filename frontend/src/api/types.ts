@@ -49,6 +49,10 @@ export interface AnalysisStreamForm {
   // "Personalizada" está roto en el wiring real del backend — solo "default"
   // funciona (ver frontend-integration.md §3, nota crítica de cramer_particion).
   cramer_particion?: "default";
+  // DECISIÓN 054 — solo "1" y "1,2" son valores válidos para el backend.
+  // Sin selector de alcance todavía en ConfigPage (eso es Bloque B4 del plan
+  // de Etapa 2) — default "1" mantiene el comportamiento actual sin cambios.
+  etapas?: "1" | "1,2";
 }
 
 export interface OutlierDecisionRequest {

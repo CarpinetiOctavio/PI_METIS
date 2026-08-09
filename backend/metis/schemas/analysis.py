@@ -6,27 +6,16 @@ from pydantic import BaseModel
 # --- Tipos compartidos ---
 
 TipoVariable = Literal["caudal_precipitacion", "otro"]
-Etapa = Literal[1, 2]
 OutlierDecision = Literal["rechazar", "aceptar"]
 Veredicto = Literal["aprobada", "rechazada"]
 WarningNivel = Literal["critico", "normal"]
 
-
-# --- Request: POST /analysis/stream ---
-
-
-class CramerParticionCustom(BaseModel):
-    n1_pct: int
-    n2_pct: int
-
-
-class AnalysisRequest(BaseModel):
-    columna_x: str
-    columna_y: str
-    tipo_variable: TipoVariable
-    etapas: list[Etapa] = [1]
-    modo: Literal["paso_a_paso", "experto"] = "experto"
-    cramer_particion: Literal["default"] | CramerParticionCustom = "default"
+# DECISIÓN 054 — AnalysisRequest y CramerParticionCustom se borraron: el
+# endpoint POST /analysis/stream es multipart/form-data con un UploadFile,
+# que no modela bien con un BaseModel plano. Los Form(...) sueltos que ya
+# declara api/v1/analysis.py son el modelo real; mantener un modelo Pydantic
+# paralelo que ninguna ruta importaba era código muerto que afirmaba una
+# validación tipada que nunca corría en runtime — ver DECISIÓN 037.
 
 
 # --- Request/Response: POST /analysis/outlier-decision ---
@@ -39,6 +28,27 @@ class OutlierDecisionRequest(BaseModel):
 
 
 class OutlierDecisionResponse(BaseModel):
+    ok: bool
+    pipeline_continua: bool
+
+
+# --- Request/Response: POST /analysis/distribution-decision (DECISIÓN 052) ---
+# Reemplaza al design-events documentado en api-contracts.md y nunca
+# implementado — los eventos de diseño viajan por el stream SSE, esto es
+# solo la decisión que lo desbloquea. Sin restricciones de rango a nivel
+# Pydantic (periodos_retorno > 1, máximo 20, etc.): esa validación produce
+# 400 DIST_SELECTION_INVALID, no un 422 genérico de FastAPI, así que se
+# hace a mano en el borde del endpoint, igual que cramer_particion.
+
+
+class DistributionDecisionRequest(BaseModel):
+    session_id: uuid.UUID
+    distribucion: str
+    metodo: str
+    periodos_retorno: list[float]
+
+
+class DistributionDecisionResponse(BaseModel):
     ok: bool
     pipeline_continua: bool
 

@@ -66,6 +66,7 @@ function buildFormData(form: AnalysisStreamForm): FormData {
   body.append("tipo_variable", form.tipo_variable);
   body.append("modo", form.modo);
   body.append("cramer_particion", form.cramer_particion ?? "default");
+  body.append("etapas", form.etapas ?? "1");
   return body;
 }
 

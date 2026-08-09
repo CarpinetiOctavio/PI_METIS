@@ -78,7 +78,7 @@ def test_remocion_por_indice_no_por_valor_con_duplicado():
     escribir el test.
 
     Este test no depende de ese detalle de implementación de calcular_chow().
-    Ataca directamente el contrato que sí importa para stream_etapa1(): dado
+    Ataca directamente el contrato que sí importa para stream_analysis(): dado
     un TestResult de Chow con indice_atipico=K, la remoción debe sacar
     exactamente la posición K de la serie — sin importar si arr[K] coincide
     con el valor de otra posición legítima anterior. Se construye el
