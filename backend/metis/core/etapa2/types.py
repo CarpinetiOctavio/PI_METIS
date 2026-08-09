@@ -33,7 +33,10 @@ class DistResult:
 @dataclass
 class EventoDiseno:
     periodo_retorno: float
-    valor: float
+    # None si cuantil() falló para este período de retorno puntual — un T
+    # inválido para una distribución no puede tumbar el cálculo completo de
+    # eventos de diseño (core/etapa2/design_events.py).
+    valor: float | None
 
 
 @dataclass
