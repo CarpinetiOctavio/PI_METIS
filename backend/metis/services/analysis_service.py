@@ -3,15 +3,21 @@ import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
 
+import numpy as np
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from metis.core.pipeline import ejecutar_etapa1
+from metis.core.etapa2.design_events import calcular_eventos_diseno
+from metis.core.etapa2.types import Etapa2Result, EventoDiseno
+from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
+from metis.core.pipeline.pipeline_etapa2 import _DISTRIBUCIONES
 from metis.core.types import Etapa1Result
-from metis.core.utils import es_numerico
+from metis.core.utils import es_numerico, filtrar_numericos
 from metis.core.validacion.parser import parse_file
 from metis.db.models import Analysis, AnalysisResult
 from metis.services import session_store
+
+_MODULOS_POR_DISTRIBUCION = dict(_DISTRIBUCIONES)
 
 
 def _sse(tipo: str, payload: dict) -> str:
@@ -62,6 +68,41 @@ def _serializar_etapa1(result: Etapa1Result) -> dict:
         "nivel_independencia": result.nivel_independencia,
         "nivel_homogeneidad": result.nivel_homogeneidad,
         "nivel_confianza": result.nivel_confianza,
+        "warnings": [warning_dict(w) for w in result.warnings],
+    }
+
+
+def _serializar_etapa2(result: Etapa2Result) -> dict:
+    """Hermana exacta de _serializar_etapa1() (DECISIÓN 055, Bloque A5).
+
+    Serializa la grilla completa — las 13 distribuciones con TODOS sus
+    métodos, incluidos no_converge/no_aplicable/disabled_zeros. No aplana
+    a un top-3: la tesis misma reporta que ciertas combinaciones no
+    convergen, y eso es información docente, no un error a esconder.
+    """
+
+    def metodo_dict(m) -> dict:
+        return {
+            "metodo": m.metodo,
+            "parametros": m.parametros,
+            "eea": m.eea,
+            "status": m.status,
+        }
+
+    def dist_dict(d) -> dict:
+        return {
+            "distribucion": d.distribucion,
+            "n_parametros": d.n_parametros,
+            "metodos": [metodo_dict(m) for m in d.metodos],
+            "mejor_eea": d.mejor_eea,
+            "mejor_metodo": d.mejor_metodo,
+        }
+
+    def warning_dict(w) -> dict:
+        return {"codigo": w.codigo, "nivel": w.nivel, "descripcion": w.descripcion}
+
+    return {
+        "ranking": [dist_dict(d) for d in result.ranking],
         "warnings": [warning_dict(w) for w in result.warnings],
     }
 
@@ -283,12 +324,9 @@ async def stream_analysis(
     user_id: uuid.UUID | None,
     db: AsyncSession,
 ) -> AsyncGenerator[str, None]:
-    # DECISIÓN 054/055 — etapas ya llega validado y parseado desde el borde
-    # del endpoint. La orquestación real de Etapa 2 (llamar ejecutar_etapa2(),
-    # emitir result_etapa2_ranking, pausar) es responsabilidad de A5 — no
-    # implementada todavía en este PR. Con etapas == [1] el comportamiento de
-    # abajo es exactamente el de antes de esta decisión.
-    del etapas  # aceptado y validado, sin uso todavía — ver nota de arriba
+    # DECISIÓN 054 — etapas ya llega validado y parseado desde el borde del
+    # endpoint. Con etapas == [1] todo lo de abajo se comporta exactamente
+    # igual que antes de que Etapa 2 existiera.
     session_store.create_session(session_id)
     analysis_id: uuid.UUID | None = None
 
@@ -321,6 +359,7 @@ async def stream_analysis(
         # Chow detectó atípico — pausar y esperar decisión (CU-01 y CU-02)
         valor_atipico = _extraer_atipico(result)
         result_final = result
+        serie_final = serie_original
 
         if valor_atipico is not None:
             yield _sse(
@@ -361,12 +400,118 @@ async def stream_analysis(
                     timestamps=parsed.timestamps,
                     cramer_particion=cramer_particion,
                 )
+                serie_final = serie_filtrada
 
                 for evento in _emitir_resultado(result_final, iteracion=2):
                     yield evento
 
         # Emitir resultado final completo
         yield _sse("result_etapa1", _serializar_etapa1(result_final))
+
+        # Etapa 2 — DECISIÓN 052/055. Solo si el usuario la pidió y Etapa 1
+        # no fue rechazada; RF-GEN-P-03: ningún nivel de warning bloquea,
+        # solo nivel_confianza == "rechazado" lo hace. Corre sobre
+        # serie_final — la misma población sobre la que se calculó el
+        # veredicto final de Etapa 1 (post-Chow si el atípico se rechazó).
+        etapa2_result: Etapa2Result | None = None
+        decision_etapa2: dict | None = None
+
+        if 2 in etapas and result_final.nivel_confianza != "rechazado":
+            valores_numericos = filtrar_numericos(serie_final)
+            serie_np = np.asarray(valores_numericos, dtype=float)
+            tiene_ceros = bool(np.any(serie_np == 0))
+
+            yield _sse(
+                "progress",
+                {
+                    "paso": "ajuste_distribuciones",
+                    "etapa": 2,
+                    "completado": 1,
+                    "total": 1,
+                },
+            )
+
+            etapa2_result = ejecutar_etapa2(serie_np, tiene_ceros=tiene_ceros)
+
+            # Guardar en la sesión antes de pausar — distribution-decision
+            # necesita estos parámetros ya ajustados, no reajustar las 13
+            # distribuciones de nuevo (DECISIÓN 053).
+            estado_sesion = session_store.get_session(session_id)
+            if estado_sesion is not None:
+                estado_sesion.serie = valores_numericos
+                estado_sesion.tiene_ceros = tiene_ceros
+                estado_sesion.etapa2 = etapa2_result
+                # El mismo asyncio.Event pudo haberse usado ya para la
+                # pausa de Chow arriba — un Event no se "des-setea" solo,
+                # así que sin este clear() la segunda espera devolvería
+                # True al instante, sin esperar la decisión real.
+                estado_sesion.event.clear()
+
+            yield _sse(
+                "result_etapa2_ranking",
+                {"session_id": session_id, **_serializar_etapa2(etapa2_result)},
+            )
+
+            recibio_decision_etapa2 = await session_store.wait_for_decision(session_id)
+
+            if not recibio_decision_etapa2:
+                yield _sse(
+                    "error",
+                    {
+                        "codigo": "SESSION_TIMEOUT",
+                        "mensaje": "Tiempo de espera agotado para la selección de distribución.",
+                    },
+                )
+                return
+
+            decision_etapa2 = session_store.get_decision(session_id)
+            distribucion_elegida = decision_etapa2["distribucion"]
+            metodo_elegido = decision_etapa2["metodo"]
+            periodos_retorno = decision_etapa2["periodos_retorno"]
+
+            dist_result = next(
+                (
+                    d
+                    for d in etapa2_result.ranking
+                    if d.distribucion == distribucion_elegida
+                ),
+                None,
+            )
+            metodo_result = None
+            if dist_result is not None:
+                metodo_result = next(
+                    (m for m in dist_result.metodos if m.metodo == metodo_elegido),
+                    None,
+                )
+
+            if metodo_result is not None and metodo_result.parametros is not None:
+                modulo = _MODULOS_POR_DISTRIBUCION[distribucion_elegida]
+                eventos = calcular_eventos_diseno(
+                    modulo, metodo_result.parametros, periodos_retorno
+                )
+            else:
+                # Selección sin parámetros ajustados (status != "ok", o un
+                # nombre que no matchea ninguna fila del ranking) — no se
+                # puede calcular ningún evento, pero el request no se
+                # rechaza acá: esa validación de forma ya pasó en
+                # distribution-decision. Mismo principio que rige Etapa 2
+                # completa: ningún caso especial detiene el pipeline.
+                eventos = [
+                    EventoDiseno(periodo_retorno=t, valor=None)
+                    for t in periodos_retorno
+                ]
+
+            yield _sse(
+                "result_etapa2_eventos",
+                {
+                    "distribucion": distribucion_elegida,
+                    "metodo": metodo_elegido,
+                    "eventos_diseno": [
+                        {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
+                        for e in eventos
+                    ],
+                },
+            )
 
         # Construir registro de decisiones
         decisiones: dict = {}
@@ -375,6 +520,8 @@ async def stream_analysis(
                 "accion": decision,
                 "dato": valor_atipico,
             }
+        if decision_etapa2 is not None:
+            decisiones["distribucion"] = decision_etapa2
 
         # Persistir si es CU-01
         if user_id is not None:
@@ -384,7 +531,9 @@ async def stream_analysis(
                 tipo_variable=tipo_variable,
                 modo=modo,
                 cramer_particion=cramer_particion,
+                etapas=etapas,
                 result=result_final,
+                etapa2_result=etapa2_result,
                 decisiones=decisiones,
                 db=db,
             )
@@ -403,7 +552,9 @@ async def _persistir(
     tipo_variable: str,
     modo: str,
     cramer_particion: dict | str,
+    etapas: list[int],
     result: Etapa1Result,
+    etapa2_result: Etapa2Result | None,
     decisiones: dict,
     db: AsyncSession,
 ) -> uuid.UUID:
@@ -411,8 +562,7 @@ async def _persistir(
         user_id=user_id,
         serie=serie,
         tipo_variable=tipo_variable,
-        etapas=["1"],  # TODO(A5) — persistir el valor real de etapas cuando
-        # la orquestación de Etapa 2 exista; hoy solo Etapa 1 corre nunca.
+        etapas=[str(e) for e in etapas],
         modo=modo,
         configuracion={"cramer_particion": cramer_particion},
     )
@@ -422,7 +572,7 @@ async def _persistir(
     analysis_result = AnalysisResult(
         analysis_id=analysis.id,
         etapa1=_serializar_etapa1(result),
-        etapa2=None,
+        etapa2=_serializar_etapa2(etapa2_result) if etapa2_result is not None else None,
         decisiones=decisiones,
     )
     db.add(analysis_result)

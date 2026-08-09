@@ -723,7 +723,8 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   Contrato SSE de Etapa 2 con pausa, `session_store` con TTL, `etapas` de
   punta a punta (cierra DECISIÓN 037), por qué `full_pipeline.py` no se usa
   desde `services/`.
-- **PR 3 — Bloque A1-A3 (contrato SSE, session_store, etapas).** EN CURSO.
+- **PR 3 — Bloque A1-A3 (contrato SSE, session_store, etapas).** Mergeado
+  (#44, 09/08/2026).
   `session_store.py` reescrito a `SessionState` con TTL y barrido perezoso
   (interfaz pública sin cambios, Chow no se tocó). Endpoint nuevo
   `POST /analysis/distribution-decision` (404 `SESSION_NOT_FOUND`, 400
@@ -745,7 +746,32 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   `pytest -m unit` 237 passed, 1 skipped; `ruff check`/`format --check
   metis/` limpio; `check-error-catalog.sh` sincronizado con los tres códigos
   nuevos.
-- **PR 4 — Bloque A4-A6.** No empezado.
+- **PR 4 — Bloque A4-A6 (eventos de diseño, orquestación real,
+  persistencia, tests).** EN CURSO. `core/etapa2/design_events.py` nuevo
+  — `calcular_eventos_diseno(modulo, parametros, periodos_retorno)`,
+  F = 1 - 1/T, un período que falla no tumba el resto (`valor: null` para
+  ese evento). `EventoDiseno.valor` ensanchado de `float` a `float | None`
+  en consecuencia. `_serializar_etapa2()` (hermana de `_serializar_etapa1()`,
+  grilla completa sin aplanar a top-3) y orquestación real en
+  `stream_analysis()`: con `etapas=[1,2]` y `nivel_confianza != "rechazado"`
+  corre `ejecutar_etapa2()`, guarda `serie`/`tiene_ceros`/`etapa2` en la
+  sesión, emite `result_etapa2_ranking`, pausa, resuelve con
+  `distribution-decision`, calcula eventos y emite `result_etapa2_eventos`
+  → `complete`. Detalle técnico no obvio: el mismo `asyncio.Event` de
+  `SessionState` se reutiliza para las dos pausas posibles (Chow y
+  distribución) — se limpia con `.clear()` antes de la segunda espera, sin
+  eso la segunda pausa no esperaría de verdad si Chow ya se resolvió antes
+  en el mismo stream (ver `.claude/rules/core/statistical-pipeline.md`).
+  `_persistir()` ahora recibe `etapas` y `etapa2_result` reales — ya no
+  hardcodea `etapas=["1"]`. `full_pipeline.py` recibió la nota de docstring
+  que DECISIÓN 055 prometía y que no se había escrito. Primer test de
+  `tests/integration/` (`test_etapa2_stream_distribution_decision.py`,
+  CU-02 sin BD). Verificado: `pytest -m "unit or integration"` 250 passed,
+  1 skipped; `ruff`/`check-error-catalog.sh` limpios; smoke test manual
+  real vía HTTP (`httpx.AsyncClient` contra el backend en Docker) para
+  CU-02 y CU-01 — este último confirmado con `psql`:
+  `analyses.etapas={1,2}`, `analysis_results.etapa2` con las 13
+  distribuciones, `decisiones` con la clave `distribucion`.
 
 ---
 
