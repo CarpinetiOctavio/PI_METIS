@@ -2,11 +2,17 @@
   position: fixed;
   inset: 0;
   /* Feedback de verificación manual (Bloque C, 05/08/2026), tres rondas —
-     ver decisiones acumuladas en .modal-backdrop .card de abajo, que es
-     donde terminó viviendo el efecto real. Acá solo queda un scrim de
+     ver decisiones acumuladas en .modal-backdrop .card de abajo. Scrim de
      oscurecimiento simple, fijo (no `--ink`, que se invierte por tema —
-     ronda 2) e igual en los dos temas. */
+     ronda 2) e igual en los dos temas.
+     Bloque F1 (pasada 5) — el blur pasa a vivir también acá: un panel de
+     vidrio desenfoca lo que hay DETRÁS SUYO (la tarjeta), pero el resto de
+     la página (timeline, TopBar, fondo animado) quedaba perfectamente
+     nítido alrededor del diálogo. Ahora el scrim mismo desenfoca todo lo
+     que hay debajo. */
   background: rgba(9, 12, 16, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,8 +37,11 @@
      vidrio + sombra para la elevación. `color-mix(var(--surf) ...)` se
      adapta solo a los dos temas, igual que el resto del sistema de diseño. */
   background: color-mix(in srgb, var(--surf) 55%, transparent);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  /* Bloque F1 (pasada 5) — 20px→10px: ahora compone sobre un scrim ya
+     desenfocado (blur(6px) arriba); mantenerlo en 20px vuelve el
+     contenido de la tarjeta lechoso sin ganar separación. */
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
   border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.35),
