@@ -1,6 +1,6 @@
 # METIS Frontend — Fase 0 (Scaffold + Theming) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Estado:** plan ya ejecutado y mergeado — se conserva como registro histórico de por qué el scaffold quedó como quedó. No es un plan activo.
 
 **Goal:** Stand up the Vite + React + TypeScript project in `frontend/`, wired with the
 "Instrumento" theme (light/dark tokens), a base layout with routing stubs for the 8 chosen

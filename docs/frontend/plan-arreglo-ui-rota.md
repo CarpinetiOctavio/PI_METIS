@@ -12,7 +12,7 @@ Cada ítem trae: archivo, cambio concreto, test que lo cubre, y criterio de veri
 
 ## Bloque 0 — Reproducir antes de arreglar
 
-Regla: **ningún arreglo del Bloque 1 se implementa antes de tener su test rojo.** Es la aplicación literal de `superpowers:test-driven-development` y de la fase 4 de depuración sistemática.
+Regla: **ningún arreglo del Bloque 1 se implementa antes de tener su test rojo.** Es la regla de testing por capas de `.claude/rules/testing.md` aplicada al pie de la letra, no una excepción de este plan.
 
 ### 0.1 — Test de regresión de F1 (StrictMode aborta el stream)
 

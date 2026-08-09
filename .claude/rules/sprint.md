@@ -478,8 +478,9 @@ implementación de auth en sí.
 ### feature/frontend-fases1-5 — COMPLETA
 
 Implementación de Fases 1 a 5 del frontend (28-29/07/2026), sobre el scaffold de
-Fase 0 (`docs/superpowers/plans/2026-07-22-frontend-fase0-scaffold.md`, ya
-mergeado). Plan completo y decisión por decisión en
+Fase 0 (`docs/historico/2026-07-22-frontend-fase0-scaffold.md`, ya
+mergeado — movido desde `docs/superpowers/plans/` el 09/08/2026, ver
+`docs/historico/README.md`). Plan completo y decisión por decisión en
 `docs/frontend/frontend-implementation-plan.md` §10; resumen navegable en
 `docs/frontend/informe-implementacion-frontend-fase1-6.md`.
 
