@@ -9,13 +9,13 @@
 .spotlight-card__glow {
   position: absolute;
   inset: 0;
-  /* Mismo ajuste "más débil" pedido en la verificación manual (05/08/2026,
-     ronda 4): 200px de radio, 22% de mezcla, núcleo blanco al 30% — igual
-     que el spotlight de la exploración una vez corregida la intensidad. */
+  /* Bloque C3 (pasada 5) — "apenas notarse": radio más grande y mezcla más
+     débil que la ronda 4 de la pasada 4 (200px/22%/30%). El efecto pasa de
+     leerse como una linterna a un cambio de luz ambiente. */
   background: radial-gradient(
-    200px circle at var(--spot-x) var(--spot-y),
-    color-mix(in srgb, white 30%, var(--acc)) 0%,
-    color-mix(in srgb, var(--acc) 22%, transparent) 35%,
+    260px circle at var(--spot-x) var(--spot-y),
+    color-mix(in srgb, white 12%, var(--acc)) 0%,
+    color-mix(in srgb, var(--acc) 8%, transparent) 35%,
     transparent 70%
   );
   opacity: 0;
@@ -24,7 +24,7 @@
 }
 
 .spotlight-card:hover .spotlight-card__glow {
-  opacity: 1;
+  opacity: 0.55;
 }
 
 .spotlight-card__content {

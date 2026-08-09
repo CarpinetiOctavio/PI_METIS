@@ -1,6 +1,8 @@
 .config-card {
   max-width: 560px;
   margin: 0 auto;
+  /* Bloque C2 (pasada 5) — misma elevación que .entry. */
+  box-shadow: var(--elev-2);
 }
 
 .config-cramer {

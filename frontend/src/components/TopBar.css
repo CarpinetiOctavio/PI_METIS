@@ -66,12 +66,34 @@
   font-weight: 600;
 }
 
+/* Bloque D2 (pasada 5) — de flex suelto a panel de vidrio, mismo patrón
+   que .modal-backdrop .card (pasada 4). Tres indicadores distintos (estado
+   del backend, sesión, tema) se leían como una línea de texto continua. */
 .topbar__indicators {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surf) 65%, transparent);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 14%, transparent);
   font-size: 12px;
   color: var(--mut);
+}
+
+/* Email del usuario — un legajo largo no puede empujar el toggle de tema
+   fuera de la barra. Clase propia porque .fn es compartida por el resto
+   del design system (ConfigPage, HistoryPage, etc.) y no debe heredar
+   este recorte. */
+.topbar__email {
+  font-variant-numeric: tabular-nums;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topbar__status {
@@ -94,7 +116,9 @@
 
 .topbar__sep {
   width: 1px;
-  height: 14px;
+  /* Bloque D2 (pasada 5) — 14px→16px: dentro del panel de vidrio se leen
+     como divisiones del cluster, no como comas sueltas. */
+  height: 16px;
   background: var(--line);
 }
 

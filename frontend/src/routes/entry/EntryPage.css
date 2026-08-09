@@ -6,6 +6,8 @@
   overflow: hidden;
   min-height: 480px;
   display: flex;
+  /* Bloque C2 (pasada 5) — la card de login se recorta del fondo animado. */
+  box-shadow: var(--elev-2);
 }
 
 .entry__brand,
