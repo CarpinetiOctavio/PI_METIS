@@ -284,14 +284,27 @@ A medida que avance Fase 2, el número de status=ok crecerá desde 0.
 - gen_pareto MC: confirmar rango válido de ε en la tesis (implementado -0.49 a 50.0
   con justificación teórica en límite inferior, conservador en superior).
 
-#### Guard p ∈ (0,1) en cuantil() — PENDIENTE PROPAGACIÓN
-Propagado en: gen_exponencial, gen_pareto.
-Pendiente en: uniforme, normal, gumbel, gve, lognormal2p, lognormal3p, logpearson3,
-gamma2p, gamma3p, exponencial_beta, exponencial_x0_beta.
+#### Guard p ∈ (0,1) en cuantil() — ~~PENDIENTE PROPAGACIÓN~~
+~~Propagado en: gen_exponencial, gen_pareto.~~
+~~Pendiente en: uniforme, normal, gumbel, gve, lognormal2p, lognormal3p, logpearson3,
+gamma2p, gamma3p, exponencial_beta, exponencial_x0_beta.~~
 Los asserts se deshabilitan con python -O — usar siempre if/raise.
 
+**Corrección 09/08/2026 (plan de implementación de Etapa 2, Bloque 0.3):** la
+Fase 4.5 de abajo ya estaba hecha y nadie lo registró — verificado que el
+guard `if not (0.0 < p < 1.0): raise ValueError(...)` está presente como
+primera línea de `cuantil()` en las **13** distribuciones, no solo en las dos
+que listaba esta entrada. Antes quedaba como afirmación en prosa,
+desincronizable en silencio (y de hecho se desincronizó); ahora lo sostiene
+`tests/unit/core/etapa2/test_cuantil_guard.py`, parametrizado sobre
+`_DISTRIBUCIONES` de `pipeline_etapa2.py` (no una lista hardcodeada — una
+distribución nueva entra al test sola). Verificado con
+`pytest tests/unit/core/etapa2/test_cuantil_guard.py -v` — 52 casos en verde
+(13 módulos × 4 valores de `p` inválidos: `0.0`, `1.0`, `-0.1`, `1.1`).
+
 #### Fases siguientes
-- Fase 4.5: propagar guard p∈(0,1) a todas las cuantil() pendientes
+- ~~Fase 4.5: propagar guard p∈(0,1) a todas las cuantil() pendientes~~ —
+  **COMPLETA, verificada y registrada 09/08/2026** (ver corrección arriba).
 - Fase 5: pipeline2.py — orquestación exhaustiva
 - Fase 6: tests de comportamiento
 
