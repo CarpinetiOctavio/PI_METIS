@@ -1,7 +1,7 @@
 from metis.schemas.analysis import (
-    AnalysisRequest,
     ContractProblem,
-    CramerParticionCustom,
+    DistributionDecisionRequest,
+    DistributionDecisionResponse,
     OutlierDecisionRequest,
     OutlierDecisionResponse,
     ProgressEvent,
@@ -12,9 +12,9 @@ from metis.schemas.auth import UserMe
 from metis.schemas.common import ErrorDetail, ErrorResponse
 
 __all__ = [
-    "AnalysisRequest",
     "ContractProblem",
-    "CramerParticionCustom",
+    "DistributionDecisionRequest",
+    "DistributionDecisionResponse",
     "OutlierDecisionRequest",
     "OutlierDecisionResponse",
     "ProgressEvent",

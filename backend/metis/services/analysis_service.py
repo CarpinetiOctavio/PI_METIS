@@ -270,7 +270,7 @@ def _mapear_indice_a_serie_original(indice_filtrado: int, serie_original: list) 
     return indices_numericos[indice_filtrado]
 
 
-async def stream_etapa1(
+async def stream_analysis(
     content: bytes,
     filename: str,
     columna_x: str,
@@ -278,10 +278,17 @@ async def stream_etapa1(
     tipo_variable: str,
     modo: str,
     cramer_particion: dict | str,
+    etapas: list[int],
     session_id: str,
     user_id: uuid.UUID | None,
     db: AsyncSession,
 ) -> AsyncGenerator[str, None]:
+    # DECISIÓN 054/055 — etapas ya llega validado y parseado desde el borde
+    # del endpoint. La orquestación real de Etapa 2 (llamar ejecutar_etapa2(),
+    # emitir result_etapa2_ranking, pausar) es responsabilidad de A5 — no
+    # implementada todavía en este PR. Con etapas == [1] el comportamiento de
+    # abajo es exactamente el de antes de esta decisión.
+    del etapas  # aceptado y validado, sin uso todavía — ver nota de arriba
     session_store.create_session(session_id)
     analysis_id: uuid.UUID | None = None
 
@@ -333,7 +340,11 @@ async def stream_etapa1(
                 )
                 return
 
-            decision = session_store.get_decision(session_id)
+            # DECISIÓN 053 — decision es un dict desde acá, no un str: mismo
+            # mecanismo que usará distribution-decision, cada consumidor lee
+            # su propia clave.
+            decision_payload = session_store.get_decision(session_id)
+            decision = decision_payload["decision"] if decision_payload else None
 
             if decision == "rechazar":
                 indice_atipico = _extraer_indice_atipico(result)
@@ -400,7 +411,8 @@ async def _persistir(
         user_id=user_id,
         serie=serie,
         tipo_variable=tipo_variable,
-        etapas=["1"],
+        etapas=["1"],  # TODO(A5) — persistir el valor real de etapas cuando
+        # la orquestación de Etapa 2 exista; hoy solo Etapa 1 corre nunca.
         modo=modo,
         configuracion={"cramer_particion": cramer_particion},
     )
@@ -425,7 +437,36 @@ async def registrar_outlier_decision(
     dato_atipico: float,
     db: AsyncSession,
 ) -> dict:
-    session_store.resolve_session(session_id, decision)
+    # DECISIÓN 053 — resolve_session ahora recibe un dict, no un str.
+    session_store.resolve_session(session_id, {"decision": decision})
+    return {"ok": True, "pipeline_continua": True}
+
+
+async def registrar_distribution_decision(
+    session_id: str,
+    distribucion: str,
+    metodo: str,
+    periodos_retorno: list[float],
+) -> dict | None:
+    """Registra la selección de distribución+método y desbloquea el stream
+    en espera (DECISIÓN 052).
+
+    Retorna None si la sesión no existe — el borde del endpoint lo traduce
+    a 404 SESSION_NOT_FOUND. A diferencia de registrar_outlier_decision(),
+    acá el chequeo de existencia es explícito porque el contrato de
+    distribution-decision lo exige (DECISIÓN 052), no porque Chow tuviera
+    el mismo gap resuelto — ese gap queda tal como está, fuera de alcance.
+    """
+    if session_store.get_session(session_id) is None:
+        return None
+    session_store.resolve_session(
+        session_id,
+        {
+            "distribucion": distribucion,
+            "metodo": metodo,
+            "periodos_retorno": periodos_retorno,
+        },
+    )
     return {"ok": True, "pipeline_continua": True}
 
 

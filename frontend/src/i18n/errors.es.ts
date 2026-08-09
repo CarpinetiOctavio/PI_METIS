@@ -21,6 +21,7 @@ export const ERROR_TEXT: Record<string, string> = {
   // Contrato — parámetros de request
   CONTRACT_CRAMER_PARTICION_UNSUPPORTED:
     "La partición personalizada de Cramer todavía no está disponible. Usá la partición por defecto.",
+  CONTRACT_ETAPAS_INVALID: "El alcance del análisis pedido no es válido.",
 
   // Contrato — warnings
   CONTRACT_LENGTH_WARNING:
@@ -55,12 +56,17 @@ export const ERROR_TEXT: Record<string, string> = {
   TEST_NOT_EXECUTED_MIN_SAMPLES:
     "Mann-Kendall no se ejecutó: la serie tiene menos de 10 datos.",
 
+  // Etapa 2
+  DIST_SELECTION_INVALID:
+    "La selección de distribución y método no es válida. Revisá los períodos de retorno.",
+
   // Stream
   PARSE_ERROR:
     "No se pudo leer el archivo. Revisá el formato y las columnas seleccionadas.",
   PARSE_FILE_TOO_LARGE: "El archivo supera el límite de 10 MB permitido.",
   SESSION_TIMEOUT:
     "Se agotó el tiempo de espera para decidir sobre el dato atípico.",
+  SESSION_NOT_FOUND: "La sesión de análisis no existe o ya expiró.",
   STREAM_CONNECTION_ERROR:
     "Se perdió la conexión con el servidor durante el análisis.",
   STREAM_CLOSED_EARLY:

@@ -105,13 +105,20 @@ existir ninguna de las tres opciones evaluadas en la decisión), solo cierra
 el 500. Hoy el frontend nunca envía otra cosa que `"default"`. Ver
 `docs/decisiones/decision036.md` — DECISIÓN 036.
 
-**Nota de implementación — `etapas` se recibe y se descarta.** El endpoint real
-declara `etapas: str = Form("1")` pero nunca lo pasa a `stream_etapa1()` — el
-frontend tampoco lo envía. `schemas/analysis.py::AnalysisRequest` (el modelo
-Pydantic que representaría este contrato completo, tipado) no lo importa ninguna
-ruta. Hoy es inocuo porque Etapa 2 está mockeada en el frontend; deja de serlo
-cuando Etapa 2 se exponga de verdad (M2/M3). Ver `docs/decisiones/decision037.md`
-— DECISIÓN 037.
+**Cerrado 09/08/2026 (DECISIÓN 054, Bloque A del plan de Etapa 2) —
+`etapas` cableado de punta a punta.** La nota anterior de esta sección
+afirmaba que `etapas: str = Form("1")` se recibía y se descartaba sin
+llegar nunca a `services/`. Ya no: se parsea a `list[int]` en el borde del
+endpoint (`api/v1/analysis.py`), solo se aceptan los literales `"1"` y
+`"1,2"` — cualquier otro valor responde 400 `CONTRACT_ETAPAS_INVALID`. La
+función de `services/` se renombró de `stream_etapa1()` a
+`stream_analysis()` en el mismo cambio. `schemas/analysis.py::AnalysisRequest`
+se borró — código muerto que ninguna ruta importaba, ver DECISIÓN 037
+(cerrada por DECISIÓN 054). **La orquestación real de Etapa 2** (llamar
+`ejecutar_etapa2()`, emitir `result_etapa2_ranking`, pausar) todavía no
+está implementada — `etapas` se acepta y valida, pero con `etapas=1,2` el
+stream hoy corre exactamente igual que con `etapas=1`. Queda para el
+Bloque A5 del plan de Etapa 2.
 
 **Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
 050. Excepción a la regla general de esta sección: como el archivo se lee
@@ -237,7 +244,19 @@ pertenencia que `/archive`.
 
 ---
 
-### POST /api/v1/analysis/design-events
+### POST /api/v1/analysis/design-events — REEMPLAZADO por `distribution-decision`
+
+**Reemplazado 09/08/2026 (DECISIÓN 052, Bloque A del plan de Etapa 2).**
+Este contrato se documentó pero nunca se implementó — el router real nunca
+tuvo esta ruta. Con Etapa 2 cableada al mismo stream SSE que Etapa 1
+(DECISIÓN 052), un endpoint sincrónico que devuelve los eventos calculados
+deja de tener sentido: el cliente ya tiene una conexión SSE abierta
+esperando el ranking. Se reemplaza por
+[`POST /analysis/distribution-decision`](#post-apiv1analysisdistribution-decision-decisión-052)
+— misma forma que `outlier-decision`, el cliente manda una decisión, no
+recibe un resultado en la misma respuesta. Se conserva esta entrada, sin
+borrar, por trazabilidad — no se implementa el contrato tal como está
+escrito abajo.
 
 **Request:**
 ```json
@@ -265,6 +284,57 @@ pertenencia que `/archive`.
   "analysis_id": "uuid | null"
 }
 ```
+
+---
+
+### POST /api/v1/analysis/distribution-decision (DECISIÓN 052)
+
+**Agregado 09/08/2026** — reemplaza a `design-events` (arriba). Misma forma
+que `outlier-decision`: el cliente manda la decisión, el resultado (eventos
+de diseño, evento `result_etapa2_eventos`) viaja por el stream SSE ya
+abierto, no en la respuesta de este endpoint.
+
+**Request:**
+```json
+{
+  "session_id": "uuid-de-sesion-activa",
+  "distribucion": "gumbel",
+  "metodo": "momentos",
+  "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]
+}
+```
+
+**Auth:** JWT opcional (mismo que el stream activo)
+
+**Validación en el borde** (no con restricciones Pydantic — necesita
+devolver el código propio, no un 422 genérico de FastAPI):
+`distribucion` y `metodo` no vacíos; `periodos_retorno` con entre 1 y 20
+elementos, todos `> 1` (`F = 1 - 1/T` necesita `T > 1` para caer en
+`(0,1)` — mismo guard que `cuantil()` en `core/`, duplicado acá para
+devolver un 400 legible en vez de un 500). Cualquier violación → 400
+`DIST_SELECTION_INVALID`, evaluado antes de tocar `session_store`.
+
+**Response 200:**
+```json
+{"ok": true, "pipeline_continua": true}
+```
+
+**Errores:** 404 `SESSION_NOT_FOUND` (la sesión no existe o ya expiró — a
+diferencia de `outlier-decision`, que no valida existencia de sesión, este
+endpoint sí lo hace explícitamente por mandato de DECISIÓN 052), 400
+`DIST_SELECTION_INVALID`.
+
+**Estado de implementación (09/08/2026, Bloque A1-A3 del plan de Etapa 2):**
+el endpoint existe y valida correctamente, y desbloquea la sesión en
+`session_store`. Lo que todavía no existe es quien la use: el stream no
+llega a pausar en `result_etapa2_ranking` todavía (eso es el Bloque A5,
+"orquestación") ni se calculan eventos de diseño (Bloque A4). Este
+endpoint no tiene ningún efecto observable en el pipeline real hasta que
+esos dos bloques cierren — hoy solo puede probarse de forma aislada
+(`tests/unit/api/test_distribution_decision.py`), no de punta a punta.
+
+**Solo para CU-01 y CU-02. CU-03 no usa este endpoint** — mismo alcance
+que `outlier-decision`.
 
 ---
 
@@ -365,11 +435,12 @@ CONTRACT_NON_NUMERIC_VALUES      Valores no numéricos mezclados
 ### Contrato — parámetros de request (no de la serie)
 ```
 CONTRACT_CRAMER_PARTICION_UNSUPPORTED  cramer_particion distinto de "default" (DECISIÓN 036)
+CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
 ```
-A diferencia de los dos grupos de arriba (series de datos), este código valida
+A diferencia de los dos grupos de arriba (series de datos), estos códigos validan
 un parámetro del request en `POST /analysis/stream` antes de tocar el archivo
-subido o el pipeline — 400, no bloquea una serie válida, bloquea una opción
-todavía no implementada.
+subido o el pipeline — 400, no bloquean una serie válida, bloquean una opción
+inválida o todavía no implementada.
 
 ### Etapa 1 — pruebas
 ```
@@ -399,13 +470,21 @@ DIST_NOT_APPLICABLE              Combinación sin sentido matemático para esos 
 DIST_NOT_CONVERGED               Método iterativo sin solución estable
 DIST_HIGH_EEA                    EEA supera el 5% de la media
 DIST_DISABLED_ZEROS              Distribución deshabilitada por ceros en caudal_precipitacion
+DIST_SELECTION_INVALID           distribucion/metodo vacíos o periodos_retorno inválido (DECISIÓN 052)
 ```
+`DIST_SELECTION_INVALID` no es un estado de ajuste de una distribución como
+los otros cuatro — es la validación del request de
+`POST /analysis/distribution-decision` (respuesta HTTP 400, no un campo de
+`DistResult`). Se agrupa acá por prefijo/dominio, igual que
+`CONTRACT_ETAPAS_INVALID` se agrupa con los códigos de contrato pese a
+validar un parámetro de request y no la serie.
 
 ### Stream / sesión
 ```
 PARSE_ERROR                      No se pudo parsear el archivo subido (evento SSE "error")
 SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante un atípico (evento SSE "error")
 PARSE_FILE_TOO_LARGE             El archivo supera el límite de subida — respuesta HTTP 400, no evento SSE
+SESSION_NOT_FOUND                session_id no existe o ya expiró — respuesta HTTP 404, no evento SSE (DECISIÓN 052)
 ```
 `PARSE_ERROR` y `SESSION_TIMEOUT` son eventos SSE `error`, no respuestas HTTP
 de error — ver nota general al principio de este archivo. Emitidos por
@@ -419,6 +498,10 @@ commit que lo introduce.
 endpoint sincrónico (`/analysis/preview-columns`), así que siempre es una respuesta
 HTTP 400 estándar — DECISIÓN 050. Se agrupa acá por dominio (falla al ingerir el
 archivo subido), no por transporte.
+
+`SESSION_NOT_FOUND` es la misma excepción por el mismo motivo: `distribution-decision`
+es un endpoint sincrónico aparte del stream (igual que `outlier-decision`), así
+que responde HTTP 404 estándar, nunca un evento SSE — DECISIÓN 052.
 
 ### Códigos originados en el frontend
 ```
