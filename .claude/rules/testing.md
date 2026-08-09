@@ -2,16 +2,20 @@
 
 ## Cuatro niveles obligatorios (comprometidos en el anteproyecto)
 
-**Estado real, no solo compromiso (verificado 09/08/2026):** de los cuatro
-niveles de abajo, solo **Tests unitarios** tiene contenido real hoy.
-`tests/integration/`, `tests/e2e/` y `tests/regression/` existen como
-directorios pero contienen únicamente `__init__.py` — cero tests. Es la
-razón por la que el job `test` de CI corre `pytest -m "unit or integration"`
-tolerando exit code 5 (ver `CLAUDE.md`, sección CI): sin eso, la ausencia de
-tests de integración haría fallar el job. Seguimiento de cuándo se cierra
-cada uno en `docs/pendientes-tecnicos.md`. Esta sección describe el
-compromiso completo de los cuatro niveles — léase como objetivo, no como
-inventario de lo que ya existe.
+**Estado real, no solo compromiso (verificado 09/08/2026, actualizado en el
+cierre del Bloque A del plan de Etapa 2):** de los cuatro niveles de abajo,
+**Tests unitarios** e **Integración** tienen contenido real hoy.
+`tests/integration/` estrenó su primer test en el Bloque A6 — corre
+`stream_analysis()` de punta a punta con la pausa de Etapa 2, sin BD real
+(CU-02 anónimo). `tests/e2e/` y `tests/regression/` siguen vacíos (solo
+`__init__.py`). El job `test` de CI sigue corriendo `pytest -m "unit or
+integration"` tolerando exit code 5 (ver `CLAUDE.md`, sección CI) — no se
+quitó la tolerancia en el mismo PR que agregó el primer test de
+integración, a propósito (un cambio de CI y un cambio de features no van
+juntos). Seguimiento de cuándo se cierra cada uno en
+`docs/pendientes-tecnicos.md`. Esta sección describe el compromiso
+completo de los cuatro niveles — léase como objetivo, no como inventario
+de lo que ya existe.
 
 ### 1. Tests unitarios del core estadístico
 

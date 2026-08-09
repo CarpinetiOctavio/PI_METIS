@@ -324,14 +324,17 @@ diferencia de `outlier-decision`, que no valida existencia de sesión, este
 endpoint sí lo hace explícitamente por mandato de DECISIÓN 052), 400
 `DIST_SELECTION_INVALID`.
 
-**Estado de implementación (09/08/2026, Bloque A1-A3 del plan de Etapa 2):**
-el endpoint existe y valida correctamente, y desbloquea la sesión en
-`session_store`. Lo que todavía no existe es quien la use: el stream no
-llega a pausar en `result_etapa2_ranking` todavía (eso es el Bloque A5,
-"orquestación") ni se calculan eventos de diseño (Bloque A4). Este
-endpoint no tiene ningún efecto observable en el pipeline real hasta que
-esos dos bloques cierren — hoy solo puede probarse de forma aislada
-(`tests/unit/api/test_distribution_decision.py`), no de punta a punta.
+**Estado de implementación (09/08/2026, cierre del Bloque A1-A6 del plan de
+Etapa 2):** cableado de punta a punta y verificado. El stream pausa de
+verdad en `result_etapa2_ranking`, este endpoint la desbloquea, y el
+stream calcula los eventos de diseño reales (`core/etapa2/design_events.py`,
+Bloque A4) y persiste `analysis_results.etapa2` para CU-01 (Bloque A5).
+Verificado con `tests/integration/test_etapa2_stream_distribution_decision.py`
+(stream completo, sin red) y con un smoke test manual contra el backend real
+vía HTTP — CU-01 con `etapas=1,2`, `distribution-decision` real, y
+`psql` confirmando `analysis_results.etapa2` con las 13 distribuciones.
+Ver `.claude/rules/core/statistical-pipeline.md` para la secuencia SSE
+completa.
 
 **Solo para CU-01 y CU-02. CU-03 no usa este endpoint** — mismo alcance
 que `outlier-decision`.

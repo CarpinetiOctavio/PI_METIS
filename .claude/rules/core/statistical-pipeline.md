@@ -166,7 +166,8 @@ f"event: {tipo}\ndata: {json.dumps(payload)}\n\n"
 "test_result"             # resultado de una prueba individual
 "outlier_detected"        # pausa para decisión del usuario (CU-01/CU-02)
 "result_etapa1"           # resultados completos de Etapa 1
-"result_etapa2_ranking"   # ranking EEA completo (pausa para selección)
+"result_etapa2_ranking"   # ranking EEA completo (pausa para selección de distribución+método)
+"result_etapa2_eventos"   # eventos de diseño de la distribución elegida
 "complete"                # pipeline terminado
 "error"                   # error interno inesperado
 ```
@@ -189,6 +190,65 @@ Payload de `test_result`:
   "n2": null
 }
 ```
+
+---
+
+## Secuencia real del stream con Etapa 2 (DECISIÓN 052, cerrado 09/08/2026)
+
+Implementada de punta a punta en `services/analysis_service.py::stream_analysis()`
+— Bloque A del plan de implementación de Etapa 2. Simétrica con la pausa de
+Chow, mismo mecanismo (`session_store`), sin transporte nuevo:
+
+```
+… → result_etapa1 → progress(etapa 2) → result_etapa2_ranking → [PAUSA] → result_etapa2_eventos → complete
+                                                  ↑
+                        POST /analysis/distribution-decision → session_store.resolve_session()
+```
+
+**Condiciones para entrar a Etapa 2**, evaluadas en este orden:
+
+1. `etapas == [1, 2]` (parseado y validado en el borde del endpoint —
+   DECISIÓN 054). Con `etapas == [1]` el stream termina en `result_etapa1` →
+   `complete`, exactamente como si Etapa 2 no existiera.
+2. `result_final.nivel_confianza != "rechazado"` — el único estado que
+   bloquea. Con warnings, incluso críticos, Etapa 2 corre igual
+   (RF-GEN-P-03).
+
+Etapa 2 corre sobre la misma serie que produjo el veredicto final de
+Etapa 1 — si el atípico de Chow fue rechazado, sobre la serie ya filtrada,
+no sobre la original.
+
+**Payload de `result_etapa2_ranking`:** `{"session_id", "ranking", "warnings"}`,
+donde `ranking` es la grilla completa serializada por `_serializar_etapa2()`
+(las 13 distribuciones, todos sus métodos con `status`/`eea`/`parametros`,
+`mejor_eea`, `mejor_metodo`) — sin aplanar a un top-3, ver DECISIÓN 055.
+
+**`POST /analysis/distribution-decision`** (reemplaza al `design-events`
+documentado y nunca implementado — DECISIÓN 052, ver `api-contracts.md`)
+resuelve la pausa con `{distribucion, metodo, periodos_retorno}`.
+
+**Payload de `result_etapa2_eventos`:**
+```json
+{
+  "distribucion": "gumbel",
+  "metodo": "momentos",
+  "eventos_diseno": [
+    {"periodo_retorno": 2, "valor": 138.4},
+    {"periodo_retorno": 100, "valor": 312.7}
+  ]
+}
+```
+`valor` puede ser `null` para un período de retorno puntual si `cuantil()`
+falla para esa distribución+método — no tumba el resto de los eventos
+(`core/etapa2/design_events.py`, DECISIÓN mencionada arriba).
+
+**Implementación técnica no obvia:** el mismo `asyncio.Event` de
+`SessionState` (DECISIÓN 053) se reutiliza para las dos pausas posibles de
+una misma sesión (Chow y luego distribución) — un `Event` no se
+"des-setea" solo tras `.set()`, así que `stream_analysis()` lo limpia
+(`.clear()`) antes de la segunda espera. Sin esto, la segunda pausa
+devolvería de inmediato sin esperar la decisión real si Chow ya se
+resolvió antes en el mismo stream.
 
 ---
 
