@@ -2,6 +2,17 @@
 
 ## Cuatro niveles obligatorios (comprometidos en el anteproyecto)
 
+**Estado real, no solo compromiso (verificado 09/08/2026):** de los cuatro
+niveles de abajo, solo **Tests unitarios** tiene contenido real hoy.
+`tests/integration/`, `tests/e2e/` y `tests/regression/` existen como
+directorios pero contienen únicamente `__init__.py` — cero tests. Es la
+razón por la que el job `test` de CI corre `pytest -m "unit or integration"`
+tolerando exit code 5 (ver `CLAUDE.md`, sección CI): sin eso, la ausencia de
+tests de integración haría fallar el job. Seguimiento de cuándo se cierra
+cada uno en `docs/pendientes-tecnicos.md`. Esta sección describe el
+compromiso completo de los cuatro niveles — léase como objetivo, no como
+inventario de lo que ya existe.
+
 ### 1. Tests unitarios del core estadístico
 
 Viven en `tests/unit/core/`. Testean funciones puras de `metis/core/` sin levantar la app.

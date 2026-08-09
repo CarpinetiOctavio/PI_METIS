@@ -736,7 +736,8 @@ No se implementó así — `sse.test.ts` arma las secuencias de eventos a mano s
   productivo. Agendar como tarea explícita al cerrar el desarrollo local.
 - **P2 — CERRADO desde Fase 0.** Puerto/herramienta del frontend confirmado: **5173/Vite**,
   alineado con `FRONTEND_ORIGIN` del `.env.example`. Scaffold de Fase 0
-  (`docs/superpowers/plans/2026-07-22-frontend-fase0-scaffold.md`) lo fijó sin desalinear el
+  (`docs/historico/2026-07-22-frontend-fase0-scaffold.md`, movido desde
+  `docs/superpowers/plans/` el 09/08/2026) lo fijó sin desalinear el
   CORS del backend — sigue así desde entonces. Quedaba listado como abierto pese a estar
   resuelto de hecho; corregido en la pasada de mejora del 29/07/2026.
 - **P3 — Azul institucional UCC** para las secciones con logo (blend UCC de Fase 2) — pendiente de
