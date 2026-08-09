@@ -112,7 +112,11 @@ export function TopBar() {
         {isAuthed && user && (
           <>
             <span className="topbar__sep" aria-hidden="true" />
-            <span data-testid="user-email" className="fn">
+            <span
+              data-testid="user-email"
+              className="fn topbar__email"
+              title={user.email}
+            >
               {user.email}
             </span>
             <button type="button" className="link-btn" onClick={() => void handleLogout()}>
