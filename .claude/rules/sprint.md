@@ -679,6 +679,22 @@ corrección).
 
 ---
 
+### feature/frontend-pasada5 — COMPLETA (06-09/08/2026)
+
+Cuarta pasada de mejora del frontend, sobre la identidad visual "Instrumento"
+cerrada en la pasada 4. Plan completo en
+`docs/frontend/plan-mejora-frontend-pasada5.md`, cierre en
+[`docs/frontend/informe-resultados-pasada5.md`](../../docs/frontend/informe-resultados-pasada5.md)
+— punto de entrada para retomar el estado exacto de verificación bloque por
+bloque. Cuatro PRs apilados (Bloque A+B #37, Bloque C+D #38, Bloque E #39,
+Bloque F #40), los cuatro mergeados a `staging`: paridad del tema claro
+(token `--glow`), tercer fondo animado migrado a Canvas 2D (`three` sale del
+proyecto — DECISIÓN 051), elevación de cards, `TopBar` como cluster de
+vidrio, dropzone real + panel de muestra de columnas en `ConfigPage`
+(`ColumnPreviewPanel`), y blur del scrim en el modal de atípico.
+
+---
+
 ## Decisiones pendientes — no implementar hasta confirmar
 
 - **Partición de Cramer personalizada** — inalcanzable hoy por el endpoint
