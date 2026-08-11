@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { renderPage } from "../../test/renderPage";
 import { ResultsPage } from "./ResultsPage";
-import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
+import type { Etapa1Result, Etapa2Result, Modo, TestResultDetail } from "../../api/types";
+import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
 
 function testResult(overrides: Partial<TestResultDetail> = {}): TestResultDetail {
   return {
@@ -50,6 +51,24 @@ function makeResult(overrides: Partial<Etapa1Result> = {}): Etapa1Result {
   };
 }
 
+function makeEtapa2Result(): Etapa2Result {
+  return {
+    ranking: [
+      {
+        distribucion: "gumbel",
+        n_parametros: 2,
+        metodos: [
+          { metodo: "momentos", parametros: { mu: 100, alpha: 20 }, eea: 12.5, status: "ok" },
+          { metodo: "mv", parametros: null, eea: null, status: "no_converge" },
+        ],
+        mejor_eea: 12.5,
+        mejor_metodo: "momentos",
+      },
+    ],
+    warnings: [],
+  };
+}
+
 function stubMe(ok: boolean, body: unknown = {}) {
   vi.stubGlobal(
     "fetch",
@@ -65,6 +84,7 @@ function renderResultsPage(
   authed: boolean,
   result: Etapa1Result | undefined,
   modo?: Modo,
+  extra?: { etapa2?: Etapa2RankingState; eventosDiseno?: Etapa2EventosState },
 ) {
   if (authed) {
     stubMe(true, { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true });
@@ -76,7 +96,10 @@ function renderResultsPage(
     <MemoryRouter
       initialEntries={[
         result
-          ? { pathname: "/results", state: { result, analysisId: "an-1", modo } }
+          ? {
+              pathname: "/results",
+              state: { result, analysisId: "an-1", modo, ...extra },
+            }
           : { pathname: "/results" },
       ]}
     >
@@ -84,7 +107,6 @@ function renderResultsPage(
         <Routes>
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/config" element={<div>config screen</div>} />
-          <Route path="/ranking" element={<div>ranking screen</div>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -156,17 +178,42 @@ describe("ResultsPage", () => {
     expect(container.querySelectorAll("details")).toHaveLength(0);
   });
 
-  // F5 (informe-diagnostico-ui-rota.md): antes ninguna pantalla navegaba a
-  // /ranking — Etapa 2 era inalcanzable salvo tipeando la URL a mano.
-  it("shows a 'Continuar a Etapa 2' button with the PendingBadge, and navigates to /ranking", async () => {
+  // Bloque B del plan de Etapa 2 — Etapa 2 ya no es una pantalla mock
+  // aparte: corrió (si se pidió) dentro de StreamPage, y acá se muestra de
+  // solo lectura si el router state la trae.
+  it("does not show any Etapa 2 section when the stream only ran Etapa 1", async () => {
     renderResultsPage(true, makeResult(), "experto");
     expect(
       await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText("Vista previa · datos de demostración")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Continuar a Etapa 2 ▸" }));
+    expect(screen.queryByText("Ranking de distribuciones")).not.toBeInTheDocument();
+    expect(screen.queryByText("Evento de diseño")).not.toBeInTheDocument();
+  });
 
-    expect(await screen.findByText("ranking screen")).toBeInTheDocument();
+  it("shows the Etapa 2 ranking (read-only, no 'Elegir') when the router state carries it", async () => {
+    renderResultsPage(true, makeResult(), "experto", {
+      etapa2: { session_id: "s1", ...makeEtapa2Result() },
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "Ranking de distribuciones" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("gumbel")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Elegir" })).not.toBeInTheDocument();
+  });
+
+  it("shows the design events view when the router state carries eventosDiseno", async () => {
+    renderResultsPage(true, makeResult(), "experto", {
+      eventosDiseno: {
+        distribucion: "gumbel",
+        metodo: "momentos",
+        eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+      },
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "Evento de diseño" }),
+    ).toBeInTheDocument();
   });
 });

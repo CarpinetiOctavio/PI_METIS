@@ -7,14 +7,13 @@
 // camino feliz de login (§5.3 del informe) — el de mejor relación
 // costo/beneficio de todo el plan.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, screen, fireEvent } from "@testing-library/react";
+import { act, screen, fireEvent, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { routes } from "./routes";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ThemeProvider } from "./theme/ThemeProvider";
 import { renderPage } from "./test/renderPage";
-import { designEventsMock } from "./mocks/designEvents.mock";
 import type { AnalysisDetail } from "./api/types";
 
 vi.mock("@microsoft/fetch-event-source", () => ({
@@ -46,7 +45,7 @@ const TODOS_LOS_GRUPOS = [
   "chow",
 ];
 
-function completeStream() {
+function emitEtapa1Completo() {
   TODOS_LOS_GRUPOS.forEach((prueba) =>
     emitStream("test_result", {
       prueba,
@@ -73,7 +72,37 @@ function completeStream() {
     nivel_confianza: "validado",
     warnings: [],
   });
-  emitStream("complete", { analysis_id: "an-1" });
+}
+
+// DECISIÓN 052 — la pausa de Etapa 2 llega por el mismo stream, no por una
+// pantalla mock aparte.
+function emitEtapa2Ranking() {
+  emitStream("progress", {
+    paso: "ajuste_distribuciones",
+    etapa: 2,
+    completado: 1,
+    total: 1,
+  });
+  emitStream("result_etapa2_ranking", {
+    session_id: "sess-2",
+    ranking: [
+      {
+        distribucion: "gumbel",
+        n_parametros: 2,
+        metodos: [
+          {
+            metodo: "momentos",
+            parametros: { mu: 100, alpha: 20 },
+            eea: 12.5,
+            status: "ok",
+          },
+        ],
+        mejor_eea: 12.5,
+        mejor_metodo: "momentos",
+      },
+    ],
+    warnings: [],
+  });
 }
 
 function makeAnalysisDetail(): AnalysisDetail {
@@ -110,40 +139,43 @@ function stubFetch({ authed }: { authed: boolean }) {
   const user = { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true };
   let loggedIn = authed;
 
-  vi.stubGlobal(
-    "fetch",
-    vi.fn((input: RequestInfo | URL) => {
-      const url = typeof input === "string" ? input : input.toString();
-      const json = (body: unknown, ok = true, status = ok ? 200 : 400) =>
-        Promise.resolve({ ok, status, json: () => Promise.resolve(body) });
+  const mockedFetch = vi.fn((input: RequestInfo | URL) => {
+    const url = typeof input === "string" ? input : input.toString();
+    const json = (body: unknown, ok = true, status = ok ? 200 : 400) =>
+      Promise.resolve({ ok, status, json: () => Promise.resolve(body) });
 
-      if (url.includes("/auth/me")) {
-        return json(loggedIn ? user : {}, loggedIn, loggedIn ? 200 : 401);
-      }
-      if (url.includes("/auth/login")) {
-        loggedIn = true;
-        return json({ ok: true });
-      }
-      if (url.includes("/auth/logout")) {
-        loggedIn = false;
-        return json({ ok: true });
-      }
-      if (url.includes("/analysis/design-events")) return json(designEventsMock);
-      if (/\/history\/[^/]+$/.test(url)) return json(makeAnalysisDetail());
-      if (url.includes("/history/")) {
-        return json([
-          {
-            id: "an-1",
-            tipo_variable: "caudal_precipitacion",
-            modo: "experto",
-            etapas: ["1"],
-            created_at: "2026-01-15T00:00:00Z",
-          },
-        ]);
-      }
-      throw new Error(`unstubbed fetch: ${url}`);
-    }),
-  );
+    if (url.includes("/auth/me")) {
+      return json(loggedIn ? user : {}, loggedIn, loggedIn ? 200 : 401);
+    }
+    if (url.includes("/auth/login")) {
+      loggedIn = true;
+      return json({ ok: true });
+    }
+    if (url.includes("/auth/logout")) {
+      loggedIn = false;
+      return json({ ok: true });
+    }
+    // DECISIÓN 052 — reemplaza al design-events mockeado que existía acá.
+    if (url.includes("/analysis/distribution-decision")) {
+      return json({ ok: true, pipeline_continua: true });
+    }
+    if (/\/history\/[^/]+$/.test(url)) return json(makeAnalysisDetail());
+    if (url.includes("/history/")) {
+      return json([
+        {
+          id: "an-1",
+          tipo_variable: "caudal_precipitacion",
+          modo: "experto",
+          etapas: ["1"],
+          created_at: "2026-01-15T00:00:00Z",
+        },
+      ]);
+    }
+    throw new Error(`unstubbed fetch: ${url}`);
+  });
+
+  vi.stubGlobal("fetch", mockedFetch);
+  return mockedFetch;
 }
 
 function makeCsvFile() {
@@ -168,9 +200,11 @@ describe("grafo de navegación real (routes.tsx)", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   // F4/F5/F6/F7 (anónimo, CU-02): la puerta de entrada, todo el pipeline de
-  // Etapa 1, y la continuación mock a Etapa 2 — con un solo click cada paso.
-  it("anónimo: entrada -> config -> stream -> resultados -> ranking -> eventos de diseño", async () => {
-    stubFetch({ authed: false });
+  // Etapa 1, y Etapa 2 real (DECISIÓN 052) — pausa DENTRO de StreamPage, sin
+  // navegar a ninguna ruta separada (/ranking y /design-events se retiraron
+  // en el Bloque B del plan de Etapa 2).
+  it("anónimo: entrada -> config -> stream con Etapa 2 inline -> resultados", async () => {
+    const mockedFetch = stubFetch({ authed: false });
     mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
     renderApp("/");
 
@@ -186,27 +220,50 @@ describe("grafo de navegación real (routes.tsx)", () => {
     fireEvent.change(fileInput, { target: { files: [makeCsvFile()] } });
     fireEvent.change(screen.getByLabelText("Columna X"), { target: { value: "anio" } });
     fireEvent.change(screen.getByLabelText("Columna Y"), { target: { value: "caudal" } });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Validación + análisis de frecuencia (Etapa 1 y 2)",
+      }),
+    );
     fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
 
     expect(
       await screen.findByRole("heading", { name: "Análisis en vivo" }),
     ).toBeInTheDocument();
 
-    completeStream();
+    emitEtapa1Completo();
+    emitEtapa2Ranking();
+
+    expect(
+      await screen.findByRole("heading", { name: "Elegí una distribución" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Ver los \d+ método/));
+    fireEvent.click(screen.getByRole("button", { name: "Elegir" }));
+
+    await waitFor(() =>
+      expect(mockedFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/analysis/distribution-decision"),
+        expect.anything(),
+      ),
+    );
+
+    emitStream("result_etapa2_eventos", {
+      distribucion: "gumbel",
+      metodo: "momentos",
+      eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+    });
+    emitStream("complete", { analysis_id: "an-1" });
+
     fireEvent.click(await screen.findByRole("button", { name: /Ver resultados/ }));
 
     expect(
       await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Continuar a Etapa 2 ▸" }));
-
     expect(
-      await screen.findByRole("heading", { name: "Mejores ajustes" }),
+      screen.getByRole("heading", { name: "Ranking de distribuciones" }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Elegir" })[0]);
-
     expect(
-      await screen.findByRole("heading", { name: "Evento de diseño" }),
+      screen.getByRole("heading", { name: "Evento de diseño" }),
     ).toBeInTheDocument();
   });
 

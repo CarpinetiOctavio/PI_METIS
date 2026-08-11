@@ -32,6 +32,8 @@ const BASE_STATE: StreamState = {
   progress: { completado: 0, total: 8 },
   outlier: null,
   result: null,
+  etapa2: null,
+  eventosDiseno: null,
   analysisId: null,
   error: null,
 };
@@ -62,11 +64,13 @@ function renderStreamPage(
 ) {
   const start = vi.fn();
   const resolveOutlier = vi.fn().mockResolvedValue(undefined);
+  const resolveDistribution = vi.fn().mockResolvedValue(undefined);
   const abort = vi.fn();
   mockedUseAnalysisStream.mockReturnValue({
     start,
     state: { ...BASE_STATE, ...stateOverrides },
     resolveOutlier,
+    resolveDistribution,
     abort,
   });
 
@@ -102,12 +106,13 @@ function renderStreamPage(
       start,
       state: { ...BASE_STATE, ...nextStateOverrides },
       resolveOutlier,
+      resolveDistribution,
       abort,
     });
     rerender(<StrictMode>{makeTree()}</StrictMode>);
   }
 
-  return { start, resolveOutlier, abort, unmount, rerenderWithState };
+  return { start, resolveOutlier, resolveDistribution, abort, unmount, rerenderWithState };
 }
 
 describe("StreamPage", () => {
@@ -286,6 +291,87 @@ describe("StreamPage", () => {
     // presentación (acordeón paso a paso vs. tarjetas planas de experto).
     expect(screen.getByTestId("results-state")).toHaveTextContent(
       makeForm().modo,
+    );
+  });
+
+  // Segundo punto de pausa del stream (DECISIÓN 052) — hermano del test del
+  // modal de Chow arriba, pero inline en la página, no un modal: la grilla
+  // de 13 distribuciones no cabe en un diálogo de confirmación chico, y no
+  // hay backdrop/focus-trap para esta pausa (decisión explícita, ver el PR).
+  it("shows the Etapa 2 ranking inline when paused, and calls resolveDistribution when 'Elegir' is clicked", async () => {
+    const { resolveDistribution } = renderStreamPage({
+      fase: "waiting_distribution",
+      etapa2: {
+        session_id: "sess-2",
+        ranking: [
+          {
+            distribucion: "gumbel",
+            n_parametros: 2,
+            metodos: [
+              { metodo: "momentos", parametros: { mu: 100, alpha: 20 }, eea: 12.5, status: "ok" },
+            ],
+            mejor_eea: 12.5,
+            mejor_metodo: "momentos",
+          },
+        ],
+        warnings: [],
+      },
+    });
+
+    expect(
+      screen.getByRole("heading", { name: "Elegí una distribución" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Ver los 1 método/));
+    fireEvent.click(screen.getByRole("button", { name: "Elegir" }));
+
+    await waitFor(() =>
+      expect(resolveDistribution).toHaveBeenCalledWith(
+        "gumbel",
+        "momentos",
+        [2, 5, 10, 25, 50, 100, 200, 500],
+      ),
+    );
+  });
+
+  it("shows the design events view once result_etapa2_eventos arrives, without blocking on fase", () => {
+    renderStreamPage({
+      fase: "streaming",
+      eventosDiseno: {
+        distribucion: "gumbel",
+        metodo: "momentos",
+        eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+      },
+    });
+
+    expect(
+      screen.getByRole("heading", { name: "Evento de diseño" }),
+    ).toBeInTheDocument();
+  });
+
+  it("passes etapa2 and eventosDiseno through to /results alongside the Etapa 1 result", async () => {
+    renderStreamPage({
+      fase: "done",
+      result: {
+        contract: { bloqueante: false, codigo_error: null, warnings: [] },
+        descriptive: null,
+        independencia: [],
+        homogeneidad: [],
+        tendencia: [],
+        atipicos: [],
+        nivel_independencia: "independiente",
+        nivel_homogeneidad: "homogeneidad_ok",
+        nivel_confianza: "validado",
+        warnings: [],
+      },
+      analysisId: "an-1",
+      etapa2: { session_id: "sess-2", ranking: [], warnings: [] },
+      eventosDiseno: { distribucion: "gumbel", metodo: "momentos", eventos_diseno: [] },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Ver resultados/ }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("results-state")).toHaveTextContent("gumbel"),
     );
   });
 });
