@@ -6,13 +6,17 @@ aplanar a un top-3.
 
 import pytest
 
-from metis.core.etapa2.types import DistResult, Etapa2Result, MetodoResult
+from metis.core.etapa2.types import DistResult, Etapa2Result, MetodoResult, PuntoEmpirico
 from metis.core.types import WarningItem
 from metis.services.analysis_service import _serializar_etapa2
 
 
 def _etapa2_result_de_ejemplo() -> Etapa2Result:
     return Etapa2Result(
+        puntos_empiricos=[
+            PuntoEmpirico(valor=142.5, periodo_retorno=41.0, probabilidad=0.9756),
+            PuntoEmpirico(valor=98.1, periodo_retorno=20.5, probabilidad=0.9512),
+        ],
         ranking=[
             DistResult(
                 distribucion="gumbel",
@@ -108,4 +112,14 @@ def test_serializar_etapa2_incluye_warnings():
 def test_serializar_etapa2_sin_warnings_da_lista_vacia():
     resultado = _serializar_etapa2(Etapa2Result(ranking=[]))
 
-    assert resultado == {"ranking": [], "warnings": []}
+    assert resultado == {"ranking": [], "warnings": [], "puntos_empiricos": []}
+
+
+@pytest.mark.unit
+def test_serializar_etapa2_incluye_puntos_empiricos():
+    resultado = _serializar_etapa2(_etapa2_result_de_ejemplo())
+
+    assert resultado["puntos_empiricos"] == [
+        {"valor": 142.5, "periodo_retorno": 41.0, "probabilidad": 0.9756},
+        {"valor": 98.1, "periodo_retorno": 20.5, "probabilidad": 0.9512},
+    ]
