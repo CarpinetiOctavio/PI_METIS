@@ -202,6 +202,9 @@ export interface SseResultEtapa2RankingEvent {
   session_id: string;
   ranking: DistribucionResult[];
   warnings: WarningItem[];
+  // Bloque C — insumo del gráfico de ajuste (puntos empíricos vs. curva).
+  // Independiente de la distribución que se elija después.
+  puntos_empiricos: PuntoEmpirico[];
 }
 
 export interface SseResultEtapa2EventosEvent {
@@ -209,6 +212,10 @@ export interface SseResultEtapa2EventosEvent {
   distribucion: string;
   metodo: string;
   eventos_diseno: EventoDiseno[];
+  // Bloque C — muestreo denso (60 puntos, escala log) de la curva de la
+  // distribución elegida, distinto de eventos_diseno (los T puntuales que
+  // pidió el usuario). Insumo del gráfico de ajuste.
+  curva_ajuste: EventoDiseno[];
 }
 
 export type SseEvent =
@@ -274,6 +281,15 @@ export interface DistribucionResult {
 export interface Etapa2Result {
   ranking: DistribucionResult[];
   warnings: WarningItem[];
+  puntos_empiricos: PuntoEmpirico[];
+}
+
+// Posición de ploteo Weibull de un dato observado (empirical.py::
+// probabilidades_weibull) — propiedad de la muestra, no del ajuste.
+export interface PuntoEmpirico {
+  valor: number;
+  periodo_retorno: number;
+  probabilidad: number;
 }
 
 export interface EventoDiseno {

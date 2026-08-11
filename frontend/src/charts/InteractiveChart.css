@@ -1,0 +1,86 @@
+.interactive-chart {
+  width: 100%;
+}
+
+.interactive-chart__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+.interactive-chart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--surf2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  touch-action: none;
+}
+
+.interactive-chart__svg:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.interactive-chart__gridline {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.interactive-chart__tick {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  fill: var(--mut);
+}
+
+.interactive-chart__axis-label {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  fill: var(--mut);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.interactive-chart__line {
+  fill: none;
+  stroke-width: 2;
+  transition: d var(--t-mid) var(--ease-out);
+}
+
+.interactive-chart__point {
+  transition:
+    r var(--t-fast) var(--ease-out),
+    cx var(--t-mid) var(--ease-out),
+    cy var(--t-mid) var(--ease-out);
+}
+
+.interactive-chart__selection {
+  fill: color-mix(in srgb, var(--acc) 18%, transparent);
+  stroke: var(--acc);
+  stroke-width: 1;
+}
+
+.interactive-chart__capture {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.interactive-chart__tooltip circle {
+  stroke: var(--surf);
+  stroke-width: 1.5;
+}
+
+.interactive-chart__tooltip-box {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--surf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 4px 6px;
+  pointer-events: none;
+  white-space: nowrap;
+  width: fit-content;
+}
