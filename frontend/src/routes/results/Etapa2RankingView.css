@@ -1,0 +1,14 @@
+.etapa2-ranking {
+  margin-top: 20px;
+}
+
+.etapa2-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.etapa2-card.top {
+  border-color: var(--acc);
+}
