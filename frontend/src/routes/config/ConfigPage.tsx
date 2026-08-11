@@ -72,6 +72,10 @@ export function ConfigPage() {
     "caudal_precipitacion",
   );
   const [modo, setModo] = useState<Modo>("paso_a_paso");
+  // Bloque B6 del plan de Etapa 2 — sin selector antes, siempre se mandaba
+  // "1" implícito (default de AnalysisStreamForm.etapas). DECISIÓN 054 solo
+  // acepta "1" | "1,2" en el borde del endpoint.
+  const [etapas, setEtapas] = useState<"1" | "1,2">("1");
   const [error, setError] = useState<string | null>(null);
   // Bloque E3 (pasada 5) — movida por onFocus/onBlur de los <select>, no por
   // su valor: resalta en ColumnPreviewPanel qué columna está eligiendo cada
@@ -142,6 +146,7 @@ export function ConfigPage() {
       tipo_variable: tipoVariable,
       modo: modoEfectivo,
       cramer_particion: "default",
+      etapas,
     };
     // El form (incluido el File) viaja como router state — no persiste a un
     // refresh, pero StreamPage lo consume una sola vez al montar, así que no
@@ -302,6 +307,27 @@ export function ConfigPage() {
                 onClick={() => setTipoVariable("otro")}
               >
                 Otro
+              </button>
+            </div>
+          </fieldset>
+          <fieldset className="field">
+            <legend>Alcance del análisis</legend>
+            <div className="seg">
+              <button
+                type="button"
+                className={etapas === "1" ? "on" : ""}
+                aria-pressed={etapas === "1"}
+                onClick={() => setEtapas("1")}
+              >
+                Solo validación (Etapa 1)
+              </button>
+              <button
+                type="button"
+                className={etapas === "1,2" ? "on" : ""}
+                aria-pressed={etapas === "1,2"}
+                onClick={() => setEtapas("1,2")}
+              >
+                Validación + análisis de frecuencia (Etapa 1 y 2)
               </button>
             </div>
           </fieldset>

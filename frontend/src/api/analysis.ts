@@ -1,5 +1,7 @@
 import { postJson, requestJson } from "./client";
 import type {
+  DistributionDecisionRequest,
+  DistributionDecisionResponse,
   OutlierDecisionRequest,
   OutlierDecisionResponse,
   PreviewColumnsResponse,
@@ -10,6 +12,19 @@ export function postOutlierDecision(
 ): Promise<OutlierDecisionResponse> {
   return postJson<OutlierDecisionResponse>(
     "/api/v1/analysis/outlier-decision",
+    body,
+  );
+}
+
+// DECISIÓN 052 — reemplaza al design-events documentado y nunca
+// implementado. Misma forma que outlier-decision: el cliente manda la
+// decisión, el resultado (result_etapa2_eventos) llega por el stream SSE
+// ya abierto, no en la respuesta de este POST.
+export function postDistributionDecision(
+  body: DistributionDecisionRequest,
+): Promise<DistributionDecisionResponse> {
+  return postJson<DistributionDecisionResponse>(
+    "/api/v1/analysis/distribution-decision",
     body,
   );
 }

@@ -4,8 +4,6 @@ import { EntryPage } from "./routes/entry/EntryPage";
 import { ConfigPage } from "./routes/config/ConfigPage";
 import { StreamPage } from "./routes/stream/StreamPage";
 import { ResultsPage } from "./routes/results/ResultsPage";
-import { RankingPage } from "./routes/ranking/RankingPage";
-import { DesignEventsPage } from "./routes/design-events/DesignEventsPage";
 import { HistoryPage } from "./routes/history/HistoryPage";
 import { HistoryDetailPage } from "./routes/history/HistoryDetailPage";
 import { AuthVerifyPage } from "./routes/auth-verify/AuthVerifyPage";
@@ -44,22 +42,6 @@ export const routes: RouteObject[] = [
         element: (
           <RequireSession>
             <ResultsPage />
-          </RequireSession>
-        ),
-      },
-      {
-        path: "/ranking",
-        element: (
-          <RequireSession>
-            <RankingPage />
-          </RequireSession>
-        ),
-      },
-      {
-        path: "/design-events",
-        element: (
-          <RequireSession>
-            <DesignEventsPage />
           </RequireSession>
         ),
       },

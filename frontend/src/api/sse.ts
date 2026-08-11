@@ -1,11 +1,13 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { useCallback, useRef, useState } from "react";
-import { postOutlierDecision } from "./analysis";
+import { postDistributionDecision, postOutlierDecision } from "./analysis";
 import { errorText } from "../i18n/errors.es";
 import type {
   AnalysisStreamForm,
   DescriptiveStats,
+  DistribucionResult,
   Etapa1Result,
+  EventoDiseno,
   SseEvent,
   TestResultDetail,
   WarningItem,
@@ -17,8 +19,21 @@ export type StreamFase =
   | "idle"
   | "streaming"
   | "waiting_outlier"
+  | "waiting_distribution"
   | "done"
   | "error";
+
+export interface Etapa2RankingState {
+  session_id: string;
+  ranking: DistribucionResult[];
+  warnings: WarningItem[];
+}
+
+export interface Etapa2EventosState {
+  distribucion: string;
+  metodo: string;
+  eventos_diseno: EventoDiseno[];
+}
 
 export interface StreamState {
   fase: StreamFase;
@@ -28,6 +43,8 @@ export interface StreamState {
   progress: { completado: number; total: number };
   outlier: { session_id: string; valor_atipico: number } | null;
   result: Etapa1Result | null;
+  etapa2: Etapa2RankingState | null;
+  eventosDiseno: Etapa2EventosState | null;
   analysisId: string | null;
   error: { codigo: string; mensaje: string } | null;
 }
@@ -46,6 +63,8 @@ const INITIAL_STATE: InternalState = {
   progress: { completado: 0, total: 0 },
   outlier: null,
   result: null,
+  etapa2: null,
+  eventosDiseno: null,
   analysisId: null,
   error: null,
   _iteracion: 1,
@@ -55,6 +74,11 @@ export interface UseAnalysisStreamResult {
   start: (form: AnalysisStreamForm) => void;
   state: StreamState;
   resolveOutlier: (decision: "rechazar" | "aceptar") => Promise<void>;
+  resolveDistribution: (
+    distribucion: string,
+    metodo: string,
+    periodosRetorno: number[],
+  ) => Promise<void>;
   abort: () => void;
 }
 
@@ -95,7 +119,9 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
       // necesita reset explícito (se sobrescribe por clave `prueba`), pero
       // contractWarnings/progress sí, para no arrastrar la corrida anterior.
       const base =
-        "iteracion" in event && event.iteracion > prev._iteracion
+        "iteracion" in event &&
+        event.iteracion !== undefined &&
+        event.iteracion > prev._iteracion
           ? {
               ...prev,
               _iteracion: event.iteracion,
@@ -150,6 +176,25 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
           };
         case "result_etapa1":
           return { ...base, result: event.result };
+        case "result_etapa2_ranking":
+          return {
+            ...base,
+            fase: "waiting_distribution",
+            etapa2: {
+              session_id: event.session_id,
+              ranking: event.ranking,
+              warnings: event.warnings,
+            },
+          };
+        case "result_etapa2_eventos":
+          return {
+            ...base,
+            eventosDiseno: {
+              distribucion: event.distribucion,
+              metodo: event.metodo,
+              eventos_diseno: event.eventos_diseno,
+            },
+          };
         case "complete":
           // `complete` SIEMPRE llega después de `contract_error` también
           // (docs/frontend/frontend-integration.md §4: "Después de este evento el
@@ -269,6 +314,24 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
     [],
   );
 
+  const resolveDistribution = useCallback(
+    async (distribucion: string, metodo: string, periodosRetorno: number[]) => {
+      const { etapa2 } = internalRef.current;
+      if (!etapa2) return;
+      await postDistributionDecision({
+        session_id: etapa2.session_id,
+        distribucion,
+        metodo,
+        periodos_retorno: periodosRetorno,
+      });
+      // A diferencia de resolveOutlier, `etapa2` no se limpia acá — el
+      // ranking sigue siendo útil para mostrar en la pantalla de resultados
+      // junto a los eventos de diseño una vez que el stream termina.
+      setInternal((prev) => ({ ...prev, fase: "streaming" }));
+    },
+    [],
+  );
+
   const abort = useCallback(() => {
     abortControllerRef.current?.abort();
   }, []);
@@ -281,8 +344,10 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
     progress: internal.progress,
     outlier: internal.outlier,
     result: internal.result,
+    etapa2: internal.etapa2,
+    eventosDiseno: internal.eventosDiseno,
     analysisId: internal.analysisId,
     error: internal.error,
   };
-  return { start, state, resolveOutlier, abort };
+  return { start, state, resolveOutlier, resolveDistribution, abort };
 }

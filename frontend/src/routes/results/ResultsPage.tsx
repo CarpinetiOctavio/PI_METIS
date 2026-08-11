@@ -2,16 +2,18 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { Etapa1ResultView } from "./Etapa1ResultView";
-import { PendingBadge } from "../../mocks/PendingBadge";
+import { Etapa2RankingView } from "./Etapa2RankingView";
+import { Etapa2EventosView } from "./Etapa2EventosView";
 import type { Etapa1Result, Modo } from "../../api/types";
-import { Magnet } from "../../components/Magnet";
-import { SpecularHighlight } from "../../components/SpecularHighlight";
+import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
 import "./ResultsPage.css";
 
 interface ResultsLocationState {
   result?: Etapa1Result;
   analysisId?: string | null;
   modo?: Modo;
+  etapa2?: Etapa2RankingState | null;
+  eventosDiseno?: Etapa2EventosState | null;
 }
 
 export function ResultsPage() {
@@ -31,26 +33,33 @@ export function ResultsPage() {
   // UX-D — anónimo siempre ve la presentación Experto, sin acordeón.
   const modoEfectivo: Modo = isAuthed ? (locationState?.modo ?? "experto") : "experto";
 
+  const etapa2 = locationState?.etapa2;
+  const eventosDiseno = locationState?.eventosDiseno;
+
   return (
     <div className="results-page">
       <h1 className="h">Resultados de Etapa 1</h1>
       <Etapa1ResultView result={result} modo={modoEfectivo} />
-      {/* F5 (informe-diagnostico-ui-rota.md): antes ninguna pantalla
-          navegaba a /ranking — Etapa 2 era inalcanzable salvo tipeando la
-          URL. Se muestra igual con el PendingBadge (no se oculta hasta que
-          el backend exponga Etapa 2 de verdad, DECISIÓN 042) porque el
-          tribunal necesita ver el flujo completo de CU-01; el badge deja
-          explícito qué parte es mock. */}
-      <div className="row" style={{ marginTop: 20, alignItems: "center", gap: 10 }}>
-        <Magnet>
-          <SpecularHighlight>
-            <button type="button" className="b b-pri" onClick={() => navigate("/ranking")}>
-              Continuar a Etapa 2 ▸
-            </button>
-          </SpecularHighlight>
-        </Magnet>
-        <PendingBadge note="Etapa 2 no expuesta por API todavía — ranking de ejemplo" />
-      </div>
+      {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la
+          pidió al configurar el análisis — acá se muestra de solo lectura,
+          sin botones "Elegir". Si no se pidió Etapa 2, no hay nada que
+          mostrar acá — ver DECISIÓN 052/054. */}
+      {etapa2 && (
+        <div style={{ marginTop: 20 }}>
+          <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+            Ranking de distribuciones
+          </h2>
+          <Etapa2RankingView etapa2={{ ranking: etapa2.ranking, warnings: etapa2.warnings }} />
+        </div>
+      )}
+      {eventosDiseno && (
+        <div style={{ marginTop: 20 }}>
+          <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+            Evento de diseño
+          </h2>
+          <Etapa2EventosView eventos={eventosDiseno} />
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,14 @@ import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
 import { CountUp } from "../../components/CountUp";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
+import { Etapa2RankingView } from "../results/Etapa2RankingView";
+import { Etapa2EventosView } from "../results/Etapa2EventosView";
 import "./StreamPage.css";
+
+// Bloque B del plan de Etapa 2 — sin selector editable de períodos de
+// retorno todavía (simplificación deliberada de esta pasada, ver el PR):
+// se manda siempre el default de api-contracts.md.
+const PERIODOS_RETORNO_DEFAULT = [2, 5, 10, 25, 50, 100, 200, 500];
 
 interface Group {
   key: string;
@@ -110,9 +117,10 @@ function StatusPill({ status }: Readonly<{ status: GroupStatus }>) {
 export function StreamPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { start, state, resolveOutlier, abort } = useAnalysisStream();
+  const { start, state, resolveOutlier, resolveDistribution, abort } = useAnalysisStream();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
+  const [resolvingDistribucion, setResolvingDistribucion] = useState(false);
 
   const form = (location.state as { form?: AnalysisStreamForm } | null)?.form;
   // El form se congela en el primer render: location.state es estable dentro
@@ -214,6 +222,15 @@ export function StreamPage() {
       await resolveOutlier(decision);
     } finally {
       setResolving(false);
+    }
+  }
+
+  async function handleDistribucionElegida(distribucion: string, metodo: string) {
+    setResolvingDistribucion(true);
+    try {
+      await resolveDistribution(distribucion, metodo, PERIODOS_RETORNO_DEFAULT);
+    } finally {
+      setResolvingDistribucion(false);
     }
   }
 
@@ -337,6 +354,43 @@ export function StreamPage() {
           </>
         )}
 
+        {/* DECISIÓN 052 — Etapa 2 pausa DENTRO de este mismo stream, igual
+            que Chow arriba: sin navegación a una ruta separada. Se muestra
+            en cuanto llega el ranking y sigue visible después de resolver
+            (de ahí que la condición sea "existe el dato", no "la fase es
+            waiting_distribution" — el usuario elige y la grilla se queda a
+            la vista mientras se calculan los eventos). */}
+        {state.fase !== "error" && state.etapa2 && (
+          <div style={{ marginTop: 20 }}>
+            <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+              {state.fase === "waiting_distribution"
+                ? "Elegí una distribución"
+                : "Ranking de distribuciones"}
+            </h2>
+            <p className="sub">
+              METIS ordena por EEA; la distribución la elegís vos.
+            </p>
+            <Etapa2RankingView
+              etapa2={{ ranking: state.etapa2.ranking, warnings: state.etapa2.warnings }}
+              onElegir={
+                state.fase === "waiting_distribution"
+                  ? handleDistribucionElegida
+                  : undefined
+              }
+              resolving={resolvingDistribucion}
+            />
+          </div>
+        )}
+
+        {state.fase !== "error" && state.eventosDiseno && (
+          <div style={{ marginTop: 20 }}>
+            <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+              Evento de diseño
+            </h2>
+            <Etapa2EventosView eventos={state.eventosDiseno} />
+          </div>
+        )}
+
         {state.fase === "done" && (
           <div className="banner ok" style={{ marginTop: 14 }}>
             <span className="ic">✓</span> Análisis completo.{" "}
@@ -351,6 +405,8 @@ export function StreamPage() {
                         result: state.result,
                         analysisId: state.analysisId,
                         modo: form.modo,
+                        etapa2: state.etapa2,
+                        eventosDiseno: state.eventosDiseno,
                       },
                     })
                   }

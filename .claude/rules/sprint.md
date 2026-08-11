@@ -772,6 +772,34 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   CU-02 y CU-01 — este último confirmado con `psql`:
   `analyses.etapas={1,2}`, `analysis_results.etapa2` con las 13
   distribuciones, `decisiones` con la clave `distribucion`.
+- **PR 5 — Bloque B (frontend real de Etapa 2).** EN CURSO. Decisión de
+  arquitectura previa (Kevin, antes de arrancar): la pausa de Etapa 2 se
+  resuelve DENTRO de `StreamPage`, mismo patrón que el modal de Chow pero
+  inline (sin backdrop/focus-trap — la grilla de 13 distribuciones no cabe
+  en un diálogo de confirmación chico). `/ranking` y `/design-events` como
+  rutas separadas se retiraron. `useAnalysisStream` gana la fase
+  `waiting_distribution` y `resolveDistribution()`. Componentes nuevos
+  `Etapa2RankingView`/`Etapa2EventosView` (`routes/results/`), reusados en
+  modo interactivo (`StreamPage`) y de solo lectura (`ResultsPage`,
+  `HistoryDetailPage`). Cascada de remociones porque cada una perdía su
+  único propósito: `src/mocks/` completo (MSW, `PendingBadge`, los dos
+  `.mock.ts`), la dependencia `msw` de `package.json`, el botón "Continuar
+  a Etapa 2" de `ResultsPage`. Simplificación deliberada de este bloque:
+  sin selector editable de períodos de retorno todavía — se manda siempre
+  el default de `api-contracts.md`. `ConfigPage` gana el selector de
+  alcance (`etapas`) que faltaba. DECISIÓN 042 marcada superada con
+  addendum. Los cuatro códigos `DIST_*` que esperaban en
+  `scripts/error-catalog-allowlist.txt` a que Etapa 2 fuera real ya tienen
+  traducción — allowlist vacío por primera vez, lo que expuso un bug real
+  en `check-error-catalog.sh` (`set -e` sobre un `grep` sin matches
+  abortaba el script entero antes de correr ningún chequeo), corregido en
+  el mismo commit. Verificado: `npm run lint && npm test && npm run build`
+  — 185 tests en verde; smoke test manual real en navegador contra el
+  backend en Docker (anónimo, `etapas=1,2`): ranking real de 13
+  distribuciones, "Elegir" → `POST /analysis/distribution-decision` real
+  (200), evento de diseño con valor calculado real — confirmado además por
+  fuera del navegador (test de integración de A6 y un smoke test HTTP
+  directo) que el stream completa correctamente hasta `complete`.
 
 ---
 
