@@ -66,6 +66,9 @@ function makeEtapa2Result(): Etapa2Result {
       },
     ],
     warnings: [],
+    puntos_empiricos: [
+      { valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 },
+    ],
   };
 }
 
@@ -209,6 +212,7 @@ describe("ResultsPage", () => {
         distribucion: "gumbel",
         metodo: "momentos",
         eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+        curva_ajuste: [{ periodo_retorno: 100, valor: 312.7 }],
       },
     });
 

@@ -102,6 +102,7 @@ function emitEtapa2Ranking() {
       },
     ],
     warnings: [],
+    puntos_empiricos: [{ valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 }],
   });
 }
 
@@ -251,6 +252,7 @@ describe("grafo de navegación real (routes.tsx)", () => {
       distribucion: "gumbel",
       metodo: "momentos",
       eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+      curva_ajuste: [{ periodo_retorno: 100, valor: 312.7 }],
     });
     emitStream("complete", { analysis_id: "an-1" });
 
