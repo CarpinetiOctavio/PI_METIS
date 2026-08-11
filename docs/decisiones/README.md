@@ -156,7 +156,7 @@ situ.
 | [039](decision039.md) | Criterio de promoción de las decisiones de frontend y unificación de numeración | 29/07/2026 | Establecida |
 | [040](decision040.md) | SSE sobre fetch para el stream de Etapa 1 | 22/07/2026 | Implementado — verificado contra backend real |
 | [041](decision041.md) | Estado de servidor sin TanStack Query; `vi.stubGlobal("fetch")` como patrón único de test | 22-28/07/2026 | Diferido (TanStack Query, con criterio de habilitación) — Establecido (patrón de test) |
-| [042](decision042.md) | Alcance de los mocks de Etapa 2 y rol de MSW | 22-28/07/2026 | Implementado — verificado manualmente |
+| [042](decision042.md) | Alcance de los mocks de Etapa 2 y rol de MSW | 22-28/07/2026 | Superada 09/08/2026 — Etapa 2 dejó de ser mock (Bloque B) |
 | [043](decision043.md) | Contraste WCAG AA del tema Instrumento: hallazgos y propuesta, no aplicada | 29/07/2026 | PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [044](decision044.md) | SonarCloud: quality gate, limpieza del PR #17/B, rechazo de `<dialog>` nativo, merge del PR #17 en rojo | 30/07/2026 | Aplicada — gate de gobernanza PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [045](decision045.md) | Fondos animados en Canvas 2D sin dependencias, WebGL descartado — addendum 05/08/2026: excepción acotada para Threads (three.js) en la puerta de entrada, vía code-splitting | 31/07/2026 | Decidida — implementación en curso |

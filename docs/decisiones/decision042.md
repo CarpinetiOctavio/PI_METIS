@@ -1,6 +1,35 @@
 # DECISIÓN 042 — Alcance de los mocks de Etapa 2 y rol de MSW
 **Fecha:** 22 y 28 de Julio de 2026 (tomadas) — promovida el 29 de Julio de 2026
-**Estado:** Implementado — verificado manualmente en navegador de dev
+**Estado:** ~~Implementado — verificado manualmente en navegador de dev~~ **SUPERADA 09/08/2026 — ver addendum**
+
+### Addendum 09/08/2026 — Etapa 2 dejó de ser mock (Bloque B del plan de Etapa 2)
+Con el backend cableado de punta a punta (Bloque A) y el frontend real
+implementado en el mismo commit que agrega este addendum, los dos gaps que
+motivaban esta decisión ya no existen: `result_etapa2_ranking` y
+`result_etapa2_eventos` son eventos SSE reales que el backend emite de
+verdad (DECISIÓN 052), no una fabricación de MSW. En consecuencia:
+
+- `frontend/src/mocks/` se borró por completo (`handlers.ts`,
+  `etapa2.mock.ts`, `designEvents.mock.ts`, `browser.ts`, `PendingBadge.tsx`)
+  — MSW no tiene ningún handler real que sostener sin ellos, y `PendingBadge`
+  no tiene ninguna pantalla mock que marcar.
+- `RankingPage`/`DesignEventsPage` como rutas separadas se retiraron —
+  la pausa de Etapa 2 ahora se resuelve **dentro** de `StreamPage`, mismo
+  mecanismo que la pausa de Chow (ver la pregunta de arquitectura resuelta
+  con Kevin antes de este bloque: todo dentro del stream, sin navegar).
+  `Etapa2RankingView`/`Etapa2EventosView` (`routes/results/`) son los
+  componentes de presentación reales, reusados en modo interactivo
+  (`StreamPage`) y de solo lectura (`ResultsPage`, `HistoryDetailPage`).
+- `msw` sale de `package.json` — sin ningún handler que ejecutar, no hay
+  razón para mantener la dependencia.
+- El botón "Exportar PDF" de `DesignEventsPage` (mencionado en la decisión
+  original) se perdió junto con la pantalla — no se reimplementó en ningún
+  lado en este bloque; sigue pendiente (FE-14 / exportación PDF, fuera del
+  alcance del Bloque B, ver Bloque E del plan de Etapa 2).
+
+Esta decisión se conserva completa abajo, sin reescribir, por trazabilidad
+de por qué los mocks existieron y cómo estaban armados — igual criterio que
+el resto de `docs/decisiones/`.
 
 ### Contexto
 Etapa 2 (ranking de distribuciones por EEA, eventos de diseño) no está cableada
