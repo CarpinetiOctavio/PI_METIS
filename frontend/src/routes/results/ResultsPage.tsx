@@ -49,7 +49,13 @@ export function ResultsPage() {
           <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
             Ranking de distribuciones
           </h2>
-          <Etapa2RankingView etapa2={{ ranking: etapa2.ranking, warnings: etapa2.warnings }} />
+          <Etapa2RankingView
+            etapa2={{
+              ranking: etapa2.ranking,
+              warnings: etapa2.warnings,
+              puntos_empiricos: etapa2.puntos_empiricos,
+            }}
+          />
         </div>
       )}
       {eventosDiseno && (
@@ -57,7 +63,10 @@ export function ResultsPage() {
           <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
             Evento de diseño
           </h2>
-          <Etapa2EventosView eventos={eventosDiseno} />
+          <Etapa2EventosView
+            eventos={eventosDiseno}
+            puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
+          />
         </div>
       )}
     </div>
