@@ -218,10 +218,17 @@ Etapa 2 corre sobre la misma serie que produjo el veredicto final de
 Etapa 1 — si el atípico de Chow fue rechazado, sobre la serie ya filtrada,
 no sobre la original.
 
-**Payload de `result_etapa2_ranking`:** `{"session_id", "ranking", "warnings"}`,
-donde `ranking` es la grilla completa serializada por `_serializar_etapa2()`
-(las 13 distribuciones, todos sus métodos con `status`/`eea`/`parametros`,
-`mejor_eea`, `mejor_metodo`) — sin aplanar a un top-3, ver DECISIÓN 055.
+**Payload de `result_etapa2_ranking`:** `{"session_id", "ranking", "warnings",
+"puntos_empiricos"}`, donde `ranking` es la grilla completa serializada por
+`_serializar_etapa2()` (las 13 distribuciones, todos sus métodos con
+`status`/`eea`/`parametros`, `mejor_eea`, `mejor_metodo`) — sin aplanar a un
+top-3, ver DECISIÓN 055. **`puntos_empiricos`** — agregado en el Bloque C del
+plan de Etapa 2 (gráficos interactivos, DECISIÓN 056) — es la posición de
+ploteo Weibull de cada dato observado (`{valor, periodo_retorno,
+probabilidad}`, `core/etapa2/types.py::PuntoEmpirico`,
+`core/etapa2/empirical.py::probabilidades_weibull`): propiedad de la muestra,
+no del ajuste, así que viaja antes de que el usuario elija ninguna
+distribución. Insumo del gráfico de ajuste (`Etapa2AjusteChart`).
 
 **`POST /analysis/distribution-decision`** (reemplaza al `design-events`
 documentado y nunca implementado — DECISIÓN 052, ver `api-contracts.md`)
@@ -235,12 +242,31 @@ resuelve la pausa con `{distribucion, metodo, periodos_retorno}`.
   "eventos_diseno": [
     {"periodo_retorno": 2, "valor": 138.4},
     {"periodo_retorno": 100, "valor": 312.7}
+  ],
+  "curva_ajuste": [
+    {"periodo_retorno": 1.05, "valor": 61.2},
+    {"periodo_retorno": 1.11, "valor": 68.9}
   ]
 }
 ```
 `valor` puede ser `null` para un período de retorno puntual si `cuantil()`
 falla para esa distribución+método — no tumba el resto de los eventos
 (`core/etapa2/design_events.py`, DECISIÓN mencionada arriba).
+
+**`curva_ajuste`** — agregado en el Bloque C (gráficos interactivos,
+DECISIÓN 056). No son los `periodos_retorno` que pidió el usuario: es un
+muestreo denso de 60 puntos en escala logarítmica, entre T=1.05 y el mayor
+valor entre el T pedido por el usuario y el T empírico máximo de la muestra
+— para que la curva del gráfico de ajuste cubra el mismo rango que los
+`puntos_empiricos`. Se calcula con la misma función que `eventos_diseno`
+(`calcular_eventos_diseno()`), solo que con un `periodos_retorno` distinto —
+no hay lógica de curva nueva en `core/`. No se persiste: a diferencia de
+`puntos_empiricos` (parte de `Etapa2Result`, persistido en
+`analysis_results.etapa2`), `curva_ajuste` depende de la distribución+método
+elegidos y solo viaja por el evento transitorio — el gráfico de ajuste y el
+de eventos de diseño solo están disponibles durante la sesión interactiva
+(`StreamPage`, y de ahí a `ResultsPage` vía router state), no en
+`HistoryDetailPage`.
 
 **Implementación técnica no obvia:** el mismo `asyncio.Event` de
 `SessionState` (DECISIÓN 053) se reutiliza para las dos pausas posibles de
