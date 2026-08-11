@@ -371,7 +371,11 @@ export function StreamPage() {
               METIS ordena por EEA; la distribución la elegís vos.
             </p>
             <Etapa2RankingView
-              etapa2={{ ranking: state.etapa2.ranking, warnings: state.etapa2.warnings }}
+              etapa2={{
+                ranking: state.etapa2.ranking,
+                warnings: state.etapa2.warnings,
+                puntos_empiricos: state.etapa2.puntos_empiricos,
+              }}
               onElegir={
                 state.fase === "waiting_distribution"
                   ? handleDistribucionElegida
@@ -387,7 +391,10 @@ export function StreamPage() {
             <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
               Evento de diseño
             </h2>
-            <Etapa2EventosView eventos={state.eventosDiseno} />
+            <Etapa2EventosView
+              eventos={state.eventosDiseno}
+              puntosEmpiricos={state.etapa2?.puntos_empiricos ?? []}
+            />
           </div>
         )}
 

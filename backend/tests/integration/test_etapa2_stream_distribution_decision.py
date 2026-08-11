@@ -159,6 +159,103 @@ async def test_result_etapa2_eventos_trae_los_periodos_retorno_pedidos():
 
 
 @pytest.mark.integration
+async def test_result_etapa2_ranking_trae_puntos_empiricos():
+    # Bloque C — insumo del gráfico de ajuste, independiente de la
+    # distribución elegida: tiene que viajar en el evento de ranking, antes
+    # de que el usuario decida nada.
+    session_id = str(uuid.uuid4())
+
+    gen = stream_analysis(
+        content=_csv_de_serie_valida(),
+        filename="serie.csv",
+        columna_x="anio",
+        columna_y="caudal",
+        tipo_variable="otro",
+        modo="experto",
+        cramer_particion="default",
+        etapas=[1, 2],
+        session_id=session_id,
+        user_id=None,
+        db=None,
+    )
+
+    payload_ranking = None
+
+    async for evento_crudo in gen:
+        tipo, data = _parse_sse(evento_crudo)
+        if tipo == "result_etapa2_ranking":
+            payload_ranking = data
+            elegida = next(
+                d for d in data["ranking"] if d["mejor_eea"] is not None
+            )
+            await registrar_distribution_decision(
+                session_id=session_id,
+                distribucion=elegida["distribucion"],
+                metodo=elegida["mejor_metodo"],
+                periodos_retorno=[2, 5, 10, 25, 50, 100, 200, 500],
+            )
+
+    assert payload_ranking is not None
+    assert len(payload_ranking["puntos_empiricos"]) == len(_SERIE_VALIDADA)
+    primer_punto = payload_ranking["puntos_empiricos"][0]
+    assert {"valor", "periodo_retorno", "probabilidad"} == set(primer_punto)
+    # Convención de probabilidades_weibull: m=1 es el máximo, orden DESC.
+    assert primer_punto["valor"] == pytest.approx(max(_SERIE_VALIDADA))
+
+
+@pytest.mark.integration
+async def test_result_etapa2_eventos_trae_curva_ajuste_continua():
+    session_id = str(uuid.uuid4())
+
+    gen = stream_analysis(
+        content=_csv_de_serie_valida(),
+        filename="serie.csv",
+        columna_x="anio",
+        columna_y="caudal",
+        tipo_variable="otro",
+        modo="experto",
+        cramer_particion="default",
+        etapas=[1, 2],
+        session_id=session_id,
+        user_id=None,
+        db=None,
+    )
+
+    periodos_pedidos = [2, 5, 10, 25, 50, 100, 200, 500]
+    payload_eventos = None
+
+    async for evento_crudo in gen:
+        tipo, data = _parse_sse(evento_crudo)
+        if tipo == "result_etapa2_ranking":
+            elegida = next(
+                d for d in data["ranking"] if d["mejor_eea"] is not None
+            )
+            await registrar_distribution_decision(
+                session_id=session_id,
+                distribucion=elegida["distribucion"],
+                metodo=elegida["mejor_metodo"],
+                periodos_retorno=periodos_pedidos,
+            )
+        elif tipo == "result_etapa2_eventos":
+            payload_eventos = data
+
+    assert payload_eventos is not None
+    curva = payload_eventos["curva_ajuste"]
+    # Muestreo denso (60 puntos) — no los mismos T discretos que pidió el
+    # usuario, mucho más fino, para dibujar la curva completa.
+    assert len(curva) == 60
+    assert len(curva) > len(payload_eventos["eventos_diseno"])
+    # Orden creciente de T, en escala log — geomspace ya lo garantiza, pero
+    # es la propiedad que el gráfico necesita para no tener que reordenar.
+    periodos_curva = [p["periodo_retorno"] for p in curva]
+    assert periodos_curva == sorted(periodos_curva)
+    # La curva cubre al menos el rango de los períodos pedidos por el
+    # usuario (T=500 en este fixture).
+    assert periodos_curva[-1] >= max(periodos_pedidos)
+    assert all(p["valor"] is not None for p in curva)
+
+
+@pytest.mark.integration
 async def test_etapas_1_solo_no_pausa_en_etapa_2():
     """Con etapas=[1] el comportamiento debe ser exactamente el de antes
     de esta decisión — el criterio de hecho explícito del Bloque A."""

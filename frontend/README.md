@@ -23,7 +23,13 @@ src/
 │                 # co-locado + .test.tsx. routes/results/ también tiene
 │                 # Etapa2RankingView.tsx/Etapa2EventosView.tsx — presentación
 │                 # de Etapa 2, reusada por StreamPage (interactiva),
-│                 # ResultsPage e HistoryDetailPage (solo lectura)
+│                 # ResultsPage e HistoryDetailPage (solo lectura) — y
+│                 # Etapa2AjusteChart.tsx/Etapa2EventosChart.tsx, los dos
+│                 # gráficos interactivos montados dentro de
+│                 # Etapa2EventosView (DECISIÓN 056)
+├── charts/       # InteractiveChart.tsx — componente SVG propio de bajo
+│                 # nivel (d3-scale + d3-shape, zoom/tooltip/teclado),
+│                 # reusado por los dos gráficos de routes/results/
 ├── api/          # cliente fetch tipado: client.ts, auth.ts, analysis.ts,
 │                 # history.ts, sse.ts (hook useAnalysisStream,
 │                 # SSE-sobre-fetch — ver docs/decisiones/decision040.md)

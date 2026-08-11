@@ -35,6 +35,7 @@ from metis.core.etapa2.types import (
     DistResult,
     Etapa2Result,
     MetodoResult,
+    PuntoEmpirico,
 )
 from metis.core.types import WarningItem
 
@@ -64,7 +65,13 @@ def ejecutar_etapa2(serie: np.ndarray, tiene_ceros: bool = False) -> Etapa2Resul
     """
     serie_arr = np.asarray(serie, dtype=float)
     media = float(np.mean(serie_arr))
-    _, _, probs_empiricas = probabilidades_weibull(serie_arr)
+    serie_ordenada, periodos_retorno_emp, probs_empiricas = probabilidades_weibull(
+        serie_arr
+    )
+    puntos_empiricos = [
+        PuntoEmpirico(valor=float(v), periodo_retorno=float(t), probabilidad=float(p))
+        for v, t, p in zip(serie_ordenada, periodos_retorno_emp, probs_empiricas)
+    ]
 
     ranking: list[DistResult] = []
     warnings: list[WarningItem] = []
@@ -154,4 +161,6 @@ def ejecutar_etapa2(serie: np.ndarray, tiene_ceros: bool = False) -> Etapa2Resul
         )
     )
 
-    return Etapa2Result(ranking=ranking, warnings=warnings)
+    return Etapa2Result(
+        ranking=ranking, warnings=warnings, puntos_empiricos=puntos_empiricos
+    )

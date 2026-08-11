@@ -40,7 +40,22 @@ class EventoDiseno:
 
 
 @dataclass
+class PuntoEmpirico:
+    """Posición de ploteo Weibull de un dato observado (empirical.py::probabilidades_weibull).
+
+    Independiente de qué distribución se elija — es una propiedad de la
+    muestra, no del ajuste. Bloque C del plan de Etapa 2: insumo del
+    gráfico de ajuste (puntos empíricos vs. curva de la distribución).
+    """
+
+    valor: float
+    periodo_retorno: float
+    probabilidad: float
+
+
+@dataclass
 class Etapa2Result:
     # Ordenado por mejor_eea ASC; empate desempatado por n_parametros ASC
     ranking: list[DistResult]
     warnings: list[WarningItem] = field(default_factory=list)
+    puntos_empiricos: list[PuntoEmpirico] = field(default_factory=list)

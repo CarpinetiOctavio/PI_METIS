@@ -315,6 +315,7 @@ describe("StreamPage", () => {
           },
         ],
         warnings: [],
+        puntos_empiricos: [{ valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 }],
       },
     });
 
@@ -340,6 +341,7 @@ describe("StreamPage", () => {
         distribucion: "gumbel",
         metodo: "momentos",
         eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+        curva_ajuste: [{ periodo_retorno: 100, valor: 312.7 }],
       },
     });
 
@@ -364,8 +366,13 @@ describe("StreamPage", () => {
         warnings: [],
       },
       analysisId: "an-1",
-      etapa2: { session_id: "sess-2", ranking: [], warnings: [] },
-      eventosDiseno: { distribucion: "gumbel", metodo: "momentos", eventos_diseno: [] },
+      etapa2: { session_id: "sess-2", ranking: [], warnings: [], puntos_empiricos: [] },
+      eventosDiseno: {
+        distribucion: "gumbel",
+        metodo: "momentos",
+        eventos_diseno: [],
+        curva_ajuste: [],
+      },
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Ver resultados/ }));

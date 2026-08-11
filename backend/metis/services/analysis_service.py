@@ -101,9 +101,20 @@ def _serializar_etapa2(result: Etapa2Result) -> dict:
     def warning_dict(w) -> dict:
         return {"codigo": w.codigo, "nivel": w.nivel, "descripcion": w.descripcion}
 
+    def punto_empirico_dict(p) -> dict:
+        return {
+            "valor": p.valor,
+            "periodo_retorno": p.periodo_retorno,
+            "probabilidad": p.probabilidad,
+        }
+
     return {
         "ranking": [dist_dict(d) for d in result.ranking],
         "warnings": [warning_dict(w) for w in result.warnings],
+        # Bloque C — insumo del gráfico de ajuste (puntos empíricos vs.
+        # curva). Independiente de la distribución elegida, ver
+        # PuntoEmpirico en core/etapa2/types.py.
+        "puntos_empiricos": [punto_empirico_dict(p) for p in result.puntos_empiricos],
     }
 
 
@@ -489,6 +500,24 @@ async def stream_analysis(
                 eventos = calcular_eventos_diseno(
                     modulo, metodo_result.parametros, periodos_retorno
                 )
+                # Bloque C — curva continua de la distribución ajustada,
+                # para el gráfico de ajuste (empíricos vs. curva). No son
+                # los eventos de diseño que pidió el usuario (T discretos,
+                # ej. [2, 5, ..., 500]): es un muestreo denso en escala log
+                # de T=1.05 hasta el mayor entre el T pedido y el T empírico
+                # máximo de la muestra, para que la curva cubra el mismo
+                # rango que los puntos empíricos.
+                max_t_empirico = max(
+                    (p.periodo_retorno for p in etapa2_result.puntos_empiricos),
+                    default=1.05,
+                )
+                t_max_curva = max(max(periodos_retorno, default=1.05), max_t_empirico)
+                periodos_curva = np.geomspace(
+                    1.05, max(t_max_curva, 1.06), num=60
+                ).tolist()
+                curva_ajuste = calcular_eventos_diseno(
+                    modulo, metodo_result.parametros, periodos_curva
+                )
             else:
                 # Selección sin parámetros ajustados (status != "ok", o un
                 # nombre que no matchea ninguna fila del ranking) — no se
@@ -500,6 +529,7 @@ async def stream_analysis(
                     EventoDiseno(periodo_retorno=t, valor=None)
                     for t in periodos_retorno
                 ]
+                curva_ajuste = []
 
             yield _sse(
                 "result_etapa2_eventos",
@@ -509,6 +539,10 @@ async def stream_analysis(
                     "eventos_diseno": [
                         {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
                         for e in eventos
+                    ],
+                    "curva_ajuste": [
+                        {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
+                        for e in curva_ajuste
                     ],
                 },
             )

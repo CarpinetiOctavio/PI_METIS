@@ -8,6 +8,7 @@ import type {
   DistribucionResult,
   Etapa1Result,
   EventoDiseno,
+  PuntoEmpirico,
   SseEvent,
   TestResultDetail,
   WarningItem,
@@ -27,12 +28,14 @@ export interface Etapa2RankingState {
   session_id: string;
   ranking: DistribucionResult[];
   warnings: WarningItem[];
+  puntos_empiricos: PuntoEmpirico[];
 }
 
 export interface Etapa2EventosState {
   distribucion: string;
   metodo: string;
   eventos_diseno: EventoDiseno[];
+  curva_ajuste: EventoDiseno[];
 }
 
 export interface StreamState {
@@ -184,6 +187,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
               session_id: event.session_id,
               ranking: event.ranking,
               warnings: event.warnings,
+              puntos_empiricos: event.puntos_empiricos,
             },
           };
         case "result_etapa2_eventos":
@@ -193,6 +197,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
               distribucion: event.distribucion,
               metodo: event.metodo,
               eventos_diseno: event.eventos_diseno,
+              curva_ajuste: event.curva_ajuste,
             },
           };
         case "complete":

@@ -772,7 +772,7 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   CU-02 y CU-01 — este último confirmado con `psql`:
   `analyses.etapas={1,2}`, `analysis_results.etapa2` con las 13
   distribuciones, `decisiones` con la clave `distribucion`.
-- **PR 5 — Bloque B (frontend real de Etapa 2).** EN CURSO. Decisión de
+- **PR 5 — Bloque B (frontend real de Etapa 2).** Mergeado (#46, 09/08/2026). Decisión de
   arquitectura previa (Kevin, antes de arrancar): la pausa de Etapa 2 se
   resuelve DENTRO de `StreamPage`, mismo patrón que el modal de Chow pero
   inline (sin backdrop/focus-trap — la grilla de 13 distribuciones no cabe
@@ -800,6 +800,73 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   (200), evento de diseño con valor calculado real — confirmado además por
   fuera del navegador (test de integración de A6 y un smoke test HTTP
   directo) que el stream completa correctamente hasta `complete`.
+
+- **PR 6 — Bloque C (gráficos interactivos).** EN CURSO. DECISIÓN 056:
+  `d3-scale`+`d3-shape` con SVG propio (no Recharts, no canvas) — mismo
+  criterio que DECISIÓN 045/051 (código propio y chico, defendible ante el
+  tribunal, antes que una dependencia grande). Componente de bajo nivel
+  `frontend/src/charts/InteractiveChart.tsx` (zoom por rueda y por selección
+  de rectángulo, tooltip con `(T, valor)` exacto al hover, navegación por
+  teclado entre marcadores con flechas/Home/End, reset), reusado por los dos
+  gráficos del bloque: `Etapa2AjusteChart` (puntos empíricos vs. curva de la
+  distribución elegida) y `Etapa2EventosChart` (curva continua + marcadores
+  en los períodos de retorno pedidos), ambos montados dentro de
+  `Etapa2EventosView`. Eje X siempre logarítmico (T) — es el único uso que
+  tienen estos dos gráficos.
+
+  **Cambio de contrato para que el gráfico de ajuste tuviera de dónde sacar
+  los datos** (C2 del plan advertía justo este riesgo): `Etapa2Result` gana
+  `puntos_empiricos` (`core/etapa2/types.py::PuntoEmpirico`, poblado en
+  `ejecutar_etapa2()` con la misma `probabilidades_weibull()` que ya usaba el
+  cálculo de EEA) — persistido, viaja en `result_etapa2_ranking` y en
+  `analysis_results.etapa2`. `result_etapa2_eventos` gana `curva_ajuste` — un
+  muestreo denso de 60 puntos (no los T discretos que pidió el usuario),
+  calculado con la misma `calcular_eventos_diseno()` de A4, sin lógica nueva
+  en `core/`. `curva_ajuste` NO se persiste (depende de la
+  distribución+método elegidos, es parte del evento transitorio) — los dos
+  gráficos solo están disponibles en la sesión interactiva
+  (`StreamPage`→`ResultsPage` vía router state), no en `HistoryDetailPage`.
+
+  **El toggle calendario/hidrológico que la maqueta original ponía por
+  tarjeta (bug D5 de la pasada 2) no se trasladó** — cerrado por eliminación
+  del control, no por corrección: el criterio de año decide qué valor cae en
+  qué año (una regla de agregación aguas arriba de Etapa 1, Bloque F, sin
+  implementar), no una opción de dibujo aguas abajo. Ya estaba fuera desde
+  que el Bloque B borró `RankingPage`/`DesignEventsPage`; este bloque solo lo
+  deja documentado como decisión, no como pendiente.
+
+  **Bug real encontrado y corregido durante la verificación en navegador (no
+  en los tests, que corren en jsdom sin `preventDefault` real):** React
+  registra `onWheel` como listener passive por default — `preventDefault()`
+  dentro del handler fallaba en silencio y el wheel-zoom no bloqueaba el
+  scroll de la página por debajo. Se reemplazó por un listener nativo
+  (`svg.addEventListener("wheel", handler, { passive: false })`) vía
+  `useEffect`, único cambio de `InteractiveChart.tsx` motivado por esto.
+
+  Verificado: `pytest -m "unit or integration"` en verde (dos tests de
+  integración nuevos para `puntos_empiricos`/`curva_ajuste`), `ruff`
+  limpio; `npm run lint && npm test && npm run build` en verde (196 tests,
+  incluidos 8 de `InteractiveChart` sobre SVG real con
+  `getBoundingClientRect` mockeado, sin snapshots); aumento de bundle medido
+  antes/después con `git stash` — +13.15 kB gzip (bajo el techo de 15 kB de
+  DECISIÓN 056). Smoke test manual real en navegador de dev contra el
+  backend en Docker: ranking + gráfico de ajuste con 40 puntos empíricos
+  reales, gráfico de eventos con 8 marcadores reales, zoom por rueda,
+  zoom por selección de rectángulo (confirmado por el rango de los ticks del
+  eje X antes/después), reset, tooltip y navegación por teclado (flechas,
+  Home, End) verificados contra el DOM real, no solo por captura de pantalla
+  (el entorno de esta sesión no compone frames para `screenshot`, mismo
+  límite ya documentado en el cierre del Bloque B).
+
+  **Encontrado durante la verificación, no un bug de este bloque:** el
+  proceso de `uvicorn` del contenedor `pi_metis-backend-1` no corre con
+  `--reload` — `docker cp` actualiza los archivos en el contenedor pero el
+  proceso ya arrancado sigue sirviendo el código que tenía en memoria hasta
+  un restart explícito (`docker restart`). `pytest`/`ruff` corren siempre
+  como procesos nuevos vía `docker exec` y no lo sufren; solo lo sufre
+  verificar contra el servidor HTTP ya corriendo. Anotado en
+  `docs/pendientes-tecnicos.md` para no repetir el diagnóstico la próxima
+  vez.
 
 ---
 
