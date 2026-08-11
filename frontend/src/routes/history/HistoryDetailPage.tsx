@@ -4,6 +4,7 @@ import { getHistoryItem } from "../../api/history";
 import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
 import { Etapa1ResultView } from "../results/Etapa1ResultView";
+import { Etapa2RankingView } from "../results/Etapa2RankingView";
 import type { AnalysisDetail, Modo } from "../../api/types";
 import "./HistoryDetailPage.css";
 
@@ -56,6 +57,14 @@ export function HistoryDetailPage() {
         <div className="banner warn">
           <span className="ic">▲</span> Este análisis no tiene resultados de Etapa 1
           registrados.
+        </div>
+      )}
+      {detail.etapa2 && (
+        <div style={{ marginTop: 20 }}>
+          <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+            Ranking de distribuciones
+          </h2>
+          <Etapa2RankingView etapa2={detail.etapa2} />
         </div>
       )}
     </div>
