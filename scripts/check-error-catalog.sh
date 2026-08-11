@@ -40,7 +40,11 @@ grep -ohE '^  [A-Z_]+:' frontend/src/i18n/errors.es.ts \
   | tr -d ' :' | sort -u > "$TMPDIR/fe.txt"
 
 # Allowlist — sin comentarios ni líneas vacías.
-grep -vE '^\s*(#|$)' "$ALLOWLIST" | sort -u > "$TMPDIR/allow.txt"
+# || true — un allowlist vacío (sin excepciones activas, el caso ideal) no
+# tiene ninguna línea que matchee "no es comentario ni vacía", y grep sale
+# con status 1 por "sin resultados" bajo set -e sin esto, abortando el
+# script entero antes de correr ningún chequeo real.
+grep -vE '^\s*(#|$)' "$ALLOWLIST" | sort -u > "$TMPDIR/allow.txt" || true
 
 FAILED=0
 

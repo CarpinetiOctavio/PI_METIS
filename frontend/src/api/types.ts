@@ -157,10 +157,13 @@ export interface SseDescriptiveStatsEvent extends DescriptiveStats {
 export interface SseProgressEvent {
   type: "progress";
   paso: string;
-  etapa: 1;
+  etapa: 1 | 2;
   completado: number;
   total: number;
-  iteracion: number;
+  // Los eventos de progreso de Etapa 1 llevan iteracion (re-ejecución tras
+  // Chow); el único progress de Etapa 2 (DECISIÓN 052) no re-ejecuta nada,
+  // así que no lo lleva.
+  iteracion?: number;
 }
 
 export interface SseTestResultEvent extends TestResultDetail {
@@ -190,6 +193,24 @@ export interface SseErrorEvent {
   mensaje: string;
 }
 
+// DECISIÓN 052 — pausa de Etapa 2, misma forma que outlier_detected/
+// result_etapa1: result_etapa2_ranking trae la grilla completa serializada
+// por _serializar_etapa2() (13 distribuciones, sin aplanar a top-3) y pausa
+// el stream hasta POST /analysis/distribution-decision.
+export interface SseResultEtapa2RankingEvent {
+  type: "result_etapa2_ranking";
+  session_id: string;
+  ranking: DistribucionResult[];
+  warnings: WarningItem[];
+}
+
+export interface SseResultEtapa2EventosEvent {
+  type: "result_etapa2_eventos";
+  distribucion: string;
+  metodo: string;
+  eventos_diseno: EventoDiseno[];
+}
+
 export type SseEvent =
   | SseContractErrorEvent
   | SseContractWarningEvent
@@ -198,6 +219,8 @@ export type SseEvent =
   | SseTestResultEvent
   | SseOutlierDetectedEvent
   | SseResultEtapa1Event
+  | SseResultEtapa2RankingEvent
+  | SseResultEtapa2EventosEvent
   | SseCompleteEvent
   | SseErrorEvent;
 
@@ -221,41 +244,54 @@ export interface AnalysisDetail {
   etapas: string[] | null;
   created_at: string;
   etapa1: Etapa1Result | null;
-  etapa2: null;
+  etapa2: Etapa2Result | null;
 }
 
-// --- Etapa 2 — MOCK, no implementado por el backend todavía (ver
-// frontend-implementation-plan.md §6 y §10, D19). El ranking no tiene shape
-// de contrato real (nunca se documentó un endpoint REST para él — solo
-// aparece como evento SSE `result_etapa2_ranking` que el backend nunca
-// emite); RankingItem es un shape de ejemplo para la pantalla mock, no una
-// interfaz derivada de api-contracts.md. design-events, en cambio, SÍ tiene
-// contrato real documentado (api-contracts.md) aunque no implementado.
+// --- Etapa 2 — shapes reales, cableada de punta a punta (Bloque A del plan
+// de implementación de Etapa 2, DECISIÓN 052/055). Espejo 1:1 de
+// _serializar_etapa2() (analysis_service.py) — grilla completa, sin aplanar
+// a un top-3: los métodos que no convergen o no aplican son información
+// docente, no un error a esconder (constraints.md, "METIS no sugiere
+// distribución ganadora").
 
-export interface RankingItem {
-  distribucion: string;
+export type MetodoStatus = "ok" | "no_converge" | "no_aplicable" | "disabled_zeros";
+
+export interface MetodoResultDetail {
   metodo: string;
-  eea: number;
-  rank: number;
+  parametros: Record<string, number> | null;
+  eea: number | null;
+  status: MetodoStatus;
 }
 
-export interface DesignEventsRequest {
+export interface DistribucionResult {
+  distribucion: string;
+  n_parametros: number;
+  metodos: MetodoResultDetail[];
+  mejor_eea: number | null;
+  mejor_metodo: string | null;
+}
+
+export interface Etapa2Result {
+  ranking: DistribucionResult[];
+  warnings: WarningItem[];
+}
+
+export interface EventoDiseno {
+  periodo_retorno: number;
+  // null si cuantil() falló para este período puntual — core/etapa2/
+  // design_events.py, un T inválido para una distribución no tumba el
+  // resto de los eventos.
+  valor: number | null;
+}
+
+export interface DistributionDecisionRequest {
   session_id: string;
   distribucion: string;
   metodo: string;
   periodos_retorno: number[];
 }
 
-export interface DesignEvento {
-  periodo_retorno: number;
-  valor: number;
-}
-
-export interface DesignEventsResponse {
-  distribucion: string;
-  metodo: string;
-  parametros: Record<string, number>;
-  eventos_diseno: DesignEvento[];
-  grafico_ajuste: string | null;
-  analysis_id: string | null;
+export interface DistributionDecisionResponse {
+  ok: boolean;
+  pipeline_continua: boolean;
 }

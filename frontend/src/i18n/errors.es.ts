@@ -59,6 +59,14 @@ export const ERROR_TEXT: Record<string, string> = {
   // Etapa 2
   DIST_SELECTION_INVALID:
     "La selección de distribución y método no es válida. Revisá los períodos de retorno.",
+  DIST_NOT_APPLICABLE:
+    "Esta combinación de distribución y método no aplica a los datos de la serie.",
+  DIST_NOT_CONVERGED:
+    "El método iterativo no encontró una solución estable para esta distribución.",
+  DIST_HIGH_EEA:
+    "El error estándar de ajuste supera el 5% de la media — el ajuste es de baja calidad.",
+  DIST_DISABLED_ZEROS:
+    "Esta distribución está deshabilitada porque la serie tiene ceros.",
 
   // Stream
   PARSE_ERROR:

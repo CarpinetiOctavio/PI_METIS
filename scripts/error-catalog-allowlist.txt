@@ -10,13 +10,3 @@
 # Formato: un código por línea, sin comillas. Líneas que empiezan con # son
 # comentario.
 
-# Etapa 2 (ranking, eventos de diseño) no está cableada contra el frontend
-# real todavía — es 100% mock (ver DECISIÓN 042, docs/decisiones/decision042.md).
-# Estos cuatro códigos están en el catálogo (porque el backend sí los define
-# en core/etapa2/) pero legítimamente ausentes de frontend/src/i18n/errors.es.ts
-# hasta que Etapa 2 se exponga de verdad. Remover estas cuatro líneas cuando
-# eso pase — dejar de estar acá es la señal de que Etapa 2 ya es real.
-DIST_NOT_APPLICABLE
-DIST_NOT_CONVERGED
-DIST_HIGH_EEA
-DIST_DISABLED_ZEROS
