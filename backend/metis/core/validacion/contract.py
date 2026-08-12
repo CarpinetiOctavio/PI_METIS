@@ -2,6 +2,7 @@ import numpy as np
 
 from metis.core.types import ContractResult, WarningItem
 from metis.core.utils import es_numerico
+from metis.core.validacion.parser import parsear_timestamps
 
 
 def validar_contrato(
@@ -93,7 +94,7 @@ def validar_contrato(
                 )
             )
 
-        if not _espaciado_regular(timestamps):
+        if not _espaciado_regular(timestamps, resolucion_temporal):
             warnings.append(
                 WarningItem(
                     codigo="CONTRACT_IRREGULAR_SPACING",
@@ -105,9 +106,39 @@ def validar_contrato(
     return ContractResult(bloqueante=False, codigo_error=None, warnings=warnings)
 
 
-def _espaciado_regular(timestamps: list) -> bool:
+def _espaciado_regular(
+    timestamps: list, resolucion_temporal: str | None = None
+) -> bool:
+    # F2.2 (Bloque F, docs/plan-etapa2-implementacion.md §7). Dos casos reales
+    # distintos según de dónde vengan los timestamps:
+    #
+    # - CSV: parser.py::_leer_dataframe no pasa parse_dates a pd.read_csv, así
+    #   que una columna de fechas llega como str crudo ("1980-01-31"). Restar
+    #   dos str levanta TypeError, capturado más abajo — hoy la comparación
+    #   se salta en silencio para CUALQUIER serie con fechas de texto,
+    #   irregular o no, sin avisar nunca.
+    # - Excel: pd.read_excel sí reconoce el tipo fecha nativo de la celda, así
+    #   que la columna llega como Timestamp real. Restar dos Timestamp
+    #   consecutivos de una serie MENSUAL da un Timedelta de 28, 29, 30 o 31
+    #   días según el mes — nunca el mismo valor dos veces seguidas, así que
+    #   `len(set(diffs)) == 1` rechaza como "irregular" una serie mensual
+    #   perfectamente regular.
+    #
+    # Con resolucion_temporal == "mensual" se compara en granularidad de MES
+    # (ordinal de período, PeriodIndex.asi8 — consecutivo por construcción),
+    # no de día: dos fechas que caen en meses consecutivos dan diferencia 1,
+    # sin importar si el mes tiene 28, 30 o 31 días. Para "anual" (u otros
+    # casos, incluidos los timestamps año-entero que ya funcionan hoy) se
+    # conserva la comparación exacta original.
     if len(timestamps) < 2:
         return True
+    if resolucion_temporal == "mensual":
+        try:
+            ordinales = parsear_timestamps(timestamps).to_period("M").asi8
+        except Exception:
+            return True
+        diffs = ordinales[1:] - ordinales[:-1]
+        return len(set(diffs.tolist())) == 1
     try:
         diffs = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
         return len(set(diffs)) == 1

@@ -85,13 +85,17 @@ verificación y su propio PR (o serie de PRs).
 | **A** | Cableado del motor en el stream (backend) | 0 | ninguno | M2 |
 | **B** | Frontend real de Etapa 2, sin mocks | A | ninguno | M2 |
 | **C** | Gráficos interactivos | B | ninguno | M2 |
-| **D** | Tests de regresión de Etapa 2 | A | parcial — ver §6 | M2 |
+| **D** | Tests de regresión de Etapa 2 | A | **lo lleva Octavio — fuera de este plan**, ver §6 | M2 |
 | **E** | Exportación PDF | A, B, C | FE-14 sin implementar | M3 |
 | **F** | Agregación temporal y año hidrológico | 0 | parcial — ver §7 | M2 |
 
 **F es independiente de A-E** y sale de un hallazgo de este mismo plan: METIS
 acepta series mensuales y no las agrega, con consecuencias estadísticas
 reales. Se puede ejecutar en paralelo con A. Está descrito en §7.
+
+**El Bloque D no es de este plan** (Kevin, 09/08/2026): los tests de regresión
+contra la tesis los está trabajando Octavio. La sección §6 se conserva como
+insumo para él, no como tarea nuestra.
 
 **E se especifica aparte.** Depende de una pieza que hoy no existe en ninguna
 capa (fórmulas con valores sustituidos en modo paso a paso, FE-14) y de una
@@ -186,7 +190,7 @@ dominio. Entradas de arranque:
 | Pendiente | Estado |
 |---|---|
 | `tests/integration/` vacío (solo `__init__.py`) | Bloque A6 lo estrena |
-| `tests/regression/` vacío | Bloque D lo estrena |
+| `tests/regression/` vacío | Lo lleva Octavio, fuera de este plan |
 | `tests/e2e/` vacío | Sin plan — `constraints.md` excluye E2E de UI del scope V1.0, pero los E2E de API de `testing.md` §3 no están excluidos y tampoco existen |
 | El job `test` de CI tolera exit code 5 | Deja de hacer falta cuando `integration/` tenga tests; quitar el flag en un PR propio |
 | FE-16 — `Etapa1Result` no expone la serie cruda | Bloquea serie temporal, boxplot mensual y gráfico de Chow |
@@ -654,7 +658,17 @@ tienen eje temporal real, y los tres necesitan la serie cruda, que
 
 ---
 
-## 6. Bloque D — Tests de regresión de Etapa 2
+## 6. Bloque D — Tests de regresión de Etapa 2 (LO LLEVA OCTAVIO)
+
+> **Fuera del alcance de este plan (Kevin, 09/08/2026).** Confirmado con
+> Octavio: los tests de regresión contra la tesis los está trabajando él. Lo
+> que sigue es el análisis que produjo este plan, conservado por si le sirve
+> como insumo — no es una tarea de este frente y ningún PR de §9 lo cubre.
+>
+> **Lo único que sí nos toca es el punto de contacto:** si el Bloque F cambia
+> cómo se construye la serie anual, los fixtures de regresión tienen que
+> conocer con qué `mes_inicio_anio` se armaron las 9 estaciones de la tesis —
+> ver F6.3. Avisarle a Octavio cuando la 057 se escriba.
 
 ### D1 — El bloqueo es parcial, no total
 
@@ -724,7 +738,9 @@ Buscado en `.claude/rules/`, `docs/decisiones/`, `docs/auditoria/` y
 
 **Lo que sí está escrito.** El año hidrológico es **1 julio → 30 junio** del
 año siguiente (`constraints.md:50`, `statistical-pipeline.md:259`, coinciden).
-Todo gráfico con eje temporal lleva las dos versiones.
+Todo gráfico con eje temporal lleva las dos versiones. Ojo: los dos archivos
+lo escriben como una constante del sistema, no como el valor de la región
+centro del país — ver F3, donde eso se corrige.
 
 **Lo que no está escrito en ninguna parte:**
 
@@ -771,87 +787,183 @@ las dos anteriores, pero es la misma familia de problema.
 Los tres se corrigen en este bloque. F2.1 y F2.2 son bugs de contrato de
 datos, no features — se pueden arreglar sin esperar ninguna respuesta.
 
-### F3 — Lo que se implementa
+### F3 — Mes de inicio del año, configurable (decisión de Kevin, 09/08/2026)
 
-**Precondición de dominio, para la parte de agregación (no para los bugs):**
-las preguntas de F5 tienen que estar respondidas. Los bugs de F2 no dependen
-de nadie.
+El año hidrológico **no es una constante**: cambia según la zona del país.
+`constraints.md:50` fija julio-junio, que es el de la región centro donde
+están las 9 estaciones de la tesis, pero eso es un **valor por defecto
+razonable, no una regla universal**. Un registro del NOA, de la cuenca del
+Plata o de la Patagonia arranca en otro mes.
 
-Comportamiento propuesto, a confirmar en F5:
+Por lo tanto: **el mes de inicio del año se configura antes de correr el
+análisis, y puede ser cualquiera de los 12.**
 
-1. **`resolucion_temporal == "anual"`** — camino actual, sin cambios. METIS
-   recibe la serie ya construida y no puede elegir el criterio de año: solo
-   puede pedir que el usuario **declare** cuál usó, para rotularlo en gráficos
-   y PDF. Campo nuevo en `ConfigPage`, sin valor por defecto adivinado.
-2. **`resolucion_temporal == "mensual"`** — METIS agrega a máximos anuales él
-   mismo, en `core/validacion/` (aguas arriba de Etapa 1, función pura, sin
-   conocimiento de HTTP). **Por defecto, año hidrológico** (1 jul → 30 jun),
-   con el calendario como alternativa explícita — el análisis de frecuencia de
-   extremos por año calendario parte la temporada húmeda al medio y puede
-   asignar dos crecidas de un mismo evento estacional a años distintos.
-   Sujeto a F5.1.
-3. **Años incompletos** — el caso concreto que planteaste: registro que
-   arranca en marzo, o cuya cantidad de meses no es múltiplo de 12. El primer
-   y el último año del registro quedan parciales. Propuesta: se **descartan**
-   los años que no tengan el 100% de sus meses, con un warning nuevo,
-   no bloqueante, que diga cuántos años se descartaron y cuáles
-   (`CONTRACT_INCOMPLETE_YEARS_DISCARDED`). Descartar sesga a la baja el
-   máximo de un año parcial y es la práctica estándar; **completar o
-   interpolar está descartado de plano** — `constraints.md` es explícito en
-   que METIS no corrige datos.
-   El descarte ocurre **antes** del conteo de la regla de n: una serie de 12
-   años que pierde 2 parciales entra a Etapa 1 con n=10, y si eso la deja
-   bajo el piso, bloquea con `CONTRACT_SERIES_TOO_SHORT` como cualquier otra
-   serie corta. Es coherente con la regla existente, no una excepción nueva.
-4. **Umbral de tolerancia** — un año al que le falta un solo mes de la
-   estación seca no es lo mismo que uno al que le faltan siete. Si se decide
-   un umbral (ej. ≥ 11 meses se acepta), es una regla de dominio y la fija
-   Facundo, no nosotros. Va en F5.2.
+Esto simplifica el modelo en vez de complicarlo. Deja de haber dos
+"modalidades" (calendario vs. hidrológico) con un toggle entre ellas: hay **un
+solo parámetro**, `mes_inicio_anio ∈ [1..12]`. El año calendario es
+simplemente `mes_inicio_anio = 1` — un caso particular, no un modo aparte. La
+dicotomía que `constraints.md` describía era una simplificación de esto.
 
-`resolucion_temporal` deja de ser un campo calculado y descartado: pasa a ser
-lo que decide qué camino toma el pipeline.
+Este es también el motivo profundo por el que el toggle de C3 no podía
+funcionar: no era una opción binaria de presentación, era un parámetro de
+construcción de la muestra con doce valores posibles.
 
-### F4 — Decisión a escribir
+**Parámetro nuevo, de punta a punta:**
 
-**DECISIÓN 057 — Agregación temporal, criterio de año y tratamiento de años
-incompletos.** Cubre los tres puntos de F3, los tres bugs de F2 y el código de
-error nuevo. Es la decisión más cargada de dominio de todo este plan: la
-justificación tiene que citar la respuesta de Facundo, no nuestro criterio.
+| Capa | Cambio |
+|---|---|
+| `POST /analysis/stream` | Campo `mes_inicio_anio: int` (`Form`), default `7`, validado en `[1..12]` → 400 `CONTRACT_MES_INICIO_INVALID` |
+| `core/validacion/` | Módulo nuevo `aggregation.py`, función pura |
+| `analyses.configuracion` (JSONB) | Se guarda junto a `cramer_particion` — es registro de auditoría, el resultado no se puede reproducir sin él |
+| `ConfigPage` | Selector de mes (§F5) |
+| Gráficos y PDF | Rótulo: "año hidrológico: junio–mayo" |
 
-El código de error nuevo va a `api-contracts.md` y a `errors.es.ts` en el mismo
-commit — misma regla de DECISIÓN 038 que rige los tres de A1/A3.
+`mes_inicio_anio` **no es opcional en el registro de auditoría**: dos análisis
+sobre el mismo archivo con meses distintos dan series distintas y resultados
+distintos. Sin guardarlo, el historial de CU-01 muestra un resultado que no se
+puede volver a producir.
 
-### F5 — Preguntas para Facundo/Carlos
+### F4 — La agregación y el recorte de los extremos
 
-A `docs/auditoria/pendientes/pendientes-facundo.md`:
+Módulo nuevo `core/validacion/aggregation.py`, función pura, sin conocimiento
+de HTTP ni de BD — la restricción de aislamiento de `core/` aplica igual:
 
-1. **¿Cuál es el criterio de año del análisis?** Nuestra posición: hidrológico
-   por defecto (1 jul → 30 jun), por el argumento de no partir la temporada
-   húmeda. ¿Se confirma? ¿Y las 9 estaciones de la tesis con cuál se armaron?
-2. **¿Se descartan los años incompletos, o hay un umbral de meses mínimos?**
-   Nuestra posición: descartar los que no tengan los 12 meses, con warning.
-3. **¿METIS recibe alguna vez series mensuales de verdad?** Si la respuesta es
-   que no —que el insumo es siempre la serie de máximos anuales ya
-   construida— entonces F3.2 y F3.3 no se implementan, y lo que corresponde es
-   **rechazar** la entrada mensual con un error de contrato explícito en vez
-   de procesarla mal en silencio como hoy. Esa variante es mucho más barata y
-   cierra el bug F2.1 igual.
+```python
+def agregar_a_maximos_anuales(
+    serie: list[float],
+    timestamps: list,
+    mes_inicio: int,
+) -> AgregacionResult:
+    ...
+```
 
-La pregunta 3 es la que más cambia el alcance: convendría hacerla primero.
+Devuelve la serie anual, los timestamps de cada año agregado, y la lista de
+períodos descartados con su motivo, para que el pipeline pueda emitir los
+warnings.
 
-### F6 — Criterios de hecho
+**Regla de recorte en los dos extremos (decisión de Kevin, 09/08/2026).**
+El registro casi nunca arranca justo en el mes de inicio ni termina justo en
+el mes de cierre. Los datos que sobran en cualquiera de los dos extremos **se
+descartan**:
+
+- *Inicio.* Si `mes_inicio = 6` y el registro arranca en marzo de 2001, los
+  meses marzo–mayo de 2001 no forman un año completo: se descartan. El primer
+  año del análisis es junio 2001 – mayo 2002.
+- *Fin.* Si el mismo registro termina en agosto de 2010, los meses junio–agosto
+  de 2010 no llegan a cerrar el año: se descartan. El último año del análisis
+  es junio 2009 – mayo 2010.
+
+En otras palabras, el registro se **recorta a años completos**. No se completa,
+no se interpola, no se acepta un año parcial "casi lleno" en los extremos —
+`constraints.md` es explícito en que METIS no corrige datos, y el máximo de un
+año parcial está sesgado a la baja por construcción.
+
+Se emite un warning **no bloqueante**, `CONTRACT_PARTIAL_YEARS_TRIMMED`, que
+dice cuántos meses se descartaron en cada extremo y cuál es el período
+efectivo del análisis. El usuario tiene que ver qué se recortó: es la
+diferencia entre "descartar" y "borrar en silencio".
+
+**Etiquetado del año agregado.** Un año junio 2001 – mayo 2002 se etiqueta con
+el año calendario **en que empieza** (2001). Con `mes_inicio = 1` esto degenera
+exactamente en el año calendario, lo que sirve de verificación de consistencia
+del propio algoritmo. La convención se documenta explícitamente porque cambia
+el eje X de todos los gráficos temporales y el rótulo de los resultados.
+
+**El recorte ocurre antes del conteo de n.** Un registro de 12 años que pierde
+los dos extremos entra a Etapa 1 con n=10, y si eso lo deja bajo el piso
+bloquea con `CONTRACT_SERIES_TOO_SHORT` como cualquier serie corta. Es
+coherente con la regla existente, no una excepción nueva.
+
+**Dónde se llama.** Al principio de `ejecutar_etapa1()`, antes de
+`validar_contrato()` — no en `services/`. Así el conteo de la regla de n opera
+ya sobre la serie agregada, `services/` no gana lógica de dominio, y se
+respeta "el pipeline siempre arranca por Etapa 1".
+
+**El caso que Kevin no especificó, y que hay que resolver igual: el hueco
+interior.** Los extremos están definidos; un año del medio al que le faltan
+meses (una estación fuera de servicio seis meses en 2007) no. No es lo mismo
+que un extremo: recortarlo partiría el registro en dos. Propuesta, a confirmar
+en F6: se descarta ese año y se emite
+`CONTRACT_INCOMPLETE_YEARS_DISCARDED` — código distinto del recorte de
+extremos, porque significa otra cosa (hay un agujero en el registro, no un
+borde). La serie resultante queda con un salto temporal, que `contract.py` ya
+detecta como `CONTRACT_IRREGULAR_SPACING`. Con eso, los tres warnings juntos
+cuentan la historia completa sin que ninguno mienta.
+
+**Función de agregación.** Máximo por año, que es lo que corresponde al
+análisis de frecuencia de eventos extremos y a lo que hace la tesis. Para
+`tipo_variable == "otro"` el máximo puede no ser lo que el usuario quiere —
+queda en F6.
+
+### F5 — Frontend
+
+**Selector de mes en `ConfigPage`.** Doce opciones, con el rango visible en la
+etiqueta ("Junio — el año va de junio a mayo"), default julio, y una nota de
+una línea explicando que define cómo se agrupan los datos en años.
+
+**Cuándo mostrarlo.** Si la columna X son años de 4 dígitos, la serie ya viene
+anual y el selector no cambia nada. `ConfigPage` ya tiene la heurística para
+detectarlo: `pareceFechaOAnio()` distingue `/^\d{4}$/` de una fecha completa, y
+el panel de muestra de columnas de la pasada 5 ya tiene los valores a mano.
+Regla: **el selector se muestra habilitado solo cuando la columna X elegida
+tiene fechas completas**; con años puros se muestra deshabilitado, con la nota
+de que la serie ya está agregada. El campo se manda siempre — el backend lo
+ignora cuando la resolución es anual, y así el frontend no necesita adivinar
+nada que el backend no pueda re-verificar.
+
+**Resultados.** El período efectivo del análisis y el criterio de año se
+muestran junto a la estadística descriptiva, y el warning de recorte con el
+mismo componente de banner que el resto de Etapa 1.
+
+### F6 — Decisión, y lo que queda para Facundo
+
+**DECISIÓN 057 — Agregación temporal por año hidrológico configurable.** Cubre
+F3, F4 y F5, los tres bugs de F2 y los tres códigos de error nuevos. El mes
+configurable y el recorte de extremos son decisión de producto ya tomada
+(Kevin, 09/08/2026) y se documentan como tal.
+
+Lo que sigue siendo dominio y va a
+`docs/auditoria/pendientes/pendientes-facundo.md`:
+
+1. **Hueco interior.** ¿Se descarta el año incompleto del medio, o hay un
+   umbral de meses mínimos por debajo del cual recién se descarta? Nuestra
+   posición: descartar el que no tenga los 12.
+2. **Función de agregación para `tipo_variable == "otro"`.** Máximo anual es
+   correcto para caudal y precipitación. ¿Y para una variable arbitraria?
+3. **Las 9 estaciones de la tesis, ¿con qué mes de inicio se armaron?** No
+   cambia la implementación, pero sí los fixtures del Bloque D: si se armaron
+   por año calendario, un test de regresión que agregue por julio no las
+   reproduce.
+
+Ninguna de las tres bloquea F2, F3 ni el grueso de F4 — solo el hueco interior
+y el caso `otro`.
+
+### F7 — Criterios de hecho
 
 - F2.1: una serie mensual ya no atraviesa el pipeline como si fuera anual —
-  o se agrega (F3.2) o se rechaza con código propio (F5.3), nunca se procesa
-  como está.
+  se agrega, siempre.
 - F2.2: una serie mensual real de 10 años no dispara
   `CONTRACT_IRREGULAR_SPACING`. Test unitario con meses de 28/30/31 días.
 - F2.3: `_inferir_resolucion()` usa la moda de los deltas; test con una serie
   mensual con un hueco de 14 meses que antes se inferían como `"anual"`.
-- Tests unitarios de la agregación: años completos, año inicial parcial, año
-  final parcial, los dos parciales, y el caso en que el descarte deja n < 10.
-- `./scripts/check-error-catalog.sh` verde con el código nuevo.
-- DECISIÓN 057 escrita, citando las respuestas de F5.
+- **Tests de `agregar_a_maximos_anuales()`**, uno por caso:
+  - registro que arranca y termina justo en el mes de inicio (sin recorte);
+  - arranca tarde (recorte de inicio, el ejemplo de marzo con `mes_inicio=6`);
+  - termina temprano (recorte de fin, el ejemplo de agosto);
+  - los dos extremos parciales a la vez;
+  - `mes_inicio = 1` reproduce exactamente el año calendario;
+  - `mes_inicio = 12` (caso borde: el año cruza el cambio de año calendario
+    con un solo mes del lado viejo);
+  - el recorte deja n < 10 → `CONTRACT_SERIES_TOO_SHORT` bloqueante;
+  - año interior incompleto (según lo que se resuelva en F6.1).
+- `mes_inicio_anio` fuera de `[1..12]` → 400 `CONTRACT_MES_INICIO_INVALID`.
+- `analyses.configuracion` guarda `mes_inicio_anio`; verificado con `psql` en
+  un análisis de CU-01.
+- `./scripts/check-error-catalog.sh` verde con los tres códigos nuevos.
+- Verificación manual: mismo archivo mensual analizado con `mes_inicio = 1` y
+  con `mes_inicio = 7` produce series anuales distintas, y el warning de
+  recorte dice qué meses se descartaron en cada caso.
+- DECISIÓN 057 escrita.
 
 ---
 
@@ -889,14 +1001,23 @@ Su spec sale cuando A, B y C estén cerrados y FE-14 tenga una decisión.
 | 4 | A4-A6 — eventos de diseño, serialización, persistencia, tests | `staging` | PR 3 |
 | 5 | B — frontend real | `staging` | PR 4 |
 | 6 | C — gráficos | `staging` | PR 5 |
-| 7 | D — regresión | `staging` | PR 4 |
-| 8 | F2 — los tres bugs de contrato temporal | `staging` | PR 1 |
-| 9 | F3-F4 — agregación y año hidrológico | `staging` | PR 8 + respuestas de F5 |
+| 7 | F2 — los tres bugs de contrato temporal | `staging` | PR 1 |
+| 8 | F3-F4 — mes configurable, agregación y recorte (backend) | `staging` | PR 7 |
+| 9 | F5 — selector de mes y período efectivo (frontend) | `staging` | PR 8 |
 
-PR 7 no depende de 5 ni 6: la regresión es contra el core, no contra la UI.
-PR 8 no depende de ninguno de A-D: son bugs aislados de `core/validacion/` y
-conviene mandar la consulta de F5 apenas se abra, porque PR 9 espera esa
-respuesta y es el único tramo con bloqueo externo real.
+El Bloque D no tiene PR acá — lo lleva Octavio (§6).
+
+PR 7 no depende de ninguno de A-C: son bugs aislados de `core/validacion/`.
+PR 8 y 9 tampoco esperan a nadie — con el mes configurable y el recorte de
+extremos ya decididos, lo único que sigue abierto con Facundo es el hueco
+interior y el caso `tipo_variable == "otro"` (F6), que se pueden implementar
+con la propuesta y ajustar después si responde distinto. **Conviene mandarle
+las tres preguntas de F6 al abrir el PR 7**, no cuando el PR 8 esté escrito.
+
+**Coordinación con Octavio:** el PR 8 cambia cómo se construye la serie anual.
+Avisarle antes de mergearlo — sus fixtures de regresión asumen las series de
+la tesis tal como están, y F6.3 es justamente la pregunta de con qué mes se
+armaron.
 
 ---
 
@@ -922,19 +1043,24 @@ respuesta y es el único tramo con bloqueo externo real.
 - `docs/decisiones/decision042.md` — marcada como superada (los mocks ya no
   existen).
 - `.claude/rules/architecture/api-contracts.md` — `distribution-decision`
-  documentado, `design-events` marcado como reemplazado, cuatro códigos de
-  error nuevos en el catálogo (tres de A1/A3 más el de años incompletos de F3),
-  `etapas` con sus valores válidos.
+  documentado, `design-events` marcado como reemplazado, seis códigos de error
+  nuevos en el catálogo (tres de A1/A3 más `CONTRACT_MES_INICIO_INVALID`,
+  `CONTRACT_PARTIAL_YEARS_TRIMMED` y `CONTRACT_INCOMPLETE_YEARS_DISCARDED` del
+  Bloque F), `etapas` y `mes_inicio_anio` con sus valores válidos.
 - `.claude/rules/core/statistical-pipeline.md` — la secuencia real de eventos
   SSE de Etapa 2, con la pausa; y la regla de agregación temporal del Bloque F,
   que hoy no está escrita en ninguna parte.
-- `.claude/rules/architecture/constraints.md` — el criterio de año del
-  análisis (no solo el de los gráficos) y el tratamiento de años incompletos.
-- `.claude/rules/testing.md` — `tests/integration/` y `tests/regression/`
-  dejan de estar vacíos.
-- `.claude/rules/sprint.md` — M2 y su estado; Fase 4.5 marcada COMPLETA.
+- `.claude/rules/architecture/constraints.md` — **corregir** la sección "Año
+  hidrológico": hoy fija julio-junio como constante del sistema, y pasa a ser
+  el default de un parámetro configurable en los 12 meses. Sumar el recorte de
+  extremos y el criterio de etiquetado del año agregado.
+- `.claude/rules/testing.md` — `tests/integration/` deja de estar vacío.
+  (`tests/regression/` lo cierra Octavio por su lado.)
+- `.claude/rules/sprint.md` — M2 y su estado; Fase 4.5 marcada COMPLETA; nota
+  de que los tests de regresión los lleva Octavio, para que el próximo que lea
+  M1/M2 no los tome como pendiente sin dueño.
 - `CLAUDE.md` — "Frontend — estado actual": Etapa 2 deja de estar mockeada.
-- `docs/auditoria/pendientes/pendientes-facundo.md` — las tres preguntas de F5.
+- `docs/auditoria/pendientes/pendientes-facundo.md` — las tres preguntas de F6.
 - `docs/pendientes-tecnicos.md` — creado en el Bloque 0, y actualizado a medida
   que cada bloque cierra sus entradas.
 - `docs/README.md` — índice con `pendientes-tecnicos.md`.

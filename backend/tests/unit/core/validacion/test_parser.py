@@ -103,6 +103,27 @@ def test_columna_de_fechas_reales_sigue_funcionando():
 
 
 @pytest.mark.unit
+def test_hueco_largo_no_hace_confundir_mensual_con_anual():
+    # F2.3 (Bloque F, plan §7) — un hueco largo en una serie mayormente
+    # mensual no debe empujar el PROMEDIO de deltas por encima del umbral de
+    # "anual". Cinco pasos mensuales reales (31, 29, 31, 30, 31 días — 31 es
+    # mayoría real, no un empate de moda) seguidos de un hueco de ~3 años y
+    # medio: bajo el promedio viejo, ese único hueco domina el promedio de
+    # los 6 deltas y cruza el umbral de 300 días -> "anual" (mal). Bajo la
+    # moda, 31 sigue siendo el valor dominante -> "mensual" (correcto).
+    csv = (
+        b"fecha,caudal\n"
+        b"2000-01-01,94.71\n2000-02-01,89.83\n2000-03-01,105.13\n"
+        b"2000-04-01,110.2\n2000-05-01,120.4\n2000-06-01,98.1\n"
+        b"2003-10-01,102.3\n"
+    )
+
+    resultado = parse_file(csv, "serie.csv", columna_x="fecha", columna_y="caudal")
+
+    assert resultado.resolucion_temporal == "mensual"
+
+
+@pytest.mark.unit
 def test_columna_de_anio_y_mes_como_fecha_sigue_siendo_mensual():
     # No-regresión: fechas mensuales en formato ISO (no años puros de 4
     # dígitos como valor completo) deben seguir infiriendo "mensual".
