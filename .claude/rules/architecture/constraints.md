@@ -72,15 +72,31 @@ hasta el mes anterior de Y+1 se etiqueta con Y — el año calendario en que
 empieza. Con `mes_inicio_anio = 1` esto degenera exactamente en el año
 calendario.
 
-### Gráficos con eje temporal
+### Gráficos con eje temporal — corregido por DECISIÓN 058
+**Corrección 12/08/2026:** esta sección afirmaba que la regla de "dos
+versiones" (calendario y con el `mes_inicio_anio` configurado) aplicaba sin
+distinción a los tres gráficos con eje temporal, y los daba por bloqueados
+por FE-16 (`Etapa1Result` no expone la serie cruda) — ambas afirmaciones
+quedaron desactualizadas: `Etapa1Result` ya expone `serie_efectiva`/
+`timestamps_efectivos` desde DECISIÓN 057, y la regla de dos versiones tiene
+una excepción real. Ver [DECISIÓN 058](../../../docs/decisiones/decision058.md)
+para el razonamiento completo.
+
 `Etapa2AjusteChart`/`Etapa2EventosChart` (Bloque C, DECISIÓN 056) **no**
 llevan un toggle calendario/hidrológico por gráfico — el criterio de año ya
 se fijó como parámetro del análisis (`mes_inicio_anio`, arriba), no es una
-opción de presentación aguas abajo. Donde la regla de "dos versiones"
-(calendario y con el `mes_inicio_anio` configurado) sigue aplicando sin
-ambigüedad: serie temporal, boxplot mensual, gráfico de Chow — los tres con
-eje temporal real, pendientes de implementación (bloqueados por FE-16, ver
-`docs/pendientes-tecnicos.md`: `Etapa1Result` no expone la serie cruda).
+opción de presentación aguas abajo.
+
+La regla de "dos versiones" (calendario y con el `mes_inicio_anio`
+configurado) aplica a **serie temporal y boxplot mensual** — son
+descriptivos, la versión calendario es una vista comparativa legítima. **No
+aplica al gráfico de Chow**: Chow corrió sobre `serie_efectiva` (la
+agregación con el `mes_inicio_anio` configurado), y su atípico es un punto
+de esa serie específica — en la agregación calendario ese punto puede no
+existir o valer otra cosa. El gráfico de Chow se dibuja solo sobre la serie
+analizada, sin toggle. El toggle, donde aplica, solo se muestra con carga
+mensual — con carga anual el criterio de año ya lo fijó el usuario al armar
+el archivo, no hay una segunda agregación posible para comparar.
 
 ### PDF de exportación — CU-01
 Se genera on-demand, no se almacena en disco.
