@@ -1,5 +1,6 @@
 import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
 import { formatInt, formatNum } from "../../i18n/format";
+import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import { CountUp } from "../../components/CountUp";
 import "./Etapa1ResultView.css";
 
@@ -98,11 +99,19 @@ function GroupTable({ items }: Readonly<{ items: TestResultDetail[] }>) {
  * persistido, Fase 4). No decide el `modo` efectivo (anónimo=experto,
  * UX-D) — eso es responsabilidad de quien la use, según su propio
  * contexto de auth.
+ *
+ * `mesInicioAnio` (Bloque F5, DECISIÓN 057) es opcional a propósito: solo
+ * viaja en la sesión interactiva (ConfigPage → StreamPage → ResultsPage vía
+ * router state), no se persiste en `analyses.configuracion` de forma que
+ * `GET /history/{id}` lo devuelva — mismo límite ya aceptado para
+ * `curva_ajuste` en el Bloque C. Sin el prop, la nota simplemente no se
+ * renderiza.
  */
 export function Etapa1ResultView({
   result,
   modo,
-}: Readonly<{ result: Etapa1Result; modo: Modo }>) {
+  mesInicioAnio,
+}: Readonly<{ result: Etapa1Result; modo: Modo; mesInicioAnio?: number }>) {
   const pasoAPaso = modo === "paso_a_paso";
 
   const groups: Group[] = [
@@ -185,6 +194,9 @@ export function Etapa1ResultView({
               </tr>
             </tbody>
           </table>
+          {mesInicioAnio !== undefined && (
+            <p className="fn">{notaCriterioAnio(mesInicioAnio)}</p>
+          )}
         </div>
       )}
 

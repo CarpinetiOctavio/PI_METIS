@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { postPreviewColumns } from "../../api/analysis";
 import type { AnalysisStreamForm, ColumnaPreview, Modo, TipoVariable } from "../../api/types";
+import { etiquetaSelectorMes } from "../../i18n/mesInicioAnio";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
 import { ColumnPreviewPanel } from "./ColumnPreviewPanel";
 import "./ConfigPage.css";
+
+const DOCE_MESES = Array.from({ length: 12 }, (_, i) => i + 1);
 
 // Bloque E1 (pasada 5) — cap real de PARSE_FILE_TOO_LARGE (DECISIÓN 050), el
 // frontend nunca lo mencionaba antes de la dropzone.
@@ -24,6 +27,15 @@ function formatFileSize(bytes: number): string {
 function pareceFechaOAnio(muestra: string[]): boolean {
   if (muestra.length === 0) return false;
   return muestra.every((v) => /^\d{4}$/.test(v) || !Number.isNaN(Date.parse(v)));
+}
+
+// F5 (DECISIÓN 057) — a diferencia de pareceFechaOAnio() (deliberadamente
+// laxa, para preseleccionar la columna X), acá hace falta distinguir año
+// puro de fecha completa: el selector de mes de inicio no tiene sentido
+// sobre una serie que ya es anual.
+function esAnioPuro(muestra: string[]): boolean {
+  if (muestra.length === 0) return false;
+  return muestra.every((v) => /^\d{4}$/.test(v));
 }
 
 function esNumerica(muestra: string[]): boolean {
@@ -76,6 +88,12 @@ export function ConfigPage() {
   // "1" implícito (default de AnalysisStreamForm.etapas). DECISIÓN 054 solo
   // acepta "1" | "1,2" en el borde del endpoint.
   const [etapas, setEtapas] = useState<"1" | "1,2">("1");
+  // Bloque F5 del plan de Etapa 2 (DECISIÓN 057) — default 7 (julio),
+  // idéntico al default del backend. Se manda siempre, deshabilitado o no
+  // (ver serieYaEsAnual más abajo) — el backend lo ignora cuando la
+  // resolución ya es anual, así el frontend no necesita adivinar nada que
+  // el backend no pueda re-verificar.
+  const [mesInicioAnio, setMesInicioAnio] = useState(7);
   const [error, setError] = useState<string | null>(null);
   // Bloque E3 (pasada 5) — movida por onFocus/onBlur de los <select>, no por
   // su valor: resalta en ColumnPreviewPanel qué columna está eligiendo cada
@@ -86,6 +104,17 @@ export function ConfigPage() {
   // UX-D — el anónimo siempre usa la UI Experto, sin selector de modo
   // (frontend/frontend-design/metis-wireframes-fase1-decisiones.md, "UX-D").
   const modoEfectivo: Modo = isAuthed ? modo : "experto";
+
+  // F5 — el selector de mes se deshabilita solo cuando la columna X elegida
+  // es un año puro (serie ya anual, agregar no cambia nada). Sin preview
+  // (inputs de texto de respaldo) no hay forma de saberlo: se deja
+  // habilitado, mismo criterio conservador que el resto de esta pantalla
+  // ante la ausencia de preview.
+  const columnaXInfo =
+    preview.status === "ready"
+      ? preview.columnas.find((c) => String(c.indice) === columnaX)
+      : undefined;
+  const serieYaEsAnual = columnaXInfo ? esAnioPuro(columnaXInfo.muestra) : false;
 
   async function handleFileChange(file: File | null) {
     setArchivo(file);
@@ -147,6 +176,7 @@ export function ConfigPage() {
       modo: modoEfectivo,
       cramer_particion: "default",
       etapas,
+      mes_inicio_anio: mesInicioAnio,
     };
     // El form (incluido el File) viaja como router state — no persiste a un
     // refresh, pero StreamPage lo consume una sola vez al montar, así que no
@@ -289,6 +319,27 @@ export function ConfigPage() {
               bloquea por esto.
             </div>
           )}
+          <div className="field">
+            <label htmlFor="config-mes-inicio">Mes de inicio del año</label>
+            <select
+              id="config-mes-inicio"
+              className="input"
+              value={mesInicioAnio}
+              disabled={serieYaEsAnual}
+              onChange={(event) => setMesInicioAnio(Number(event.target.value))}
+            >
+              {DOCE_MESES.map((mes) => (
+                <option key={mes} value={mes}>
+                  {etiquetaSelectorMes(mes)}
+                </option>
+              ))}
+            </select>
+            <p className="fn">
+              {serieYaEsAnual
+                ? "La columna X ya son años — este criterio no aplica, la serie no se agrega."
+                : "Define cómo se agrupan los datos en años antes de analizar la serie (solo tiene efecto si la serie es mensual)."}
+            </p>
+          </div>
           <fieldset className="field">
             <legend>Tipo de variable</legend>
             <div className="seg">

@@ -14,6 +14,9 @@ interface ResultsLocationState {
   modo?: Modo;
   etapa2?: Etapa2RankingState | null;
   eventosDiseno?: Etapa2EventosState | null;
+  // Bloque F5 (DECISIÓN 057) — solo viaja en la sesión interactiva, ver la
+  // nota de Etapa1ResultView sobre por qué no llega desde el historial.
+  mesInicioAnio?: number;
 }
 
 export function ResultsPage() {
@@ -39,7 +42,11 @@ export function ResultsPage() {
   return (
     <div className="results-page">
       <h1 className="h">Resultados de Etapa 1</h1>
-      <Etapa1ResultView result={result} modo={modoEfectivo} />
+      <Etapa1ResultView
+        result={result}
+        modo={modoEfectivo}
+        mesInicioAnio={locationState?.mesInicioAnio}
+      />
       {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la
           pidió al configurar el análisis — acá se muestra de solo lectura,
           sin botones "Elegir". Si no se pidió Etapa 2, no hay nada que
