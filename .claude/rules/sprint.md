@@ -1021,6 +1021,125 @@ cierren) para el detalle completo. Progreso real, PR por PR:
 
 ---
 
+## Plan de cierre de pendientes no-test — CERRADO (12/08/2026)
+
+Cinco PRs, `docs/plan-cierre-pendientes-no-test.md` (borrado tras este
+cierre — lo que sobrevive son las decisiones, las correcciones a
+`.claude/rules/` y la fila tachada de `docs/pendientes-tecnicos.md`, mismo
+criterio que el plan de Etapa 2). Orden pensado para que cada PR fuera
+mergeable solo; PR3-PR5 terminaron apilados uno sobre el otro (cada uno
+dependía de verdad del contrato/código del anterior, no solo
+conceptualmente), con la base retargeteada a `staging` en cuanto el PR de
+abajo mergeaba.
+
+- **PR 1 — Hot reload del backend** (`fix/backend-hot-reload`, [#51](https://github.com/CarpinetiOctavio/PI_METIS/pull/51)).
+  `docker-compose.yml`, servicio `backend`: `command: uvicorn ... --reload`
+  + `volumes: ["./backend:/app"]` — cierra la fila de `pendientes-tecnicos.md`
+  sobre `docker cp`/`docker restart` como paso manual obligatorio.
+  `architecture.md` actualizado con el YAML nuevo y el caveat de que este
+  mismo compose aproxima el despliegue de la UCC (dev-only, se separaría a
+  un `docker-compose.override.yml` si aparece un compose de producción
+  real — anotado como fila nueva en `pendientes-tecnicos.md`, sin cerrar).
+  Verificado editando `metis/main.py` en el host sin `docker cp` ni
+  `docker restart`: `WatchFiles detected changes... Reloading` en los logs
+  y el cambio reflejado en `curl` de inmediato. `pytest -m "unit or
+  integration"` 272 passed, 1 skipped, sin regresión.
+
+- **PR 2 — DECISIÓN 058** (`docs/decision058`, [#52](https://github.com/CarpinetiOctavio/PI_METIS/pull/52)).
+  Solo documentación, antes de tocar código — mismo patrón que el Bloque A0
+  del plan de Etapa 2. Fija la partición completa de qué serie se expone
+  dónde (`analyses.{serie,timestamps,configuracion}` = entrada auditada,
+  `analysis_results.etapa1.datos` = resultado), acota la regla de "dos
+  versiones" de `constraints.md` (aplica a serie temporal y boxplot
+  mensual, no a Chow ni a los dos gráficos de Etapa 2), fija que la
+  versión calendario se calcula en `core/` y nunca en TypeScript, decide
+  no hacer backfill de análisis viejos, y calcula el tope de payload
+  (~59 KB en el peor caso realista — recalculado a ~63 KB en el PR 4 tras
+  la corrección de `serie_calendario`, ver abajo). Reescribe la fila FE-16
+  de `pendientes-tecnicos.md` con el diagnóstico real (verificado contra
+  el código: tres huecos de serialización/persistencia, no "`Etapa1Result`
+  no expone la serie cruda" — eso ya lo había resuelto DECISIÓN 057).
+
+- **PR 3 — Backend: contrato, persistencia y migración**
+  (`feature/serie-en-contrato-etapa1`, [#53](https://github.com/CarpinetiOctavio/PI_METIS/pull/53)).
+  `Etapa1Result` gana `serie_original`/`timestamps_originales`/
+  `resolucion_original` (capturados en `ejecutar_etapa1()` antes de la
+  agregación). `_serializar_etapa1()` gana el bloque `datos` completo y un
+  segundo argumento `mes_inicio_anio` (no el `ParsedData` completo —
+  alternativa evaluada y descartada, `_persistir()` también la llama).
+  `test_result_dict()` expone `indice_atipico`. Migración `005` —
+  `analyses.timestamps`, JSONB nullable sin backfill. `get_analysis_by_id()`
+  devuelve `serie`/`timestamps`/`configuracion`, cerrando el hueco que el
+  PR 9 del plan de Etapa 2 había dejado anotado (`mes_inicio_anio` ya se
+  persistía, pero el endpoint no lo devolvía). **Bug real encontrado al
+  cablear esto:** la segunda ejecución de `ejecutar_etapa1()` (tras
+  rechazar un atípico) corre sobre la serie ya agregada y pierde el origen
+  mensual real — se copian `serie_original`/`timestamps_originales`/
+  `resolucion_original` desde la primera ejecución antes de serializar el
+  resultado final, cubierto por un test de integración nuevo. Verificado:
+  `pytest -m "unit or integration"` 277 passed, 1 skipped (+5 sobre la
+  línea base); smoke test manual real vía `httpx` contra el backend en
+  Docker (CU-01) con `psql` confirmando `analyses.timestamps` con 144
+  elementos ISO-8601 reales.
+
+- **PR 4 — Frontend: serie temporal y gráfico de Chow**
+  (`feature/graficos-etapa1`, [#54](https://github.com/CarpinetiOctavio/PI_METIS/pull/54)).
+  **Bug real encontrado al construir el consumidor, corregido antes de
+  seguir:** `serie_calendario` (DECISIÓN 058) se había documentado como
+  `list[float]` suelto, del mismo largo que `serie_efectiva` — falso, la
+  agregación calendario recorta sus propios extremos de forma
+  independiente y puede tener más o menos puntos (confirmado con un test
+  real: 12 años calendario dan 11 puntos con `mes_inicio_anio=7` pero 12
+  con `mes_inicio=1`). Pasa a `{serie, timestamps}`. `InteractiveChart`
+  gana `xScale?: "log" | "linear"` — el propio docstring del componente ya
+  pedía esto. Dominio/zoom/distancia de hover se bifurcan por escala: una
+  razón multiplicativa no sirve para años cercanos entre sí (ej.
+  2000-2010, razón ~1.005, muy por debajo del guard log de 1.05 — con el
+  guard viejo aplicado sin querer a un eje lineal, ningún zoom por
+  selección habría sido posible sobre un rango de años real). Componentes
+  nuevos `Etapa1SerieTemporalChart` (con toggle configurado/calendario,
+  solo con carga mensual) y `Etapa1ChowChart` (sin toggle — apartamiento
+  parcial documentado de la regla de dos versiones, Chow corrió sobre
+  `serie_efectiva` y su atípico no tiene sentido en la agregación
+  calendario). Verificado: `npm test` 212 passed (+11), delta de bundle
+  +0.83 kB gzip; smoke test manual en el navegador de dev contra el
+  backend real (CU-02): los dos gráficos con 11 puntos reales cada uno
+  (recorte real: 1999 y 2011 parciales, período efectivo 2000-2010),
+  toggle "Calendario" cambiando a 12 puntos y mostrando la nota de "vista
+  comparativa" — confirma en vivo el mismo número que predijo el test
+  unitario del PR 3.
+
+- **PR 5 — Frontend: boxplot mensual e historial** (`feature/boxplot-mensual`,
+  [#55](https://github.com/CarpinetiOctavio/PI_METIS/pull/55)). Componente
+  propio `charts/BoxPlot.tsx` (no forzado dentro de `InteractiveChart` —
+  geometría distinta, sin zoom que tenga sentido sobre 12 meses fijos).
+  `charts/quartiles.ts::calcularCuartiles()` — bisagras de Tukey (mediana
+  exclusiva), convención documentada explícitamente (no "la que usa la
+  librería"), con el caso degenerado `n=1` encontrado escribiendo el test
+  (las dos mitades quedan vacías, `mediana([])` da `NaN` sin guard).
+  `Etapa1BoxplotMensualChart` — doce cajas sobre `datos.serie_original` +
+  `timestamps_originales`, toggle configurado/calendario que reordena el
+  eje sin recalcular datos (a diferencia del de la serie temporal).
+  `HistoryDetailPage` pasa `mesInicioAnio` a `Etapa1ResultView` y muestra
+  un banner de estado vacío explícito para análisis persistidos antes de
+  la migración `005` (`timestamps === null` como señal exacta, sin
+  backfill). Verificado: `npm test` 227 passed (+15), delta de bundle
+  +1.3 kB gzip; smoke test manual en el navegador de dev contra el backend
+  real (CU-01, usuario de prueba verificado y borrado al cerrar): login,
+  historial listando el análisis persistido, detalle con los tres
+  gráficos reales — boxplot con 12 cajas reales, orden "Jul..Jun" por
+  default y "Ene..Dic" al togglear "Calendario" (confirmado con
+  `aria-pressed`); estado vacío verificado con un registro sintético
+  (`timestamps=NULL` vía `psql`, clonado y borrado después) confirmando
+  que el banner aparece.
+
+**Cierre:** fila FE-16 de `pendientes-tecnicos.md` tachada con fecha y qué
+la cerró (ver esa entrada); fila del caveat de compose de producción
+(anotada en el PR 1) queda abierta, no urgente. `docs/plan-cierre-pendientes-no-test.md`
+borrado en el mismo commit que esta sección.
+
+---
+
 ## Decisiones pendientes — no implementar hasta confirmar
 
 - **Partición de Cramer personalizada** — inalcanzable hoy por el endpoint
