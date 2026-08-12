@@ -4,6 +4,18 @@ import pytest
 from metis.core.pipeline import ejecutar_etapa1
 
 
+def _fechas_mensuales(anio_inicio: int, mes_inicio: int, cantidad: int) -> list[str]:
+    fechas = []
+    anio, mes = anio_inicio, mes_inicio
+    for _ in range(cantidad):
+        fechas.append(f"{anio:04d}-{mes:02d}-01")
+        mes += 1
+        if mes > 12:
+            mes = 1
+            anio += 1
+    return fechas
+
+
 # Serie que produce nivel_confianza="validado" — todas las pruebas aprueban.
 # numpy seed=9, uniform(10, 100), n=50. Seed 1 fue descartada (Helmert rechaza
 # con criterio directo |S-C| ≤ √(n-1): margen=0). Seed 9: margen=6 (holgado).
@@ -133,3 +145,78 @@ def test_t_student_usa_particion_mitad_mitad_no_particion_cramer():
     assert t_student.estadistico == pytest.approx(-1.7643, abs=1e-3)
     assert t_student.valor_critico == pytest.approx(2.0739, abs=1e-3)
     assert t_student.veredicto == "aprobada"
+
+
+# ── Agregación temporal (Bloque F4) ───────────────────────────────────────────
+
+
+@pytest.mark.unit
+def test_resolucion_anual_serie_efectiva_es_la_serie_de_entrada():
+    # Sin agregación (resolucion_temporal="anual"), serie_efectiva /
+    # timestamps_efectivos tienen que reflejar exactamente lo que entró —
+    # comportamiento idéntico al de antes del Bloque F4.
+    resultado = ejecutar_etapa1(SERIE_VALIDADA, "otro", "anual")
+    assert resultado.serie_efectiva == SERIE_VALIDADA
+
+
+@pytest.mark.unit
+def test_serie_mensual_con_anios_completos_se_agrega_antes_de_las_pruebas():
+    # F2.1 — 12 años completos (144 meses) mensuales, mes_inicio=1: el
+    # pipeline tiene que correr sobre los 12 máximos anuales, no sobre los
+    # 144 valores mensuales crudos.
+    timestamps = _fechas_mensuales(2000, 1, 144)
+    serie = [float(i % 12) + (i // 12) for i in range(144)]  # valores variados
+
+    resultado = ejecutar_etapa1(
+        serie,
+        "otro",
+        resolucion_temporal="mensual",
+        timestamps=timestamps,
+        mes_inicio_anio=1,
+    )
+
+    assert resultado.contract.bloqueante is False
+    assert len(resultado.serie_efectiva) == 12
+    assert resultado.timestamps_efectivos == list(range(2000, 2012))
+
+
+@pytest.mark.unit
+def test_serie_mensual_con_recorte_emite_warning_partial_years_trimmed():
+    # 11 años completos + 3 meses sueltos al final (año 12 incompleto,
+    # mes_inicio=1) -> se recorta, con warning no bloqueante.
+    timestamps = _fechas_mensuales(2000, 1, 11 * 12 + 3)
+    serie = [float(i) for i in range(len(timestamps))]
+
+    resultado = ejecutar_etapa1(
+        serie,
+        "otro",
+        resolucion_temporal="mensual",
+        timestamps=timestamps,
+        mes_inicio_anio=1,
+    )
+
+    assert resultado.contract.bloqueante is False
+    assert len(resultado.serie_efectiva) == 11
+    codigos = [w.codigo for w in resultado.warnings]
+    assert "CONTRACT_PARTIAL_YEARS_TRIMMED" in codigos
+
+
+@pytest.mark.unit
+def test_recorte_mensual_que_deja_n_menor_a_10_es_bloqueante():
+    # F7 — el recorte ocurre ANTES del conteo de la regla de n: 8 años
+    # completos agregados (n=8 < 10) tienen que bloquear con
+    # CONTRACT_SERIES_TOO_SHORT, igual que cualquier otra serie corta.
+    timestamps = _fechas_mensuales(2000, 1, 8 * 12)
+    serie = [float(i) for i in range(len(timestamps))]
+
+    resultado = ejecutar_etapa1(
+        serie,
+        "otro",
+        resolucion_temporal="mensual",
+        timestamps=timestamps,
+        mes_inicio_anio=1,
+    )
+
+    assert resultado.contract.bloqueante is True
+    assert resultado.contract.codigo_error == "CONTRACT_SERIES_TOO_SHORT"
+    assert resultado.nivel_confianza == "rechazado"

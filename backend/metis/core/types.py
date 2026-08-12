@@ -66,6 +66,18 @@ class Etapa1Result:
     )  # "homogeneidad_ok" | "homogeneidad_warning" | "homogeneidad_critica"
     nivel_confianza: str  # "validado" | "con_warnings" | "rechazado"
     warnings: list[WarningItem] = field(default_factory=list)
+    # Bloque F4 (agregación temporal) — la serie y los timestamps sobre los
+    # que realmente corrió la batería estadística: iguales a los de entrada
+    # si resolucion_temporal era "anual" (nada que agregar); la serie de
+    # máximos anuales y sus año-etiqueta si era "mensual". services/ usa
+    # esto (no la serie cruda de entrada) para todo lo que pasa DESPUÉS de
+    # Etapa 1 — mapeo de índice de Chow, Etapa 2 — porque una vez agregada,
+    # el resto del pipeline razona en el dominio anual, no en el mensual
+    # crudo. `analyses.serie` en la persistencia sigue siendo la serie
+    # cruda subida por el usuario — es otro campo, con otro propósito
+    # (auditoría de lo que se subió, no de lo que se analizó).
+    serie_efectiva: list[float] = field(default_factory=list)
+    timestamps_efectivos: list | None = None
 
 
 @dataclass

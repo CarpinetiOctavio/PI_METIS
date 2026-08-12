@@ -17,6 +17,18 @@ juntos). Seguimiento de cuándo se cierra cada uno en
 completo de los cuatro niveles — léase como objetivo, no como inventario
 de lo que ya existe.
 
+**Corrección 12/08/2026 (Kevin, rediseño del Bloque F del plan de
+implementación de Etapa 2):** `tests/regression/` ya no forma parte de este
+plan — los tests de regresión matemática contra la tesis los lleva Octavio
+por su lado. Sigue vacío en el repo, pero no está huérfano: `docs/plan-etapa2-implementacion.md`
+§6 queda como insumo para ese trabajo, no como una tarea pendiente de este
+frente. `tests/integration/` sumó dos archivos más en el Bloque F3-F4
+(agregación temporal, DECISIÓN 057) — el segundo con nombre expresamente
+elegido para dejar constancia del bug real que encontró: rechazar un
+atípico de Chow sobre una serie mensual agregada requiere que el índice se
+mapee contra la serie agregada (`Etapa1Result.serie_efectiva`), no contra la
+serie mensual cruda.
+
 ### 1. Tests unitarios del core estadístico
 
 Viven en `tests/unit/core/`. Testean funciones puras de `metis/core/` sin levantar la app.

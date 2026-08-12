@@ -94,6 +94,7 @@ function buildFormData(form: AnalysisStreamForm): FormData {
   body.append("modo", form.modo);
   body.append("cramer_particion", form.cramer_particion ?? "default");
   body.append("etapas", form.etapas ?? "1");
+  body.append("mes_inicio_anio", String(form.mes_inicio_anio ?? 7));
   return body;
 }
 

@@ -334,6 +334,7 @@ async def stream_analysis(
     session_id: str,
     user_id: uuid.UUID | None,
     db: AsyncSession,
+    mes_inicio_anio: int = 7,
 ) -> AsyncGenerator[str, None]:
     # DECISIÓN 054 — etapas ya llega validado y parseado desde el borde del
     # endpoint. Con etapas == [1] todo lo de abajo se comporta exactamente
@@ -358,6 +359,7 @@ async def stream_analysis(
             resolucion_temporal=parsed.resolucion_temporal,
             timestamps=parsed.timestamps,
             cramer_particion=cramer_particion,
+            mes_inicio_anio=mes_inicio_anio,
         )
 
         for evento in _emitir_resultado(result, iteracion=1):
@@ -367,10 +369,21 @@ async def stream_analysis(
             yield _sse("complete", {"analysis_id": None})
             return
 
+        # Bloque F4 — de acá en más, todo lo que sigue (mapeo de índice de
+        # Chow, Etapa 2) razona sobre serie_efectiva: la serie tal como
+        # ejecutar_etapa1() la analizó de verdad — igual a serie_original si
+        # resolucion_temporal era "anual" (nada que agregar), o los máximos
+        # anuales agregados si era "mensual". serie_original en sí NO se
+        # reasigna: sigue siendo la serie cruda tal como se subió, para
+        # _persistir() más abajo (auditoría de lo que el usuario subió, no
+        # de lo que se analizó).
+        serie_efectiva = result.serie_efectiva
+        timestamps_efectivos = result.timestamps_efectivos
+
         # Chow detectó atípico — pausar y esperar decisión (CU-01 y CU-02)
         valor_atipico = _extraer_atipico(result)
         result_final = result
-        serie_final = serie_original
+        serie_final = serie_efectiva
 
         if valor_atipico is not None:
             yield _sse(
@@ -399,16 +412,19 @@ async def stream_analysis(
             if decision == "rechazar":
                 indice_atipico = _extraer_indice_atipico(result)
                 indice_real = _mapear_indice_a_serie_original(
-                    indice_atipico, serie_original
+                    indice_atipico, serie_efectiva
                 )
-                serie_filtrada = serie_original.copy()
+                serie_filtrada = serie_efectiva.copy()
                 del serie_filtrada[indice_real]
 
                 result_final = ejecutar_etapa1(
                     serie=serie_filtrada,
                     tipo_variable=tipo_variable,
-                    resolucion_temporal=parsed.resolucion_temporal,
-                    timestamps=parsed.timestamps,
+                    # "anual" forzado, no parsed.resolucion_temporal — si era
+                    # "mensual", serie_efectiva ya es la agregada, no
+                    # corresponde volver a agregarla.
+                    resolucion_temporal="anual",
+                    timestamps=timestamps_efectivos,
                     cramer_particion=cramer_particion,
                 )
                 serie_final = serie_filtrada
@@ -565,6 +581,7 @@ async def stream_analysis(
                 tipo_variable=tipo_variable,
                 modo=modo,
                 cramer_particion=cramer_particion,
+                mes_inicio_anio=mes_inicio_anio,
                 etapas=etapas,
                 result=result_final,
                 etapa2_result=etapa2_result,
@@ -586,6 +603,7 @@ async def _persistir(
     tipo_variable: str,
     modo: str,
     cramer_particion: dict | str,
+    mes_inicio_anio: int,
     etapas: list[int],
     result: Etapa1Result,
     etapa2_result: Etapa2Result | None,
@@ -598,7 +616,14 @@ async def _persistir(
         tipo_variable=tipo_variable,
         etapas=[str(e) for e in etapas],
         modo=modo,
-        configuracion={"cramer_particion": cramer_particion},
+        # mes_inicio_anio (Bloque F3) no es opcional acá — dos análisis
+        # sobre el mismo archivo con meses distintos dan series y
+        # resultados distintos; sin guardarlo, el historial de CU-01
+        # muestra un resultado que no se puede volver a producir.
+        configuracion={
+            "cramer_particion": cramer_particion,
+            "mes_inicio_anio": mes_inicio_anio,
+        },
     )
     db.add(analysis)
     await db.flush()  # genera analysis.id sin cerrar la transacción
