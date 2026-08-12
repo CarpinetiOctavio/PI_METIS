@@ -102,6 +102,45 @@ export interface TestResultDetail {
   n1: number | null;
   n2: number | null;
   valor_atipico: number | null;
+  // PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058) — ya
+  // existía en el backend (TestResult), nunca se serializaba.
+  indice_atipico: number | null;
+}
+
+// Timestamp normalizado — PR 3 (DECISIÓN 058 §4.4): siempre ISO-8601 str +
+// `anio` propio, sin importar si el dato de origen era str/int/pd.Timestamp
+// (sin agregación) o list[int] de año-etiqueta (con agregación).
+export interface TimestampNormalizado {
+  iso: string;
+  anio: number;
+}
+
+// Segunda agregación (mes_inicio=1), con sus PROPIOS timestamps — PR 4,
+// corrección sobre DECISIÓN 058: puede tener más o menos puntos que
+// serie_efectiva (otro mes_inicio, otro criterio de qué período queda
+// completo), nunca se puede asumir el mismo eje X.
+export interface SerieCalendario {
+  serie: number[];
+  timestamps: TimestampNormalizado[];
+}
+
+// Bloque "datos" de result_etapa1 — PR 3 del plan de cierre de pendientes
+// no-test (DECISIÓN 058). Ver .claude/rules/core/statistical-pipeline.md
+// para el detalle completo de cada campo.
+export interface Etapa1Datos {
+  resolucion_original: "anual" | "mensual" | null;
+  serie_efectiva: number[];
+  timestamps_efectivos: TimestampNormalizado[] | null;
+  // Solo presentes si resolucion_original === "mensual" — con carga anual
+  // son idénticos a los _efectiva, el backend no los duplica.
+  serie_original: number[] | null;
+  timestamps_originales: TimestampNormalizado[] | null;
+  // Ya mapeado a posición en serie_efectiva — null si no hay atípico (o si
+  // el usuario ya lo rechazó en una iteración anterior del stream).
+  indice_atipico: number | null;
+  // null si no hubo agregación real o si mes_inicio_anio ya era 1
+  // (DECISIÓN 058 §3, solo para presentación).
+  serie_calendario: SerieCalendario | null;
 }
 
 export interface DescriptiveStats {
@@ -136,6 +175,10 @@ export interface Etapa1Result {
   // nota sobre result_etapa1 (el stream corta antes en contract_error).
   nivel_confianza: "validado" | "con_warnings" | "rechazado";
   warnings: WarningItem[];
+  // Opcional — el historial persistido antes de la migración 005 no lo
+  // trae (sin backfill, DECISIÓN 058 §4). Sin este campo, la sección de
+  // gráficos de Etapa1ResultView no se renderiza.
+  datos?: Etapa1Datos;
 }
 
 // --- Eventos SSE — union discriminada por `type`. Todos llevan `iteracion`

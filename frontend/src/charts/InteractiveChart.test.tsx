@@ -232,4 +232,74 @@ describe("InteractiveChart", () => {
 
     expect(screen.getByRole("img", { name: "Vacío" })).toBeInTheDocument();
   });
+
+  // PR 4 del plan de cierre de pendientes no-test — xScale="linear" para
+  // los gráficos de Etapa 1 con eje de año. Años reales están MUY cerca en
+  // términos de razón (2010/2000 ≈ 1.005, muy por debajo de MIN_SPAN_RATIO
+  // = 1.05): el guard de span mínimo de la escala log, aplicado sin
+  // querer a un eje lineal, habría rechazado CUALQUIER zoom por selección
+  // sobre un rango de años — incluso el dominio completo. Este test falla
+  // si spanTooSmall() no se bifurca por escala.
+  describe("xScale=\"linear\"", () => {
+    function serieAnual(): ChartSeries[] {
+      return [
+        {
+          id: "serie",
+          kind: "points",
+          label: "Serie",
+          colorVar: "--acc",
+          data: [
+            { x: 2000, y: 10 },
+            { x: 2010, y: 20 },
+          ],
+        },
+      ];
+    }
+
+    it("renders with a linear x-axis and shows the exact year in the tooltip", () => {
+      const { container } = render(
+        <InteractiveChart
+          series={serieAnual()}
+          xScale="linear"
+          ariaLabel="Serie anual"
+          xLabel="Año"
+          yLabel="Valor"
+        />,
+      );
+
+      // Dominio con padding lineal: [1999.5, 2010.5], span=11.
+      // plotX(2000) = (2000-1999.5)/11 * 564 ≈ 25.6
+      const capture = container.querySelector(".interactive-chart__capture") as Element;
+      fireEvent.mouseMove(capture, { clientX: clientXFor(25.6) });
+
+      const tooltip = container.querySelector(".interactive-chart__tooltip");
+      expect(tooltip).toBeInTheDocument();
+      expect(within(tooltip as HTMLElement).getByText("T = 2000")).toBeInTheDocument();
+    });
+
+    it("drag-select over a close-together year range still zooms (ratio-based guard would reject it)", () => {
+      const { container } = render(
+        <InteractiveChart
+          series={serieAnual()}
+          xScale="linear"
+          ariaLabel="Serie anual"
+          xLabel="Año"
+          yLabel="Valor"
+        />,
+      );
+
+      const capture = container.querySelector(".interactive-chart__capture") as Element;
+      const reset = screen.getByRole("button", { name: "Restablecer zoom" });
+      expect(reset).toBeDisabled();
+
+      // Selección de casi todo el ancho del plot — en escala log, la razón
+      // hi/lo de este rango de años (≈1.005) está muy por debajo de 1.05 y
+      // el zoom quedaría siempre rechazado.
+      fireEvent.mouseDown(capture, { clientX: clientXFor(10) });
+      fireEvent.mouseMove(capture, { clientX: clientXFor(550) });
+      fireEvent.mouseUp(capture);
+
+      expect(reset).toBeEnabled();
+    });
+  });
 });

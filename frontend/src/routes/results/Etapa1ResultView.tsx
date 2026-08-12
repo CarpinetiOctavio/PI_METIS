@@ -2,6 +2,8 @@ import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
 import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import { CountUp } from "../../components/CountUp";
+import { Etapa1SerieTemporalChart } from "./Etapa1SerieTemporalChart";
+import { Etapa1ChowChart } from "./Etapa1ChowChart";
 import "./Etapa1ResultView.css";
 
 interface Group {
@@ -200,6 +202,19 @@ export function Etapa1ResultView({
           {mesInicioAnio !== undefined && (
             <p className="fn">{notaCriterioAnio(mesInicioAnio)}</p>
           )}
+        </div>
+      )}
+
+      {/* PR 4 del plan de cierre de pendientes no-test — sin result.datos
+          (historial persistido antes de la migración 005, DECISIÓN 058 §4)
+          esta sección no se renderiza, sin nota de reemplazo acá: el
+          estado vacío completo (con la nota explicando por qué) es
+          responsabilidad de HistoryDetailPage (PR 5), no de este
+          componente presentacional puro. */}
+      {result.datos && (
+        <div className="stack" style={{ marginTop: 14 }}>
+          <Etapa1SerieTemporalChart datos={result.datos} />
+          <Etapa1ChowChart datos={result.datos} mesInicioAnio={mesInicioAnio} />
         </div>
       )}
 

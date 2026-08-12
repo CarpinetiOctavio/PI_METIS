@@ -10,10 +10,15 @@ import "./InteractiveChart.css";
  * real (no canvas) para que los tests puedan verificar el DOM que ve el
  * usuario, zoom/tooltip/teclado escritos a mano.
  *
- * Eje X siempre logarítmico (T, período de retorno) — es el único uso que
- * tienen los dos gráficos de Etapa 2 (docs/plan-etapa2-implementacion.md
- * §5). Si en algún momento hace falta un eje lineal, agregar la opción acá
- * en vez de duplicar el componente.
+ * Eje X logarítmico por default (T, período de retorno) — el único uso que
+ * tenían los dos gráficos de Etapa 2 hasta el PR 4 del plan de cierre de
+ * pendientes no-test. `xScale="linear"` lo agrega ese PR para los gráficos
+ * de Etapa 1 con eje de año (serie temporal, gráfico de Chow) — cumple lo
+ * que este mismo docstring pedía: agregar la opción acá, no duplicar el
+ * componente. El cálculo de dominio, zoom (rueda y selección) y distancia
+ * de hover se bifurcan según la escala — una razón multiplicativa (T
+ * nunca es 0, tiene sentido con ratios) no sirve para años, que pueden
+ * estar cerca de 0 o repartirse con espaciado lineal.
  */
 
 export interface ChartPoint {
@@ -37,11 +42,13 @@ interface InteractiveChartProps {
   xTickFormat?: (v: number) => string;
   yTickFormat?: (v: number) => string;
   height?: number;
+  xScale?: "log" | "linear";
 }
 
 const VIEW_W = 640;
 const MARGIN = { top: 12, right: 16, bottom: 40, left: 60 };
-const MIN_SPAN_RATIO = 1.05; // no permite zoom infinito
+const MIN_SPAN_RATIO = 1.05; // no permite zoom infinito — escala log (ratio)
+const MIN_SPAN_FRACTION_LINEAR = 0.01; // análogo para escala lineal (fracción del dominio completo)
 const WHEEL_ZOOM_IN = 0.8;
 const WHEEL_ZOOM_OUT = 1.25;
 
@@ -57,6 +64,7 @@ export function InteractiveChart({
   xTickFormat = defaultTickFormat,
   yTickFormat = defaultTickFormat,
   height = 320,
+  xScale: xScaleType = "log",
 }: Readonly<InteractiveChartProps>) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [xOverride, setXOverride] = useState<[number, number] | null>(null);
@@ -74,12 +82,20 @@ export function InteractiveChart({
   const allPoints = useMemo(() => series.flatMap((s) => s.data), [series]);
 
   const fullXDomain = useMemo((): [number, number] => {
+    if (xScaleType === "linear") {
+      const xs = allPoints.map((p) => p.x);
+      if (xs.length === 0) return [0, 1];
+      const lo = Math.min(...xs);
+      const hi = Math.max(...xs);
+      const pad = (hi - lo) * 0.05 || Math.abs(hi) * 0.05 || 1;
+      return [lo - pad, hi + pad];
+    }
     const xs = allPoints.map((p) => p.x).filter((x) => x > 0);
     if (xs.length === 0) return [1.01, 10];
     const lo = Math.min(...xs);
     const hi = Math.max(...xs);
     return lo === hi ? [lo / 1.1, hi * 1.1] : [lo / 1.05, hi * 1.05];
-  }, [allPoints]);
+  }, [allPoints, xScaleType]);
 
   const yDomain = useMemo((): [number, number] => {
     const ys = allPoints.map((p) => p.y);
@@ -93,8 +109,12 @@ export function InteractiveChart({
   const xDomain = xOverride ?? fullXDomain;
 
   const xScale = useMemo(
-    () => scaleLog().domain(xDomain).range([0, plotWidth]).clamp(true),
-    [xDomain, plotWidth],
+    () =>
+      (xScaleType === "linear" ? scaleLinear() : scaleLog())
+        .domain(xDomain)
+        .range([0, plotWidth])
+        .clamp(true),
+    [xDomain, plotWidth, xScaleType],
   );
   const yScale = useMemo(
     () => scaleLinear().domain(yDomain).range([plotHeight, 0]),
@@ -119,8 +139,30 @@ export function InteractiveChart({
     return svgX - MARGIN.left;
   }
 
+  // Guard de span mínimo — evita zoom infinito. Escala log compara por
+  // razón (T nunca es 0, tiene sentido dividir); escala lineal compara por
+  // fracción del dominio completo (un año puede estar cerca de 0 o
+  // repartirse con espaciado parejo, dividir no tiene el mismo sentido).
+  function spanTooSmall(lo: number, hi: number): boolean {
+    if (xScaleType === "linear") {
+      const fullSpan = fullXDomain[1] - fullXDomain[0];
+      return hi - lo < fullSpan * MIN_SPAN_FRACTION_LINEAR;
+    }
+    return hi / lo < MIN_SPAN_RATIO;
+  }
+
   function zoomAround(centerValue: number, factor: number) {
     const [lo, hi] = xDomain;
+    if (xScaleType === "linear") {
+      const c = Math.min(Math.max(centerValue, lo), hi);
+      let newLo = c - (c - lo) * factor;
+      let newHi = c + (hi - c) * factor;
+      newLo = Math.max(newLo, fullXDomain[0]);
+      newHi = Math.min(newHi, fullXDomain[1]);
+      if (spanTooSmall(newLo, newHi)) return;
+      setXOverride([newLo, newHi]);
+      return;
+    }
     if (centerValue <= 0) return;
     const logLo = Math.log(lo);
     const logHi = Math.log(hi);
@@ -129,7 +171,7 @@ export function InteractiveChart({
     let newHi = Math.exp(logC + (logHi - logC) * factor);
     newLo = Math.max(newLo, fullXDomain[0]);
     newHi = Math.min(newHi, fullXDomain[1]);
-    if (newHi / newLo < MIN_SPAN_RATIO) return;
+    if (spanTooSmall(newLo, newHi)) return;
     setXOverride([newLo, newHi]);
   }
 
@@ -154,7 +196,7 @@ export function InteractiveChart({
     svg.addEventListener("wheel", onWheel, { passive: false });
     return () => svg.removeEventListener("wheel", onWheel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [xDomain, fullXDomain, plotWidth]);
+  }, [xDomain, fullXDomain, plotWidth, xScaleType]);
 
   function handleMouseDown(event: ReactMouseEvent<SVGRectElement>) {
     const rect = svgRef.current?.getBoundingClientRect();
@@ -173,7 +215,7 @@ export function InteractiveChart({
     }
     const clamped = Math.min(Math.max(plotX, 0), plotWidth);
     const hoverValue = xScale.invert(clamped);
-    const nearest = findNearestByX(allPointsWithSeries(series), hoverValue);
+    const nearest = findNearestByX(allPointsWithSeries(series), hoverValue, xScaleType);
     setHover(nearest);
   }
 
@@ -185,7 +227,7 @@ export function InteractiveChart({
     if (x2 - x1 < 8) return; // umbral mínimo — un click no dispara zoom
     const domLo = xScale.invert(Math.min(Math.max(x1, 0), plotWidth));
     const domHi = xScale.invert(Math.min(Math.max(x2, 0), plotWidth));
-    if (domHi / domLo < MIN_SPAN_RATIO) return;
+    if (spanTooSmall(domLo, domHi)) return;
     setXOverride([domLo, domHi]);
   }
 
@@ -388,15 +430,18 @@ function allPointsWithSeries(
 function findNearestByX(
   candidates: { point: ChartPoint; series: ChartSeries }[],
   value: number,
+  scaleType: "log" | "linear",
 ): { point: ChartPoint; series: ChartSeries } | null {
   if (candidates.length === 0) return null;
+  const dist = (x: number) =>
+    scaleType === "linear" ? Math.abs(x - value) : Math.abs(Math.log(x) - Math.log(value));
   let best = candidates[0];
-  let bestDist = Math.abs(Math.log(best.point.x) - Math.log(value));
+  let bestDist = dist(best.point.x);
   for (const candidate of candidates.slice(1)) {
-    const dist = Math.abs(Math.log(candidate.point.x) - Math.log(value));
-    if (dist < bestDist) {
+    const d = dist(candidate.point.x);
+    if (d < bestDist) {
       best = candidate;
-      bestDist = dist;
+      bestDist = d;
     }
   }
   return best;
