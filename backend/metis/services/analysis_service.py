@@ -13,7 +13,8 @@ from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
 from metis.core.pipeline.pipeline_etapa2 import _DISTRIBUCIONES
 from metis.core.types import Etapa1Result
 from metis.core.utils import es_numerico, filtrar_numericos
-from metis.core.validacion.parser import parse_file
+from metis.core.validacion.aggregation import agregar_a_maximos_anuales
+from metis.core.validacion.parser import parse_file, parsear_timestamps
 from metis.db.models import Analysis, AnalysisResult
 from metis.services import session_store
 
@@ -24,7 +25,56 @@ def _sse(tipo: str, payload: dict) -> str:
     return f"event: {tipo}\ndata: {json.dumps(payload)}\n\n"
 
 
-def _serializar_etapa1(result: Etapa1Result) -> dict:
+def _serializar_timestamps(
+    timestamps: list | None, *, agregados: bool
+) -> list[dict] | None:
+    """Normaliza timestamps_efectivos/timestamps_originales a una forma
+    única — PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058,
+    §4.4). Sin agregación es la lista cruda del parser (str/int/pd.Timestamp
+    heterogéneos); agregada es list[int] (año-etiqueta de
+    agregar_a_maximos_anuales()). Serializar cualquiera de las dos tal cual
+    manda JSON inconsistente al frontend según de dónde vino el archivo —
+    acá siempre se emite ISO-8601 str, más `anio` como campo propio para que
+    el gráfico de serie anual rotule por año, no por fecha completa.
+    """
+    if timestamps is None:
+        return None
+    if agregados:
+        return [{"iso": f"{anio}-01-01", "anio": int(anio)} for anio in timestamps]
+    parsed = parsear_timestamps(timestamps)
+    return [{"iso": ts.strftime("%Y-%m-%d"), "anio": int(ts.year)} for ts in parsed]
+
+
+def _calcular_serie_calendario(
+    result: Etapa1Result, mes_inicio_anio: int
+) -> list[float] | None:
+    """Segunda agregación, mes_inicio=1, SOLO para presentación — DECISIÓN
+    058 §3. No toca Etapa1Result ni ninguna prueba estadística, corre aparte
+    después de que Etapa 1 ya terminó. None si no hubo agregación real
+    (carga anual, nada que comparar) o si mes_inicio_anio ya es 1 (la
+    versión configurada YA ES la calendario, no se manda dos veces lo
+    mismo).
+    """
+    if result.resolucion_original != "mensual" or mes_inicio_anio == 1:
+        return None
+    agregacion = agregar_a_maximos_anuales(
+        result.serie_original, result.timestamps_originales, mes_inicio=1
+    )
+    return agregacion.serie
+
+
+def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
+    """mes_inicio_anio como segundo argumento, no `parsed: ParsedData`
+    completo (alternativa evaluada y descartada — PR 3 del plan de cierre
+    de pendientes no-test): _persistir() también llama a esta función, y
+    arrastrar el ParsedData completo por los dos caminos solo para leer un
+    entero sería peor que el problema que resuelve. serie_original/
+    timestamps_originales/resolucion_original SÍ viajan enteros dentro de
+    `result` (Etapa1Result los expone desde DECISIÓN 058) — mes_inicio_anio
+    es la única pieza que Etapa1Result no tiene motivo para cargar (es un
+    parámetro del request, no del análisis en sí).
+    """
+
     def test_result_dict(tr) -> dict:
         return {
             "prueba": tr.prueba,
@@ -36,10 +86,38 @@ def _serializar_etapa1(result: Etapa1Result) -> dict:
             "n1": tr.n1,
             "n2": tr.n2,
             "valor_atipico": tr.valor_atipico,
+            "indice_atipico": tr.indice_atipico,
         }
 
     def warning_dict(w) -> dict:
         return {"codigo": w.codigo, "nivel": w.nivel, "descripcion": w.descripcion}
+
+    hubo_agregacion = result.resolucion_original == "mensual"
+
+    # Bloque F5/PR3 (DECISIÓN 058 §5) — indice_atipico ya viaja en
+    # serie_efectiva-space: calcular_chow() corre sobre valores_numericos,
+    # que dentro de ejecutar_etapa1() ES serie_efectiva (misma lista, sin
+    # otro filtrado de por medio). No hace falta un mapeo adicional acá.
+    indice_atipico = _extraer_indice_atipico(result)
+
+    datos = {
+        "resolucion_original": result.resolucion_original,
+        "serie_efectiva": result.serie_efectiva,
+        "timestamps_efectivos": _serializar_timestamps(
+            result.timestamps_efectivos, agregados=hubo_agregacion
+        ),
+        # serie_original/timestamps_originales solo si hubo agregación real
+        # — con carga anual son idénticos a los _efectiva, duplicarlos es
+        # peso muerto (DECISIÓN 058 §1).
+        "serie_original": result.serie_original if hubo_agregacion else None,
+        "timestamps_originales": (
+            _serializar_timestamps(result.timestamps_originales, agregados=False)
+            if hubo_agregacion
+            else None
+        ),
+        "indice_atipico": indice_atipico,
+        "serie_calendario": _calcular_serie_calendario(result, mes_inicio_anio),
+    }
 
     return {
         "contract": {
@@ -69,6 +147,7 @@ def _serializar_etapa1(result: Etapa1Result) -> dict:
         "nivel_homogeneidad": result.nivel_homogeneidad,
         "nivel_confianza": result.nivel_confianza,
         "warnings": [warning_dict(w) for w in result.warnings],
+        "datos": datos,
     }
 
 
@@ -427,13 +506,25 @@ async def stream_analysis(
                     timestamps=timestamps_efectivos,
                     cramer_particion=cramer_particion,
                 )
+                # PR 3 (DECISIÓN 058) — esta segunda ejecución corre sobre
+                # serie_filtrada (ya agregada), así que no tiene forma de
+                # conocer la serie mensual cruda original: sus propios
+                # serie_original/timestamps_originales/resolucion_original
+                # quedarían iguales a la entrada de ESTA llamada, no a la
+                # subida real del usuario. `result` (la primera ejecución,
+                # antes de que Chow pausara) es la única que los conoce de
+                # verdad — se copian acá para que el resultado final (el que
+                # se serializa y persiste) siga exponiendo el origen real.
+                result_final.serie_original = result.serie_original
+                result_final.timestamps_originales = result.timestamps_originales
+                result_final.resolucion_original = result.resolucion_original
                 serie_final = serie_filtrada
 
                 for evento in _emitir_resultado(result_final, iteracion=2):
                     yield evento
 
         # Emitir resultado final completo
-        yield _sse("result_etapa1", _serializar_etapa1(result_final))
+        yield _sse("result_etapa1", _serializar_etapa1(result_final, mes_inicio_anio))
 
         # Etapa 2 — DECISIÓN 052/055. Solo si el usuario la pidió y Etapa 1
         # no fue rechazada; RF-GEN-P-03: ningún nivel de warning bloquea,
@@ -578,6 +669,7 @@ async def stream_analysis(
             analysis_id = await _persistir(
                 user_id=user_id,
                 serie=serie_original,
+                timestamps=parsed.timestamps,
                 tipo_variable=tipo_variable,
                 modo=modo,
                 cramer_particion=cramer_particion,
@@ -600,6 +692,7 @@ async def stream_analysis(
 async def _persistir(
     user_id: uuid.UUID,
     serie: list[float],
+    timestamps: list | None,
     tipo_variable: str,
     modo: str,
     cramer_particion: dict | str,
@@ -613,6 +706,12 @@ async def _persistir(
     analysis = Analysis(
         user_id=user_id,
         serie=serie,
+        # PR 3 (DECISIÓN 058 §1) — timestamps de la serie tal como se
+        # subió, nunca agregados (a diferencia de datos.timestamps_efectivos
+        # del resultado, que sí puede traer año-etiqueta). Normalizado a
+        # ISO-8601 igual que timestamps_originales en _serializar_etapa1() —
+        # el driver JSONB no sabe serializar pd.Timestamp crudo.
+        timestamps=_serializar_timestamps(timestamps, agregados=False),
         tipo_variable=tipo_variable,
         etapas=[str(e) for e in etapas],
         modo=modo,
@@ -630,7 +729,7 @@ async def _persistir(
 
     analysis_result = AnalysisResult(
         analysis_id=analysis.id,
-        etapa1=_serializar_etapa1(result),
+        etapa1=_serializar_etapa1(result, mes_inicio_anio),
         etapa2=_serializar_etapa2(etapa2_result) if etapa2_result is not None else None,
         decisiones=decisiones,
     )
@@ -702,6 +801,16 @@ async def get_analysis_by_id(
         "created_at": analysis.created_at.isoformat(),
         "etapa1": result.etapa1,
         "etapa2": result.etapa2,
+        # PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058) —
+        # cierra el hueco que dejó anotado el PR 9 del plan de Etapa 2: sin
+        # `configuracion` acá, la nota de criterio de año de
+        # Etapa1ResultView nunca llegaba a HistoryDetailPage aunque
+        # mes_inicio_anio ya se persistía desde DECISIÓN 057. `serie`/
+        # `timestamps` son la entrada cruda auditada (analyses), no el
+        # resultado — ver DECISIÓN 058 §1 para la partición completa.
+        "serie": analysis.serie,
+        "timestamps": analysis.timestamps,
+        "configuracion": analysis.configuracion,
     }
 
 

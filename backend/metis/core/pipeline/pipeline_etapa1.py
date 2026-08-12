@@ -82,6 +82,16 @@ def ejecutar_etapa1(
     mes_inicio_anio: int = 7,
 ) -> Etapa1Result:
 
+    # Capturados ANTES del paso 0 — PR 3 del plan de cierre de pendientes
+    # no-test (DECISIÓN 058). serie/timestamps/resolucion_temporal se
+    # reasignan más abajo si hubo agregación; estas tres variables guardan
+    # los valores de entrada tal como llegaron, para que Etapa1Result
+    # pueda exponer la serie original sin que services/ tenga que volver
+    # a cargar el archivo.
+    serie_original = serie
+    timestamps_originales = timestamps
+    resolucion_original = resolucion_temporal
+
     # ── 0. Agregación temporal (Bloque F4) ────────────────────────────────────
     # Antes de validar_contrato() — así el conteo de la regla de n opera ya
     # sobre la serie agregada, y una serie mensual nunca corre la batería
@@ -119,6 +129,9 @@ def ejecutar_etapa1(
             warnings=warnings_agregacion + contract.warnings,
             serie_efectiva=filtrar_numericos(serie),
             timestamps_efectivos=timestamps,
+            serie_original=serie_original,
+            timestamps_originales=timestamps_originales,
+            resolucion_original=resolucion_original,
         )
 
     # Serie filtrada — solo valores numéricos para todas las pruebas
@@ -189,4 +202,7 @@ def ejecutar_etapa1(
         warnings=warnings,
         serie_efectiva=valores_numericos,
         timestamps_efectivos=timestamps,
+        serie_original=serie_original,
+        timestamps_originales=timestamps_originales,
+        resolucion_original=resolucion_original,
     )

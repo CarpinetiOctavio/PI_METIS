@@ -193,11 +193,15 @@ last_login     TIMESTAMP
 id             UUID PRIMARY KEY DEFAULT gen_random_uuid()
 user_id        UUID REFERENCES users(id) ON DELETE CASCADE
 serie          JSONB NOT NULL        -- array numérico completo
+timestamps     JSONB                 -- migración 005 (DECISIÓN 058) — timestamps de `serie`
+                                      -- tal como se subió, ISO-8601; NULL sin backfill en filas
+                                      -- previas a esta migración
 tipo_variable  VARCHAR(50) NOT NULL  -- caudal_precipitacion | otro
 etapas         VARCHAR[]             -- {1} | {1,2}
 modo           VARCHAR(20)           -- paso_a_paso | experto
-configuracion  JSONB                 -- partición Cramer, decisiones contrato
+configuracion  JSONB                 -- partición Cramer, mes_inicio_anio, decisiones contrato
 created_at     TIMESTAMP DEFAULT NOW()
+archivado_at   TIMESTAMP             -- migración 004 (DECISIÓN 048) — soft-delete, NULL si no archivado
 ```
 
 ### Tabla: analysis_results

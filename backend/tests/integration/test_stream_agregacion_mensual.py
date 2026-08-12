@@ -151,3 +151,25 @@ async def test_rechazar_atipico_sobre_serie_mensual_agregada_no_rompe_el_indice(
     # 14, o el atípico seguiría presente tras "rechazar").
     assert payload_final["descriptive"]["n"] == 14
     assert payload_final["descriptive"]["maximo"] < 1000.0
+
+    # PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058) — el
+    # bloque "datos" del resultado FINAL (la segunda ejecución de
+    # ejecutar_etapa1(), sobre la serie ya sin el atípico) tiene que seguir
+    # exponiendo la serie mensual cruda ORIGINAL, no la que vio esa segunda
+    # ejecución (que ya no tiene acceso a los datos mensuales — corre sobre
+    # serie_efectiva menos un punto). Sin el copiado explícito de
+    # serie_original/timestamps_originales desde la primera ejecución en
+    # stream_analysis(), este bloque quedaría con resolucion_original
+    # forzado a "anual" y sin la serie mensual — exactamente el hueco que
+    # bloqueaba el boxplot mensual (FE-16).
+    datos = payload_final["datos"]
+    assert datos["resolucion_original"] == "mensual"
+    assert datos["serie_original"] is not None
+    assert len(datos["serie_original"]) == 15 * 12  # los 180 meses crudos
+    assert len(datos["timestamps_originales"]) == 15 * 12
+    # serie_efectiva del resultado final: 14 años (post-rechazo), no 15.
+    assert len(datos["serie_efectiva"]) == 14
+    # No quedó ningún atípico nuevo tras rechazar el primero.
+    assert datos["indice_atipico"] is None
+    # mes_inicio_anio=1 en este test — la calendario ya ES la efectiva.
+    assert datos["serie_calendario"] is None
