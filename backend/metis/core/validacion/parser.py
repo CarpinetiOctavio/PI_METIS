@@ -79,21 +79,30 @@ def _resolver_columna(df: pd.DataFrame, columna: str) -> str | None:
 
 
 def _inferir_resolucion(timestamps: list) -> str | None:
+    # F2.3 (Bloque F, docs/plan-etapa2-implementacion.md §7) — antes usaba el
+    # PROMEDIO de los deltas entre timestamps consecutivos: (ts[-1]-ts[0])/(n-1).
+    # Un solo hueco largo en una serie mayormente mensual (un sensor caído
+    # varios meses, un año sin registro) arrastra el promedio hacia arriba y
+    # puede cruzar el umbral de "anual" aunque el espaciado real y dominante
+    # de la serie siga siendo mensual. La MODA de los deltas no se deja
+    # arrastrar por un outlier — refleja el espaciado que la serie realmente
+    # tiene la mayor parte del tiempo.
     if len(timestamps) < 2:
         return None
     try:
-        ts = _parsear_timestamps(timestamps)
-        delta = (ts[-1] - ts[0]) / (len(ts) - 1)
-        if delta.days >= 300:
+        ts = parsear_timestamps(timestamps)
+        deltas_dias = (ts[1:] - ts[:-1]).days
+        moda_dias = int(pd.Series(deltas_dias).mode().iloc[0])
+        if moda_dias >= 300:
             return "anual"
-        if delta.days >= 25:
+        if moda_dias >= 25:
             return "mensual"
         return None
     except Exception:
         return None
 
 
-def _parsear_timestamps(timestamps: list) -> pd.DatetimeIndex:
+def parsear_timestamps(timestamps: list) -> pd.DatetimeIndex:
     # Bug encontrado en verificación manual (05/08/2026): una columna de año
     # puro (ej. "anio": 1980, 1981, ...) es el caso MÁS común de este dominio
     # — series anuales de máximos hidrológicos, exactamente el formato de la
