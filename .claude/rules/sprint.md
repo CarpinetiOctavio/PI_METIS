@@ -914,7 +914,7 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   este bloque).
 
 - **PR 8 — Bloque F3-F4 (mes configurable, agregación y recorte, backend).**
-  EN CURSO. Cierra F2.1. Módulo nuevo `core/validacion/aggregation.py` —
+  Mergeado (#49, 12/08/2026). Cierra F2.1. Módulo nuevo `core/validacion/aggregation.py` —
   función pura `agregar_a_maximos_anuales(serie, timestamps, mes_inicio)`,
   sin conocimiento de HTTP ni BD. Etiqueta cada mes con el año-período al que
   pertenece (`mes >= mes_inicio → año actual, si no → año-1`), agrupa,
@@ -975,6 +975,49 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   CU-01 con `mes_inicio_anio=9`: `analyses.configuracion` confirmado con
   `psql` — `{"mes_inicio_anio": 9, "cramer_particion": "default"}`. Usuario
   y análisis de prueba borrados al cerrar la verificación.
+
+- **PR 9 — Bloque F5 (selector de mes y período efectivo, frontend).** EN
+  CURSO. Cierra el Bloque F completo (F2-F5) — sin cambios de backend, ese
+  trabajo ya estaba cerrado por el PR 8. `frontend/src/i18n/mesInicioAnio.ts`
+  nuevo — `etiquetaSelectorMes()`/`notaCriterioAnio()` compartidas entre
+  `ConfigPage` (texto del `<option>`) y `Etapa1ResultView` (nota de
+  resultados), para que ambos digan exactamente lo mismo.
+
+  **Selector en `ConfigPage`.** Doce opciones (`DOCE_MESES`), default 7
+  (julio, igual que el default del backend), siempre incluido en
+  `AnalysisStreamForm.mes_inicio_anio` — el backend ya lo ignora cuando la
+  resolución es anual (PR 8), así que el frontend no necesita replicar esa
+  lógica. Habilitado/deshabilitado según la columna X elegida: `esAnioPuro()`
+  (distinta de `pareceFechaOAnio()`, deliberadamente laxa y usada solo para
+  la preselección heurística) exige que las 4 muestras sean año puro
+  (`/^\d{4}$/`) antes de deshabilitar — con fecha completa, o sin preview
+  todavía (inputs de texto de respaldo), el selector queda habilitado por
+  default.
+
+  **Nota de "criterio de año" en resultados.** `Etapa1ResultView` gana el
+  prop opcional `mesInicioAnio` — sin él, la nota simplemente no se
+  renderiza. Solo viaja en la sesión interactiva (`ConfigPage` → `StreamPage`
+  → `ResultsPage` vía router state, mismo mecanismo que ya usaba `modo`) —
+  no llega a `HistoryDetailPage`, mismo límite ya aceptado para
+  `curva_ajuste` en el Bloque C: `analyses.configuracion` no viaja en la
+  respuesta de `GET /history/{id}` y exponerlo ahí es un cambio de contrato
+  de backend fuera del alcance de este PR (la fila de la tabla de PRs del
+  plan lo marca explícitamente "(frontend)"). El warning de recorte
+  (`CONTRACT_PARTIAL_YEARS_TRIMMED`) no necesitó ningún cambio — ya viajaba
+  con el período efectivo en su propio `descripcion`
+  (`_warnings_de_agregacion()`, PR 8) y `Etapa1ResultView` ya renderizaba
+  `warning.descripcion` tal cual en el banner genérico de warnings.
+
+  Verificado: `npx tsc -b`, `npm run lint`, `npm test` (201 tests, +5 sobre
+  el cierre del PR 8: 3 de `ConfigPage.test.tsx` sobre el selector
+  habilitado/deshabilitado/envío del mes elegido, 2 de `ResultsPage.test.tsx`
+  sobre la nota presente/ausente), `npm run build` — todos verdes. Backend
+  sin cambios — `pytest -m "unit or integration"` sigue en 272 passed, 1
+  skipped, re-verificado tras un restart de los contenedores Docker durante
+  esta sesión. Smoke test manual en el navegador de dev contra el backend
+  real: las 12 opciones del selector con el rótulo exacto esperado
+  ("Julio — el año va de julio a junio", etc.), default en julio confirmado
+  contra el DOM real.
 
 ---
 

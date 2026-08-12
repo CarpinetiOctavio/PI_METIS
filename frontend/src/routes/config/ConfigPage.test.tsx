@@ -128,6 +128,7 @@ describe("ConfigPage", () => {
       tipo_variable: "otro",
       modo: "experto",
       cramer_particion: "default",
+      mes_inicio_anio: 7,
     });
   });
 
@@ -367,5 +368,84 @@ describe("ConfigPage", () => {
 
     fireEvent.blur(selectX);
     expect(header).not.toHaveClass("column-preview-panel__col--activa");
+  });
+
+  // Bloque F5 del plan de Etapa 2 (DECISIÓN 057) — selector de mes de inicio.
+
+  it("deshabilita el selector de mes cuando la columna X elegida es un año puro", async () => {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "anio", indice: 0, muestra: ["1980", "1981", "1982"] },
+            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["anio,caudal\n1980,94.71\n"], "serie.csv", {
+      type: "text/csv",
+    });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    // La heurística preselecciona "anio" (año puro) en Columna X.
+    await screen.findByRole("combobox", { name: "Columna X" });
+    expect(screen.getByLabelText("Mes de inicio del año")).toBeDisabled();
+    expect(screen.getByText(/ya son años/)).toBeInTheDocument();
+  });
+
+  it("habilita el selector de mes cuando la columna X elegida es una fecha completa", async () => {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "fecha", indice: 0, muestra: ["1980-01-15", "1980-02-15"] },
+            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["fecha,caudal\n1980-01-15,94.71\n"], "serie.csv", {
+      type: "text/csv",
+    });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    await screen.findByRole("combobox", { name: "Columna X" });
+    expect(screen.getByLabelText("Mes de inicio del año")).toBeEnabled();
+  });
+
+  it("manda el mes elegido por el usuario en el form, no solo el default", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["1,100"], "serie.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+    fireEvent.change(screen.getByLabelText("Columna X"), { target: { value: "anio" } });
+    fireEvent.change(screen.getByLabelText("Columna Y"), { target: { value: "caudal" } });
+    fireEvent.change(screen.getByLabelText("Mes de inicio del año"), {
+      target: { value: "9" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
+    const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
+    expect(form.mes_inicio_anio).toBe(9);
   });
 });

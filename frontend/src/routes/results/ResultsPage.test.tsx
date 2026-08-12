@@ -87,7 +87,11 @@ function renderResultsPage(
   authed: boolean,
   result: Etapa1Result | undefined,
   modo?: Modo,
-  extra?: { etapa2?: Etapa2RankingState; eventosDiseno?: Etapa2EventosState },
+  extra?: {
+    etapa2?: Etapa2RankingState;
+    eventosDiseno?: Etapa2EventosState;
+    mesInicioAnio?: number;
+  },
 ) {
   if (authed) {
     stubMe(true, { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true });
@@ -204,6 +208,25 @@ describe("ResultsPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("gumbel")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Elegir" })).not.toBeInTheDocument();
+  });
+
+  // Bloque F5 del plan de Etapa 2 (DECISIÓN 057).
+  it("shows the criterio de año note when the router state carries mesInicioAnio", async () => {
+    renderResultsPage(true, makeResult(), "experto", { mesInicioAnio: 9 });
+    expect(
+      await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
+    ).toBeInTheDocument();
+
+    expect(screen.getByText(/Criterio de año: septiembre/)).toBeInTheDocument();
+  });
+
+  it("does not show the criterio de año note when mesInicioAnio is absent", async () => {
+    renderResultsPage(true, makeResult(), "experto");
+    expect(
+      await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
+    ).toBeInTheDocument();
+
+    expect(screen.queryByText(/Criterio de año/)).not.toBeInTheDocument();
   });
 
   it("shows the design events view when the router state carries eventosDiseno", async () => {

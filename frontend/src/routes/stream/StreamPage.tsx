@@ -414,6 +414,7 @@ export function StreamPage() {
                         modo: form.modo,
                         etapa2: state.etapa2,
                         eventosDiseno: state.eventosDiseno,
+                        mesInicioAnio: form.mes_inicio_anio,
                       },
                     })
                   }
