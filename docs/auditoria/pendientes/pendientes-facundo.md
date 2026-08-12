@@ -700,3 +700,39 @@ Actualmente ambas distribuciones tienen `METODOS_APLICABLES = ("momentos",
 "mv")` con estimadores idénticos.
 Pregunta: si Facundo confirma que deben listarse como un solo método,
 ¿corresponde eliminar "momentos" del tuple y dejar solo "mv"?
+
+## Bloque F del plan de Etapa 2 — agregación temporal (09/08/2026)
+
+Ver `docs/plan-etapa2-implementacion.md` §7 (F3-F6) para el detalle completo
+y `docs/decisiones/decision057.md` para la decisión de producto ya tomada
+(mes de inicio del año configurable, recorte de extremos parciales) — las
+tres preguntas de abajo NO bloquean esa parte, ya implementada. Solo
+bloquean el hueco interior y el caso `tipo_variable == "otro"`.
+
+### Hueco interior — ¿se descarta siempre, o hay un umbral de meses?
+Un año del medio al que le faltan meses (una estación fuera de servicio
+seis meses en 2007) no es lo mismo que un extremo parcial — recortarlo
+partiría el registro en dos. Implementado provisoriamente: se descarta
+cualquier año interior que no tenga los 12 meses completos, con
+`CONTRACT_INCOMPLETE_YEARS_DISCARDED`.
+Pregunta: ¿se descarta el año incompleto del medio sin excepción, o hay un
+umbral de meses mínimos (ej. ≥ 11 meses se acepta) por debajo del cual
+recién corresponde descartarlo?
+
+### Función de agregación para tipo_variable == "otro"
+`core/validacion/aggregation.py::agregar_a_maximos_anuales()` agrega
+siempre por máximo anual — correcto para `caudal_precipitacion` (es lo que
+hace la tesis) y para el análisis de frecuencia de eventos extremos en
+general.
+Pregunta: ¿el máximo anual es también la agregación correcta para
+`tipo_variable == "otro"`, o una variable arbitraria podría necesitar una
+función distinta (mínimo, media, etc.)?
+
+### Las 9 estaciones de la tesis — ¿con qué mes de inicio se armaron?
+No cambia la implementación de `aggregation.py` en sí, pero sí los fixtures
+de los tests de regresión (Bloque D, lo lleva Octavio): si las series de
+`docs/auditoria/regresion/regresion-e2e-coreEstadistico/` se armaron por
+año calendario, un test de regresión que agregue por julio no las
+reproduce.
+Pregunta: ¿con qué `mes_inicio_anio` se construyeron los máximos anuales de
+las 9 estaciones de la tesis — calendario (enero) u otro?

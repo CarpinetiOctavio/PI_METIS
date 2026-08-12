@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision056.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision057.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -171,3 +171,4 @@ situ.
 | [054](decision054.md) | `etapas` cableado de punta a punta — cierra DECISIÓN 037 | 09/08/2026 | Decidida — implementación en curso |
 | [055](decision055.md) | `full_pipeline.py` no se usa desde `services/`, y para qué queda | 09/08/2026 | Decidida — implementación en curso |
 | [056](decision056.md) | Gráficos interactivos de Etapa 2: `d3-scale` + `d3-shape` con SVG propio | 11/08/2026 | Decidida — implementación en curso |
+| [057](decision057.md) | Agregación temporal por año hidrológico configurable (`mes_inicio_anio`) | 12/08/2026 | Decidida — implementación en curso |
