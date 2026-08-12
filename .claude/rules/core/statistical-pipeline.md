@@ -12,6 +12,7 @@ Services/ orquesta el pipeline y emite eventos SSE. Core/ solo calcula.
 ### Orden de ejecución (fijo, no configurable)
 
 ```
+0. Agregación temporal (Bloque F4)         ← solo si resolucion_temporal=="mensual", antes de todo lo demás
 1. Validación del contrato de datos        ← primera barrera, puede ser bloqueante
 2. Estadística descriptiva                 ← automática, siempre, antes de cualquier prueba
 3. Independencia: Anderson + Wald-Wolfowitz
@@ -21,6 +22,42 @@ Services/ orquesta el pipeline y emite eventos SSE. Core/ solo calcula.
 ```
 
 **α = 5% fijo en toda la V1.0. No es configurable.**
+
+### Paso 0 — Agregación temporal (DECISIÓN 057, Bloque F del plan de Etapa 2)
+
+Si `resolucion_temporal == "mensual"`, `ejecutar_etapa1()` llama a
+`core/validacion/aggregation.py::agregar_a_maximos_anuales(serie, timestamps,
+mes_inicio_anio)` **antes** de `validar_contrato()` — no en `services/`. El
+resto del pipeline (contrato, las seis pruebas, Chow, Etapa 2) corre sobre la
+serie de máximos anuales ya agregada, exactamente como si el usuario hubiera
+subido una serie anual — `resolucion_temporal` se fuerza a `"anual"`
+internamente después de agregar.
+
+`mes_inicio_anio ∈ [1..12]` (default `7`, `POST /analysis/stream`) define el
+mes de inicio del año — el año calendario es el caso `mes_inicio_anio = 1`,
+no un modo aparte (ver `constraints.md`, sección "Año hidrológico —
+configurable, no una constante").
+
+**Recorte de extremos y hueco interior:** los años parciales en los dos
+extremos del registro se descartan (warning `CONTRACT_PARTIAL_YEARS_TRIMMED`,
+no bloqueante); un año incompleto en el medio del registro se descarta con
+un código distinto (`CONTRACT_INCOMPLETE_YEARS_DISCARDED`) porque significa
+otra cosa — un agujero, no un borde. El recorte ocurre **antes** del conteo
+de la regla de n: un registro que queda con menos de 10 años agregados
+bloquea con `CONTRACT_SERIES_TOO_SHORT`, igual que cualquier otra serie
+corta.
+
+**`Etapa1Result.serie_efectiva`/`timestamps_efectivos`** — la serie y los
+timestamps sobre los que la batería estadística realmente corrió: iguales a
+la entrada si no hubo agregación, o los máximos anuales si la hubo.
+`services/analysis_service.py` usa estos campos (no `serie_original`, la
+serie cruda subida) para todo lo que corre después de Etapa 1 — el mapeo del
+índice de Chow cuando el usuario rechaza un atípico, y la entrada de Etapa 2.
+Sin esto, rechazar un atípico sobre una serie mensual agregada habría
+mapeado el índice contra la serie mensual cruda (mucho más larga) y borrado
+un dato mensual sin relación con el atípico real — bug real encontrado al
+escribir esta parte del Bloque F, cubierto por
+`tests/integration/test_stream_agregacion_mensual.py`.
 
 ### Contrato de datos — validaciones en orden
 

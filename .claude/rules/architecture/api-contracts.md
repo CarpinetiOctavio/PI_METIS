@@ -81,7 +81,8 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
   "tipo_variable": "caudal_precipitacion | otro",
   "etapas": [1] | [1, 2],
   "modo": "paso_a_paso | experto",
-  "cramer_particion": "default | {n1_pct: 60, n2_pct: 30}"
+  "cramer_particion": "default | {n1_pct: 60, n2_pct: 30}",
+  "mes_inicio_anio": 1 | 2 | ... | 12
 }
 ```
 
@@ -119,6 +120,20 @@ se borró — código muerto que ninguna ruta importaba, ver DECISIÓN 037
 está implementada — `etapas` se acepta y valida, pero con `etapas=1,2` el
 stream hoy corre exactamente igual que con `etapas=1`. Queda para el
 Bloque A5 del plan de Etapa 2.
+
+**Agregado 12/08/2026 (DECISIÓN 057, Bloque F3 del plan de Etapa 2) —
+`mes_inicio_anio: int = Form(7)`.** Mes de inicio del año hidrológico,
+`[1..12]`, validado en el borde del endpoint → 400
+`CONTRACT_MES_INICIO_INVALID` fuera de rango. Default `7` (julio) — el año
+hidrológico de la región centro, conservado como default razonable, no como
+regla universal (`constraints.md` lo describía antes como una constante del
+sistema; ver la corrección en esa sección). Solo tiene efecto cuando la
+resolución temporal de la serie subida es `"mensual"`
+(`core/validacion/aggregation.py::agregar_a_maximos_anuales()`, llamado
+dentro de `ejecutar_etapa1()`); con una serie ya anual el valor se acepta y
+valida igual, pero no cambia nada. Se persiste en `analyses.configuracion`
+para CU-01 — no es opcional, dos análisis con `mes_inicio_anio` distinto
+sobre el mismo archivo dan resultados distintos.
 
 **Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
 050. Excepción a la regla general de esta sección: como el archivo se lee
@@ -433,12 +448,23 @@ CONTRACT_DUPLICATE_TIMESTAMPS    Duplicados temporales
 CONTRACT_WRONG_ORDER             Orden cronológico incorrecto
 CONTRACT_IRREGULAR_SPACING       Espaciado temporal irregular
 CONTRACT_NON_NUMERIC_VALUES      Valores no numéricos mezclados
+CONTRACT_PARTIAL_YEARS_TRIMMED   Agregación mensual (Bloque F4): años parciales recortados en los extremos del registro
+CONTRACT_INCOMPLETE_YEARS_DISCARDED  Agregación mensual (Bloque F4): año incompleto descartado dentro del registro (no en un extremo)
 ```
+`CONTRACT_PARTIAL_YEARS_TRIMMED` y `CONTRACT_INCOMPLETE_YEARS_DISCARDED` los
+emite `core/pipeline/pipeline_etapa1.py::_warnings_de_agregacion()`, no
+`core/validacion/contract.py` — son resultado de
+`core/validacion/aggregation.py::agregar_a_maximos_anuales()`, que corre
+antes de `validar_contrato()` cuando `resolucion_temporal == "mensual"`
+(DECISIÓN 057). Se agrupan acá por dominio (contrato de datos temporal), no
+por el módulo que los emite — mismo criterio que ya aplica el resto de esta
+sección.
 
 ### Contrato — parámetros de request (no de la serie)
 ```
 CONTRACT_CRAMER_PARTICION_UNSUPPORTED  cramer_particion distinto de "default" (DECISIÓN 036)
 CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
+CONTRACT_MES_INICIO_INVALID            mes_inicio_anio fuera de [1..12] (DECISIÓN 057)
 ```
 A diferencia de los dos grupos de arriba (series de datos), estos códigos validan
 un parámetro del request en `POST /analysis/stream` antes de tocar el archivo

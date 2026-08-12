@@ -46,9 +46,41 @@ No importa si Helmert o t de Student aprobaron.
 Stream pausa. Se emite evento `outlier_detected`. El pipeline NO continúa hasta recibir
 decisión del usuario via POST /analysis/outlier-decision.
 
+### Año hidrológico — configurable, no una constante (DECISIÓN 057)
+**Corrección 12/08/2026:** esta sección decía "calendario (ene-dic) e
+hidrológico (jul-jun)" como si fueran las dos únicas opciones del sistema.
+Julio-junio es el año hidrológico de la región centro de Argentina (donde
+están las 9 estaciones de la tesis de Facundo) — un valor por defecto
+razonable, no una regla universal. Un registro del NOA, de la cuenca del
+Plata o de la Patagonia arranca la temporada húmeda en otro mes.
+
+El mes de inicio del año se configura antes de correr el análisis:
+`mes_inicio_anio ∈ [1..12]` (`POST /analysis/stream`, default `7`). El año
+calendario es simplemente el caso `mes_inicio_anio = 1`, no un modo aparte
+con un toggle — ver `core/validacion/aggregation.py::agregar_a_maximos_anuales()`
+y `docs/decisiones/decision057.md`.
+
+**Recorte de extremos.** El registro se recorta a años completos: los meses
+que sobran en cualquiera de los dos extremos (el registro casi nunca arranca
+o termina justo en el mes de inicio) se descartan, nunca se completan ni
+interpolan — warning no bloqueante `CONTRACT_PARTIAL_YEARS_TRIMMED`. Un año
+incompleto en el medio del registro (no en un extremo) se descarta con un
+código distinto, `CONTRACT_INCOMPLETE_YEARS_DISCARDED`.
+
+**Etiquetado.** Un año que arranca en el mes de inicio del año Y y corre
+hasta el mes anterior de Y+1 se etiqueta con Y — el año calendario en que
+empieza. Con `mes_inicio_anio = 1` esto degenera exactamente en el año
+calendario.
+
 ### Gráficos con eje temporal
-Siempre dos versiones: calendario (ene-dic) e hidrológico (jul-jun).
-Ambas son obligatorias. Aplica a: serie temporal, boxplot mensual, gráfico Chow, gráfico ajuste, eventos de diseño.
+`Etapa2AjusteChart`/`Etapa2EventosChart` (Bloque C, DECISIÓN 056) **no**
+llevan un toggle calendario/hidrológico por gráfico — el criterio de año ya
+se fijó como parámetro del análisis (`mes_inicio_anio`, arriba), no es una
+opción de presentación aguas abajo. Donde la regla de "dos versiones"
+(calendario y con el `mes_inicio_anio` configurado) sigue aplicando sin
+ambigüedad: serie temporal, boxplot mensual, gráfico de Chow — los tres con
+eje temporal real, pendientes de implementación (bloqueados por FE-16, ver
+`docs/pendientes-tecnicos.md`: `Etapa1Result` no expone la serie cruda).
 
 ### PDF de exportación — CU-01
 Se genera on-demand, no se almacena en disco.

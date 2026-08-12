@@ -883,7 +883,7 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   `docs/plan-etapa2-implementacion.md` §7 (F3-F6) para el detalle completo —
   DECISIÓN 057 lo va a formalizar cuando el Bloque F3-F4 esté escrito.
 
-- **PR 7 — Bloque F2 (los tres bugs de contrato temporal).** EN CURSO.
+- **PR 7 — Bloque F2 (los tres bugs de contrato temporal).** Mergeado (#48, 12/08/2026).
   Independiente de A-C, sin bloqueo externo. **F2.2** —
   `contract.py::_espaciado_regular()` comparaba deltas exactos en días
   (`len(set(diffs)) == 1`); con `resolucion_temporal == "mensual"` ahora
@@ -912,6 +912,69 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   tests nuevos sobre los 254 del cierre de Bloque C); `ruff check`/`format
   --check` limpios; `check-error-catalog.sh` verde (sin códigos nuevos en
   este bloque).
+
+- **PR 8 — Bloque F3-F4 (mes configurable, agregación y recorte, backend).**
+  EN CURSO. Cierra F2.1. Módulo nuevo `core/validacion/aggregation.py` —
+  función pura `agregar_a_maximos_anuales(serie, timestamps, mes_inicio)`,
+  sin conocimiento de HTTP ni BD. Etiqueta cada mes con el año-período al que
+  pertenece (`mes >= mes_inicio → año actual, si no → año-1`), agrupa,
+  descarta los períodos incompletos (extremos con
+  `CONTRACT_PARTIAL_YEARS_TRIMMED`, huecos interiores con
+  `CONTRACT_INCOMPLETE_YEARS_DISCARDED` — motivo distinto porque significan
+  cosas distintas) y devuelve el máximo de cada período completo. Llamada
+  dentro de `ejecutar_etapa1()` (`core/pipeline/pipeline_etapa1.py`), paso 0,
+  antes de `validar_contrato()` — nunca en `services/`, tal como fija
+  DECISIÓN 057.
+
+  **`mes_inicio_anio` de punta a punta:** `POST /analysis/stream` (`Form`,
+  default 7, validado `[1..12]` → 400 `CONTRACT_MES_INICIO_INVALID`),
+  `stream_analysis()`, `ejecutar_etapa1()`, persistido en
+  `analyses.configuracion` junto a `cramer_particion`. Frontend:
+  `AnalysisStreamForm` manda el campo (default 7, sin selector real todavía
+  — eso es F5) siguiendo el mismo patrón que `etapas` en el Bloque A.
+
+  **El bug real que apareció al cablear esto, no anticipado por el plan:**
+  con la agregación adentro de `ejecutar_etapa1()`, el índice que reporta
+  Chow pasa a referirse a la serie *agregada* cuando la entrada era mensual
+  — `services/analysis_service.py::_mapear_indice_a_serie_original()`
+  operaba directo sobre `serie_original` (la serie mensual cruda); mapear un
+  índice de la serie anual contra la mensual habría borrado un dato mensual
+  sin relación con el atípico real al rechazar un atípico. Se agregan
+  `serie_efectiva`/`timestamps_efectivos` a `Etapa1Result` — la serie
+  realmente analizada (igual a la entrada si no hubo agregación, la agregada
+  si la hubo) — y `services/` usa esos campos, no `serie_original`, para el
+  mapeo de índice y para Etapa 2. `analyses.serie` (persistencia) sigue
+  siendo la serie cruda subida, sin cambios — es auditoría de lo que se
+  subió, no de lo que se analizó. Cubierto por
+  `tests/integration/test_stream_agregacion_mensual.py` — el segundo test de
+  ese archivo falla de inmediato (índice apuntando a un dato mensual
+  arbitrario, no al atípico real) si se revierte el fix.
+
+  `full_pipeline.py::ejecutar_pipeline_completo()` recibió el mismo fix por
+  la misma razón (usaba `filtrar_numericos(serie)` sobre la serie cruda para
+  Etapa 2 en vez de `etapa1.serie_efectiva`) — no lo usa `services/`
+  (DECISIÓN 055) pero sí los tests de regresión de Octavio, y habría quedado
+  con el mismo bug latente para entrada mensual.
+
+  Tres códigos de error nuevos (`CONTRACT_MES_INICIO_INVALID`,
+  `CONTRACT_PARTIAL_YEARS_TRIMMED`, `CONTRACT_INCOMPLETE_YEARS_DISCARDED`) en
+  `api-contracts.md` y `errors.es.ts` en el mismo commit — DECISIÓN 038.
+  `constraints.md` corregido: la sección "año hidrológico" pasa de describir
+  julio-junio como constante del sistema a describir `mes_inicio_anio` como
+  el parámetro real, con julio como default de la región centro.
+
+  Verificado: `pytest -m "unit or integration"` — 272 passed, 1 skipped (+15
+  sobre el cierre del Bloque F2: 9 de `aggregation.py`, 4 de wiring en
+  `ejecutar_etapa1()`, 2 de integración con Chow); `ruff`/`check-error-catalog.sh`
+  limpios; `npm run lint && npm test && npm run build` en verde (196 tests,
+  sin cambios de conteo — F5 todavía no agrega UI real). Smoke test manual
+  real vía HTTP contra el backend en Docker: el mismo archivo mensual de 15
+  años analizado con `mes_inicio_anio=1` da n=15 sin recorte; con
+  `mes_inicio_anio=7` da n=14 con `CONTRACT_PARTIAL_YEARS_TRIMMED`
+  ("1999 (6/12 meses), 2014 (6/12 meses) — período efectivo 2000–2013").
+  CU-01 con `mes_inicio_anio=9`: `analyses.configuracion` confirmado con
+  `psql` — `{"mes_inicio_anio": 9, "cramer_particion": "default"}`. Usuario
+  y análisis de prueba borrados al cerrar la verificación.
 
 ---
 
