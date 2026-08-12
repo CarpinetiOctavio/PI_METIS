@@ -48,6 +48,25 @@ def _parsear_etapas(etapas: str) -> list[int]:
     return _ETAPAS_VALIDAS[etapas]
 
 
+_MES_INICIO_INVALIDO = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "CONTRACT_MES_INICIO_INVALID",
+            "mensaje": "mes_inicio_anio debe estar entre 1 y 12.",
+        }
+    },
+)
+
+
+def _validar_mes_inicio(mes_inicio_anio: int) -> int:
+    """DECISIÓN 057 (Bloque F3) — validado en el borde, mismo tratamiento
+    que _parsear_etapas(): core/ nunca ve un valor fuera de [1..12]."""
+    if not (1 <= mes_inicio_anio <= 12):
+        raise _MES_INICIO_INVALIDO
+    return mes_inicio_anio
+
+
 # DECISIÓN 050 — mismo valor que client_max_body_size en nginx/nginx.conf y
 # frontend/nginx.conf. nginx no es el único camino: :8000 está mapeado al
 # host por diseño (architecture.md, "Exposición de puertos en desarrollo"),
@@ -115,6 +134,7 @@ async def stream_analysis(
     etapas: str = Form("1"),
     modo: str = Form("experto"),
     cramer_particion: str = Form("default"),
+    mes_inicio_anio: int = Form(7),
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
@@ -138,6 +158,7 @@ async def stream_analysis(
         )
 
     etapas_parseadas = _parsear_etapas(etapas)
+    mes_inicio_valido = _validar_mes_inicio(mes_inicio_anio)
     content = await _leer_archivo_limitado(archivo)
     session_id = str(uuid.uuid4())
 
@@ -154,6 +175,7 @@ async def stream_analysis(
             session_id=session_id,
             user_id=current_user.id if current_user else None,
             db=db,
+            mes_inicio_anio=mes_inicio_valido,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},

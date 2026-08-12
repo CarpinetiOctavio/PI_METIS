@@ -38,7 +38,6 @@ import numpy as np
 from metis.core.pipeline.pipeline_etapa1 import ejecutar_etapa1
 from metis.core.pipeline.pipeline_etapa2 import ejecutar_etapa2
 from metis.core.pipeline.types import FullPipelineResult
-from metis.core.utils import filtrar_numericos
 
 
 def ejecutar_pipeline_completo(
@@ -47,6 +46,7 @@ def ejecutar_pipeline_completo(
     resolucion_temporal: str | None = None,
     timestamps: list | None = None,
     cramer_particion: dict | str = "default",
+    mes_inicio_anio: int = 7,
 ) -> FullPipelineResult:
     etapa1 = ejecutar_etapa1(
         serie=serie,
@@ -54,13 +54,17 @@ def ejecutar_pipeline_completo(
         resolucion_temporal=resolucion_temporal,
         timestamps=timestamps,
         cramer_particion=cramer_particion,
+        mes_inicio_anio=mes_inicio_anio,
     )
 
     if etapa1.nivel_confianza == "rechazado":
         return FullPipelineResult(etapa1=etapa1, etapa2=None)
 
-    valores_numericos = filtrar_numericos(serie)
-    serie_np = np.asarray(valores_numericos, dtype=float)
+    # Bloque F4 — serie_efectiva, no filtrar_numericos(serie): si
+    # resolucion_temporal era "mensual", serie es la serie mensual cruda,
+    # y Etapa 2 tiene que ajustar sobre los máximos anuales agregados
+    # (etapa1.serie_efectiva), no sobre los valores mensuales sin agregar.
+    serie_np = np.asarray(etapa1.serie_efectiva, dtype=float)
     tiene_ceros = bool(np.any(serie_np == 0))
 
     etapa2 = ejecutar_etapa2(serie_np, tiene_ceros=tiene_ceros)

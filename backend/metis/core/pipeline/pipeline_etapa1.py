@@ -18,7 +18,59 @@ from metis.core.etapa1.trend import (
 )
 from metis.core.types import Etapa1Result, WarningItem
 from metis.core.utils import filtrar_numericos
+from metis.core.validacion.aggregation import (
+    MOTIVO_HUECO_INTERIOR,
+    AgregacionResult,
+    agregar_a_maximos_anuales,
+)
 from metis.core.validacion.contract import validar_contrato
+
+
+def _warnings_de_agregacion(agregacion: AgregacionResult) -> list[WarningItem]:
+    extremos = [
+        p for p in agregacion.periodos_descartados if p.motivo != MOTIVO_HUECO_INTERIOR
+    ]
+    interiores = [
+        p for p in agregacion.periodos_descartados if p.motivo == MOTIVO_HUECO_INTERIOR
+    ]
+
+    warnings: list[WarningItem] = []
+
+    if extremos:
+        detalle = ", ".join(
+            f"{p.anio} ({p.meses_presentes}/12 meses)" for p in extremos
+        )
+        periodo_efectivo = (
+            f"{agregacion.timestamps[0]}–{agregacion.timestamps[-1]}"
+            if agregacion.timestamps
+            else "ningún año completo"
+        )
+        warnings.append(
+            WarningItem(
+                codigo="CONTRACT_PARTIAL_YEARS_TRIMMED",
+                nivel="normal",
+                descripcion=(
+                    f"Se recortaron {len(extremos)} año(s) parcial(es) en los "
+                    f"extremos del registro: {detalle}. Período efectivo del "
+                    f"análisis: {periodo_efectivo}."
+                ),
+            )
+        )
+
+    if interiores:
+        anios = ", ".join(str(p.anio) for p in interiores)
+        warnings.append(
+            WarningItem(
+                codigo="CONTRACT_INCOMPLETE_YEARS_DISCARDED",
+                nivel="normal",
+                descripcion=(
+                    f"Se descartaron {len(interiores)} año(s) incompleto(s) "
+                    f"dentro del registro: {anios}."
+                ),
+            )
+        )
+
+    return warnings
 
 
 def ejecutar_etapa1(
@@ -27,7 +79,23 @@ def ejecutar_etapa1(
     resolucion_temporal: str | None = None,
     timestamps: list | None = None,
     cramer_particion: dict | str = "default",
+    mes_inicio_anio: int = 7,
 ) -> Etapa1Result:
+
+    # ── 0. Agregación temporal (Bloque F4) ────────────────────────────────────
+    # Antes de validar_contrato() — así el conteo de la regla de n opera ya
+    # sobre la serie agregada, y una serie mensual nunca corre la batería
+    # estadística sobre los valores crudos (F2.1). Con resolucion_temporal
+    # != "mensual" (incluido None) esta rama no hace nada — comportamiento
+    # idéntico al de antes de este bloque.
+    warnings_agregacion: list[WarningItem] = []
+    if resolucion_temporal == "mensual":
+        agregacion = agregar_a_maximos_anuales(serie, timestamps, mes_inicio_anio)
+        serie = agregacion.serie
+        timestamps = agregacion.timestamps
+        resolucion_temporal = "anual"  # ya agregada — el resto del pipeline
+        # la trata como cualquier serie anual, sin saber que hubo agregación
+        warnings_agregacion = _warnings_de_agregacion(agregacion)
 
     # ── 1. Contrato de datos ──────────────────────────────────────────────────
     contract = validar_contrato(
@@ -48,12 +116,14 @@ def ejecutar_etapa1(
             nivel_independencia=None,
             nivel_homogeneidad=None,
             nivel_confianza="rechazado",
-            warnings=contract.warnings,
+            warnings=warnings_agregacion + contract.warnings,
+            serie_efectiva=filtrar_numericos(serie),
+            timestamps_efectivos=timestamps,
         )
 
     # Serie filtrada — solo valores numéricos para todas las pruebas
     valores_numericos = filtrar_numericos(serie)
-    warnings: list[WarningItem] = list(contract.warnings)
+    warnings: list[WarningItem] = warnings_agregacion + list(contract.warnings)
 
     # ── 2. Estadística descriptiva ────────────────────────────────────────────
     descriptive = calcular_descriptiva(valores_numericos)
@@ -117,4 +187,6 @@ def ejecutar_etapa1(
         nivel_homogeneidad=nivel_homogeneidad,
         nivel_confianza=nivel_confianza,
         warnings=warnings,
+        serie_efectiva=valores_numericos,
+        timestamps_efectivos=timestamps,
     )

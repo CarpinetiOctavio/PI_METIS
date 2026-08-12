@@ -35,6 +35,7 @@ async def test_etapas_uno_dos_no_lanza():
         etapas="1,2",
         modo="experto",
         cramer_particion="default",
+        mes_inicio_anio=7,
         db=None,
         current_user=None,
     )
@@ -54,6 +55,7 @@ async def test_etapas_invalida_da_400_no_500():
             etapas="2",
             modo="experto",
             cramer_particion="default",
+            mes_inicio_anio=7,
             db=None,
             current_user=None,
         )
@@ -73,6 +75,7 @@ async def test_etapas_vacia_da_400():
             etapas="",
             modo="experto",
             cramer_particion="default",
+            mes_inicio_anio=7,
             db=None,
             current_user=None,
         )
@@ -98,6 +101,7 @@ async def test_etapas_invalida_se_valida_antes_de_leer_el_archivo():
             etapas="3",
             modo="experto",
             cramer_particion="default",
+            mes_inicio_anio=7,
             db=None,
             current_user=None,
         )
