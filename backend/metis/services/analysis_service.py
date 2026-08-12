@@ -47,20 +47,32 @@ def _serializar_timestamps(
 
 def _calcular_serie_calendario(
     result: Etapa1Result, mes_inicio_anio: int
-) -> list[float] | None:
+) -> dict | None:
     """Segunda agregación, mes_inicio=1, SOLO para presentación — DECISIÓN
     058 §3. No toca Etapa1Result ni ninguna prueba estadística, corre aparte
     después de que Etapa 1 ya terminó. None si no hubo agregación real
     (carga anual, nada que comparar) o si mes_inicio_anio ya es 1 (la
     versión configurada YA ES la calendario, no se manda dos veces lo
     mismo).
+
+    Corrección PR 4 (encontrada al construir el gráfico consumidor): DECISIÓN
+    058 documentaba esto como `list[float]` bareback, asumiendo implícitamente
+    que tendría el mismo largo que serie_efectiva. Falso — la agregación
+    calendario recorta sus propios extremos parciales de forma independiente
+    (otro mes_inicio, otro criterio de qué período queda completo), así que
+    puede tener MÁS o MENOS puntos que serie_efectiva. Sin sus propios
+    timestamps no hay forma de ubicar cada valor en el eje X — se devuelve
+    `{serie, timestamps}`, no un array suelto.
     """
     if result.resolucion_original != "mensual" or mes_inicio_anio == 1:
         return None
     agregacion = agregar_a_maximos_anuales(
         result.serie_original, result.timestamps_originales, mes_inicio=1
     )
-    return agregacion.serie
+    return {
+        "serie": agregacion.serie,
+        "timestamps": _serializar_timestamps(agregacion.timestamps, agregados=True),
+    }
 
 
 def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
@@ -270,6 +282,7 @@ def _emitir_resultado(result: Etapa1Result, iteracion: int) -> list[str]:
             "n1": prueba.n1,
             "n2": prueba.n2,
             "valor_atipico": prueba.valor_atipico,
+            "indice_atipico": prueba.indice_atipico,
             "iteracion": iteracion,
         }
         eventos.append(_sse("test_result", d))
@@ -299,6 +312,7 @@ def _emitir_resultado(result: Etapa1Result, iteracion: int) -> list[str]:
             "n1": prueba.n1,
             "n2": prueba.n2,
             "valor_atipico": prueba.valor_atipico,
+            "indice_atipico": prueba.indice_atipico,
             "iteracion": iteracion,
         }
         eventos.append(_sse("test_result", d))
@@ -328,6 +342,7 @@ def _emitir_resultado(result: Etapa1Result, iteracion: int) -> list[str]:
             "n1": prueba.n1,
             "n2": prueba.n2,
             "valor_atipico": prueba.valor_atipico,
+            "indice_atipico": prueba.indice_atipico,
             "iteracion": iteracion,
         }
         eventos.append(_sse("test_result", d))
@@ -357,6 +372,7 @@ def _emitir_resultado(result: Etapa1Result, iteracion: int) -> list[str]:
             "n1": prueba.n1,
             "n2": prueba.n2,
             "valor_atipico": prueba.valor_atipico,
+            "indice_atipico": prueba.indice_atipico,
             "iteracion": iteracion,
         }
         eventos.append(_sse("test_result", d))
