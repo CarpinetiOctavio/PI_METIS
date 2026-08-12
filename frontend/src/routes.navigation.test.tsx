@@ -126,6 +126,9 @@ function makeAnalysisDetail(): AnalysisDetail {
       warnings: [],
     },
     etapa2: null,
+    serie: null,
+    timestamps: null,
+    configuracion: null,
   };
 }
 
