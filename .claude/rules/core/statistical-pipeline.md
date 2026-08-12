@@ -224,9 +224,14 @@ Payload de `test_result`:
   "warning_codigo": null,
   "warning_nivel": null,
   "n1": null,
-  "n2": null
+  "n2": null,
+  "indice_atipico": null
 }
 ```
+`indice_atipico` agregado en el PR 3 del plan de cierre de pendientes
+no-test (DECISIÓN 058), en paralelo con `test_result_dict()` — mismo campo
+que ya existía en `TestResult`, nunca se serializaba en ninguno de los dos
+caminos.
 
 **Payload de `result_etapa1`** — agregado el bloque `datos` en el PR 3 del
 plan de cierre de pendientes no-test (DECISIÓN 058). Antes de este PR el

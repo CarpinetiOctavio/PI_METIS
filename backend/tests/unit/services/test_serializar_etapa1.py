@@ -83,10 +83,17 @@ def test_datos_carga_mensual_con_mes_inicio_distinto_de_1_manda_las_dos_agregaci
     # serie_calendario: SEGUNDA agregación, mes_inicio=1, sobre los mismos
     # 12 años calendario ya completos de origen — sin nada que recortar,
     # 12 períodos. Necesariamente distinta de serie_efectiva (otro criterio
-    # de año, otra cantidad de períodos).
+    # de año, otra cantidad de períodos) — por eso viaja con sus PROPIOS
+    # timestamps, no como array suelto (corrección PR 4, ver docstring de
+    # _calcular_serie_calendario()).
     assert datos["serie_calendario"] is not None
-    assert len(datos["serie_calendario"]) == 12
-    assert len(datos["serie_calendario"]) != len(datos["serie_efectiva"])
+    assert len(datos["serie_calendario"]["serie"]) == 12
+    assert len(datos["serie_calendario"]["timestamps"]) == 12
+    assert datos["serie_calendario"]["timestamps"][0] == {
+        "iso": "2000-01-01",
+        "anio": 2000,
+    }
+    assert len(datos["serie_calendario"]["serie"]) != len(datos["serie_efectiva"])
 
 
 @pytest.mark.unit
