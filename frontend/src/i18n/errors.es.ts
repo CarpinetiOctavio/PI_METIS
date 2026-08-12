@@ -22,6 +22,7 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_CRAMER_PARTICION_UNSUPPORTED:
     "La partición personalizada de Cramer todavía no está disponible. Usá la partición por defecto.",
   CONTRACT_ETAPAS_INVALID: "El alcance del análisis pedido no es válido.",
+  CONTRACT_MES_INICIO_INVALID: "El mes de inicio del año debe estar entre 1 y 12.",
 
   // Contrato — warnings
   CONTRACT_LENGTH_WARNING:
@@ -33,6 +34,10 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_WRONG_ORDER: "La serie no está en orden cronológico.",
   CONTRACT_IRREGULAR_SPACING: "El espaciado temporal es irregular.",
   CONTRACT_NON_NUMERIC_VALUES: "Hay valores no numéricos mezclados en la serie.",
+  CONTRACT_PARTIAL_YEARS_TRIMMED:
+    "Se recortaron años parciales en los extremos del registro al agregar a máximos anuales.",
+  CONTRACT_INCOMPLETE_YEARS_DISCARDED:
+    "Se descartó al menos un año incompleto dentro del registro al agregar a máximos anuales.",
 
   // Etapa 1 — pruebas
   TEST_CRITICAL_INDEPENDENCE:

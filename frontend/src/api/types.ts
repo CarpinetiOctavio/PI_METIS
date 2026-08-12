@@ -53,6 +53,11 @@ export interface AnalysisStreamForm {
   // Sin selector de alcance todavía en ConfigPage (eso es Bloque B4 del plan
   // de Etapa 2) — default "1" mantiene el comportamiento actual sin cambios.
   etapas?: "1" | "1,2";
+  // DECISIÓN 057 — mes de inicio del año hidrológico, [1..12]. Sin selector
+  // todavía en ConfigPage (eso es el Bloque F5 del plan de Etapa 2) —
+  // default 7 (julio) mantiene el comportamiento actual sin cambios; solo
+  // tiene efecto cuando la serie subida es de resolución mensual.
+  mes_inicio_anio?: number;
 }
 
 export interface OutlierDecisionRequest {
