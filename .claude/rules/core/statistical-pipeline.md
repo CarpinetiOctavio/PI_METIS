@@ -228,6 +228,54 @@ Payload de `test_result`:
 }
 ```
 
+**Payload de `result_etapa1`** — agregado el bloque `datos` en el PR 3 del
+plan de cierre de pendientes no-test (DECISIÓN 058). Antes de este PR el
+evento llevaba `contract`/`descriptive`/las cuatro baterías de pruebas/los
+niveles/`warnings` (ver `_serializar_etapa1()` en
+`services/analysis_service.py`) pero nunca la serie en sí — el bloqueo real
+detrás de FE-16. `analysis_results.etapa1` persiste exactamente el mismo
+payload para CU-01.
+
+```json
+{
+  "contract": { "...": "..." },
+  "descriptive": { "...": "..." },
+  "independencia": [ { "...": "...", "indice_atipico": null } ],
+  "homogeneidad": [ "..." ],
+  "tendencia": [ "..." ],
+  "atipicos": [ { "...": "...", "indice_atipico": 17 } ],
+  "nivel_independencia": "independiente",
+  "nivel_homogeneidad": "homogeneidad_ok",
+  "nivel_confianza": "con_warnings",
+  "warnings": [ "..." ],
+  "datos": {
+    "resolucion_original": "mensual",
+    "serie_efectiva": [94.71, 89.83],
+    "timestamps_efectivos": [{"iso": "1980-01-01", "anio": 1980}],
+    "serie_original": [12.1, 15.7],
+    "timestamps_originales": [{"iso": "1980-01-01", "anio": 1980}],
+    "indice_atipico": 17,
+    "serie_calendario": null
+  }
+}
+```
+
+Cada `TestResult` (en `independencia`/`homogeneidad`/`tendencia`/`atipicos`)
+gana `indice_atipico` — ya existía en `core/types.py::TestResult`, nunca se
+serializaba. Distinto de `datos.indice_atipico`: éste último ya viene
+mapeado a posición en `datos.serie_efectiva` (`_extraer_indice_atipico()`,
+que en la práctica coincide con el índice crudo de Chow porque
+`valores_numericos` ES `serie_efectiva` dentro de `ejecutar_etapa1()` — ver
+DECISIÓN 058 §5), mientras que el de cada `TestResult` individual es el que
+calculó la prueba en su propio espacio, sin traducir.
+
+`datos.serie_original`/`datos.timestamps_originales` solo viajan si
+`resolucion_original == "mensual"` — con carga anual son idénticos a los
+`_efectiva`, duplicarlos es peso muerto. `datos.serie_calendario` solo se
+puebla con carga mensual y `mes_inicio_anio != 1` — ver DECISIÓN 058 §§1-3
+para la partición completa (qué vive en `analyses` vs. en
+`analysis_results.etapa1`) y el cálculo de tamaño de payload.
+
 ---
 
 ## Secuencia real del stream con Etapa 2 (DECISIÓN 052, cerrado 09/08/2026)

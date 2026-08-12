@@ -230,6 +230,47 @@ Cada item del array ahora expone `archivado_at` (`null` si no está archivado).
 
 ---
 
+### GET /api/v1/history/{id}
+
+**Documentado por primera vez en el PR 3 del plan de cierre de pendientes
+no-test (DECISIÓN 058)** — el endpoint ya existía (`history.py::get_history_item`,
+`services/analysis_service.py::get_analysis_by_id()`), esta sección nunca se
+había escrito. Al mismo tiempo gana tres campos nuevos: `serie`,
+`timestamps`, `configuracion` — cierran el hueco que el PR 9 del plan de
+Etapa 2 dejó anotado (`mes_inicio_anio` ya se persistía desde DECISIÓN 057,
+pero el endpoint no lo devolvía, así que la nota de criterio de año nunca
+llegaba a `HistoryDetailPage`).
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Verifica pertenencia
+(`user_id`) — un análisis ajeno responde 404, no 403.
+
+**Response 200:**
+```json
+{
+  "id": "uuid",
+  "tipo_variable": "otro",
+  "modo": "experto",
+  "etapas": ["1"],
+  "created_at": "2026-07-31T01:19:27.556471",
+  "etapa1": { "...": "ver payload de result_etapa1 en statistical-pipeline.md" },
+  "etapa2": null,
+  "serie": [94.71, 89.83],
+  "timestamps": [{"iso": "1980-01-01", "anio": 1980}],
+  "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7}
+}
+```
+
+`serie`/`timestamps`/`configuracion` son la entrada tal como se subió y
+configuró (`analyses`, DECISIÓN 058 §1) — no el resultado del análisis, que
+ya viaja dentro de `etapa1.datos`. `timestamps` es `null` para cualquier
+análisis persistido antes de la migración `005` (sin backfill, ver
+DECISIÓN 058 §4) — el frontend degrada explícitamente para esos casos en
+vez de reconstruir datos.
+
+**Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
 ### POST /api/v1/history/{id}/archive
 
 **Agregado en DECISIÓN 048 (pasada 4, Bloque E)** — soft-delete de un

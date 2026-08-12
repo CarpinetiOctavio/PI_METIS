@@ -16,6 +16,12 @@ class Analysis(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     serie: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058) —
+    # timestamps de `serie` tal como se subieron, normalizados a ISO-8601
+    # antes de persistir (services/analysis_service.py). Nullable sin
+    # backfill: las filas de antes de esta migración quedan en NULL, el
+    # frontend degrada explícitamente para esos análisis (DECISIÓN 058 §4).
+    timestamps: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     tipo_variable: Mapped[str] = mapped_column(String(50), nullable=False)
     etapas: Mapped[list[str] | None] = mapped_column(ARRAY(String))
     modo: Mapped[str | None] = mapped_column(String(20))

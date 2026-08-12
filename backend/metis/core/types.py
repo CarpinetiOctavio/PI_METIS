@@ -78,6 +78,18 @@ class Etapa1Result:
     # (auditoría de lo que se subió, no de lo que se analizó).
     serie_efectiva: list[float] = field(default_factory=list)
     timestamps_efectivos: list | None = None
+    # PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058) — la
+    # serie tal como llegó a ejecutar_etapa1(), antes de cualquier
+    # agregación: auditoría de la entrada, no del resultado. Igual a
+    # serie_efectiva/timestamps_efectivos cuando no hubo agregación (la
+    # serialización en services/ solo emite estos dos por separado cuando
+    # resolucion_original == "mensual" — con carga anual duplicarlos es
+    # peso muerto). resolucion_original conserva el valor de
+    # resolucion_temporal tal como llegó, ANTES de que el paso 0 lo fuerce
+    # a "anual" tras agregar.
+    serie_original: list = field(default_factory=list)
+    timestamps_originales: list | None = None
+    resolucion_original: str | None = None
 
 
 @dataclass

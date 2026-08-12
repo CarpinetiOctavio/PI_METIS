@@ -100,12 +100,15 @@ function GroupTable({ items }: Readonly<{ items: TestResultDetail[] }>) {
  * UX-D) — eso es responsabilidad de quien la use, según su propio
  * contexto de auth.
  *
- * `mesInicioAnio` (Bloque F5, DECISIÓN 057) es opcional a propósito: solo
- * viaja en la sesión interactiva (ConfigPage → StreamPage → ResultsPage vía
- * router state), no se persiste en `analyses.configuracion` de forma que
- * `GET /history/{id}` lo devuelva — mismo límite ya aceptado para
- * `curva_ajuste` en el Bloque C. Sin el prop, la nota simplemente no se
- * renderiza.
+ * `mesInicioAnio` (Bloque F5, DECISIÓN 057) es opcional a propósito. Viaja
+ * de punta a punta en la sesión interactiva (ConfigPage → StreamPage →
+ * ResultsPage vía router state). Corrección PR 3 del plan de cierre de
+ * pendientes no-test (DECISIÓN 058): `mes_inicio_anio` SÍ se persiste en
+ * `analyses.configuracion` desde DECISIÓN 057 (PR 8 del plan de Etapa 2) —
+ * lo que faltaba era que `GET /history/{id}` devolviera `configuracion`, y
+ * ya lo hace. `HistoryDetailPage` todavía no lo consume para pasarlo acá
+ * (PR 5 del mismo plan) — hasta que eso pase, sin el prop la nota
+ * simplemente no se renderiza.
  */
 export function Etapa1ResultView({
   result,
