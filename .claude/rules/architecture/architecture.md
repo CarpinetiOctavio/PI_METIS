@@ -63,6 +63,9 @@ capas es señal de que falta un módulo nuevo.
 services:
   backend:
     build: ./backend
+    command: uvicorn metis.main:app --host 0.0.0.0 --port 8000 --reload   # --reload — DECISIÓN de PR fix/backend-hot-reload (12/08/2026)
+    volumes:
+      - ./backend:/app   # bind mount — el proceso ve los cambios del host sin docker cp + docker restart
     depends_on: [postgres]
     env_file: .env
     ports: ["8000:8000"]   # mapeo al host — necesario para smoke tests y desarrollo local sin nginx
@@ -83,6 +86,30 @@ services:
     ports: ["80:80", "443:443"]
     depends_on: [backend, frontend]
 ```
+
+### `--reload` + bind mount en `backend` — solo para desarrollo local
+
+Antes de este PR, `docker cp` actualizaba los archivos dentro del contenedor
+pero el proceso `uvicorn` ya arrancado seguía sirviendo el código que tenía
+cargado en memoria — solo un `docker restart` hacía que el servidor HTTP
+viera un cambio de código (`pytest`/`ruff` vía `docker exec` no lo sufrían,
+por correr como procesos nuevos). Ver `docs/pendientes-tecnicos.md` para el
+diagnóstico original, encontrado en el Bloque C del plan de Etapa 2.
+
+`command: uvicorn ... --reload` + `volumes: ["./backend:/app"]` resuelve
+esto: el bind mount monta el código del host sobre `/app` (donde el
+Dockerfile ya lo había copiado), y `--reload` (vía `watchfiles`, incluido en
+`uvicorn[standard]==0.29.0`) reinicia el proceso solo cuando detecta un
+cambio. Las dependencias instaladas viven en `site-packages`, fuera de
+`/app`, así que el mount no las tapa.
+
+**Caveat de producción.** Este `docker-compose.yml` es también la
+aproximación al despliegue de la UCC. Con `--reload` + bind mount, el
+contenedor sirve el código del host, no el de la imagen — correcto para
+desarrollo, no para producción. Si en M4/M5 aparece un compose de producción
+real, esta configuración se mueve a un `docker-compose.override.yml` y el
+base vuelve al `CMD` del Dockerfile (que no cambia — sigue siendo el de
+producción, este `command` solo lo pisa a nivel de compose).
 
 ### Exposición de puertos en desarrollo — backend y postgres
 
