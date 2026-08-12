@@ -801,7 +801,7 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   fuera del navegador (test de integración de A6 y un smoke test HTTP
   directo) que el stream completa correctamente hasta `complete`.
 
-- **PR 6 — Bloque C (gráficos interactivos).** EN CURSO. DECISIÓN 056:
+- **PR 6 — Bloque C (gráficos interactivos).** Mergeado (#47, 11/08/2026). DECISIÓN 056:
   `d3-scale`+`d3-shape` con SVG propio (no Recharts, no canvas) — mismo
   criterio que DECISIÓN 045/051 (código propio y chico, defendible ante el
   tribunal, antes que una dependencia grande). Componente de bajo nivel
@@ -867,6 +867,51 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   verificar contra el servidor HTTP ya corriendo. Anotado en
   `docs/pendientes-tecnicos.md` para no repetir el diagnóstico la próxima
   vez.
+
+- **Bloque D retirado del plan (Kevin, 09/08/2026).** Los tests de regresión
+  matemática contra la tesis los lleva Octavio por su lado — la sección §6
+  del plan queda como insumo para él, no como tarea de este frente. Sin PR
+  propio en la numeración de abajo.
+
+- **Bloque F rediseñado (Kevin, 09/08/2026), antes de arrancar PR 7.** El año
+  hidrológico deja de ser una dicotomía calendario/hidrológico con un
+  toggle — pasa a ser un solo parámetro `mes_inicio_anio ∈ [1..12]`,
+  configurable, donde el año calendario es simplemente el caso
+  `mes_inicio_anio = 1`. Se agrega la regla de recorte de años parciales en
+  los extremos (se descartan, nunca se completan ni interpolan —
+  `constraints.md` ya lo prohibía) y el tratamiento del hueco interior. Ver
+  `docs/plan-etapa2-implementacion.md` §7 (F3-F6) para el detalle completo —
+  DECISIÓN 057 lo va a formalizar cuando el Bloque F3-F4 esté escrito.
+
+- **PR 7 — Bloque F2 (los tres bugs de contrato temporal).** EN CURSO.
+  Independiente de A-C, sin bloqueo externo. **F2.2** —
+  `contract.py::_espaciado_regular()` comparaba deltas exactos en días
+  (`len(set(diffs)) == 1`); con `resolucion_temporal == "mensual"` ahora
+  compara por ordinal de mes (`DatetimeIndex.to_period("M").asi8`, secuencial
+  por construcción), insensible a que un mes tenga 28, 30 o 31 días. Al
+  investigar se encontró un segundo bug de la misma familia, no listado
+  originalmente: con timestamps de texto (una columna de fecha subida por
+  CSV, sin `parse_dates` en `pd.read_csv`), restar dos strings levantaba
+  `TypeError`, capturado por un `except` que devolvía "regular" sin avisar
+  nunca — el chequeo se saltaba en silencio para cualquier serie con fechas
+  de texto, irregular o no. El fix nuevo (reusa
+  `parser.py::parsear_timestamps()`, renombrada de `_parsear_timestamps` para
+  poder compartirla entre los dos módulos de `core/validacion/`) cubre ambos
+  casos con la misma rama. **F2.3** — `parser.py::_inferir_resolucion()`
+  usaba `(ts[-1]-ts[0])/(n-1)` (equivalente al promedio de los deltas
+  consecutivos); un solo hueco largo en una serie mayormente mensual puede
+  arrastrar ese promedio por encima del umbral de "anual" (300 días) aunque
+  el espaciado real y dominante siga siendo mensual. Reemplazado por la moda
+  de los deltas, que no se deja arrastrar por un outlier. **F2.1 no se cierra
+  en este PR** — `_inferir_resolucion()` ya calculaba "mensual" antes de este
+  PR, el bug real es que nada llama a una función de agregación cuando lo
+  hace; esa función (`core/validacion/aggregation.py::agregar_a_maximos_anuales()`)
+  todavía no existe, la escribe el Bloque F4 (PR 8). Documentado así en
+  `docs/pendientes-tecnicos.md` en vez de fabricar un cierre parcial.
+  Verificado: `pytest -m "unit or integration"` — 257 passed, 1 skipped (+3
+  tests nuevos sobre los 254 del cierre de Bloque C); `ruff check`/`format
+  --check` limpios; `check-error-catalog.sh` verde (sin códigos nuevos en
+  este bloque).
 
 ---
 
