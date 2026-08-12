@@ -4,6 +4,7 @@ import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import { CountUp } from "../../components/CountUp";
 import { Etapa1SerieTemporalChart } from "./Etapa1SerieTemporalChart";
 import { Etapa1ChowChart } from "./Etapa1ChowChart";
+import { Etapa1BoxplotMensualChart } from "./Etapa1BoxplotMensualChart";
 import "./Etapa1ResultView.css";
 
 interface Group {
@@ -215,6 +216,7 @@ export function Etapa1ResultView({
         <div className="stack" style={{ marginTop: 14 }}>
           <Etapa1SerieTemporalChart datos={result.datos} />
           <Etapa1ChowChart datos={result.datos} mesInicioAnio={mesInicioAnio} />
+          <Etapa1BoxplotMensualChart datos={result.datos} mesInicioAnio={mesInicioAnio} />
         </div>
       )}
 

@@ -49,10 +49,27 @@ export function HistoryDetailPage() {
         {detail.tipo_variable} · {new Date(detail.created_at).toLocaleString("es-AR")}
       </p>
       {detail.etapa1 ? (
-        <Etapa1ResultView
-          result={detail.etapa1}
-          modo={(detail.modo as Modo | null) ?? "experto"}
-        />
+        <>
+          <Etapa1ResultView
+            result={detail.etapa1}
+            modo={(detail.modo as Modo | null) ?? "experto"}
+            mesInicioAnio={detail.configuracion?.mes_inicio_anio}
+          />
+          {/* PR 5 del plan de cierre de pendientes no-test (DECISIÓN 058
+              §4) — sin backfill, `timestamps` es null para cualquier
+              análisis persistido antes de la migración 005. Etapa1ResultView
+              ya no renderiza sus gráficos en silencio (result.datos
+              tampoco existe en un registro tan viejo) — acá se explica
+              por qué, en vez de dejar una sección vacía sin contexto. */}
+          {detail.timestamps === null && (
+            <div className="banner warn" style={{ marginTop: 14 }}>
+              <span className="ic">▲</span> Este análisis es anterior a esta
+              versión de METIS — los gráficos de serie temporal, Chow y
+              boxplot mensual no están disponibles para registros de esta
+              antigüedad.
+            </div>
+          )}
+        </>
       ) : (
         <div className="banner warn">
           <span className="ic">▲</span> Este análisis no tiene resultados de Etapa 1

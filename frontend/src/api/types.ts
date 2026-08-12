@@ -292,6 +292,15 @@ export interface HistoryItem {
   archivado_at: string | null;
 }
 
+// PR 3/5 del plan de cierre de pendientes no-test (DECISIÓN 058) —
+// mes_inicio_anio ya se persistía desde DECISIÓN 057, esto solo tipa la
+// forma real de analyses.configuracion tal como GET /history/{id} la
+// devuelve.
+export interface AnalysisConfiguracion {
+  cramer_particion: string;
+  mes_inicio_anio: number;
+}
+
 export interface AnalysisDetail {
   id: string;
   tipo_variable: string;
@@ -300,6 +309,14 @@ export interface AnalysisDetail {
   created_at: string;
   etapa1: Etapa1Result | null;
   etapa2: Etapa2Result | null;
+  // Entrada tal como se subió y configuró (analyses, DECISIÓN 058 §1) —
+  // no el resultado, que ya viaja dentro de etapa1.datos. `timestamps` es
+  // `null` para cualquier análisis persistido antes de la migración 005
+  // (sin backfill, DECISIÓN 058 §4) — es la señal que usa HistoryDetailPage
+  // para el estado vacío explícito.
+  serie: number[] | null;
+  timestamps: TimestampNormalizado[] | null;
+  configuracion: AnalysisConfiguracion | null;
 }
 
 // --- Etapa 2 — shapes reales, cableada de punta a punta (Bloque A del plan
