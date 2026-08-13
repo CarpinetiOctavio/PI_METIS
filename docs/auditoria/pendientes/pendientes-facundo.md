@@ -136,6 +136,15 @@ la tabla de GVE Momentos, más abajo), recomiendo un repaso manual de
 la numeración de estación en estas cuatro secciones antes de
 consolidar todo para Facundo.
 
+**ACTUALIZACIÓN 13/08/2026 — repaso manual hecho para 2 de las 4
+secciones, sin rotulado cruzado.** Octavio verificó a mano, estación
+por estación, los censos de "Gen. Exponencial — Método Momentos L" y
+"Gamma 3p — parámetros calculados con x0 > min(serie)" contra la ficha
+real de la tesis — detalle en cada sección más abajo. Ninguna de las 9
+citas de esas dos secciones tenía estación mal rotulada. **LP3 Método
+Directo y Log-Normal 2p — NO_APLICABLE siguen sin este repaso**, la
+duda de numeración de esta nota sigue abierta para esas dos.
+
 **ACTUALIZACIÓN 15/07/2026 — confirmado con verificación de CV explícita en
 est_07 y est_08, sin ambigüedad de numeración.** Mismo patrón: el α de
 METIS reproduce exacto el CV real de los datos (CV=S/x̄); el α de tesis no.
@@ -153,6 +162,31 @@ Tesis reporta lambda negativo también en est_03 (-0.0069) pero con
 magnitud diferente.
 Pregunta: ¿Hay alguna restricción de signo o dominio en IV-84 que
 no está explicitada en el texto?
+
+**ACTUALIZACIÓN 13/08/2026 — censo completo de las 9 estaciones,
+verificado manualmente contra la tesis, sin rotulado cruzado.** El
+caso no es aislado de est_03 — la tesis reporta λ negativo en las 9 de
+9 estaciones para esta combinación distribución/método:
+
+| Estación | λ tesis (Momentos-L) | Fuente |
+|---|---|---|
+| est_01 (Alpa Corral) | -0.0031 | `regresion-unitaria/est_01_alpa_corral_rioBarrancas-unitaria.md:161` |
+| est_02 (Vado de Río Seco) | -0.0033 | `regresion-unitaria/est_02_vado_rio_seco_rioBarrancas-unitaria.md:148` |
+| est_03 (La Tapa) | -0.0069 | `regresion-unitaria/est_03_la_tapa_rioLasCanitas-unitaria.md:154` |
+| est_04 (Las Tapias, Río Las Tapias) | -0.00013 | `regresion-unitaria/est_04_las_tapias_rioLasTapias-unitaria.md:150` |
+| est_05 (Piedra Blanca) | -0.0097 | `regresion-unitaria/est_05_piedra_blanca_rioPiedraBlanca-unitaria.md:153` |
+| est_06 (Las Tapias, Río San Bartolomé) | -0.0111 | `regresion-unitaria/est_06_las_tapias_rioSanBartolome-unitaria.md:150` |
+| est_07 (Tincunaco) | -0.0095 | `regresion-unitaria/est_07_tincunaco_rioChocancharagua-unitaria.md:131` |
+| est_08 (Ume Pay) | -0.0032 | `regresion-unitaria/est_08_ume_pay_rioGrande-unitaria.md:161` |
+| est_09 (La Suela) | -0.0198 | `regresion-unitaria/est_09_la_suela_rioLaSuela-unitaria.md:130` |
+
+Octavio verificó cada uno de estos 9 valores contra la ficha real de
+la tesis — coinciden todos, ninguna estación estaba cruzada con otra
+(precedente de rotulado cruzado ya conocido en este archivo, ver NOTA
+10/07/2026 más arriba y la corrección de la tabla de GVE Momentos más
+abajo). La pregunta original sobre IV-84 sigue abierta — esto solo
+confirma que la evidencia detrás de la pregunta es sistemática en las
+9 estaciones, no un caso puntual de est_03.
 
 ### LP3 Método Directo — restricción B ∈ (3, 6]
 METIS aplica NO_APLICABLE cuando B ∉ (3, 6] (est_03: B=2.63).
@@ -188,6 +222,46 @@ y est_04 aunque x0 > min(serie), pero marca EEA=NO_APLICABLE.
 METIS marca NO_APLICABLE desde la estimación de parámetros.
 Pregunta: ¿Calculás los parámetros aunque x0 > min, y solo
 inhibís el EEA? ¿O es otro criterio?
+
+**ACTUALIZACIÓN 13/08/2026 — censo completo de las 9 estaciones y los
+3 métodos (Momentos, MV, MPP), verificado manualmente contra la
+tesis, sin rotulado cruzado.**
+
+| Estación | min(serie) | x0 Momentos | x0 MV | x0 MPP |
+|---|---|---|---|---|
+| est_01 (Alpa Corral) | 15.0 | -159.149 | NO_CONVERGE | -36.302 |
+| est_02 (Vado de Río Seco) | 42.0 | 3.683 | NO_CONVERGE | 35.355 |
+| est_03 (La Tapa) | 2.0 | **13.664 (>min)** | **13.664 (>min)** | **15.00 (>min)** |
+| est_04 (Las Tapias, Río Las Tapias) | 2.0 | **2.724 (>min)** | 1.740 | **2.307 (>min)** |
+| est_05 (Piedra Blanca) | 0.9 (tesis muestra 1.0, redondeo de display) | -5.387 | NO_APLICABLE (sin params) | -1.368 |
+| est_06 (Las Tapias, Río San Bartolomé) | 14.0 | -6.25 | 5.241 | 11.81 |
+| est_07 (Tincunaco) | 11.8 | -12.218 | 4.408 | 2.682 |
+| est_08 (Ume Pay) | 39.2 | -35.53 | 34.351 | 12.529 |
+| est_09 (La Suela) | 10.99 | 3.446 | 10.758 | **37.579 (>min)** |
+
+Negrita = x0 > min(serie) según la tesis. Fuentes:
+`regresion-e2e-coreEstadistico/est_03-e2e.md:118-120`,
+`est_04-e2e.md:106-109,203`, `est_09-e2e.md:194-197`, resto en su
+`est_0X-e2e.md` respectivo, fila "Gamma 3p".
+
+**3 de 9 estaciones violan, no solo est_03/est_04 como decía el
+enunciado original de esta sección:** est_03 (los 3 métodos), est_04
+(Momentos y MPP — MV no viola, x0=1.740<2.0), est_09 (solo MPP,
+x0=37.579>10.99, con α negativo además señalado como atípico en la
+ficha original). Octavio verificó los 9 valores de la tabla contra la
+ficha real de la tesis — coinciden todos, sin estación cruzada.
+
+**El criterio de la tesis frente a la violación no es consistente
+entre estaciones** — no es "params sí, EEA no" en todos los casos:
+en est_03 (los 3 métodos) la tesis publica x0/α/β completos y marca
+EEA=NO_APLICABLE; en est_04 (Momentos y MPP) y est_09 (MPP) la tesis
+publica x0/α/β **y EEA completo** pese a violar el mismo soporte —
+confirmado en detalle en `est_04-e2e.md` Hallazgo B (línea ~201):
+*"el criterio de METIS (rechazar cuando x0≥min) es matemáticamente
+consistente en las dos estaciones; el que varía es el criterio de
+tesis."* La pregunta original queda vigente con este matiz: no hay
+un único criterio de tesis para reconstruir en METIS, ni siquiera
+"bloquear solo el EEA" explica todos los casos.
 
 ---
 
