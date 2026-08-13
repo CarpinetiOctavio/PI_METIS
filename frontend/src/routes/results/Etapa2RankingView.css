@@ -12,3 +12,27 @@
 .etapa2-card.top {
   border-color: var(--acc);
 }
+
+/* F4 (fix pre-reunión) — .banner es flex de una sola línea (icono + texto);
+   acá se reusa sobre un <details> para agrupar warnings repetidos, que
+   necesita layout de bloque (summary arriba, lista al expandir). */
+.etapa2-ranking details.banner {
+  display: block;
+}
+
+.etapa2-ranking details.banner > summary {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  cursor: pointer;
+  list-style: none;
+}
+
+.etapa2-ranking details.banner > summary::-webkit-details-marker {
+  display: none;
+}
+
+.etapa2-warning-hint {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
