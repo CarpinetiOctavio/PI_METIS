@@ -1,3 +1,6 @@
+import uuid
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from metis.core.etapa1.outliers import calcular_chow
@@ -7,6 +10,7 @@ from metis.services.analysis_service import (
     _extraer_atipico,
     _extraer_indice_atipico,
     _mapear_indice_a_serie_original,
+    _persistir,
 )
 
 
@@ -150,9 +154,7 @@ def test_remocion_mapea_indice_cuando_hay_valor_faltante_antes_del_atipico():
     serie_original = [10.0, 10.0, 10.0, None] + [10.0] * 17 + [500.0]
     timestamps = list(range(1980, 1980 + len(serie_original)))
 
-    resultado = ejecutar_etapa1(
-        serie_original, "otro", "anual", timestamps=timestamps
-    )
+    resultado = ejecutar_etapa1(serie_original, "otro", "anual", timestamps=timestamps)
     chow = next(t for t in resultado.atipicos if t.prueba == "chow")
     assert chow.warning_codigo == "TEST_WARNING_OUTLIER_DETECTED"
     assert chow.valor_atipico == 500.0
@@ -177,3 +179,53 @@ def test_remocion_mapea_indice_cuando_hay_valor_faltante_antes_del_atipico():
     assert serie_filtrada.count(10.0) == 20  # los 20 legítimos, todos presentes
     assert serie_filtrada[3] is None  # el None no lo toca este fix, sigue ahí
     assert len(serie_filtrada) == len(serie_original) - 1
+
+
+# ── F7a (plan de fixes pre-reunión) — nombre_archivo en configuracion ──────
+
+
+def _etapa1_result_minimo() -> Etapa1Result:
+    return Etapa1Result(
+        contract=ContractResult(bloqueante=False, codigo_error=None),
+        descriptive=None,
+        independencia=[],
+        homogeneidad=[],
+        tendencia=[],
+        atipicos=[],
+        nivel_independencia=None,
+        nivel_homogeneidad=None,
+        nivel_confianza="validado",
+    )
+
+
+@pytest.mark.unit
+async def test_persistir_guarda_nombre_archivo_en_configuracion():
+    db = MagicMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
+
+    await _persistir(
+        user_id=uuid.uuid4(),
+        serie=[94.71, 89.83],
+        timestamps=None,
+        tipo_variable="otro",
+        modo="experto",
+        cramer_particion="default",
+        mes_inicio_anio=7,
+        etapas=[1],
+        result=_etapa1_result_minimo(),
+        etapa2_result=None,
+        decisiones={},
+        db=db,
+        filename="estacion_04.csv",
+    )
+
+    # db.add() se llama dos veces (Analysis, AnalysisResult) — el primero
+    # es el Analysis, donde vive configuracion.
+    analysis_guardado = db.add.call_args_list[0].args[0]
+    assert analysis_guardado.configuracion["nombre_archivo"] == "estacion_04.csv"
+    # cramer_particion/mes_inicio_anio siguen ahí — F7a agrega una clave,
+    # no reemplaza el dict.
+    assert analysis_guardado.configuracion["cramer_particion"] == "default"
+    assert analysis_guardado.configuracion["mes_inicio_anio"] == 7

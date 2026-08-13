@@ -695,6 +695,7 @@ async def stream_analysis(
                 etapa2_result=etapa2_result,
                 decisiones=decisiones,
                 db=db,
+                filename=filename,
             )
 
         yield _sse(
@@ -718,6 +719,7 @@ async def _persistir(
     etapa2_result: Etapa2Result | None,
     decisiones: dict,
     db: AsyncSession,
+    filename: str,
 ) -> uuid.UUID:
     analysis = Analysis(
         user_id=user_id,
@@ -735,9 +737,15 @@ async def _persistir(
         # sobre el mismo archivo con meses distintos dan series y
         # resultados distintos; sin guardarlo, el historial de CU-01
         # muestra un resultado que no se puede volver a producir.
+        # nombre_archivo (F7a, plan de fixes pre-reunión) — sin columna
+        # propia a propósito: analyses no la tiene y agregarla es una
+        # migración que este fix no amerita (DECISIÓN, ver PR). Vive en
+        # configuracion (JSONB, ya existe) igual que cramer_particion y
+        # mes_inicio_anio.
         configuracion={
             "cramer_particion": cramer_particion,
             "mes_inicio_anio": mes_inicio_anio,
+            "nombre_archivo": filename,
         },
     )
     db.add(analysis)
@@ -848,6 +856,16 @@ async def get_history(
             "etapas": a.etapas,
             "created_at": a.created_at.isoformat(),
             "archivado_at": a.archivado_at.isoformat() if a.archivado_at else None,
+            # F7a (plan de fixes pre-reunión) — null para cualquier análisis
+            # persistido antes de este fix (sin backfill, mismo criterio que
+            # `timestamps`/DECISIÓN 058 §4): configuracion no tenía esta
+            # clave todavía. El frontend degrada a tipo_variable en ese caso.
+            "nombre_archivo": (a.configuracion or {}).get("nombre_archivo"),
+            # F7b — la serie completa ya vive en analyses.serie (~40 valores
+            # típicos), así que reusarla acá no cambia el orden de magnitud
+            # del payload de la lista. Sparkline decorativa, no un gráfico
+            # real — sin timestamps, sin ejes.
+            "serie_preview": a.serie,
         }
         for a in rows
     ]
