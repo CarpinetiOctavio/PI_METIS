@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartSeries } from "../../charts/InteractiveChart";
-import { formatNum } from "../../i18n/format";
+import { formatAxis } from "../../i18n/format";
 import type { Etapa1Datos } from "../../api/types";
 
 /**
@@ -79,7 +79,7 @@ export function Etapa1SerieTemporalChart({
         xLabel="Año"
         yLabel="Valor"
         xTickFormat={(v) => String(Math.round(v))}
-        yTickFormat={(v) => formatNum(v)}
+        yTickFormat={(v) => formatAxis(v)}
       />
     </div>
   );

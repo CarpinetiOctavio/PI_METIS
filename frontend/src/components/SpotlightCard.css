@@ -9,13 +9,13 @@
 .spotlight-card__glow {
   position: absolute;
   inset: 0;
-  /* Bloque C3 (pasada 5) — "apenas notarse": radio más grande y mezcla más
-     débil que la ronda 4 de la pasada 4 (200px/22%/30%). El efecto pasa de
-     leerse como una linterna a un cambio de luz ambiente. */
+  /* Fix pre-reunión (F1) — "mínimo, casi transparente": la ronda de la
+     pasada 5 (12%/8%/opacity 0.55) todavía se leía como una linterna,
+     sobre todo en tema claro. Mezcla del centro bajada a la mitad. */
   background: radial-gradient(
     260px circle at var(--spot-x) var(--spot-y),
-    color-mix(in srgb, white 12%, var(--acc)) 0%,
-    color-mix(in srgb, var(--acc) 8%, transparent) 35%,
+    color-mix(in srgb, white 6%, var(--acc)) 0%,
+    color-mix(in srgb, var(--acc) 4%, transparent) 35%,
     transparent 70%
   );
   opacity: 0;
@@ -24,7 +24,7 @@
 }
 
 .spotlight-card:hover .spotlight-card__glow {
-  opacity: 0.55;
+  opacity: 0.22;
 }
 
 .spotlight-card__content {

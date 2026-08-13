@@ -46,3 +46,14 @@ export function formatInt(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return intFormatter.format(value);
 }
+
+// Ejes de gráficos: los 5 decimales de formatNum() son para tablas de
+// resultados, donde el docente compara contra la tesis. En un eje solo
+// roban ancho y obligan a un margen enorme.
+const axisFormatter = new Intl.NumberFormat("es-AR", {
+  maximumFractionDigits: 2,
+});
+
+export function formatAxis(value: number): string {
+  return axisFormatter.format(value);
+}

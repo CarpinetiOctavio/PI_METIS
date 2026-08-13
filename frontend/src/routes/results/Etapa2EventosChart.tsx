@@ -1,6 +1,6 @@
 import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartSeries } from "../../charts/InteractiveChart";
-import { formatNum } from "../../i18n/format";
+import { formatAxis } from "../../i18n/format";
 import type { EventoDiseno } from "../../api/types";
 
 /**
@@ -43,8 +43,8 @@ export function Etapa2EventosChart({
       ariaLabel="Gráfico de eventos de diseño: valor estimado contra período de retorno"
       xLabel="Período de retorno T (años)"
       yLabel="Valor estimado (xT)"
-      xTickFormat={(v) => formatNum(v)}
-      yTickFormat={(v) => formatNum(v)}
+      xTickFormat={(v) => formatAxis(v)}
+      yTickFormat={(v) => formatAxis(v)}
     />
   );
 }
