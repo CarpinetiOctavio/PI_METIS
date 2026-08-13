@@ -437,6 +437,15 @@ Si en algún momento aparece una estación con Generalizada Pareto MC
 como referencia real, se cierra por verificación numérica directa en
 vez de seguir intentando leer la ecuación de la fuente.
 
+**Actualización 07/08/2026.** Se decide escalar de todas formas, fuera
+del criterio de baja prioridad definido arriba: se envía a Facundo y Carlos la
+fórmula IV-153 transcripta textualmente para confirmación. Carlos
+confirma la forma correcta de la ecuación. Con esto se levanta la
+incertidumbre de lectura/tipografía descripta arriba — pasa de
+verificación de baja confianza a **pendiente de implementación**:
+falta reflejar la fórmula confirmada en `gen_pareto.py`, no falta
+verificarla contra la fuente.
+
 ---
 
 ### Gamma 3p MV — Causa D extrema en est_08, cambia el #1 del ranking
