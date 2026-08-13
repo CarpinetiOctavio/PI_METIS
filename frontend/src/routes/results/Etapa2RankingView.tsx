@@ -28,6 +28,44 @@ const pctFormatter = new Intl.NumberFormat("es-AR", {
   maximumFractionDigits: 1,
 });
 
+// F6 (fix pre-reunión) — mismo default que StreamPage mandaba siempre
+// (Bloque B del plan de Etapa 2, api-contracts.md). Vive acá ahora porque
+// el campo editable es de esta vista, no de StreamPage.
+const PERIODOS_RETORNO_DEFAULT = [2, 5, 10, 25, 50, 100, 200, 500];
+
+// Mismos límites que valida el backend en POST /analysis/distribution-decision
+// (DIST_SELECTION_INVALID, api-contracts.md) — entre 1 y 20 valores, todos
+// > 1 (F = 1 - 1/T necesita T > 1). Validado acá para mostrar el error
+// inline antes de mandar el request, no como un 400 genérico.
+function parsePeriodosRetorno(input: string): { valores: number[] } | { error: string } {
+  const partes = input
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  if (partes.length === 0) {
+    return { error: "Ingresá al menos un período de retorno." };
+  }
+  if (partes.length > 20) {
+    return { error: "No se pueden pedir más de 20 períodos de retorno." };
+  }
+
+  const valores: number[] = [];
+  for (const parte of partes) {
+    const valor = Number(parte);
+    if (!Number.isFinite(valor)) {
+      return { error: `"${parte}" no es un número válido.` };
+    }
+    if (valor <= 1) {
+      return {
+        error: `Los períodos de retorno deben ser mayores que 1 — "${parte}" no lo es.`,
+      };
+    }
+    valores.push(valor);
+  }
+  return { valores };
+}
+
 // F4 — "EEA 7,65775 (7,0 %)": sin esto, un ajuste al 7% de error relativo
 // (razonable) y uno al 83% (inservible) se leían exactamente igual en la
 // card. null si no hay media disponible (ver nota de mediaSerie más abajo).
@@ -191,6 +229,11 @@ function agruparWarnings(warnings: WarningItem[]): WarningGroup[] {
  * `mediaSerie` — media de la serie analizada (Etapa1Result.descriptive.media
  * en cada llamador), opcional: solo habilita el "% de la media" junto al EEA
  * (F4). Sin ella la card sigue mostrando el EEA crudo, como antes.
+ *
+ * `onElegir` recibe también `periodosRetorno` (F6) — el campo editable de
+ * esta vista, validado en el cliente antes de llamarlo. StreamPage ya no
+ * manda un default fijo, lo que el usuario haya dejado en el campo es lo
+ * que viaja.
  */
 export function Etapa2RankingView({
   etapa2,
@@ -199,11 +242,13 @@ export function Etapa2RankingView({
   mediaSerie,
 }: Readonly<{
   etapa2: Etapa2Result;
-  onElegir?: (distribucion: string, metodo: string) => void;
+  onElegir?: (distribucion: string, metodo: string, periodosRetorno: number[]) => void;
   resolving?: boolean;
   mediaSerie?: number | null;
 }>) {
   const [verTodas, setVerTodas] = useState(false);
+  const [periodosInput, setPeriodosInput] = useState(PERIODOS_RETORNO_DEFAULT.join(", "));
+  const [periodosError, setPeriodosError] = useState<string | null>(null);
 
   // El backend ya ordena ascendente por mejor_eea (nulls al final) — el
   // frontend no reordena ni recalcula el ranking.
@@ -214,6 +259,16 @@ export function Etapa2RankingView({
   const ocultas = etapa2.ranking.length - TOP_VISIBLE;
 
   const grupos = agruparWarnings(etapa2.warnings);
+
+  function handleElegir(distribucion: string, metodo: string) {
+    const parsed = parsePeriodosRetorno(periodosInput);
+    if ("error" in parsed) {
+      setPeriodosError(parsed.error);
+      return;
+    }
+    setPeriodosError(null);
+    onElegir!(distribucion, metodo, parsed.valores);
+  }
 
   return (
     <div className="etapa2-ranking">
@@ -248,13 +303,45 @@ export function Etapa2RankingView({
           )}
         </div>
       )}
+      {/* F6 (fix pre-reunión) — antes se mandaba siempre el default fijo.
+          Un solo campo acá arriba, no uno por card: los períodos de retorno
+          son un parámetro del request de distribution-decision, no algo
+          por distribución. */}
+      {onElegir && (
+        <div className="field" style={{ marginBottom: 12, maxWidth: 420 }}>
+          <label htmlFor="etapa2-periodos-retorno">
+            Períodos de retorno T (años, separados por coma)
+          </label>
+          <input
+            id="etapa2-periodos-retorno"
+            className="input"
+            type="text"
+            value={periodosInput}
+            onChange={(event) => {
+              setPeriodosInput(event.target.value);
+              if (periodosError) setPeriodosError(null);
+            }}
+            aria-invalid={periodosError !== null}
+            aria-describedby={periodosError ? "etapa2-periodos-retorno-error" : undefined}
+          />
+          {periodosError && (
+            <p
+              id="etapa2-periodos-retorno-error"
+              role="alert"
+              className="etapa2-periodos-error"
+            >
+              {periodosError}
+            </p>
+          )}
+        </div>
+      )}
       <div className="etapa2-grid">
         {visibles.map((item, index) => (
           <DistribucionCard
             key={item.distribucion}
             item={item}
             esMejor={hayMejor && index === 0}
-            onElegir={onElegir}
+            onElegir={onElegir ? handleElegir : undefined}
             resolving={resolving}
             mediaSerie={mediaSerie}
           />

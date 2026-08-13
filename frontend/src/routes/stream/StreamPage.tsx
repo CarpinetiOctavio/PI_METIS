@@ -9,11 +9,6 @@ import { Etapa2RankingView } from "../results/Etapa2RankingView";
 import { Etapa2EventosView } from "../results/Etapa2EventosView";
 import "./StreamPage.css";
 
-// Bloque B del plan de Etapa 2 — sin selector editable de períodos de
-// retorno todavía (simplificación deliberada de esta pasada, ver el PR):
-// se manda siempre el default de api-contracts.md.
-const PERIODOS_RETORNO_DEFAULT = [2, 5, 10, 25, 50, 100, 200, 500];
-
 interface Group {
   key: string;
   label: string;
@@ -225,10 +220,14 @@ export function StreamPage() {
     }
   }
 
-  async function handleDistribucionElegida(distribucion: string, metodo: string) {
+  async function handleDistribucionElegida(
+    distribucion: string,
+    metodo: string,
+    periodosRetorno: number[],
+  ) {
     setResolvingDistribucion(true);
     try {
-      await resolveDistribution(distribucion, metodo, PERIODOS_RETORNO_DEFAULT);
+      await resolveDistribution(distribucion, metodo, periodosRetorno);
     } finally {
       setResolvingDistribucion(false);
     }

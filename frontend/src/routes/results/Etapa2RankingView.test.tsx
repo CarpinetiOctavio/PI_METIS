@@ -101,7 +101,11 @@ describe("Etapa2RankingView", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Elegir este ajuste" }));
-    expect(onElegir).toHaveBeenCalledWith("gumbel", "momentos");
+    expect(onElegir).toHaveBeenCalledWith(
+      "gumbel",
+      "momentos",
+      [2, 5, 10, 25, 50, 100, 200, 500],
+    );
   });
 
   it("F5 — no muestra 'Elegir este ajuste' en modo de solo lectura (sin onElegir)", () => {
@@ -137,5 +141,73 @@ describe("Etapa2RankingView", () => {
       />,
     );
     expect(screen.getByText(/7,0 %/)).toBeInTheDocument();
+  });
+
+  it("F6 — no muestra el campo de períodos de retorno en modo de solo lectura", () => {
+    render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+      />,
+    );
+    expect(
+      screen.queryByLabelText(/Períodos de retorno/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("F6 — manda los períodos editados en vez del default", async () => {
+    const user = userEvent.setup();
+    const onElegir = vi.fn();
+    render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        onElegir={onElegir}
+      />,
+    );
+
+    const campo = screen.getByLabelText(/Períodos de retorno/);
+    await user.clear(campo);
+    await user.type(campo, "2, 10, 100");
+    await user.click(screen.getByRole("button", { name: "Elegir este ajuste" }));
+
+    expect(onElegir).toHaveBeenCalledWith("gumbel", "momentos", [2, 10, 100]);
+  });
+
+  it("F6 — rechaza un período ≤ 1 con un error inline, sin llamar a onElegir", async () => {
+    const user = userEvent.setup();
+    const onElegir = vi.fn();
+    render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        onElegir={onElegir}
+      />,
+    );
+
+    const campo = screen.getByLabelText(/Períodos de retorno/);
+    await user.clear(campo);
+    await user.type(campo, "1, 10");
+    await user.click(screen.getByRole("button", { name: "Elegir este ajuste" }));
+
+    expect(onElegir).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/mayores que 1/);
+  });
+
+  it("F6 — rechaza más de 20 valores con un error inline, sin llamar a onElegir", async () => {
+    const user = userEvent.setup();
+    const onElegir = vi.fn();
+    render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        onElegir={onElegir}
+      />,
+    );
+
+    const campo = screen.getByLabelText(/Períodos de retorno/);
+    const veintiuno = Array.from({ length: 21 }, (_, i) => i + 2).join(", ");
+    await user.clear(campo);
+    await user.type(campo, veintiuno);
+    await user.click(screen.getByRole("button", { name: "Elegir este ajuste" }));
+
+    expect(onElegir).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/no se pueden pedir más de 20/i);
   });
 });
