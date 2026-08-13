@@ -1,6 +1,6 @@
 import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartSeries } from "../../charts/InteractiveChart";
-import { formatNum } from "../../i18n/format";
+import { formatAxis } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import type { Etapa1Datos } from "../../api/types";
 
@@ -64,7 +64,7 @@ export function Etapa1ChowChart({
         xLabel="Año"
         yLabel="Valor"
         xTickFormat={(v) => String(Math.round(v))}
-        yTickFormat={(v) => formatNum(v)}
+        yTickFormat={(v) => formatAxis(v)}
       />
     </div>
   );

@@ -46,7 +46,12 @@ interface InteractiveChartProps {
 }
 
 const VIEW_W = 640;
-const MARGIN = { top: 12, right: 16, bottom: 40, left: 60 };
+// left=88 (F2, fix pre-reunión): con formatNum() de 5 decimales el margen de
+// 60 cortaba el primer dígito de etiquetas grandes (ej. "1.000,00000"). Ahora
+// que los ticks usan formatAxis() (2 decimales, ver i18n/format.ts) 88 sobra
+// con margen — no se bajó porque el peor caso (serie con atípico) tampoco
+// justifica ajustarlo más fino.
+const MARGIN = { top: 12, right: 16, bottom: 40, left: 88 };
 const MIN_SPAN_RATIO = 1.05; // no permite zoom infinito — escala log (ratio)
 const MIN_SPAN_FRACTION_LINEAR = 0.01; // análogo para escala lineal (fracción del dominio completo)
 const WHEEL_ZOOM_IN = 0.8;

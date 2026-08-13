@@ -1,6 +1,6 @@
 import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartSeries } from "../../charts/InteractiveChart";
-import { formatNum } from "../../i18n/format";
+import { formatAxis } from "../../i18n/format";
 import type { EventoDiseno, PuntoEmpirico } from "../../api/types";
 
 /**
@@ -50,8 +50,8 @@ export function Etapa2AjusteChart({
       ariaLabel={`Gráfico de ajuste: puntos empíricos contra la curva de ${distribucion} (${metodo})`}
       xLabel="Período de retorno T (años)"
       yLabel="Valor"
-      xTickFormat={(v) => formatNum(v)}
-      yTickFormat={(v) => formatNum(v)}
+      xTickFormat={(v) => formatAxis(v)}
+      yTickFormat={(v) => formatAxis(v)}
     />
   );
 }

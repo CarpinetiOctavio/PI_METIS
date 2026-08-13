@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BoxPlot } from "../../charts/BoxPlot";
 import type { BoxPlotCategory } from "../../charts/BoxPlot";
 import { calcularCuartiles } from "../../charts/quartiles";
-import { formatNum } from "../../i18n/format";
+import { formatAxis } from "../../i18n/format";
 import type { Etapa1Datos } from "../../api/types";
 
 const MESES_ABREV = [
@@ -103,7 +103,7 @@ export function Etapa1BoxplotMensualChart({
         categories={categories}
         ariaLabel="Boxplot mensual de la serie cruda"
         yLabel="Valor"
-        yTickFormat={(v) => formatNum(v)}
+        yTickFormat={(v) => formatAxis(v)}
       />
     </div>
   );

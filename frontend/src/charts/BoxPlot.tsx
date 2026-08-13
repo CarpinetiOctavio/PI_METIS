@@ -34,7 +34,10 @@ interface BoxPlotProps {
 }
 
 const VIEW_W = 640;
-const MARGIN = { top: 12, right: 16, bottom: 40, left: 60 };
+// left=88 — mismo fix que InteractiveChart.tsx (F2, fix pre-reunión): el
+// margen de 60 cortaba etiquetas grandes con formatNum() (5 decimales). Ver
+// el comentario en InteractiveChart.tsx para el detalle completo.
+const MARGIN = { top: 12, right: 16, bottom: 40, left: 88 };
 
 function defaultTickFormat(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
