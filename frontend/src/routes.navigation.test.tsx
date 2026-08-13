@@ -172,6 +172,9 @@ function stubFetch({ authed }: { authed: boolean }) {
           modo: "experto",
           etapas: ["1"],
           created_at: "2026-01-15T00:00:00Z",
+          archivado_at: null,
+          nombre_archivo: null,
+          serie_preview: [94.71, 89.83, 105.13],
         },
       ]);
     }

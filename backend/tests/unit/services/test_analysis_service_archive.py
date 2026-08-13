@@ -71,9 +71,7 @@ async def test_archive_analysis_marca_archivado_at_y_commitea():
 async def test_archive_analysis_retorna_false_si_no_existe_o_no_pertenece():
     db = _mock_db_scalar_one_or_none(None)
 
-    ok = await archive_analysis(
-        analysis_id=uuid.uuid4(), user_id=uuid.uuid4(), db=db
-    )
+    ok = await archive_analysis(analysis_id=uuid.uuid4(), user_id=uuid.uuid4(), db=db)
 
     assert ok is False
     db.commit.assert_not_awaited()
@@ -97,9 +95,7 @@ async def test_unarchive_analysis_limpia_archivado_at_y_commitea():
 async def test_unarchive_analysis_retorna_false_si_no_existe_o_no_pertenece():
     db = _mock_db_scalar_one_or_none(None)
 
-    ok = await unarchive_analysis(
-        analysis_id=uuid.uuid4(), user_id=uuid.uuid4(), db=db
-    )
+    ok = await unarchive_analysis(analysis_id=uuid.uuid4(), user_id=uuid.uuid4(), db=db)
 
     assert ok is False
     db.commit.assert_not_awaited()
@@ -142,3 +138,44 @@ async def test_get_history_incluir_archivados_true_pasa_por_el_mismo_camino():
     items = await get_history(user_id=user_id, db=db, incluir_archivados=True)
 
     assert items[0]["archivado_at"] is not None
+
+
+# ── F7a/F7b (plan de fixes pre-reunión) — nombre_archivo y serie_preview ────
+
+
+@pytest.mark.unit
+async def test_get_history_expone_nombre_archivo_y_serie_preview():
+    user_id = uuid.uuid4()
+    analysis = _analysis(
+        user_id=user_id,
+        configuracion={
+            "cramer_particion": "default",
+            "nombre_archivo": "estacion_04.csv",
+        },
+        serie=[94.71, 89.83, 105.13],
+    )
+    db = _mock_db_scalars_all([analysis])
+
+    items = await get_history(user_id=user_id, db=db)
+
+    assert items[0]["nombre_archivo"] == "estacion_04.csv"
+    assert items[0]["serie_preview"] == [94.71, 89.83, 105.13]
+
+
+@pytest.mark.unit
+async def test_get_history_degrada_nombre_archivo_a_null_sin_backfill():
+    """Análisis persistidos antes de F7a — configuracion no tiene la clave
+    nombre_archivo (o configuracion es None directamente). Igual que
+    timestamps (DECISIÓN 058 §4), sin backfill: el frontend degrada
+    mostrando tipo_variable en vez de romper o esconder la fila."""
+    user_id = uuid.uuid4()
+    sin_clave = _analysis(
+        user_id=user_id, configuracion={"cramer_particion": "default"}
+    )
+    sin_configuracion = _analysis(user_id=user_id, configuracion=None)
+    db = _mock_db_scalars_all([sin_clave, sin_configuracion])
+
+    items = await get_history(user_id=user_id, db=db)
+
+    assert items[0]["nombre_archivo"] is None
+    assert items[1]["nombre_archivo"] is None

@@ -212,6 +212,21 @@ el mismo cap que `/analysis/stream`.
 por defecto excluye los análisis archivados; `?archivados=true` los incluye.
 Cada item del array ahora expone `archivado_at` (`null` si no está archivado).
 
+**Agregados `nombre_archivo` y `serie_preview` en el PR 4 del plan de fixes
+pre-reunión (F7a/F7b, 14/08/2026)** — antes la lista solo exponía
+`tipo_variable`, indistinguible entre análisis del mismo tipo de variable.
+`nombre_archivo` vive en `analyses.configuracion` (JSONB, sin migración —
+mismo campo que `cramer_particion`/`mes_inicio_anio`), poblado desde el
+`filename` real que ya recibía `stream_analysis()`. `serie_preview` reusa
+`analyses.serie` tal cual (~40 valores típicos, no cambia el orden de
+magnitud del payload) para una sparkline decorativa en cada fila — sin
+timestamps ni ejes, ese detalle vive solo en `GET /history/{id}`.
+
+**Sin backfill** (mismo criterio que `timestamps`, DECISIÓN 058 §4):
+`nombre_archivo` es `null` para cualquier análisis persistido antes de este
+PR — el frontend degrada explícitamente a mostrar `tipo_variable` en ese
+caso, no oculta la fila ni la rompe.
+
 **Auth:** JWT en HttpOnly Cookie (requerido)
 
 **Response 200:**
@@ -223,7 +238,9 @@ Cada item del array ahora expone `archivado_at` (`null` si no está archivado).
     "modo": "experto",
     "etapas": ["1"],
     "created_at": "2026-07-31T01:19:27.556471",
-    "archivado_at": null
+    "archivado_at": null,
+    "nombre_archivo": "estacion_04.csv",
+    "serie_preview": [94.71, 89.83, 105.13]
   }
 ]
 ```

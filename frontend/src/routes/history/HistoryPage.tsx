@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
 import type { HistoryItem } from "../../api/types";
 import { SpotlightCard } from "../../components/SpotlightCard";
+import { Sparkline } from "../../charts/Sparkline";
 import "./HistoryPage.css";
 
 const PAGE_SIZE = 10;
@@ -231,12 +232,18 @@ function HistoryRow({
     <SpotlightCard className="history-item">
       <Link to={`/history/${item.id}`} className="history-item-link">
         <div className="row" style={{ alignItems: "center" }}>
-          <b>{item.tipo_variable}</b>
+          {/* F7a — el título es el nombre de archivo, no el tipo de
+              variable (todos los análisis del mismo tipo eran
+              indistinguibles). Sin backfill: análisis de antes de este fix
+              no tienen nombre_archivo, degradan al comportamiento anterior. */}
+          <b>{item.nombre_archivo ?? item.tipo_variable}</b>
           <span className="sp" />
+          {item.serie_preview.length > 1 && <Sparkline valores={item.serie_preview} />}
           <span className="fn">{new Date(item.created_at).toLocaleString("es-AR")}</span>
         </div>
         <p className="fn">
-          Modo: {item.modo ?? "—"} · Etapas: {item.etapas?.join(", ") ?? "—"}
+          Tipo: {item.tipo_variable} · Modo: {item.modo ?? "—"} · Etapas:{" "}
+          {item.etapas?.join(", ") ?? "—"}
         </p>
       </Link>
       <div className="row history-item-actions">

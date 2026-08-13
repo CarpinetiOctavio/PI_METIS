@@ -70,6 +70,8 @@ function makeItems(n: number): HistoryItem[] {
     etapas: ["1"],
     created_at: new Date(2026, 0, i + 1).toISOString(),
     archivado_at: null,
+    nombre_archivo: null,
+    serie_preview: [],
   }));
 }
 
@@ -186,5 +188,40 @@ describe("HistoryPage", () => {
 
     expect(await screen.findByRole("link")).toHaveAttribute("href", "/history/id-0");
     expect(screen.getByRole("button", { name: "Desarchivar" })).toBeInTheDocument();
+  });
+
+  // ── F7a/F7b (plan de fixes pre-reunión) ─────────────────────────────────
+
+  it("F7a — muestra el nombre de archivo como título y el tipo de variable en los metadatos", async () => {
+    const items = makeItems(1).map((i) => ({ ...i, nombre_archivo: "estacion_04.csv" }));
+    stubFetch(200, items);
+    renderHistoryPage();
+
+    expect(await screen.findByText("estacion_04.csv")).toBeInTheDocument();
+    expect(screen.getByText(/Tipo: caudal_precipitacion/)).toBeInTheDocument();
+  });
+
+  it("F7a — degrada al tipo de variable como título cuando nombre_archivo es null (análisis viejo)", async () => {
+    stubFetch(200, makeItems(1)); // nombre_archivo: null por default en makeItems
+    renderHistoryPage();
+
+    expect(await screen.findByText("caudal_precipitacion")).toBeInTheDocument();
+  });
+
+  it("F7b — renderiza una sparkline cuando el item trae serie_preview", async () => {
+    const items = makeItems(1).map((i) => ({ ...i, serie_preview: [94.71, 89.83, 105.13] }));
+    stubFetch(200, items);
+    const { container } = renderHistoryPage();
+
+    await screen.findByRole("link");
+    expect(container.querySelector(".sparkline")).toBeInTheDocument();
+  });
+
+  it("F7b — no renderiza la sparkline cuando serie_preview está vacía", async () => {
+    stubFetch(200, makeItems(1)); // serie_preview: [] por default en makeItems
+    const { container } = renderHistoryPage();
+
+    await screen.findByRole("link");
+    expect(container.querySelector(".sparkline")).not.toBeInTheDocument();
   });
 });

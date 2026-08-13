@@ -290,6 +290,12 @@ export interface HistoryItem {
   etapas: string[] | null;
   created_at: string;
   archivado_at: string | null;
+  // F7a/F7b (plan de fixes pre-reunión) — null para cualquier análisis
+  // persistido antes de este fix (sin backfill, mismo criterio que
+  // timestamps/DECISIÓN 058 §4). El frontend degrada a tipo_variable
+  // cuando nombre_archivo es null.
+  nombre_archivo: string | null;
+  serie_preview: number[];
 }
 
 // PR 3/5 del plan de cierre de pendientes no-test (DECISIÓN 058) —
