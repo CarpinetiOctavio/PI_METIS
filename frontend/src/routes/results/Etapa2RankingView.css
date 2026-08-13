@@ -36,3 +36,12 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* F6 (fix pre-reunión) — error inline de validación del campo de períodos
+   de retorno, nunca un banner genérico (el 400 del backend no debería
+   llegar nunca acá, la validación del cliente lo previene antes). */
+.etapa2-periodos-error {
+  color: var(--crit);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
