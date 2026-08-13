@@ -81,7 +81,10 @@ export function HistoryDetailPage() {
           <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
             Ranking de distribuciones
           </h2>
-          <Etapa2RankingView etapa2={detail.etapa2} />
+          <Etapa2RankingView
+            etapa2={detail.etapa2}
+            mediaSerie={detail.etapa1?.descriptive?.media}
+          />
         </div>
       )}
     </div>

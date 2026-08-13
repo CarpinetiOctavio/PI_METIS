@@ -382,6 +382,7 @@ export function StreamPage() {
                   : undefined
               }
               resolving={resolvingDistribucion}
+              mediaSerie={state.result?.descriptive?.media}
             />
           </div>
         )}

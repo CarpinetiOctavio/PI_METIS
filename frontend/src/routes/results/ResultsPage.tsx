@@ -62,6 +62,7 @@ export function ResultsPage() {
               warnings: etapa2.warnings,
               puntos_empiricos: etapa2.puntos_empiricos,
             }}
+            mediaSerie={result.descriptive?.media}
           />
         </div>
       )}
