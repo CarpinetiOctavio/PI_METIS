@@ -216,6 +216,7 @@ async def test_persistir_guarda_nombre_archivo_en_configuracion():
         etapas=[1],
         result=_etapa1_result_minimo(),
         etapa2_result=None,
+        seleccion_etapa2=None,
         decisiones={},
         db=db,
         filename="estacion_04.csv",

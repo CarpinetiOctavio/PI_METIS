@@ -258,6 +258,21 @@ Etapa 2 dejó anotado (`mes_inicio_anio` ya se persistía desde DECISIÓN 057,
 pero el endpoint no lo devolvía, así que la nota de criterio de año nunca
 llegaba a `HistoryDetailPage`).
 
+**Bloque C2 del plan post-avance (14/08/2026)** — dos campos más:
+
+- **`decisiones`** — el registro de auditoría de CU-01 ya se persistía
+  (`analysis_results.decisiones`, ver `architecture.md`) pero este endpoint
+  nunca lo devolvía. `{}` (nunca `null`) para un análisis sin ninguna pausa
+  resuelta — `_persistir()` siempre recibe al menos `{}`.
+- **`etapa2.seleccion`** — `_serializar_etapa2()` gana un bloque opcional con
+  la distribución+método elegidos y sus resultados
+  (`{distribucion, metodo, periodos_retorno, eventos_diseno, curva_ajuste}`),
+  para que el historial pueda mostrar la elección sin recalcular nada.
+  `null` cuando `etapa2` no es `null` pero no se llegó a elegir ninguna
+  distribución (stream abandonado en la pausa — ver B4, plan post-avance,
+  todavía sin resolver) — mismo criterio sin backfill que `timestamps`
+  (DECISIÓN 058 §4).
+
 **Auth:** JWT en HttpOnly Cookie (requerido). Verifica pertenencia
 (`user_id`) — un análisis ajeno responde 404, no 403.
 
@@ -270,7 +285,22 @@ llegaba a `HistoryDetailPage`).
   "etapas": ["1"],
   "created_at": "2026-07-31T01:19:27.556471",
   "etapa1": { "...": "ver payload de result_etapa1 en statistical-pipeline.md" },
-  "etapa2": null,
+  "etapa2": {
+    "ranking": ["...", "ver DECISIÓN 055 — la grilla completa, sin aplanar"],
+    "warnings": ["..."],
+    "puntos_empiricos": ["..."],
+    "seleccion": {
+      "distribucion": "gve",
+      "metodo": "ml",
+      "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500],
+      "eventos_diseno": [{"periodo_retorno": 2, "valor": 107.5625}],
+      "curva_ajuste": [{"periodo_retorno": 1.05, "valor": 61.2}]
+    }
+  },
+  "decisiones": {
+    "chow": {"accion": "rechazar", "dato": 950.0},
+    "distribucion": {"distribucion": "gve", "metodo": "ml", "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]}
+  },
   "serie": [94.71, 89.83],
   "timestamps": [{"iso": "1980-01-01", "anio": 1980}],
   "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7}
