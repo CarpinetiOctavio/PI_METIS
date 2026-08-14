@@ -112,7 +112,12 @@ def test_serializar_etapa2_incluye_warnings():
 def test_serializar_etapa2_sin_warnings_da_lista_vacia():
     resultado = _serializar_etapa2(Etapa2Result(ranking=[]))
 
-    assert resultado == {"ranking": [], "warnings": [], "puntos_empiricos": []}
+    assert resultado == {
+        "ranking": [],
+        "warnings": [],
+        "puntos_empiricos": [],
+        "seleccion": None,
+    }
 
 
 @pytest.mark.unit

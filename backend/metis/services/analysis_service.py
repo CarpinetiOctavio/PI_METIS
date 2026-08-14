@@ -163,13 +163,22 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
     }
 
 
-def _serializar_etapa2(result: Etapa2Result) -> dict:
+def _serializar_etapa2(result: Etapa2Result, seleccion: dict | None = None) -> dict:
     """Hermana exacta de _serializar_etapa1() (DECISIÓN 055, Bloque A5).
 
     Serializa la grilla completa — las 13 distribuciones con TODOS sus
     métodos, incluidos no_converge/no_aplicable/disabled_zeros. No aplana
     a un top-3: la tesis misma reporta que ciertas combinaciones no
     convergen, y eso es información docente, no un error a esconder.
+
+    `seleccion` (Bloque C2a, plan post-avance) — la elección de
+    distribución+método del usuario y sus resultados (eventos_diseno,
+    curva_ajuste), para que el historial pueda mostrarla sin recalcular
+    nada. `None` cuando no se llegó a elegir (stream abandonado en la
+    pausa, o `result_etapa2_ranking` — se emite ANTES de que exista
+    ninguna elección) — mismo criterio sin backfill que `timestamps`
+    (DECISIÓN 058 §4) y `nombre_archivo` (F7a): el campo siempre está
+    presente en el JSON, en `null` cuando no aplica.
     """
 
     def metodo_dict(m) -> dict:
@@ -206,6 +215,7 @@ def _serializar_etapa2(result: Etapa2Result) -> dict:
         # curva). Independiente de la distribución elegida, ver
         # PuntoEmpirico en core/etapa2/types.py.
         "puntos_empiricos": [punto_empirico_dict(p) for p in result.puntos_empiricos],
+        "seleccion": seleccion,
     }
 
 
@@ -571,6 +581,10 @@ async def stream_analysis(
         # veredicto final de Etapa 1 (post-Chow si el atípico se rechazó).
         etapa2_result: Etapa2Result | None = None
         decision_etapa2: dict | None = None
+        # Bloque C2a (plan post-avance) — la elección + sus resultados, para
+        # persistir junto al ranking. Se arma junto con result_etapa2_eventos
+        # más abajo (misma data, evita recalcular).
+        seleccion_etapa2: dict | None = None
 
         if 2 in etapas and result_final.nivel_confianza != "rechazado":
             valores_numericos = filtrar_numericos(serie_final)
@@ -676,21 +690,30 @@ async def stream_analysis(
                 ]
                 curva_ajuste = []
 
+            eventos_diseno_dicts = [
+                {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
+                for e in eventos
+            ]
+            curva_ajuste_dicts = [
+                {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
+                for e in curva_ajuste
+            ]
             yield _sse(
                 "result_etapa2_eventos",
                 {
                     "distribucion": distribucion_elegida,
                     "metodo": metodo_elegido,
-                    "eventos_diseno": [
-                        {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
-                        for e in eventos
-                    ],
-                    "curva_ajuste": [
-                        {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
-                        for e in curva_ajuste
-                    ],
+                    "eventos_diseno": eventos_diseno_dicts,
+                    "curva_ajuste": curva_ajuste_dicts,
                 },
             )
+            seleccion_etapa2 = {
+                "distribucion": distribucion_elegida,
+                "metodo": metodo_elegido,
+                "periodos_retorno": periodos_retorno,
+                "eventos_diseno": eventos_diseno_dicts,
+                "curva_ajuste": curva_ajuste_dicts,
+            }
 
         # Construir registro de decisiones
         decisiones: dict = {}
@@ -715,6 +738,7 @@ async def stream_analysis(
                 etapas=etapas,
                 result=result_final,
                 etapa2_result=etapa2_result,
+                seleccion_etapa2=seleccion_etapa2,
                 decisiones=decisiones,
                 db=db,
                 filename=filename,
@@ -739,6 +763,7 @@ async def _persistir(
     etapas: list[int],
     result: Etapa1Result,
     etapa2_result: Etapa2Result | None,
+    seleccion_etapa2: dict | None,
     decisiones: dict,
     db: AsyncSession,
     filename: str,
@@ -776,7 +801,11 @@ async def _persistir(
     analysis_result = AnalysisResult(
         analysis_id=analysis.id,
         etapa1=_serializar_etapa1(result, mes_inicio_anio),
-        etapa2=_serializar_etapa2(etapa2_result) if etapa2_result is not None else None,
+        etapa2=(
+            _serializar_etapa2(etapa2_result, seleccion_etapa2)
+            if etapa2_result is not None
+            else None
+        ),
         decisiones=decisiones,
     )
     db.add(analysis_result)
@@ -847,6 +876,12 @@ async def get_analysis_by_id(
         "created_at": analysis.created_at.isoformat(),
         "etapa1": result.etapa1,
         "etapa2": result.etapa2,
+        # C2b (plan post-avance) — registro de auditoría de CU-01: qué
+        # decidió el usuario ante el atípico y ante la distribución
+        # (analysis_results.decisiones ya se persistía, este endpoint nunca
+        # lo devolvía). `{}` para análisis sin ninguna pausa resuelta —
+        # nunca None, `_persistir()` siempre recibe al menos `{}`.
+        "decisiones": result.decisiones,
         # PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058) —
         # cierra el hueco que dejó anotado el PR 9 del plan de Etapa 2: sin
         # `configuracion` acá, la nota de criterio de año de

@@ -309,16 +309,21 @@ Etapa 1 — si el atípico de Chow fue rechazado, sobre la serie ya filtrada,
 no sobre la original.
 
 **Payload de `result_etapa2_ranking`:** `{"session_id", "ranking", "warnings",
-"puntos_empiricos"}`, donde `ranking` es la grilla completa serializada por
-`_serializar_etapa2()` (las 13 distribuciones, todos sus métodos con
-`status`/`eea`/`parametros`, `mejor_eea`, `mejor_metodo`) — sin aplanar a un
-top-3, ver DECISIÓN 055. **`puntos_empiricos`** — agregado en el Bloque C del
-plan de Etapa 2 (gráficos interactivos, DECISIÓN 056) — es la posición de
-ploteo Weibull de cada dato observado (`{valor, periodo_retorno,
+"puntos_empiricos", "seleccion"}`, donde `ranking` es la grilla completa
+serializada por `_serializar_etapa2()` (las 13 distribuciones, todos sus
+métodos con `status`/`eea`/`parametros`, `mejor_eea`, `mejor_metodo`) — sin
+aplanar a un top-3, ver DECISIÓN 055. **`puntos_empiricos`** — agregado en el
+Bloque C del plan de Etapa 2 (gráficos interactivos, DECISIÓN 056) — es la
+posición de ploteo Weibull de cada dato observado (`{valor, periodo_retorno,
 probabilidad}`, `core/etapa2/types.py::PuntoEmpirico`,
 `core/etapa2/empirical.py::probabilidades_weibull`): propiedad de la muestra,
 no del ajuste, así que viaja antes de que el usuario elija ninguna
 distribución. Insumo del gráfico de ajuste (`Etapa2AjusteChart`).
+**`seleccion`** — agregado en el Bloque C2a del plan post-avance
+(14/08/2026) — siempre `null` en este evento en particular: se emite
+**antes** de que exista ninguna elección, el campo solo se puebla en lo que
+queda persistido (`analysis_results.etapa2`, ver `api-contracts.md` §
+`GET /history/{id}`), no en este evento transitorio.
 
 **`POST /analysis/distribution-decision`** (reemplaza al `design-events`
 documentado y nunca implementado — DECISIÓN 052, ver `api-contracts.md`)
