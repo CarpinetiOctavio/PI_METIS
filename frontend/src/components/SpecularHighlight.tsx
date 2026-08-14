@@ -1,4 +1,5 @@
 import { useRef, type CSSProperties, type ReactNode, type MouseEvent } from "react";
+import { useMotion } from "../theme/MotionProvider";
 import "./SpecularHighlight.css";
 
 /**
@@ -20,6 +21,12 @@ export function SpecularHighlight({
   style,
 }: Readonly<{ children: ReactNode; className?: string; style?: CSSProperties }>) {
   const ref = useRef<HTMLSpanElement>(null);
+  // A2 (plan post-avance) — con "media"/"off" no hay brillo que siga al
+  // mouse, pero el <span> se conserva (className/style siguen siendo
+  // load-bearing en varios llamadores reales, ej. `width: "100%"` en
+  // Etapa2RankingView) — mismo criterio que Magnet.tsx.
+  const { effectiveLevel } = useMotion();
+  const highlightEnabled = effectiveLevel === "alta";
 
   function handleMouseMove(event: MouseEvent<HTMLSpanElement>) {
     const el = ref.current;
@@ -34,7 +41,7 @@ export function SpecularHighlight({
       ref={ref}
       className={`specular-highlight ${className ?? ""}`}
       style={style}
-      onMouseMove={handleMouseMove}
+      onMouseMove={highlightEnabled ? handleMouseMove : undefined}
     >
       {children}
     </span>

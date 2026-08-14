@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { prefersReducedMotion, sizeCanvasToViewport } from "./canvasUtils";
+import type { MotionLevel } from "../motion";
 
 /** Firma de la función de dibujo que cada fondo le pasa al hook — mismo
  * `draw(t)` que tenían los tres componentes antes de esta extracción, más
@@ -36,10 +37,20 @@ export type CanvasDrawFn = (
  * comportamiento que las versiones no extraídas, donde el registro de
  * listeners adicionales vivía después de la guarda de contexto, dentro del
  * mismo efecto.
+ *
+ * `motionLevel` (Bloque A, plan post-avance) — a diferencia de `draw`/
+ * `setupExtra`, SÍ es dependencia del efecto: cambiar de nivel reinicia el
+ * loop a propósito, porque `setupExtra` (el registro de listeners de
+ * puntero de DotFieldBackground) solo corre una vez por montaje — sin
+ * reiniciar el efecto, pasar de "alta" a "media" nunca desregistraría el
+ * tracking de puntero hasta un remount real. La densidad (THREAD_COUNT,
+ * GRID_STEP, etc.) en cambio SÍ se propaga sin reinicio: `draw` se lee vía
+ * ref y ya se actualiza en cada render, sin necesidad de tocar este array.
  */
 export function useCanvasAnimationLoop(
   canvasRef: RefObject<HTMLCanvasElement>,
   draw: CanvasDrawFn,
+  motionLevel: MotionLevel,
   setupExtra?: () => () => void,
 ): void {
   // draw/setupExtra se guardan en refs, actualizadas en cada render, en vez
@@ -88,10 +99,14 @@ export function useCanvasAnimationLoop(
 
     resize();
 
-    if (prefersReducedMotion()) {
+    if (motionLevel === "off" || prefersReducedMotion()) {
       // Guarda de reduced-motion: un frame estático, sin arrancar el loop —
       // no basta con acelerar la animación, hay que no gastar CPU en
-      // absoluto.
+      // absoluto. `motionLevel === "off"` cubre el nivel elegido en la app;
+      // `prefersReducedMotion()` sigue acá como red de seguridad (defensa
+      // en profundidad) por si algún consumidor futuro monta este hook sin
+      // pasar por el gate de RootLayout, que ya no monta el fondo en
+      // absoluto cuando el nivel efectivo es "off".
       drawRef.current(0, ctx, width, height);
     } else {
       rafId = window.requestAnimationFrame(loop);
@@ -133,6 +148,7 @@ export function useCanvasAnimationLoop(
     // vida del componente); draw/setupExtra se leen vía ref
     // (drawRef/setupExtraRef) a propósito, para que este efecto siga
     // corriendo una sola vez por montaje, igual que en los tres
-    // componentes antes de esta extracción.
-  }, [canvasRef]);
+    // componentes antes de esta extracción. motionLevel SÍ es dependencia
+    // — ver el comentario del JSDoc de la función.
+  }, [canvasRef, motionLevel]);
 }

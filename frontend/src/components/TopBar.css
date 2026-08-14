@@ -122,6 +122,37 @@
   background: var(--line);
 }
 
+/* Selector de intensidad de animación (A3, plan post-avance) — mismo
+   patrón de cluster inline-flex que .topbar__theme-toggle, un <select>
+   nativo en vez de un botón de dos estados porque son tres niveles. */
+.topbar__motion-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar__motion-select select {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: var(--surf2);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+
+.topbar__motion-select select:hover {
+  border-color: var(--acc);
+}
+
+.topbar__motion-select select:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
 /* Toggle de tema de dos estados — reemplaza el botón "Cambiar tema" suelto.
    El nombre accesible ("Cambiar tema") vive en aria-label, no en texto
    visible: TopBar.test.tsx lo busca por /cambiar tema/i como nombre de

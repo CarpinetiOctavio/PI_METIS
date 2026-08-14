@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "../theme/ThemeProvider";
+import { MotionProvider } from "../theme/MotionProvider";
 import { AuthProvider } from "../auth/AuthProvider";
 import { renderPage } from "../test/renderPage";
 import { TopBar } from "./TopBar";
@@ -40,16 +41,27 @@ function renderTopBar(initialPath = "/config") {
   return renderPage(
     <MemoryRouter initialEntries={[initialPath]}>
       <ThemeProvider>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<EntryProbe />} />
-            <Route path="/config" element={<TopBar />} />
-            <Route path="/history" element={<TopBar />} />
-            <Route path="/stream" element={<TopBar />} />
-          </Routes>
-        </AuthProvider>
+        <MotionProvider>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<EntryProbe />} />
+              <Route path="/config" element={<TopBar />} />
+              <Route path="/history" element={<TopBar />} />
+              <Route path="/stream" element={<TopBar />} />
+            </Routes>
+          </AuthProvider>
+        </MotionProvider>
       </ThemeProvider>
     </MemoryRouter>,
+  );
+}
+
+function mockReducedMotion(reduce: boolean) {
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    (query: string) =>
+      ({
+        matches: reduce && query === "(prefers-reduced-motion: reduce)",
+      }) as MediaQueryList,
   );
 }
 
@@ -209,5 +221,54 @@ describe("TopBar", () => {
 
     expect(screen.queryByRole("link", { current: "page" })).not.toBeInTheDocument();
     expect(container.querySelector(".topbar__pill-indicator")).not.toBeInTheDocument();
+  });
+
+  // A3 (plan post-avance) — selector de intensidad de animación, al lado
+  // del toggle de tema.
+  it("shows the motion selector defaulting to 'Alta', and changing it updates data-motion", async () => {
+    stubFetch();
+
+    renderTopBar();
+    await waitFor(() =>
+      expect(screen.getByTestId("backend-status")).toHaveTextContent(
+        "Backend conectado",
+      ),
+    );
+
+    const select = screen.getByLabelText("Movimiento") as HTMLSelectElement;
+    expect(select.value).toBe("alta");
+
+    fireEvent.change(select, { target: { value: "media" } });
+
+    expect(select.value).toBe("media");
+    expect(document.documentElement.dataset.motion).toBe("media");
+    expect(localStorage.getItem("metis-motion-level")).toBe("media");
+  });
+
+  it("shows a note when the OS forces reduced motion, regardless of the selected level", async () => {
+    mockReducedMotion(true);
+    stubFetch();
+
+    renderTopBar();
+    await waitFor(() =>
+      expect(screen.getByTestId("backend-status")).toHaveTextContent(
+        "Backend conectado",
+      ),
+    );
+
+    expect(screen.getByTestId("motion-system-note")).toBeInTheDocument();
+  });
+
+  it("does not show the reduced-motion note when the OS does not force it", async () => {
+    stubFetch();
+
+    renderTopBar();
+    await waitFor(() =>
+      expect(screen.getByTestId("backend-status")).toHaveTextContent(
+        "Backend conectado",
+      ),
+    );
+
+    expect(screen.queryByTestId("motion-system-note")).not.toBeInTheDocument();
   });
 });

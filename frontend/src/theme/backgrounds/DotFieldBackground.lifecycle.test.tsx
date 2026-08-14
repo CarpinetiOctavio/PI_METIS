@@ -7,6 +7,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { StrictMode } from "react";
 import { render } from "@testing-library/react";
 import { DotFieldBackground } from "./DotFieldBackground";
+import { MotionProvider } from "../MotionProvider";
 
 function mockRaf() {
   let nextId = 0;
@@ -81,5 +82,47 @@ describe("DotFieldBackground — ciclo de vida bajo StrictMode", () => {
     );
 
     expect(rafSpy).not.toHaveBeenCalled();
+  });
+});
+
+// A2 (plan post-avance) — DotFieldBackground es el único de los tres fondos
+// con seguimiento de puntero; "media" lo apaga por completo (no solo lo
+// atenúa), verificado acá directamente sobre los listeners de window, no
+// sobre el resultado visual del draw (que los tests de arriba no ejercitan
+// de todas formas — mockRaf nunca invoca el callback real).
+describe("DotFieldBackground — nivel de movimiento 'media'", () => {
+  beforeEach(() => {
+    mockReducedMotion(false);
+    localStorage.setItem("metis-motion-level", "media");
+  });
+
+  it("no registra el seguimiento de puntero (pointermove/pointerleave)", () => {
+    mockRaf();
+    const addSpy = vi.spyOn(window, "addEventListener");
+
+    render(
+      <StrictMode>
+        <MotionProvider>
+          <DotFieldBackground />
+        </MotionProvider>
+      </StrictMode>,
+    );
+
+    expect(addSpy).not.toHaveBeenCalledWith("pointermove", expect.anything());
+    expect(addSpy).not.toHaveBeenCalledWith("pointerleave", expect.anything());
+  });
+
+  it("igual arranca el loop — la retícula sigue animada, solo menos densa", () => {
+    const { requested, canceled } = mockRaf();
+
+    render(
+      <StrictMode>
+        <MotionProvider>
+          <DotFieldBackground />
+        </MotionProvider>
+      </StrictMode>,
+    );
+
+    expect(requested.length - canceled.length).toBe(1);
   });
 });

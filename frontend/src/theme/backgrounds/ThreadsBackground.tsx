@@ -1,13 +1,17 @@
 import { useRef } from "react";
 import { hexToRgba, lerpHex, readCssVar, secureRandom } from "./canvasUtils";
 import { useCanvasAnimationLoop } from "./useCanvasAnimationLoop";
+import { useMotion } from "../MotionProvider";
+import type { MotionLevel } from "../motion";
 
 // Fondo de todas las pantallas (DECISIÓN 051) — hermano de
 // DotFieldBackground/GridScanBackground, mismo z-index negativo, montado
-// siempre en RootLayout (sin lazy/Suspense). Hasta DECISIÓN 051 este
-// componente usaba Three.js y estaba acotado a "/" vía React.lazy (addendum
-// de DECISIÓN 045, docs/decisiones/decision045.md) porque el chunk pesaba
-// ~600 KB minificados. Lo que dibujaba de verdad — THREE.Line con
+// siempre en RootLayout (sin lazy/Suspense) salvo con el nivel de
+// movimiento "off" (Bloque A, plan post-avance — RootLayout deja de
+// montarlo directamente). Hasta DECISIÓN 051 este componente usaba
+// Three.js y estaba acotado a "/" vía React.lazy (addendum de DECISIÓN 045,
+// docs/decisiones/decision045.md) porque el chunk pesaba ~600 KB
+// minificados. Lo que dibujaba de verdad — THREE.Line con
 // LineBasicMaterial, cámara ortográfica, sin luces/materiales/profundidad —
 // es una polilínea 2D: se reimplementa acá en Canvas 2D, igual que sus dos
 // hermanos, y Three.js sale del proyecto.
@@ -17,10 +21,16 @@ import { useCanvasAnimationLoop } from "./useCanvasAnimationLoop";
 // explícito de verificación manual (05/08/2026): "que se vieran más líneas y
 // de distintos colores", sin salirse de la paleta de la identidad
 // "Instrumento". Parámetros conservados sin cambios respecto a la versión
-// Three.js.
-const THREAD_COUNT = 18;
+// Three.js. Con el nivel "media" (A2, plan post-avance), Kevin decidió
+// conservar el fondo animado pero con mucha menos densidad — 18 -> 6.
+const THREAD_COUNT_ALTA = 18;
+const THREAD_COUNT_MEDIA = 6;
 const POINTS_PER_THREAD = 64;
 const PALETTE_STEPS = 5;
+
+function threadCountFor(level: MotionLevel): number {
+  return level === "media" ? THREAD_COUNT_MEDIA : THREAD_COUNT_ALTA;
+}
 
 /** La versión Three.js trabajaba en NDC (-1..1, cámara ortográfica
  * -1/1/1/-1). La función de onda y los rangos de yOffset/speed se
@@ -43,6 +53,7 @@ interface Thread {
 
 export function ThreadsBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { effectiveLevel } = useMotion();
 
   // Generado una sola vez por instancia del componente, no en cada frame —
   // mismo criterio que la versión no extraída (el array vivía fuera de
@@ -50,13 +61,24 @@ export function ThreadsBackground() {
   // useRef con init perezoso logra lo mismo sin depender de la vida del
   // efecto del hook: los seeds/velocidades de cada hilo se sortean al
   // montar y se mantienen fijos mientras el componente esté vivo.
+  //
+  // A2 (plan post-avance) — a diferencia de la versión original, el conteo
+  // ya no es una constante fija: si cambia el nivel de movimiento, hay que
+  // REGENERAR el array (no solo cambiar THREAD_COUNT), porque `??=` solo
+  // asigna una vez. threadsLevelRef guarda con qué nivel se generó la
+  // última vez, para detectar el cambio sin depender del efecto del hook.
   const threadsRef = useRef<Thread[]>();
-  threadsRef.current ??= Array.from({ length: THREAD_COUNT }, (_, i) => ({
-    opacity: 0.14 + (i / THREAD_COUNT) * 0.14,
-    seed: secureRandom() * 1000,
-    yOffset: (i / (THREAD_COUNT - 1)) * 2 - 1,
-    speed: 0.15 + secureRandom() * 0.15,
-  }));
+  const threadsLevelRef = useRef<MotionLevel>();
+  if (threadsLevelRef.current !== effectiveLevel) {
+    const count = threadCountFor(effectiveLevel);
+    threadsRef.current = Array.from({ length: count }, (_, i) => ({
+      opacity: 0.14 + (i / count) * 0.14,
+      seed: secureRandom() * 1000,
+      yOffset: (i / (count - 1)) * 2 - 1,
+      speed: 0.15 + secureRandom() * 0.15,
+    }));
+    threadsLevelRef.current = effectiveLevel;
+  }
 
   useCanvasAnimationLoop(canvasRef, (t, ctx, width, height) => {
     const time = t / 1000;
@@ -89,7 +111,7 @@ export function ThreadsBackground() {
       }
       ctx.stroke();
     });
-  });
+  }, effectiveLevel);
 
   return (
     <canvas

@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../theme/ThemeProvider";
+import { useMotion, type MotionLevel } from "../theme/MotionProvider";
 import { useBackendPing } from "../api/useBackendPing";
 import { useAuth } from "../auth/AuthProvider";
 import "./TopBar.css";
@@ -8,6 +9,12 @@ import "./TopBar.css";
 const MODE_LABEL: Record<"light" | "dark", string> = {
   light: "Claro",
   dark: "Oscuro",
+};
+
+const MOTION_LABEL: Record<MotionLevel, string> = {
+  alta: "Alta",
+  media: "Media",
+  off: "Sin animaciones",
 };
 
 const BACKEND_LABEL: Record<"loading" | "ok" | "error", string> = {
@@ -22,6 +29,7 @@ function navLinkClassName({ isActive }: { isActive: boolean }): string {
 
 export function TopBar() {
   const { mode, toggleMode } = useTheme();
+  const { level, setLevel, systemForcesReduced } = useMotion();
   const { state } = useBackendPing();
   const { user, isAuthed, isAnonymous, logout, exitAnonymously } = useAuth();
   const navigate = useNavigate();
@@ -38,6 +46,10 @@ export function TopBar() {
   function handleExitAnonymous() {
     exitAnonymously();
     navigate("/", { replace: true });
+  }
+
+  function handleMotionChange(event: ChangeEvent<HTMLSelectElement>) {
+    setLevel(event.target.value as MotionLevel);
   }
 
   const navRef = useRef<HTMLElement>(null);
@@ -132,6 +144,40 @@ export function TopBar() {
             </button>
           </>
         )}
+
+        <span className="topbar__sep" aria-hidden="true" />
+
+        {/* A3 (plan post-avance) — selector de intensidad de animación,
+            al lado del toggle de tema. Con el sistema pidiendo movimiento
+            reducido, el nivel efectivo ya es "off" sin importar lo elegido
+            acá (MotionProvider) — el selector queda habilitado igual (el
+            usuario puede seguir ajustando su preferencia para cuando el
+            sistema deje de pedirlo), pero lo dice explícitamente en vez de
+            comportarse como si no hiciera nada. */}
+        <span className="topbar__motion-select">
+          <label htmlFor="motion-level" className="fn">
+            Movimiento
+          </label>
+          <select
+            id="motion-level"
+            value={level}
+            onChange={handleMotionChange}
+            title={
+              systemForcesReduced
+                ? "Tu sistema pide movimiento reducido — se aplica igual que \"Sin animaciones\" mientras esa preferencia esté activa."
+                : undefined
+            }
+          >
+            <option value="alta">{MOTION_LABEL.alta}</option>
+            <option value="media">{MOTION_LABEL.media}</option>
+            <option value="off">{MOTION_LABEL.off}</option>
+          </select>
+          {systemForcesReduced && (
+            <span className="fn" data-testid="motion-system-note">
+              (tu sistema pide movimiento reducido)
+            </span>
+          )}
+        </span>
 
         <span className="topbar__sep" aria-hidden="true" />
 

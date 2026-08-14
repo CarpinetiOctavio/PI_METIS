@@ -3,6 +3,7 @@ import { TopBar } from "./TopBar";
 import { ThreadsBackground } from "../theme/backgrounds/ThreadsBackground";
 import { DotFieldBackground } from "../theme/backgrounds/DotFieldBackground";
 import { GridScanBackground } from "../theme/backgrounds/GridScanBackground";
+import { useMotion } from "../theme/MotionProvider";
 
 export function RootLayout() {
   // La puerta de entrada ("/") tiene su propio fondo (GridScanBackground) —
@@ -25,12 +26,18 @@ export function RootLayout() {
   // nunca dentro del wrapper animado de cada ruta — igual que ya estaba
   // DotFieldBackground, que por eso nunca tuvo este problema.
   const { pathname, key } = useLocation();
-  const showDotField = pathname !== "/";
-  const showGridScan = pathname === "/";
+  const { effectiveLevel } = useMotion();
+  // A3 (plan post-avance) — nivel "off": no basta con no animar, hay que no
+  // MONTAR los fondos en absoluto (no arrancar ningún requestAnimationFrame
+  // ni tocar el DOM de más). Con "alta"/"media" los fondos siguen su propia
+  // lógica de densidad (ver cada componente).
+  const motionOff = effectiveLevel === "off";
+  const showDotField = pathname !== "/" && !motionOff;
+  const showGridScan = pathname === "/" && !motionOff;
 
   return (
     <div className="app-shell">
-      <ThreadsBackground />
+      {!motionOff && <ThreadsBackground />}
       {showDotField && <DotFieldBackground />}
       {showGridScan && <GridScanBackground />}
       <TopBar />

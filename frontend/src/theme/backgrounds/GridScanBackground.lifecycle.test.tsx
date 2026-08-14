@@ -5,6 +5,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { StrictMode } from "react";
 import { render } from "@testing-library/react";
 import { GridScanBackground } from "./GridScanBackground";
+import { MotionProvider } from "../MotionProvider";
 
 function mockRaf() {
   let nextId = 0;
@@ -69,6 +70,45 @@ describe("GridScanBackground — ciclo de vida bajo StrictMode", () => {
     render(
       <StrictMode>
         <GridScanBackground />
+      </StrictMode>,
+    );
+
+    expect(rafSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("GridScanBackground — nivel de movimiento", () => {
+  beforeEach(() => {
+    mockReducedMotion(false);
+  });
+
+  // A2 (plan post-avance) — "media" apaga el haz de barrido (drawBeam),
+  // pero la grilla base sigue animada: a diferencia de "off", el loop
+  // sigue vivo.
+  it("con nivel 'media', el loop sigue vivo — solo se apaga el haz, no la grilla", () => {
+    localStorage.setItem("metis-motion-level", "media");
+    const { requested, canceled } = mockRaf();
+
+    render(
+      <StrictMode>
+        <MotionProvider>
+          <GridScanBackground />
+        </MotionProvider>
+      </StrictMode>,
+    );
+
+    expect(requested.length - canceled.length).toBe(1);
+  });
+
+  it("con nivel 'off', no arranca ningún loop (defensa en profundidad)", () => {
+    localStorage.setItem("metis-motion-level", "off");
+    const { rafSpy } = mockRaf();
+
+    render(
+      <StrictMode>
+        <MotionProvider>
+          <GridScanBackground />
+        </MotionProvider>
       </StrictMode>,
     );
 
