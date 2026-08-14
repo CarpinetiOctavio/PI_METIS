@@ -6,7 +6,6 @@ import { CountUp } from "../../components/CountUp";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
 import { Etapa2RankingView } from "../results/Etapa2RankingView";
-import { Etapa2EventosView } from "../results/Etapa2EventosView";
 import "./StreamPage.css";
 
 interface Group {
@@ -116,6 +115,13 @@ export function StreamPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
   const [resolvingDistribucion, setResolvingDistribucion] = useState(false);
+  // B2 (plan post-avance) — una vez elegida la distribución, la grilla
+  // completa deja de tener sentido (el usuario ya decidió); esto es lo que
+  // se muestra en su lugar mientras se calculan los eventos de diseño.
+  const [seleccionEtapa2, setSeleccionEtapa2] = useState<{
+    distribucion: string;
+    metodo: string;
+  } | null>(null);
 
   const form = (location.state as { form?: AnalysisStreamForm } | null)?.form;
   // El form se congela en el primer render: location.state es estable dentro
@@ -209,6 +215,40 @@ export function StreamPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [modalOpen]);
 
+  // B1 (plan post-avance) — /stream deja de ser un destino final: en cuanto
+  // el pipeline termina, navega sola a /results en vez de mostrar un banner
+  // con un botón "Ver resultados". `replace: true` importa — sin él, el
+  // botón "atrás" del navegador vuelve a /stream, que remontaría y
+  // relanzaría el análisis entero (el efecto de arranque corre en cada
+  // montaje). El guard evita una segunda navegación bajo el doble efecto de
+  // StrictMode (fase="done" no vuelve a cambiar, pero el efecto sí podría
+  // re-dispararse si alguna dependencia cambiara de identidad).
+  const navigatedToResultsRef = useRef(false);
+  useEffect(() => {
+    if (state.fase !== "done" || navigatedToResultsRef.current) return;
+    navigatedToResultsRef.current = true;
+    navigate("/results", {
+      replace: true,
+      state: {
+        result: state.result,
+        analysisId: state.analysisId,
+        modo: form?.modo,
+        etapa2: state.etapa2,
+        eventosDiseno: state.eventosDiseno,
+        mesInicioAnio: form?.mes_inicio_anio,
+      },
+    });
+  }, [
+    state.fase,
+    state.result,
+    state.analysisId,
+    state.etapa2,
+    state.eventosDiseno,
+    form?.modo,
+    form?.mes_inicio_anio,
+    navigate,
+  ]);
+
   if (!form) return null;
 
   async function handleOutlierDecision(decision: "rechazar" | "aceptar") {
@@ -226,6 +266,7 @@ export function StreamPage() {
     periodosRetorno: number[],
   ) {
     setResolvingDistribucion(true);
+    setSeleccionEtapa2({ distribucion, metodo });
     try {
       await resolveDistribution(distribucion, metodo, periodosRetorno);
     } finally {
@@ -355,74 +396,38 @@ export function StreamPage() {
 
         {/* DECISIÓN 052 — Etapa 2 pausa DENTRO de este mismo stream, igual
             que Chow arriba: sin navegación a una ruta separada. Se muestra
-            en cuanto llega el ranking y sigue visible después de resolver
-            (de ahí que la condición sea "existe el dato", no "la fase es
-            waiting_distribution" — el usuario elige y la grilla se queda a
-            la vista mientras se calculan los eventos). */}
+            en cuanto llega el ranking. B2 (plan post-avance) — una vez
+            resuelta la elección, la grilla completa ya no tiene sentido acá
+            (el usuario ya decidió, y con B1 la pantalla está a punto de
+            navegar a /results) y se colapsa a una línea de estado. */}
         {state.fase !== "error" && state.etapa2 && (
           <div style={{ marginTop: 20 }}>
-            <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
-              {state.fase === "waiting_distribution"
-                ? "Elegí una distribución"
-                : "Ranking de distribuciones"}
-            </h2>
-            <p className="sub">
-              METIS ordena por EEA; la distribución la elegís vos.
-            </p>
-            <Etapa2RankingView
-              etapa2={{
-                ranking: state.etapa2.ranking,
-                warnings: state.etapa2.warnings,
-                puntos_empiricos: state.etapa2.puntos_empiricos,
-              }}
-              onElegir={
-                state.fase === "waiting_distribution"
-                  ? handleDistribucionElegida
-                  : undefined
-              }
-              resolving={resolvingDistribucion}
-              mediaSerie={state.result?.descriptive?.media}
-            />
-          </div>
-        )}
-
-        {state.fase !== "error" && state.eventosDiseno && (
-          <div style={{ marginTop: 20 }}>
-            <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
-              Evento de diseño
-            </h2>
-            <Etapa2EventosView
-              eventos={state.eventosDiseno}
-              puntosEmpiricos={state.etapa2?.puntos_empiricos ?? []}
-            />
-          </div>
-        )}
-
-        {state.fase === "done" && (
-          <div className="banner ok" style={{ marginTop: 14 }}>
-            <span className="ic">✓</span> Análisis completo.{" "}
-            <Magnet style={{ marginLeft: "auto" }}>
-              <SpecularHighlight>
-                <button
-                  type="button"
-                  className="b b-pri"
-                  onClick={() =>
-                    navigate("/results", {
-                      state: {
-                        result: state.result,
-                        analysisId: state.analysisId,
-                        modo: form.modo,
-                        etapa2: state.etapa2,
-                        eventosDiseno: state.eventosDiseno,
-                        mesInicioAnio: form.mes_inicio_anio,
-                      },
-                    })
-                  }
-                >
-                  Ver resultados ▸
-                </button>
-              </SpecularHighlight>
-            </Magnet>
+            {state.fase === "waiting_distribution" ? (
+              <>
+                <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+                  Elegí una distribución
+                </h2>
+                <p className="sub">
+                  METIS ordena por EEA; la distribución la elegís vos.
+                </p>
+                <Etapa2RankingView
+                  etapa2={{
+                    ranking: state.etapa2.ranking,
+                    warnings: state.etapa2.warnings,
+                    puntos_empiricos: state.etapa2.puntos_empiricos,
+                  }}
+                  onElegir={handleDistribucionElegida}
+                  resolving={resolvingDistribucion}
+                  mediaSerie={state.result?.descriptive?.media}
+                />
+              </>
+            ) : (
+              seleccionEtapa2 && (
+                <p className="sub">
+                  Ajustando <b>{seleccionEtapa2.distribucion} · {seleccionEtapa2.metodo}</b>…
+                </p>
+              )
+            )}
           </div>
         )}
       </div>

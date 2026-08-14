@@ -265,7 +265,9 @@ describe("StreamPage", () => {
     await waitFor(() => expect(independenciaStep).toHaveFocus());
   });
 
-  it("shows a completion banner and navigates to /results carrying the result", async () => {
+  // B1 (plan post-avance) — /stream deja de ser un destino final: navega
+  // sola con replace:true en cuanto fase="done", sin banner ni botón.
+  it("navigates to /results on its own once fase=done, without any banner or button", async () => {
     renderStreamPage({
       fase: "done",
       result: {
@@ -283,7 +285,9 @@ describe("StreamPage", () => {
       analysisId: "an-1",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Ver resultados/ }));
+    expect(
+      screen.queryByRole("button", { name: /Ver resultados/ }),
+    ).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(screen.getByTestId("results-state")).toHaveTextContent("an-1"),
@@ -335,20 +339,47 @@ describe("StreamPage", () => {
     );
   });
 
-  it("shows the design events view once result_etapa2_eventos arrives, without blocking on fase", () => {
-    renderStreamPage({
-      fase: "streaming",
-      eventosDiseno: {
-        distribucion: "gumbel",
-        metodo: "momentos",
-        eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
-        curva_ajuste: [{ periodo_retorno: 100, valor: 312.7 }],
-      },
+  // B2 (plan post-avance) — Etapa2EventosView ya no se muestra en /stream
+  // (los eventos llegan justo antes de complete, la pantalla los mostraría
+  // por menos de un segundo antes de que B1 navegue a /results). En su
+  // lugar, elegir una distribución colapsa la grilla completa a una línea
+  // de estado — el usuario ya decidió, no hay nada más para interactuar acá.
+  it("collapses the ranking grid to a status line once a distribution was chosen, instead of showing Etapa2EventosView", async () => {
+    const etapa2 = {
+      session_id: "sess-2",
+      ranking: [
+        {
+          distribucion: "gumbel",
+          n_parametros: 2,
+          metodos: [
+            { metodo: "momentos", parametros: { mu: 100, alpha: 20 }, eea: 12.5, status: "ok" as const },
+          ],
+          mejor_eea: 12.5,
+          mejor_metodo: "momentos",
+        },
+      ],
+      warnings: [],
+      puntos_empiricos: [{ valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 }],
+    };
+    const { resolveDistribution, rerenderWithState } = renderStreamPage({
+      fase: "waiting_distribution",
+      etapa2,
     });
 
+    fireEvent.click(screen.getByText(/Ver los 1 método/));
+    fireEvent.click(screen.getByRole("button", { name: "Elegir" }));
+    await waitFor(() => expect(resolveDistribution).toHaveBeenCalled());
+
+    // El stream sigue avanzando tras la elección — misma etapa2, fase ya no
+    // "waiting_distribution".
+    rerenderWithState({ fase: "streaming", etapa2 });
+
     expect(
-      screen.getByRole("heading", { name: "Evento de diseño" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { name: "Elegí una distribución" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("gumbel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Evento de diseño" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Ajustando/)).toHaveTextContent("gumbel · momentos");
   });
 
   it("passes etapa2 and eventosDiseno through to /results alongside the Etapa 1 result", async () => {
@@ -375,8 +406,6 @@ describe("StreamPage", () => {
         curva_ajuste: [],
       },
     });
-
-    fireEvent.click(screen.getByRole("button", { name: /Ver resultados/ }));
 
     await waitFor(() =>
       expect(screen.getByTestId("results-state")).toHaveTextContent("gumbel"),

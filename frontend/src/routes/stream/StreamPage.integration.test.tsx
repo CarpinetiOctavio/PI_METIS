@@ -106,8 +106,9 @@ describe("StreamPage — integración de punta a punta (componente + hook reales
 
   // Este es el escenario que hace imposible que F1 vuelva: si el ciclo de
   // vida de StreamPage rompiera el stream otra vez, este test se cuelga en
-  // "streaming" para siempre y nunca llega a "Ver resultados".
-  it("camino feliz: los 4 grupos llegan a estado final y aparece 'Ver resultados'", async () => {
+  // "streaming" para siempre y nunca navega a /results. B1 (plan post-avance)
+  // — la navegación es automática ahora, no hay botón que clickear.
+  it("camino feliz: los 4 grupos llegan a estado final y navega solo a /results", async () => {
     renderStream();
 
     TODOS_LOS_GRUPOS.forEach((prueba) => testResult(prueba));
@@ -123,15 +124,16 @@ describe("StreamPage — integración de punta a punta (componente + hook reales
       nivel_confianza: "validado",
       warnings: [],
     });
-    emit("complete", { analysis_id: "an-1" });
 
-    expect(
-      await screen.findByRole("button", { name: /Ver resultados/ }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Independencia").closest(".step")?.querySelector(".pill")).toHaveTextContent("aprobada");
+    // Aserciones sobre la última pantalla de /stream, antes de que llegue
+    // "complete" y dispare la navegación automática.
+    await waitFor(() =>
+      expect(screen.getByText("Independencia").closest(".step")?.querySelector(".pill")).toHaveTextContent("aprobada"),
+    );
     expect(screen.getByText("Atípicos (Chow)").closest(".step")?.querySelector(".pill")).toHaveTextContent("aprobada");
 
-    fireEvent.click(screen.getByRole("button", { name: /Ver resultados/ }));
+    emit("complete", { analysis_id: "an-1" });
+
     expect(await screen.findByTestId("results-state")).toHaveTextContent("an-1");
   });
 
@@ -165,23 +167,12 @@ describe("StreamPage — integración de punta a punta (componente + hook reales
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 
     // Re-ejecución: mismo prueba, iteracion:2, valor distinto — reemplaza,
-    // no se acumula un segundo resultado para "anderson".
+    // no se acumula un segundo resultado para "anderson". Se verifica ANTES
+    // de emitir "complete": con B1 (plan post-avance) la navegación a
+    // /results es automática, así que /stream (y esta tabla) dejan de
+    // existir en el DOM en cuanto llega ese evento.
     TODOS_LOS_GRUPOS.forEach((prueba) => testResult(prueba, 2, { estadistico: 0.22 }));
-    emit("result_etapa1", {
-      contract: { bloqueante: false, codigo_error: null, warnings: [] },
-      descriptive: null,
-      independencia: [],
-      homogeneidad: [],
-      tendencia: [],
-      atipicos: [],
-      nivel_independencia: "independiente",
-      nivel_homogeneidad: "homogeneidad_ok",
-      nivel_confianza: "validado",
-      warnings: [],
-    });
-    emit("complete", { analysis_id: "an-2" });
 
-    await screen.findByRole("button", { name: /Ver resultados/ });
     fireEvent.click(screen.getByText("Independencia"));
     // Solo una fila "anderson" en la tabla expandida — no dos (no quedó la
     // de iteracion:1 acumulada junto a la de iteracion:2).
