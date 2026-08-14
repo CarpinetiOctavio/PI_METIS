@@ -204,3 +204,21 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* A3 (plan post-avance) — mismo efecto que el media query de arriba,
+   disparado por el nivel "sin animaciones" del selector de la app
+   (MotionProvider.tsx) en vez de (o además de) la preferencia del SO.
+   MotionProvider ya resuelve data-motion="off" cuando el sistema pide
+   movimiento reducido, así que este selector cubre en la práctica la
+   elección manual dentro de la app — se mantiene aparte del @media de
+   arriba (en vez de fusionarlos) porque uno reacciona a un cambio de
+   preferencia del SO sin que React haya montado nada todavía, y el otro
+   depende de que MotionProvider haya corrido su efecto. */
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

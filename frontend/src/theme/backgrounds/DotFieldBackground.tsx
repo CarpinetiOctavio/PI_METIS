@@ -1,12 +1,18 @@
 import { useRef } from "react";
 import { hexToRgba, readCssVar } from "./canvasUtils";
 import { useCanvasAnimationLoop } from "./useCanvasAnimationLoop";
+import { useMotion } from "../MotionProvider";
 
 // Fondo de la aplicación (B2, plan pasada4 §4). Refuerza el paso de 28px de
 // la retícula técnica que ya existe en .app-shell (global.css) — no la
 // reemplaza. DECISIÓN 045: Canvas 2D + requestAnimationFrame, sin
 // dependencias nuevas.
-const GRID_STEP = 28;
+//
+// A2 (plan post-avance) — con nivel "media", el paso pasa de 28 a 56 (una
+// cuarta parte de los puntos en 2D) y se apaga el seguimiento del puntero
+// por completo (setupExtra condicional más abajo).
+const GRID_STEP_ALTA = 28;
+const GRID_STEP_MEDIA = 56;
 const INFLUENCE_RADIUS = 130;
 const BASE_RADIUS = 1.1;
 const HOVER_RADIUS = 2.6;
@@ -16,6 +22,9 @@ const DRIFT_AMPLITUDE = 2;
 
 export function DotFieldBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { effectiveLevel } = useMotion();
+  const trackPointer = effectiveLevel === "alta";
+  const gridStep = effectiveLevel === "media" ? GRID_STEP_MEDIA : GRID_STEP_ALTA;
   // pointer-events: none en el canvas — escuchar en window, el puntero
   // siempre está "sobre" el contenido real que está encima. Vive en un ref
   // (no en el hook compartido) porque el tracking de puntero es específico
@@ -30,12 +39,12 @@ export function DotFieldBackground() {
     (t, ctx, width, height) => {
       const accent = readCssVar("--glow", "#7dd3e8");
       ctx.clearRect(0, 0, width, height);
-      const cols = Math.ceil(width / GRID_STEP) + 1;
-      const rows = Math.ceil(height / GRID_STEP) + 1;
+      const cols = Math.ceil(width / gridStep) + 1;
+      const rows = Math.ceil(height / gridStep) + 1;
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-          const baseX = col * GRID_STEP;
-          const baseY = row * GRID_STEP;
+          const baseX = col * gridStep;
+          const baseY = row * gridStep;
           const x = baseX + Math.sin(t / 4000 + row) * DRIFT_AMPLITUDE;
           const y = baseY + Math.cos(t / 4000 + col) * DRIFT_AMPLITUDE;
           const dx = x - pointerRef.current.x;
@@ -51,23 +60,33 @@ export function DotFieldBackground() {
         }
       }
     },
+    effectiveLevel,
     // setupExtra: registrado por el hook solo si hay contexto 2D disponible
     // (mismo punto en el que vivía este registro antes de la extracción) —
-    // ver useCanvasAnimationLoop.ts para el contrato completo.
-    () => {
-      function handlePointerMove(e: PointerEvent) {
-        pointerRef.current = { x: e.clientX, y: e.clientY };
-      }
-      function handlePointerLeave() {
-        pointerRef.current = { x: -9999, y: -9999 };
-      }
-      window.addEventListener("pointermove", handlePointerMove);
-      window.addEventListener("pointerleave", handlePointerLeave);
-      return () => {
-        window.removeEventListener("pointermove", handlePointerMove);
-        window.removeEventListener("pointerleave", handlePointerLeave);
-      };
-    },
+    // ver useCanvasAnimationLoop.ts para el contrato completo. A2 (plan
+    // post-avance) — "media" apaga el seguimiento del puntero por completo,
+    // no solo lo atenúa: sin listener, pointerRef se queda fijo en
+    // (-9999,-9999) y la influencia de hover siempre da 0, que es
+    // exactamente el efecto buscado sin necesitar una segunda rama en
+    // draw(). motionLevel ya es dependencia del efecto (ver
+    // useCanvasAnimationLoop.ts), así que pasar de "alta" a "media"
+    // desregistra el listener de verdad, no solo dibuja distinto.
+    trackPointer
+      ? () => {
+          function handlePointerMove(e: PointerEvent) {
+            pointerRef.current = { x: e.clientX, y: e.clientY };
+          }
+          function handlePointerLeave() {
+            pointerRef.current = { x: -9999, y: -9999 };
+          }
+          window.addEventListener("pointermove", handlePointerMove);
+          window.addEventListener("pointerleave", handlePointerLeave);
+          return () => {
+            window.removeEventListener("pointermove", handlePointerMove);
+            window.removeEventListener("pointerleave", handlePointerLeave);
+          };
+        }
+      : undefined,
   );
 
   return (

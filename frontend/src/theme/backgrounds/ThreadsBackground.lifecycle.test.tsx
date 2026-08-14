@@ -15,6 +15,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { StrictMode } from "react";
 import { render } from "@testing-library/react";
 import { ThreadsBackground } from "./ThreadsBackground";
+import { MotionProvider } from "../MotionProvider";
 
 function mockRaf() {
   let nextId = 0;
@@ -105,5 +106,31 @@ describe("ThreadsBackground — ciclo de vida bajo StrictMode", () => {
     unmount();
 
     expect(requested.length - canceled.length).toBe(0);
+  });
+});
+
+// A2/A3 (plan post-avance) — RootLayout ya no monta este fondo con nivel
+// "off" (ver RootLayout.test.tsx), pero el hook subyacente también trata
+// motionLevel === "off" como reduced-motion por las suyas (defensa en
+// profundidad, ver useCanvasAnimationLoop.ts) — se verifica acá
+// directamente, sin pasar por RootLayout.
+describe("ThreadsBackground — nivel de movimiento 'off' (defensa en profundidad)", () => {
+  beforeEach(() => {
+    mockReducedMotion(false);
+    localStorage.setItem("metis-motion-level", "off");
+  });
+
+  it("no arranca ningún loop aunque el sistema no pida movimiento reducido", () => {
+    const { rafSpy } = mockRaf();
+
+    render(
+      <StrictMode>
+        <MotionProvider>
+          <ThreadsBackground />
+        </MotionProvider>
+      </StrictMode>,
+    );
+
+    expect(rafSpy).not.toHaveBeenCalled();
   });
 });

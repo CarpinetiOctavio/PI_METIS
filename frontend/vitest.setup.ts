@@ -20,6 +20,8 @@ beforeEach(() => {
   // patrón que ThemeProvider.tsx usa para setear estos atributos.
   delete document.documentElement.dataset.theme;
   delete document.documentElement.dataset.mode;
+  // MotionProvider (plan post-avance, Bloque A) — mismo motivo que theme/mode.
+  delete document.documentElement.dataset.motion;
 });
 
 // B6 (docs/frontend/plan-mejora-frontend-pasada4.md §4): jsdom no implementa
