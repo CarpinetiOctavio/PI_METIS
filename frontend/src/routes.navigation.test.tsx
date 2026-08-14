@@ -262,8 +262,8 @@ describe("grafo de navegación real (routes.tsx)", () => {
     });
     emitStream("complete", { analysis_id: "an-1" });
 
-    fireEvent.click(await screen.findByRole("button", { name: /Ver resultados/ }));
-
+    // B1 (plan post-avance) — /stream navega solo a /results en cuanto
+    // fase="done", sin banner ni botón que clickear.
     expect(
       await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
     ).toBeInTheDocument();
