@@ -192,6 +192,113 @@ describe("useAnalysisStream", () => {
     expect(result.current.state.outlier).toBeNull();
   });
 
+  // Bug real encontrado en vivo (plan post-avance, 14/08/2026, hallazgo V1):
+  // el POST de outlier-decision y el stream SSE son dos conexiones
+  // independientes — el servidor puede reanudar el pipeline y emitir
+  // result_etapa2_ranking (que ya deja fase="waiting_distribution") ANTES
+  // de que la promesa de este POST resuelva del lado del cliente. Sin el
+  // guard en resolveOutlier, el setInternal tardío pisaba
+  // "waiting_distribution" con "streaming" otra vez — el ranking quedaba
+  // visible pero sin ningún botón "Elegir" posible. Reproducido contra el
+  // backend real (dev y build de producción) con logging de la secuencia
+  // exacta de eventos.
+  it("does not let a late-resolving resolveOutlier overwrite fase once result_etapa2_ranking already advanced it (regression — found via live backend testing)", async () => {
+    mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
+    let resolvePost!: () => void;
+    const postSpy = vi
+      .spyOn(analysisApi, "postOutlierDecision")
+      .mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolvePost = () => resolve({ ok: true, pipeline_continua: true });
+          }),
+      );
+
+    const { result } = renderHook(() => useAnalysisStream());
+    act(() => result.current.start(makeForm()));
+    act(() => emit("outlier_detected", { session_id: "sess-1", valor_atipico: 245.7 }));
+
+    let resolveOutlierPromise!: Promise<void>;
+    act(() => {
+      resolveOutlierPromise = result.current.resolveOutlier("rechazar");
+    });
+    expect(postSpy).toHaveBeenCalled();
+
+    // El stream ya avanzó a la pausa de distribución mientras el POST de
+    // arriba sigue sin resolver — exactamente la carrera reproducida en vivo.
+    act(() =>
+      emit("result_etapa2_ranking", {
+        session_id: "sess-1",
+        ranking: [],
+        warnings: [],
+        puntos_empiricos: [],
+      }),
+    );
+    expect(result.current.state.fase).toBe("waiting_distribution");
+
+    await act(async () => {
+      resolvePost();
+      await resolveOutlierPromise;
+    });
+
+    // El setInternal tardío de resolveOutlier no debe pisar la fase más
+    // avanzada — sigue en waiting_distribution, con el ranking intacto.
+    expect(result.current.state.fase).toBe("waiting_distribution");
+    expect(result.current.state.etapa2).not.toBeNull();
+    expect(result.current.state.outlier).toBeNull();
+  });
+
+  // Mismo patrón que el test anterior, para la segunda pausa (DECISIÓN 052
+  // reusa el mismo mecanismo de sesión) — result_etapa2_eventos o incluso
+  // complete pueden llegar antes de que el POST de distribution-decision
+  // resuelva. Sin el guard, un análisis ya "done" volvía a "streaming".
+  it("does not let a late-resolving resolveDistribution overwrite fase once complete already advanced it (regression)", async () => {
+    mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
+    let resolvePost!: () => void;
+    vi.spyOn(analysisApi, "postDistributionDecision").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePost = () => resolve({ ok: true, pipeline_continua: true });
+        }),
+    );
+
+    const { result } = renderHook(() => useAnalysisStream());
+    act(() => result.current.start(makeForm()));
+    act(() =>
+      emit("result_etapa2_ranking", {
+        session_id: "sess-1",
+        ranking: [],
+        warnings: [],
+        puntos_empiricos: [],
+      }),
+    );
+    expect(result.current.state.fase).toBe("waiting_distribution");
+
+    let resolveDistribPromise!: Promise<void>;
+    act(() => {
+      resolveDistribPromise = result.current.resolveDistribution("gumbel", "momentos", [10, 100]);
+    });
+
+    // El stream ya terminó mientras el POST de arriba sigue sin resolver.
+    act(() =>
+      emit("result_etapa2_eventos", {
+        distribucion: "gumbel",
+        metodo: "momentos",
+        eventos_diseno: [],
+        curva_ajuste: [],
+      }),
+    );
+    act(() => emit("complete", { analysis_id: null }));
+    expect(result.current.state.fase).toBe("done");
+
+    await act(async () => {
+      resolvePost();
+      await resolveDistribPromise;
+    });
+
+    expect(result.current.state.fase).toBe("done");
+  });
+
   it("sets fase=error with a legible message on contract_error", () => {
     mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
     const { result } = renderHook(() => useAnalysisStream());

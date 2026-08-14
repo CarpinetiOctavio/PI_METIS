@@ -173,3 +173,16 @@ async def test_rechazar_atipico_sobre_serie_mensual_agregada_no_rompe_el_indice(
     assert datos["indice_atipico"] is None
     # mes_inicio_anio=1 en este test — la calendario ya ES la efectiva.
     assert datos["serie_calendario"] is None
+
+    # Hallazgo V2 (plan post-avance, 14/08/2026): timestamps_efectivos tenía
+    # un elemento más que serie_efectiva tras rechazar, porque se filtraba
+    # solo la serie y no los timestamps con el mismo índice — todo punto
+    # posterior al atípico quedaba corrido un año en los gráficos de la
+    # serie temporal y de Chow. Sin el fix, esto falla con 15 != 14.
+    assert len(datos["timestamps_efectivos"]) == len(datos["serie_efectiva"]) == 14
+    # El año 2007 (el atípico rechazado) no debe aparecer, y no debe haber
+    # ningún año duplicado ni faltante aparte de 2007 — si el índice
+    # filtrado no correspondiera al mismo elemento en ambas listas, algún
+    # otro año terminaría faltando o duplicado en su lugar.
+    anios_efectivos = [t["anio"] for t in datos["timestamps_efectivos"]]
+    assert anios_efectivos == [a for a in range(2000, 2015) if a != 2007]

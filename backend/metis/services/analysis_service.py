@@ -512,6 +512,24 @@ async def stream_analysis(
                 serie_filtrada = serie_efectiva.copy()
                 del serie_filtrada[indice_real]
 
+                # timestamps_efectivos está alineado 1:1 con serie_efectiva
+                # (misma construcción en ejecutar_etapa1()) — sin filtrar acá
+                # con el mismo índice, quedaba un elemento más largo que
+                # serie_filtrada: validar_contrato() evaluaba duplicados/orden/
+                # espaciado contra timestamps que ya no correspondían a la
+                # serie analizada, y todo punto posterior al atípico quedaba
+                # corrido un año en los gráficos (serie temporal, Chow) del
+                # resultado final. Hallazgo V2, plan post-avance 14/08/2026.
+                timestamps_filtrados = (
+                    None
+                    if timestamps_efectivos is None
+                    else [
+                        t
+                        for i, t in enumerate(timestamps_efectivos)
+                        if i != indice_real
+                    ]
+                )
+
                 result_final = ejecutar_etapa1(
                     serie=serie_filtrada,
                     tipo_variable=tipo_variable,
@@ -519,8 +537,12 @@ async def stream_analysis(
                     # "mensual", serie_efectiva ya es la agregada, no
                     # corresponde volver a agregarla.
                     resolucion_temporal="anual",
-                    timestamps=timestamps_efectivos,
+                    timestamps=timestamps_filtrados,
                     cramer_particion=cramer_particion,
+                    # Sin esto la segunda ejecución caía al default (7) aunque
+                    # el usuario haya elegido otro mes (DECISIÓN 057) — mismo
+                    # hallazgo V2.
+                    mes_inicio_anio=mes_inicio_anio,
                 )
                 # PR 3 (DECISIÓN 058) — esta segunda ejecución corre sobre
                 # serie_filtrada (ya agregada), así que no tiene forma de
