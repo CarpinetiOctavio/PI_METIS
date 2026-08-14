@@ -271,9 +271,14 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
           // de abajo no la pisa. Pero si el server cierra la conexión SIN
           // haber emitido `complete` (F1, informe-diagnostico-ui-rota.md
           // §1.2), sin esto la fase quedaba en "streaming"/"waiting_outlier"
-          // para siempre y silenciosamente.
+          // para siempre y silenciosamente. "waiting_distribution" tiene el
+          // mismo problema — un cierre temprano durante esa pausa (DECISIÓN
+          // 052, mismo mecanismo de sesión que Chow) dejaba el ranking
+          // visible sin ninguna acción posible y sin ningún error explicado.
           setInternal((prev) =>
-            prev.fase === "streaming" || prev.fase === "waiting_outlier"
+            prev.fase === "streaming" ||
+            prev.fase === "waiting_outlier" ||
+            prev.fase === "waiting_distribution"
               ? {
                   ...prev,
                   fase: "error",
@@ -315,7 +320,24 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
         decision,
         dato_atipico: outlier.valor_atipico,
       });
-      setInternal((prev) => ({ ...prev, fase: "streaming", outlier: null }));
+      // El stream SSE es una conexión aparte de este POST: en cuanto el
+      // servidor recibe la decisión, retoma el pipeline y puede emitir
+      // eventos (incluido result_etapa2_ranking, que ya deja fase en
+      // "waiting_distribution") ANTES de que la promesa de este POST
+      // resuelva del lado del cliente — no hay ninguna garantía de orden
+      // entre las dos. Sin el guard de abajo, este setInternal llegaba
+      // tarde y pisaba "waiting_distribution" con "streaming" otra vez,
+      // dejando el ranking visible pero sin ninguna acción posible (bug
+      // real, reproducido con logging de la secuencia real de eventos:
+      // result_etapa2_ranking procesado con prev.fase todavía
+      // "waiting_outlier", y este setInternal llegando recién después).
+      // Solo avanzar a "streaming" si seguimos en la fase que este método
+      // resuelve — si ya avanzó, dejarla como está.
+      setInternal((prev) => ({
+        ...prev,
+        fase: prev.fase === "waiting_outlier" ? "streaming" : prev.fase,
+        outlier: null,
+      }));
     },
     [],
   );
@@ -333,7 +355,16 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
       // A diferencia de resolveOutlier, `etapa2` no se limpia acá — el
       // ranking sigue siendo útil para mostrar en la pantalla de resultados
       // junto a los eventos de diseño una vez que el stream termina.
-      setInternal((prev) => ({ ...prev, fase: "streaming" }));
+      //
+      // Mismo guard que resolveOutlier y por el mismo motivo: result_etapa2_eventos
+      // o incluso complete pueden llegar por la conexión SSE antes de que
+      // esta promesa resuelva, dejando fase en "done" — sin el guard este
+      // setInternal tardío revertía un análisis ya terminado de vuelta a
+      // "streaming".
+      setInternal((prev) => ({
+        ...prev,
+        fase: prev.fase === "waiting_distribution" ? "streaming" : prev.fase,
+      }));
     },
     [],
   );
