@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision060.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision061.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -175,3 +175,4 @@ situ.
 | [058](decision058.md) | Qué serie se expone, en qué versiones y por qué (serie temporal, Chow, boxplot mensual) | 12/08/2026 | Decidida — implementación en curso |
 | [059](decision059.md) | Selector de intensidad de animación (alta/media/sin animaciones) | 14/08/2026 | Implementada |
 | [060](decision060.md) | Guard de dominio x0/µ ≥ min(serie) en Exponencial x0-β y Generalizada de Pareto (Momentos) | 17/08/2026 | Aplicada |
+| [061](decision061.md) | Default "tolerar y advertir" ante ceros en ExpX0Beta/GenPareto/GenExp — resuelve el default de implementación, no la pregunta de dominio | 17/08/2026 | Aplicada |

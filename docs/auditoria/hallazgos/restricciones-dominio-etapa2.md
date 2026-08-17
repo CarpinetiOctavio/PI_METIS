@@ -279,3 +279,29 @@ proponían, sin cambios de diseño respecto a lo documentado acá. Este
 hallazgo queda cerrado — de acá en más, `DECISIÓN 060` es la fuente de
 verdad sobre el estado del código; este archivo conserva el razonamiento
 de cómo se encontró.
+
+---
+
+## 17/08/2026 — Hallazgo: asimetría sin base matemática en el bloqueo de cero, y su resolución
+
+Al aplicar DECISIÓN 060 quedó una pregunta suelta: de las 5 distribuciones
+con `PENDING_ZEROS_CONFIRMATION = True` (ver Ronda 1, punto 5 más arriba),
+3 bloqueaban cero incondicionalmente (`exponencial_x0_beta`, `gen_pareto`,
+`gen_exponencial`) y 2 no (`gamma3p`, `lognormal3p`) — con el mismo
+docstring, la misma bandera, sin ningún criterio documentado para la
+diferencia.
+
+**Verificación matemática (Code, 17/08/2026):** de 3 distribuciones y 9
+combinaciones distribución/método, **solo Generalizada Exponencial/MV tiene
+una necesidad real de bloquear** — `log(1-e^(-λ·xi))` es indefinido en
+x=0. Las otras 8 combinaciones no aplican `log(xi)` sobre datos crudos en
+ningún punto de su fórmula; el bloqueo que tenían no tenía sustento
+matemático, era un default sin justificación más allá de "hasta confirmar".
+
+Detalle completo de la verificación, la decisión tomada por Octavio (tolerar
+donde la fórmula lo permite + advertencia obligatoria `DIST_ZEROS_TOLERATED`,
+sin tocar la pregunta de dominio en sí) y la verificación post-aplicación
+contra las 9 estaciones: [DECISIÓN 061](../../decisiones/decision061.md).
+
+Este hallazgo queda cerrado — `DECISIÓN 061` es la fuente de verdad sobre
+el estado del código de acá en más.
