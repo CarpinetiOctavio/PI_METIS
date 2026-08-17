@@ -10,6 +10,8 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-70 a IV-74
   Momentos:
     β̂ = S           (IV-70)
     x̂0 = x̄ - S     (IV-71)
+    STATUS_NO_APLICABLE si x̂0 ≥ min(xi) — ver docs/auditoria/hallazgos/
+    restricciones-dominio-etapa2.md (17/08/2026)
 
   MV:
     β̂ = (sum(xi) - n·x1) / (n-1)    (IV-72)  x1 = mínimo de la muestra
@@ -53,6 +55,18 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             )
         beta = S  # IV-70
         x0 = xbar - S  # IV-71
+
+        # x0 debe ser menor que todos los xi para que el soporte de IV-68/69
+        # (x > x0) se cumpla — mismo guard que gamma3p.py/lognormal3p.py.
+        # DECISIÓN 060 — ver docs/decisiones/decision060.md y
+        # docs/auditoria/hallazgos/restricciones-dominio-etapa2.md
+        # (17/08/2026): sin este guard, 6 de las 9 estaciones de la tesis
+        # producían x0 >= min(serie) sin marcarlo.
+        if x0 >= float(np.min(serie)):
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            )
+
         return MetodoResult(
             metodo=metodo,
             parametros={"x0": x0, "beta": beta},
