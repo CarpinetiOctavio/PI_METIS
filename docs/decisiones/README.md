@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision058.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision060.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -173,3 +173,4 @@ situ.
 | [056](decision056.md) | Gráficos interactivos de Etapa 2: `d3-scale` + `d3-shape` con SVG propio | 11/08/2026 | Decidida — implementación en curso |
 | [057](decision057.md) | Agregación temporal por año hidrológico configurable (`mes_inicio_anio`) | 12/08/2026 | Decidida — implementación en curso |
 | [058](decision058.md) | Qué serie se expone, en qué versiones y por qué (serie temporal, Chow, boxplot mensual) | 12/08/2026 | Decidida — implementación en curso |
+| [060](decision060.md) | Guard de dominio x0/µ ≥ min(serie) en Exponencial x0-β y Generalizada de Pareto (Momentos) | 17/08/2026 | Aplicada |

@@ -108,8 +108,10 @@ Generalizada Exponencial. Verificado por Code contra el código real
 
 ## 13/08/2026 — Hallazgo: guard de dominio faltante en Exponencial x0-β, Momentos
 
-**Estado: hallazgo verificado, sin aplicar — pendiente de fix en código, no
-pendiente de pregunta a Facundo.**
+**Estado (13/08/2026): hallazgo verificado, sin aplicar — pendiente de fix
+en código, no pendiente de pregunta a Facundo. Actualizado 17/08/2026 —
+APLICADO, ver [DECISIÓN 060](../../decisiones/decision060.md) y la entrada
+de esa fecha más abajo en este mismo archivo.**
 
 ### El hallazgo
 
@@ -187,3 +189,93 @@ un guard `if x0 >= min(serie): STATUS_NO_APLICABLE`, simétrico al que ya
 tienen Gamma 3p y Log-Normal 3p. Cuando se aplique, este hallazgo pasa a
 decisión numerada (`decisiones/decisionNNN.md`), siguiendo el mismo patrón
 que DECISIÓN023/025.
+
+---
+
+## 17/08/2026 — Corrección: censo subestimado, y hallazgo nuevo en Generalizada de Pareto
+
+**Corrección sobre la entrada del 13/08/2026 de arriba — no se borra, se
+corrige acá.** La entrada original decía "ya ocurre en el dataset real... un
+caso: est_04". Es una subestimación — se corrió `exponencial_x0_beta.py::ajustar("momentos")`
+contra las 9 series reales de la tesis (no solo est_04), extraídas
+directamente de `docs/auditoria/regresion/regresion-unitaria/est_0X-*.md`.
+
+### Exponencial (x0, β), Momentos — censo completo de las 9 estaciones
+
+| Estación | min(serie) | x0 (Momentos) | ¿Viola x0≥min? |
+|---|---|---|---|
+| est_01 (Alpa Corral) | 15.0 | 28.60 | **Sí** |
+| est_02 (Vado de Río Seco) | 42.0 | 33.87 | No |
+| est_03 (La Tapa) | 2.0 | -14.83 | No |
+| est_04 (Las Tapias, R. Las Tapias) | 2.0 | 4.33 | **Sí** |
+| est_05 (Piedra Blanca) | 0.9 | -1.35 | No |
+| est_06 (Las Tapias, R. San Bartolomé) | 14.0 | 16.34 | **Sí** |
+| est_07 (Tincunaco) | 11.8 | 24.34 | **Sí** |
+| est_08 (Ume Pay) | 39.2 | 68.48 | **Sí** |
+| est_09 (La Suela) | 10.99 | 18.22 | **Sí** |
+
+**6 de 9 estaciones violan, no 1.** El módulo devuelve `STATUS_OK` en los 9
+casos — nunca detecta la violación en ninguno. Reproducible con
+`backend/metis/core/etapa2/distributions/exponencial_x0_beta.py::ajustar`,
+llamado directo sobre cada serie de `regresion-unitaria/`.
+
+### Generalizada de Pareto, Momentos — hallazgo nuevo, mismo patrón exacto
+
+`gen_pareto.py::ajustar("momentos")` tiene la misma estructura: `mu = xbar - sigma/(1+eps)`
+(IV-147 despejado), sin ningún chequeo posterior contra `min(serie)` — mismo
+hueco que Exponencial x0-β, misma restricción de fondo (soporte x≥µ de
+IV-145/146).
+
+| Estación | min(serie) | µ Momentos | ¿Viola? | µ MV | µ MC | µ MPP |
+|---|---|---|---|---|---|---|
+| est_01 | 15.0 | -7.70 | No | NO_CONVERGE | 15.00 (≈min, no viola) | -33.20 |
+| est_02 | 42.0 | 27.13 | No | NO_CONVERGE | NO_CONVERGE | -22.16 |
+| est_03 | 2.0 | -3.41 | No | NO_CONVERGE | 2.00 (≈min) | -20.25 |
+| est_04 | 2.0 | **4.09** | **Sí** | NO_CONVERGE | NO_CONVERGE | -6.98 |
+| est_05 | 0.9 | -2.05 | No | NO_CONVERGE | NO_CONVERGE | -16.01 |
+| est_06 | 14.0 | 10.95 | No | NO_CONVERGE | 14.00 (≈min) | 2.16 |
+| est_07 | 11.8 | **16.98** | **Sí** | NO_CONVERGE | 11.80 (≈min) | -19.84 |
+| est_08 | 39.2 | **45.70** | **Sí** | NO_CONVERGE | 39.20 (≈min) | -0.33 |
+| est_09 | 10.99 | 3.61 | No | NO_CONVERGE | 10.96 | -34.24 |
+
+**Momentos: 3 de 9 violan (est_04, est_07, est_08).** MV, MC y MPP: **sin
+violaciones en ninguna de las 9** — verificado, no solo asumido:
+
+- **MV** fija `mu = min(serie)` por construcción antes de resolver ε y σ
+  (`gen_pareto.py:133`) — siempre válido para el soporte inclusivo de GPD
+  (x≥µ). No converge en ninguna de las 9 series reales (consistente con
+  `formulas-etapa2.md`: *"NOTA: MV y MC frecuentemente No Converge según
+  resultados de la tesis"*), pero la seguridad es por diseño, no por
+  casualidad del dataset.
+- **MPP** da `mu = x1 - sigma/(n+eps)` (IV-169) — mismo mecanismo
+  estructural que el MPP de Gamma 3p: con σ>0, siempre queda por debajo del
+  mínimo salvo que `n+ε` sea negativo (no ocurrió en ninguna de las 9).
+- **MC** converge al mínimo casi exacto en varios casos (fenómeno de borde
+  cuando ε→0) pero nunca lo supera en las 9 series.
+
+### Guards faltantes — actualización de la acción pendiente
+
+Reemplaza la acción pendiente de la entrada del 13/08/2026: son **dos**
+archivos con el mismo hueco, no uno.
+
+```python
+# exponencial_x0_beta.py, rama "momentos", después de x0 = xbar - S:
+if x0 >= float(np.min(serie)):
+    return MetodoResult(metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE)
+
+# gen_pareto.py, rama "momentos", después de mu = xbar - sigma / (1.0 + eps):
+if mu >= float(np.min(serie)):
+    return MetodoResult(metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE)
+```
+
+Mismo patrón que `gamma3p.py:133-136` y `lognormal3p.py:159`. Generalizada
+Exponencial no aplica — no tiene parámetro de posición (solo α, λ), es otra
+categoría de problema.
+
+**APLICADO — 17/08/2026, mismo día.** Ver [DECISIÓN 060](../../decisiones/decision060.md)
+para el detalle completo de la aplicación y la verificación contra las 9
+estaciones post-fix. Los dos guards de arriba fueron agregados tal como se
+proponían, sin cambios de diseño respecto a lo documentado acá. Este
+hallazgo queda cerrado — de acá en más, `DECISIÓN 060` es la fuente de
+verdad sobre el estado del código; este archivo conserva el razonamiento
+de cómo se encontró.
