@@ -20,14 +20,20 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-70 a IV-74
   Cuantil:
     xT = x0 - β·ln[1 - F(x)]    (IV-74)
 
-RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo.
-Hasta confirmar: si algún xi = 0 → STATUS_DISABLED_ZEROS.
+RESTRICCIÓN ante ceros: pregunta de dominio pendiente de confirmación de
+Facundo (¿tiene sentido físico un cero para esta variable?) — no de mecánica
+de cálculo. Ninguna fórmula de este módulo (Momentos ni MV) aplica log(xi)
+sobre datos crudos, así que un cero no rompe el cálculo — verificado en
+docs/auditoria/hallazgos/restricciones-dominio-etapa2.md. DECISIÓN 060
+estableció que, mientras se espera esa confirmación, el default es calcular
+igual (con DIST_ZEROS_TOLERATED emitido por pipeline_etapa2.py, no acá) en
+vez de bloquear — esto resuelve el default de implementación, no la pregunta
+de dominio, que sigue abierta en pendientes-facundo.md.
 """
 
 import numpy as np
 
 from metis.core.etapa2.types import (
-    STATUS_DISABLED_ZEROS,
     STATUS_NO_APLICABLE,
     STATUS_OK,
     MetodoResult,
@@ -35,17 +41,14 @@ from metis.core.etapa2.types import (
 
 N_PARAMETROS: int = 2
 METODOS_APLICABLES: tuple[str, ...] = ("momentos", "mv")
-PENDING_ZEROS_CONFIRMATION: bool = True  # pendiente Facundo — ver constraints.md
+PENDING_ZEROS_CONFIRMATION: bool = (
+    True  # pregunta de dominio, no de cálculo — ver DECISIÓN 060
+)
 
 _DENOM_GUARD = 1e-10
 
 
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
-    if np.any(serie == 0):
-        return MetodoResult(
-            metodo=metodo, parametros=None, eea=None, status=STATUS_DISABLED_ZEROS
-        )
-
     if metodo == "momentos":
         xbar = float(np.mean(serie))
         S = float(np.std(serie, ddof=1))

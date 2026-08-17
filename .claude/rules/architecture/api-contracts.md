@@ -587,10 +587,14 @@ DIST_NOT_APPLICABLE              Combinación sin sentido matemático para esos 
 DIST_NOT_CONVERGED               Método iterativo sin solución estable
 DIST_HIGH_EEA                    EEA supera el 5% de la media
 DIST_DISABLED_ZEROS              Distribución deshabilitada por ceros en caudal_precipitacion
+DIST_ZEROS_TOLERATED             Serie con ceros, ajuste calculado igual — pendiente confirmación
+                                  de dominio con Facundo (DECISIÓN 061). Solo exponencial_x0_beta,
+                                  gen_pareto y gen_exponencial/momentos+ml — ver
+                                  TOLERA_CEROS_CON_ADVERTENCIA en distributions/__init__.py
 DIST_SELECTION_INVALID           distribucion/metodo vacíos o periodos_retorno inválido (DECISIÓN 052)
 ```
 `DIST_SELECTION_INVALID` no es un estado de ajuste de una distribución como
-los otros cuatro — es la validación del request de
+los otros cinco — es la validación del request de
 `POST /analysis/distribution-decision` (respuesta HTTP 400, no un campo de
 `DistResult`). Se agrupa acá por prefijo/dominio, igual que
 `CONTRACT_ETAPAS_INVALID` se agrupa con los códigos de contrato pese a
