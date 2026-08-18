@@ -25,6 +25,13 @@ toda fórmula implementada). Incluye:
   continua, no como historial de versiones superadas.
 - `pendientes/` — ambigüedades de fórmula o de dominio aún sin resolver,
   pendientes de escalar a Facundo o Carlos Catalini.
+- `hallazgos/` — auditorías dirigidas a un tema puntual, posteriores al
+  cierre de las cuatro fases originales y no parte de su secuencia (no son
+  "fase 5"). Un archivo por tema, no por fecha — cada entrada adentro va
+  fechada, mismo patrón de append que `pendientes/` y `decisiones/`. Vive
+  acá y no en `pendientes/` porque no siempre son preguntas abiertas a
+  Facundo: pueden ser huecos de implementación que la auditoría original no
+  detectó, verificados y documentados sin necesitar su intervención.
 
 ### `decisiones/`
 Un archivo por decisión (`decision001.md` a `decision043.md`, número
@@ -205,3 +212,15 @@ registro de cuándo se estableció o modificó.
   vivir. `docs/superpowers/` (un solo archivo, el plan ya ejecutado de la
   Fase 0 del frontend) reubicado a `historico/` — encajaba en su criterio de
   documento superado conservado por trazabilidad.
+- **13/08/2026** — `auditoria/hallazgos/` creado: primer archivo,
+  `restricciones-dominio-etapa2.md`, segunda pasada de auditoría (posterior
+  al cierre de `fases/`) sobre restricciones de dominio matemático en
+  distribuciones de Etapa 2 — ceros en la serie, x0 vs. mínimo, signo de
+  parámetros. Se evaluó `bloque/Julio/`, `bloque/Agosto/` (por fecha
+  calendario) y `fases/fase5-*.md` (numeración secuencial) antes de esta
+  estructura — descartadas: la primera no tiene precedente en el resto del
+  repo (la cronología siempre se resuelve con actualizaciones fechadas
+  dentro del archivo, no con carpetas por mes) y la segunda hubiera
+  implicado que esta auditoría es el siguiente paso de la metodología
+  original de 4 fases, cuando en realidad es una pasada dirigida e
+  independiente sobre un tema puntual. Decisión de Octavio.

@@ -117,6 +117,14 @@ Las siguientes distribuciones ante series con ceros en caudal_precipitacion est�
 - Log-Normal 3 parámetros
 - Generalizada Exponencial
 
+**DECISIÓN 061 (17/08/2026, `docs/decisiones/decision061.md`) fijó el
+default de implementación mientras se espera esta confirmación — no
+resuelve la pregunta de arriba, que sigue pendiente tal cual.** De estas
+5, solo Generalizada Exponencial/MV bloquea ante cero por necesidad
+matemática real (`log(1-e^-λx)` indefinido en x=0); las demás
+combinaciones distribución/método calculan igual y emiten
+`DIST_ZEROS_TOLERATED`. Detalle en `core-etapa2-implementation.md`.
+
 ### Con área de sistemas UCC (deploy)
 El CD (deploy automático a producción) está bloqueado hasta confirmar:
 - Docker disponible en servidores UCC

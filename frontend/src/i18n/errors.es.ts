@@ -72,6 +72,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "El error estándar de ajuste supera el 5% de la media — el ajuste es de baja calidad.",
   DIST_DISABLED_ZEROS:
     "Esta distribución está deshabilitada porque la serie tiene ceros.",
+  DIST_ZEROS_TOLERATED:
+    "La serie tiene ceros y este ajuste se calculó igual — el comportamiento ante ceros está pendiente de confirmación con Facundo.",
 
   // Stream
   PARSE_ERROR:

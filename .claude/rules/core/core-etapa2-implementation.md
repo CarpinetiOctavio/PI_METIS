@@ -39,7 +39,23 @@ Gumbel, GVE, Log-Pearson III, Normal, Log-Normal 2p.
 - Generalizada Exponencial
 
 Implementar con PENDING_ZEROS_CONFIRMATION = True visible en el código.
-No asumir comportamiento — esperar confirmación de Facundo.
+No asumir comportamiento — esperar confirmación de Facundo. Esto sigue
+sin cambios: la pregunta de dominio (¿tiene sentido físico un cero para
+estas variables?) no está resuelta.
+
+**DECISIÓN 061 (17/08/2026, `docs/decisiones/decision061.md`) fijó el
+default de implementación mientras se espera esa confirmación — no
+confundir con haberla resuelto.** Verificado método por método que de
+las 5 distribuciones de arriba, solo Generalizada Exponencial/MV tiene
+una necesidad matemática real de bloquear (`log(1-e^-λx)` indefinido en
+x=0). Las otras 8 combinaciones distribución/método (Gamma 3p y
+Log-Normal 3p completas; Exponencial x0-β completa; Generalizada de
+Pareto completa; Gen. Exponencial/Momentos y /ML) no tienen ninguna
+operación que un cero rompa, así que calculan igual y emiten
+`DIST_ZEROS_TOLERATED` en vez de `STATUS_DISABLED_ZEROS`. Ver
+`TOLERA_CEROS_CON_ADVERTENCIA` en
+`metis/core/etapa2/distributions/__init__.py` para el detalle exacto de
+qué combinación cae en qué categoría.
 
 ## Métodos de estimación — estado
 Confirmados: Momentos, MV, ML (Momentos-L Hosking 1990), MPP

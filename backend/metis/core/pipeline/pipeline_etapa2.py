@@ -11,7 +11,10 @@ detienen el pipeline — se registran y se continúa.
 
 import numpy as np
 
-from metis.core.etapa2.distributions import DISABLED_WITH_ZEROS
+from metis.core.etapa2.distributions import (
+    DISABLED_WITH_ZEROS,
+    TOLERA_CEROS_CON_ADVERTENCIA,
+)
 from metis.core.etapa2.distributions import (
     exponencial_beta,
     exponencial_x0_beta,
@@ -95,6 +98,29 @@ def ejecutar_etapa2(serie: np.ndarray, tiene_ceros: bool = False) -> Etapa2Resul
                 continue
 
             resultado = modulo.ajustar(serie_arr, metodo)
+
+            # DECISIÓN 060 — la serie tiene ceros y esta distribución/método
+            # calculó igual (no está en DISABLED_WITH_ZEROS, y para
+            # gen_exponencial/mv la propia función ya devuelve
+            # disabled_zeros por necesidad matemática, nunca status=ok acá).
+            # Advertir, no bloquear: resuelve el default mientras se espera
+            # confirmación de dominio de Facundo, no la pregunta en sí.
+            if (
+                tiene_ceros
+                and nombre in TOLERA_CEROS_CON_ADVERTENCIA
+                and resultado.status == STATUS_OK
+            ):
+                warnings.append(
+                    WarningItem(
+                        codigo="DIST_ZEROS_TOLERATED",
+                        nivel="normal",
+                        descripcion=(
+                            f"{nombre}/{metodo}: la serie tiene ceros; el ajuste se "
+                            "calculó igual — comportamiento pendiente de confirmación "
+                            "de Facundo, ver pendientes-facundo.md"
+                        ),
+                    )
+                )
 
             if resultado.status == STATUS_OK and resultado.parametros is not None:
                 try:

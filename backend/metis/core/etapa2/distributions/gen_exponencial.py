@@ -27,7 +27,16 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-77 a IV-89
   Cuantil: IV-89
     xT = -ln[1 - F(x)^(1/α)] / λ
 
-RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo.
+RESTRICCIÓN ante ceros: distinta por método, no uniforme.
+  - Momentos: pregunta de dominio pendiente de Facundo, no de cálculo —
+    IV-77/78 no aplican log(xi) crudo (digamma/trigamma de α, CV de la
+    serie). Tolera cero — DECISIÓN 060.
+  - MV: bloqueo por NECESIDAD MATEMÁTICA, no pendiente de dominio —
+    log(1-e^(-λ·xi)) = log(1-e^0) = log(0), indefinido en x=0. Sigue
+    devolviendo STATUS_DISABLED_ZEROS, sin cambios de DECISIÓN 060.
+  - ML: mismo caso que Momentos — IV-83/84 no aplican log(xi) crudo. Tolera
+    cero — DECISIÓN 060.
+Ver docs/auditoria/hallazgos/restricciones-dominio-etapa2.md.
 """
 
 import numpy as np
@@ -45,17 +54,15 @@ from metis.core.etapa2.types import (
 
 N_PARAMETROS: int = 2
 METODOS_APLICABLES: tuple[str, ...] = ("momentos", "mv", "ml")
-PENDING_ZEROS_CONFIRMATION: bool = True
+PENDING_ZEROS_CONFIRMATION: bool = (
+    True  # solo Momentos/ML — MV bloquea por cálculo, ver DECISIÓN 060
+)
 
 _DENOM_GUARD = 1e-10
 _RESIDUAL_TOL = 1e-4
 
 
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
-    if np.any(serie == 0):
-        return MetodoResult(
-            metodo=metodo, parametros=None, eea=None, status=STATUS_DISABLED_ZEROS
-        )
     if np.any(serie < 0):
         return MetodoResult(
             metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
@@ -114,6 +121,15 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "mv":
+        if np.any(serie == 0):
+            # log(1-e^(-λ·xi)) = log(1-e^0) = log(0), indefinido en x=0 —
+            # a diferencia de Momentos/ML, acá el bloqueo es necesidad
+            # matemática real, no una decisión de dominio pendiente.
+            # Ver DECISIÓN 060, docs/auditoria/hallazgos/restricciones-dominio-etapa2.md.
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_DISABLED_ZEROS
+            )
+
         # IV-80/IV-81 vía fsolve. Residual verificado (DECISIÓN 010).
         def _system(params: list) -> list:
             alpha, lam = params

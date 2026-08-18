@@ -11,6 +11,8 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-147 a IV-174
     g = 2·(1-ε)·(1+2ε)^(1/2) / (1+3ε)    (IV-148) → brentq para ε
     σ̂ = S·(1+ε)·√(1+2ε)                   [IV-149 despejado]
     µ̂ = x̄ - σ̂/(1+ε)                       [IV-147 despejado]
+    STATUS_NO_APLICABLE si µ̂ ≥ min(xi) — ver docs/auditoria/hallazgos/
+    restricciones-dominio-etapa2.md (17/08/2026)
 
   MV: sistema IV-150 a IV-152
     µ̂ = min(xi) (fijo antes de resolver)
@@ -41,7 +43,16 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-147 a IV-174
     xT = ((1/(1-F(x)))^ε - 1)·(σ/ε) + µ
     Límite ε→0: xT = µ - σ·ln(1-F(x))    [L'Hôpital]
 
-RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo.
+RESTRICCIÓN ante ceros: pregunta de dominio pendiente de confirmación de
+Facundo — no de mecánica de cálculo. Ninguna fórmula de este módulo aplica
+log(xi) sobre datos crudos (MC usa log(1-fi) con fi = posición de ploteo por
+rango, no por valor; el resto no usa log en absoluto), así que un cero no
+rompe el cálculo en ningún método — verificado en docs/auditoria/hallazgos/
+restricciones-dominio-etapa2.md. DECISIÓN 060 estableció que, mientras se
+espera esa confirmación, el default es calcular igual (con
+DIST_ZEROS_TOLERATED emitido por pipeline_etapa2.py, no acá) en vez de
+bloquear — esto resuelve el default de implementación, no la pregunta de
+dominio, que sigue abierta en pendientes-facundo.md.
 NOTA: MV y MC frecuentemente No Converge según resultados de la tesis.
 """
 
@@ -50,7 +61,6 @@ from scipy.optimize import brentq, fsolve
 
 from metis.core.etapa2.types import (
     CONVERGENCIA,
-    STATUS_DISABLED_ZEROS,
     STATUS_NO_APLICABLE,
     STATUS_NO_CONVERGE,
     STATUS_OK,
@@ -59,7 +69,9 @@ from metis.core.etapa2.types import (
 
 N_PARAMETROS: int = 3
 METODOS_APLICABLES: tuple[str, ...] = ("momentos", "mv", "mc", "mpp")
-PENDING_ZEROS_CONFIRMATION: bool = True
+PENDING_ZEROS_CONFIRMATION: bool = (
+    True  # pregunta de dominio, no de cálculo — ver DECISIÓN 060
+)
 
 _DENOM_GUARD = 1e-10
 _RESIDUAL_TOL = 1e-4
@@ -80,11 +92,6 @@ def _skewness(x: np.ndarray) -> float:
 
 
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
-    if np.any(serie == 0):
-        return MetodoResult(
-            metodo=metodo, parametros=None, eea=None, status=STATUS_DISABLED_ZEROS
-        )
-
     n = len(serie)
     xbar = float(np.mean(serie))
     S = float(np.std(serie, ddof=1))
@@ -121,6 +128,18 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
         mu = xbar - sigma / (1.0 + eps)  # IV-147 despejado
+
+        # mu debe ser menor o igual a todos los xi para que el soporte de
+        # IV-145/146 (x >= mu) se cumpla — mismo guard que gamma3p.py/
+        # lognormal3p.py sobre x0. DECISIÓN 060 — ver docs/decisiones/
+        # decision060.md y docs/auditoria/hallazgos/
+        # restricciones-dominio-etapa2.md (17/08/2026): sin este guard, 3
+        # de las 9 estaciones de la tesis producían mu >= min(serie) sin
+        # marcarlo.
+        if mu >= float(np.min(serie)):
+            return MetodoResult(
+                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            )
 
         return MetodoResult(
             metodo=metodo,

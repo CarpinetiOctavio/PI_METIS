@@ -186,6 +186,23 @@ la verificación de regresión de est_04 (est_07 listado ahí como estación
 | LP3 | Indirecto | EEA | 4.4182 | 4.414 | +0.10% — prácticamente PASS |
 | LP3 | MV | — | NO_CONVERGE | α=0.677, β=2.121, y0=2.382, EEA=77.2356 | ver hallazgo E — dirección inversa a lo usual |
 
+**Nota posterior — DECISIÓN 060 (17/08/2026).** El guard de dominio
+bloquea el resultado de Exponencial x0-β Momentos de esta tabla:
+x0=24.336 > min(serie)=11.8 viola IV-68/69 — METIS hoy devuelve
+`NO_APLICABLE`. A diferencia de otras estaciones, acá sí cambia el mejor
+método de la distribución: antes, Momentos (EEA=6.8458) era mejor que
+MV (EEA=8.4850) y ocupaba el puesto 9/13 del ranking de esta estación;
+ahora, con Momentos bloqueado, el mejor método pasa a ser MV y la
+distribución baja al puesto 10/13.
+
+Gen. Pareto Momentos no tiene fila propia en esta tabla (sin referencia
+de tesis). El guard también la afecta acá, pero sin cambio práctico: ya
+era el peor puesto del ranking (13/13) antes y después del guard (EEA
+cambia de 38.52 a 41.37, ambos con MC como mejor método disponible).
+
+DECISIÓN 061 no aplica — sin ceros reales. Detalle completo en
+`docs/decisiones/decision060.md`.
+
 ---
 
 ### 4. Hallazgos relevantes — con causa e implicancia

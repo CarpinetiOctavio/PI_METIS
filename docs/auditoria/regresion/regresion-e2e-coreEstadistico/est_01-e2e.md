@@ -254,6 +254,18 @@ visto poco) en est_02-06:
 | Gen. Pareto | MC | µ, σ, ε | 15.00 / 126.10 / ~0 | **NO_CONVERGE** | METIS converge (EEA=29.2) — ver hallazgo E |
 | Gen. Pareto | MPP | µ, σ, ε | -33.20 / 2134.86 / 4.29 | **NO_CONVERGE** | METIS converge (degenerado, EEA=679M) — ver hallazgo E |
 
+**Nota posterior — DECISIÓN 060 (17/08/2026).** El guard de dominio
+agregado en `exponencial_x0_beta.py` (x0 ≥ min(serie) → `NO_APLICABLE`)
+bloquea el resultado de Exponencial x0-β Momentos de esta tabla:
+x0=28.597 > min(serie)=15.0 viola el soporte de IV-68/69. METIS hoy
+devuelve `NO_APLICABLE` en vez de los valores de arriba — el número ya
+no se reproduce. No cambia el mejor método de la distribución para esta
+estación: MV (EEA=28.10) ya era mejor que Momentos (EEA=30.09) antes del
+guard, y sigue siendo el método reportado. DECISIÓN 061 (misma fecha) no
+aplica a esta estación — solo cambia comportamiento ante series con cero
+real, y esta serie no tiene ninguno. Detalle completo, con las 9
+estaciones, en `docs/decisiones/decision060.md`.
+
 ---
 
 ### 4. Hallazgos relevantes — con causa e implicancia

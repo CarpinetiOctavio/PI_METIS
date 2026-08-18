@@ -226,6 +226,22 @@ guard IV-249 aplicado correctamente).
 
 \* 407.86 es redondeo de display de tesis; dato real 407.9.
 
+**Nota posterior — DECISIÓN 060 (17/08/2026).** El guard de dominio
+bloquea el resultado de Exponencial x0-β Momentos de esta tabla:
+x0=68.4803 > min(serie)=39.2 viola IV-68/69 — METIS hoy devuelve
+`NO_APLICABLE`. Cambia el mejor método de la distribución: antes,
+Momentos (EEA=16.53) era mejor que MV (EEA=23.09) y ocupaba el puesto
+9/13; ahora pasa a MV, puesto 10/13.
+
+Gen. Pareto Momentos no tiene fila propia en esta tabla. Acá el efecto
+del guard es una **mejora**, no una degradación: antes, Momentos daba un
+ajuste muy pobre (EEA=148.21, puesto 13/13, el peor); bloqueado ese
+resultado, el mejor método disponible pasa a ser MC (EEA=21.30), y la
+distribución sube al puesto 9/13.
+
+DECISIÓN 061 no aplica — sin ceros reales. Detalle completo en
+`docs/decisiones/decision060.md`.
+
 ---
 
 ### 4. Hallazgos relevantes — con causa e implicancia

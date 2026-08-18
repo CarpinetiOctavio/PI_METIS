@@ -209,6 +209,21 @@ con la tesis en ambos casos.
 | Gen. Pareto | MC | µ,σ,ε,EEA | 10.9641/60.3964/1.8816/800.24 | NO_CONVERGE | METIS converge (pobre) donde tesis no — patrón conocido |
 | Gen. Pareto | MPP | µ,σ,ε,EEA | -34.24/759.98/9.80/2.76e10 | NO_CONVERGE | degenerado extremo — patrón conocido, mismo problema de plausibilidad de ε que en las 8 estaciones anteriores |
 
+**Nota posterior — DECISIÓN 060 (17/08/2026).** El guard de dominio
+bloquea el resultado de Exponencial x0-β Momentos de esta tabla
+(fila anterior, no visible en este extracto): x0=18.2212 >
+min(serie)=10.99 viola IV-68/69 — METIS hoy devuelve `NO_APLICABLE`.
+Cambia el mejor método de la distribución: antes, Momentos (EEA=5.2975)
+era mejor que MV (EEA=7.7270) y ocupaba el puesto 9/13; ahora pasa a MV,
+puesto 10/13.
+
+Gen. Pareto de esta estación (tabla de arriba) no está afectado por este
+guard — µ=3.61 < min(serie)=10.99, no viola el soporte. Sin cambios en
+esa distribución.
+
+DECISIÓN 061 no aplica — sin ceros reales. Detalle completo en
+`docs/decisiones/decision060.md`.
+
 ---
 
 ### 5. Hallazgos relevantes — con causa e implicancia

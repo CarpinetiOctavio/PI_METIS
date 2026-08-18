@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision058.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision061.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -21,6 +21,18 @@ documentación de auditoría — renumerar rompería esas citas sin ningún
 beneficio real. El orden de este índice es numérico, no cronológico, por
 el mismo motivo: nadie cita "la decisión de tal fecha", todo el repo cita
 por número.
+
+**Antes de crear `decisionNNN.md` con un número nuevo, correr `git fetch`
+y comparar contra `origin/staging`** (`git ls-tree -r --name-only
+origin/staging -- docs/decisiones/` para ver el máximo real del remoto).
+El siguiente número libre en el checkout local no es necesariamente el
+siguiente número libre en el remoto — dos ramas de trabajo pueden tomar
+el mismo número en paralelo sin que ninguna de las dos lo sepa hasta el
+merge. Ya pasó una vez (17/08/2026): `DECISIÓN 059` se asignó en paralelo
+a "selector de intensidad de animación" (mergeado a `staging`) y a un
+trabajo de auditoría de Etapa 2 sin pushear — el segundo se renumeró a
+`060` antes de commitear, sin conflicto real de Git de por medio porque
+se detectó a tiempo con este mismo chequeo.
 
 ## Addendums
 
@@ -173,3 +185,6 @@ situ.
 | [056](decision056.md) | Gráficos interactivos de Etapa 2: `d3-scale` + `d3-shape` con SVG propio | 11/08/2026 | Decidida — implementación en curso |
 | [057](decision057.md) | Agregación temporal por año hidrológico configurable (`mes_inicio_anio`) | 12/08/2026 | Decidida — implementación en curso |
 | [058](decision058.md) | Qué serie se expone, en qué versiones y por qué (serie temporal, Chow, boxplot mensual) | 12/08/2026 | Decidida — implementación en curso |
+| [059](decision059.md) | Selector de intensidad de animación (alta/media/sin animaciones) | 14/08/2026 | Implementada |
+| [060](decision060.md) | Guard de dominio x0/µ ≥ min(serie) en Exponencial x0-β y Generalizada de Pareto (Momentos) | 17/08/2026 | Aplicada |
+| [061](decision061.md) | Default "tolerar y advertir" ante ceros en ExpX0Beta/GenPareto/GenExp — resuelve el default de implementación, no la pregunta de dominio | 17/08/2026 | Aplicada |
