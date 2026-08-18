@@ -61,7 +61,9 @@ export function ResultsPage() {
               ranking: etapa2.ranking,
               warnings: etapa2.warnings,
               puntos_empiricos: etapa2.puntos_empiricos,
+              seleccion: null,
             }}
+            modo="lectura"
             mediaSerie={result.descriptive?.media}
           />
         </div>

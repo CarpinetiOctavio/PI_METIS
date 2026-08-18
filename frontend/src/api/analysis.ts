@@ -1,5 +1,7 @@
 import { postJson, requestJson } from "./client";
 import type {
+  DesignEventsRecalcRequest,
+  DesignEventsRecalcResponse,
   DistributionDecisionRequest,
   DistributionDecisionResponse,
   OutlierDecisionRequest,
@@ -25,6 +27,20 @@ export function postDistributionDecision(
 ): Promise<DistributionDecisionResponse> {
   return postJson<DistributionDecisionResponse>(
     "/api/v1/analysis/distribution-decision",
+    body,
+  );
+}
+
+// Bloque C2c (plan post-avance) — historial interactivo: recalcula eventos
+// de diseño para una distribución+método explorados desde HistoryDetailPage,
+// sin ningún stream ni session_id de por medio (DECISIÓN 062, "explorar no
+// es decidir" — no confundir con postDistributionDecision).
+export function postRecalcularDesignEvents(
+  analysisId: string,
+  body: DesignEventsRecalcRequest,
+): Promise<DesignEventsRecalcResponse> {
+  return postJson<DesignEventsRecalcResponse>(
+    `/api/v1/analysis/${analysisId}/design-events`,
     body,
   );
 }

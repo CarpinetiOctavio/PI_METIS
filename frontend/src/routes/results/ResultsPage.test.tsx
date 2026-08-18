@@ -70,6 +70,7 @@ function makeEtapa2Result(): Etapa2Result {
     puntos_empiricos: [
       { valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 },
     ],
+    seleccion: null,
   };
 }
 

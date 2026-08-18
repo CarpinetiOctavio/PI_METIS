@@ -492,6 +492,15 @@
   color: var(--mut);
 }
 
+/* Bloque C3 (plan post-avance) — "elegida en el análisis" en el historial
+   interactivo, distinto de .pill.ok ("menor EEA"): es un hecho de
+   auditoría, no un juicio de calidad de ajuste. Reusa --acc, ya usado por
+   el resto de la identidad "Instrumento" para foco/selección. */
+.pill.acc {
+  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  color: var(--acc);
+}
+
 .kpi {
   border: 1px solid var(--line);
   border-radius: var(--r-sm);

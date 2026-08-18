@@ -2,3 +2,13 @@
   max-width: 760px;
   margin: 0 auto;
 }
+
+/* Bloque C3 (plan post-avance) — resultado de "explorar" una distribución
+   distinta desde el historial. Borde punteado a propósito: tiene que leerse
+   distinto de la tarjeta de "Elección registrada" (borde sólido, card soft)
+   — DECISIÓN 062, "explorar no es decidir". */
+.history-detail-exploracion {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  padding: 14px;
+}

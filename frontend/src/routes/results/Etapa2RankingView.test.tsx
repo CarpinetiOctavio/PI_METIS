@@ -19,7 +19,7 @@ const RANKING_13 = Array.from({ length: 13 }, (_, i) => distribucion(`dist-${i}`
 describe("Etapa2RankingView", () => {
   it("F3 — muestra solo las primeras 4 distribuciones y un botón para ver el resto", async () => {
     const user = userEvent.setup();
-    render(<Etapa2RankingView etapa2={{ ranking: RANKING_13, warnings: [], puntos_empiricos: [] }} />);
+    render(<Etapa2RankingView etapa2={{ ranking: RANKING_13, warnings: [], puntos_empiricos: [], seleccion: null }} />);
 
     expect(screen.getByText("dist-0")).toBeInTheDocument();
     expect(screen.getByText("dist-3")).toBeInTheDocument();
@@ -38,7 +38,7 @@ describe("Etapa2RankingView", () => {
   it("no muestra el botón de 'ver más' cuando hay 4 o menos distribuciones", () => {
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: RANKING_13.slice(0, 4), warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: RANKING_13.slice(0, 4), warnings: [], puntos_empiricos: [], seleccion: null }}
       />,
     );
     expect(screen.queryByText(/distribuciones restantes/)).not.toBeInTheDocument();
@@ -51,7 +51,7 @@ describe("Etapa2RankingView", () => {
       descripcion: `dist-${i}/momentos supera el 5% de la media`,
     }));
     render(
-      <Etapa2RankingView etapa2={{ ranking: RANKING_13, warnings, puntos_empiricos: [] }} />,
+      <Etapa2RankingView etapa2={{ ranking: RANKING_13, warnings, puntos_empiricos: [], seleccion: null }} />,
     );
 
     expect(screen.getByText(/25 combinaciones/)).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe("Etapa2RankingView", () => {
       descripcion: `crítico ${i}`,
     }));
     render(
-      <Etapa2RankingView etapa2={{ ranking: RANKING_13, warnings, puntos_empiricos: [] }} />,
+      <Etapa2RankingView etapa2={{ ranking: RANKING_13, warnings, puntos_empiricos: [], seleccion: null }} />,
     );
 
     for (let i = 0; i < 5; i++) {
@@ -82,7 +82,7 @@ describe("Etapa2RankingView", () => {
       descripcion: `warning ${i}`,
     }));
     render(
-      <Etapa2RankingView etapa2={{ ranking: RANKING_13, warnings, puntos_empiricos: [] }} />,
+      <Etapa2RankingView etapa2={{ ranking: RANKING_13, warnings, puntos_empiricos: [], seleccion: null }} />,
     );
 
     for (let i = 0; i < 3; i++) {
@@ -95,7 +95,7 @@ describe("Etapa2RankingView", () => {
     const onElegir = vi.fn();
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
         onElegir={onElegir}
       />,
     );
@@ -111,7 +111,7 @@ describe("Etapa2RankingView", () => {
   it("F5 — no muestra 'Elegir este ajuste' en modo de solo lectura (sin onElegir)", () => {
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
       />,
     );
     expect(
@@ -124,7 +124,7 @@ describe("Etapa2RankingView", () => {
     item.mejor_metodo = null;
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: [item], warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: [item], warnings: [], puntos_empiricos: [], seleccion: null }}
         onElegir={vi.fn()}
       />,
     );
@@ -136,7 +136,7 @@ describe("Etapa2RankingView", () => {
   it("F4 (magnitud) — muestra el EEA como % de la media cuando mediaSerie está disponible", () => {
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: [distribucion("gumbel", 7.65775)], warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: [distribucion("gumbel", 7.65775)], warnings: [], puntos_empiricos: [], seleccion: null }}
         mediaSerie={110}
       />,
     );
@@ -146,7 +146,7 @@ describe("Etapa2RankingView", () => {
   it("F6 — no muestra el campo de períodos de retorno en modo de solo lectura", () => {
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
       />,
     );
     expect(
@@ -159,7 +159,7 @@ describe("Etapa2RankingView", () => {
     const onElegir = vi.fn();
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
         onElegir={onElegir}
       />,
     );
@@ -177,7 +177,7 @@ describe("Etapa2RankingView", () => {
     const onElegir = vi.fn();
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
         onElegir={onElegir}
       />,
     );
@@ -196,7 +196,7 @@ describe("Etapa2RankingView", () => {
     const onElegir = vi.fn();
     render(
       <Etapa2RankingView
-        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [] }}
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
         onElegir={onElegir}
       />,
     );
@@ -209,5 +209,77 @@ describe("Etapa2RankingView", () => {
 
     expect(onElegir).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent(/no se pueden pedir más de 20/i);
+  });
+
+  // Bloque C3 (plan post-avance) — modo "exploracion": mismo botón activo,
+  // pero el callback pega al recálculo stateless, no a distribution-decision
+  // — el texto tiene que leerse distinto para que nunca se confunda con
+  // decidir (DECISIÓN 062).
+  it("C3 — modo exploracion muestra 'Explorar este ajuste' en vez de 'Elegir este ajuste'", () => {
+    render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
+        modo="exploracion"
+        onElegir={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Explorar este ajuste" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Elegir este ajuste" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("C3 — modo exploracion llama a onElegir igual que stream, solo cambia el texto", async () => {
+    const user = userEvent.setup();
+    const onElegir = vi.fn();
+    render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
+        modo="exploracion"
+        onElegir={onElegir}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Explorar este ajuste" }));
+    expect(onElegir).toHaveBeenCalledWith(
+      "gumbel",
+      "momentos",
+      [2, 5, 10, 25, 50, 100, 200, 500],
+    );
+  });
+
+  it("C3 — seleccionRegistrada marca la card correspondiente como 'elegida en el análisis'", () => {
+    render(
+      <Etapa2RankingView
+        etapa2={{
+          ranking: [distribucion("gumbel", 12.5), distribucion("gve", 20)],
+          warnings: [],
+          puntos_empiricos: [],
+          seleccion: null,
+        }}
+        modo="exploracion"
+        onElegir={vi.fn()}
+        seleccionRegistrada={{ distribucion: "gve", metodo: "momentos" }}
+      />,
+    );
+
+    expect(screen.getByText("elegida en el análisis")).toBeInTheDocument();
+    // La card "gumbel" no es la elegida — no lleva la etiqueta.
+    const cardGumbel = screen.getByText("gumbel").closest(".etapa2-card");
+    expect(cardGumbel).not.toHaveTextContent("elegida en el análisis");
+  });
+
+  it("C3 — sin seleccionRegistrada, ninguna card muestra 'elegida en el análisis'", () => {
+    render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [distribucion("gumbel", 12.5)], warnings: [], puntos_empiricos: [], seleccion: null }}
+        modo="lectura"
+      />,
+    );
+
+    expect(screen.queryByText("elegida en el análisis")).not.toBeInTheDocument();
   });
 });

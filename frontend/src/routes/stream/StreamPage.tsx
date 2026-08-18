@@ -415,7 +415,12 @@ export function StreamPage() {
                     ranking: state.etapa2.ranking,
                     warnings: state.etapa2.warnings,
                     puntos_empiricos: state.etapa2.puntos_empiricos,
+                    // result_etapa2_ranking se emite ANTES de que exista
+                    // ninguna elección — seleccion solo se puebla en lo que
+                    // queda persistido (ver statistical-pipeline.md).
+                    seleccion: null,
                   }}
+                  modo="stream"
                   onElegir={handleDistribucionElegida}
                   resolving={resolvingDistribucion}
                   mediaSerie={state.result?.descriptive?.media}
