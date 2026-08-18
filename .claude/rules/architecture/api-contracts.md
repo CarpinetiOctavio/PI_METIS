@@ -444,6 +444,82 @@ que `outlier-decision`.
 
 ---
 
+### POST /api/v1/analysis/{id}/design-events (DECISIÓN 062, Bloque C2c)
+
+**Agregado 18/08/2026** — historial interactivo: recálculo **stateless** de
+eventos de diseño para una distribución+método distintos de los elegidos
+durante el stream original, sin reajustar nada. Los `parametros` de las 28
+combinaciones ya viven en `analysis_results.etapa2.ranking` (DECISIÓN 055)
+— este endpoint solo busca la fila que corresponde y llama
+`calcular_eventos_diseno()`, la misma función pura que usa el stream.
+
+No confundir con `POST /analysis/distribution-decision`: ese endpoint
+resuelve una pausa real de un stream en curso, con `session_id`; este no
+tiene ninguna sesión de por medio, opera directo sobre un análisis ya
+persistido por su `id`.
+
+**Request:**
+```json
+{
+  "distribucion": "gve",
+  "metodo": "ml",
+  "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]
+}
+```
+
+**Auth:** JWT en HttpOnly Cookie (requerido) — a diferencia de
+`distribution-decision` (JWT opcional, sigue al stream activo), este
+endpoint siempre requiere sesión: solo CU-01 tiene historial. Verifica
+pertenencia igual que `GET /history/{id}` — un análisis ajeno o inexistente
+responde 404 sin distinguir los dos casos.
+
+**Validación en el borde:** misma función que `distribution-decision`
+(`distribucion`/`metodo` no vacíos, `periodos_retorno` entre 1 y 20
+elementos todos `> 1`) → 400 `DIST_SELECTION_INVALID` — la forma del
+request es idéntica, el destino de la decisión es lo único que cambia.
+
+**Response 200:**
+```json
+{
+  "eventos_diseno": [
+    {"periodo_retorno": 2, "valor": 138.4},
+    {"periodo_retorno": 100, "valor": 312.7}
+  ],
+  "curva_ajuste": [
+    {"periodo_retorno": 1.05, "valor": 61.2},
+    {"periodo_retorno": 1.11, "valor": 68.9}
+  ]
+}
+```
+Mismo formato que `result_etapa2_eventos` del stream (`curva_ajuste`: 60
+puntos en escala logarítmica, no los `periodos_retorno` pedidos — ver
+`statistical-pipeline.md`). `valor` puede ser `null` para un período
+puntual si `cuantil()` falla para esa distribución+método, igual que en el
+stream.
+
+**Errores:**
+- 404 `ANALYSIS_NOT_FOUND` — el análisis no existe, no pertenece al
+  usuario, o no tiene Etapa 2 ejecutada (`analysis_results.etapa2` es
+  `null`). Los tres casos responden igual, sin revelar cuál aplica.
+- 400 `DIST_SELECTION_INVALID` — forma del request inválida (ver arriba).
+- 400 `DIST_METHOD_NOT_FITTED` — la combinación pedida no aparece en el
+  ranking persistido, o aparece con `status != "ok"` (no convergió, no
+  aplicable, deshabilitada por ceros) — no hay `parametros` de los que
+  partir. Distinto de `DIST_SELECTION_INVALID`: ese código es sobre la
+  forma del request, este es sobre si la combinación bien formada tiene
+  algo que recalcular.
+
+**No toca `session_store`, no persiste nada, no altera
+`analysis_results.decisiones`** — DECISIÓN 062, "explorar no es decidir".
+El registro de auditoría de CU-01 sigue reflejando exactamente lo que se
+decidió durante el análisis, nunca una exploración posterior desde el
+historial.
+
+**Solo para CU-01.** CU-02 no tiene historial que explorar; CU-03 no usa
+este router.
+
+---
+
 ### POST /api/v1/validate/ (CU-03)
 
 **Request (multipart/form-data):**
@@ -591,14 +667,16 @@ DIST_ZEROS_TOLERATED             Serie con ceros, ajuste calculado igual — pen
                                   de dominio con Facundo (DECISIÓN 061). Solo exponencial_x0_beta,
                                   gen_pareto y gen_exponencial/momentos+ml — ver
                                   TOLERA_CEROS_CON_ADVERTENCIA en distributions/__init__.py
-DIST_SELECTION_INVALID           distribucion/metodo vacíos o periodos_retorno inválido (DECISIÓN 052)
+DIST_SELECTION_INVALID           distribucion/metodo vacíos o periodos_retorno inválido (DECISIÓN 052) —
+                                  compartido entre distribution-decision y POST /analysis/{id}/design-events
+DIST_METHOD_NOT_FITTED           La combinación distribución+método pedida en POST /analysis/{id}/design-events
+                                  no aparece en el ranking persistido, o su status != "ok" (DECISIÓN 062)
 ```
-`DIST_SELECTION_INVALID` no es un estado de ajuste de una distribución como
-los otros cinco — es la validación del request de
-`POST /analysis/distribution-decision` (respuesta HTTP 400, no un campo de
-`DistResult`). Se agrupa acá por prefijo/dominio, igual que
-`CONTRACT_ETAPAS_INVALID` se agrupa con los códigos de contrato pese a
-validar un parámetro de request y no la serie.
+`DIST_SELECTION_INVALID` y `DIST_METHOD_NOT_FITTED` no son estados de
+ajuste de una distribución como los otros cinco — son validaciones de
+request (respuesta HTTP 400, no un campo de `DistResult`). Se agrupan acá
+por prefijo/dominio, igual que `CONTRACT_ETAPAS_INVALID` se agrupa con los
+códigos de contrato pese a validar un parámetro de request y no la serie.
 
 ### Stream / sesión
 ```
@@ -606,6 +684,8 @@ PARSE_ERROR                      No se pudo parsear el archivo subido (evento SS
 SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante un atípico (evento SSE "error")
 PARSE_FILE_TOO_LARGE             El archivo supera el límite de subida — respuesta HTTP 400, no evento SSE
 SESSION_NOT_FOUND                session_id no existe o ya expiró — respuesta HTTP 404, no evento SSE (DECISIÓN 052)
+ANALYSIS_NOT_FOUND               El análisis de POST /analysis/{id}/design-events no existe, no es del
+                                  usuario, o no tiene Etapa 2 — respuesta HTTP 404, sin sesión de por medio (DECISIÓN 062)
 ```
 `PARSE_ERROR` y `SESSION_TIMEOUT` son eventos SSE `error`, no respuestas HTTP
 de error — ver nota general al principio de este archivo. Emitidos por
@@ -623,6 +703,12 @@ archivo subido), no por transporte.
 `SESSION_NOT_FOUND` es la misma excepción por el mismo motivo: `distribution-decision`
 es un endpoint sincrónico aparte del stream (igual que `outlier-decision`), así
 que responde HTTP 404 estándar, nunca un evento SSE — DECISIÓN 052.
+
+`ANALYSIS_NOT_FOUND` se agrupa acá por dominio (identifica qué análisis no se
+pudo resolver, mismo motivo que agrupa a `SESSION_NOT_FOUND`) aunque
+`POST /analysis/{id}/design-events` no tiene ningún `session_id` ni stream
+de por medio — es un recálculo stateless sobre un análisis ya persistido
+(DECISIÓN 062).
 
 ### Códigos originados en el frontend
 ```

@@ -53,6 +53,31 @@ class DistributionDecisionResponse(BaseModel):
     pipeline_continua: bool
 
 
+# --- Request/Response: POST /analysis/{id}/design-events (Bloque C2c, plan
+# post-avance) — recálculo stateless de eventos de diseño desde el
+# historial. No toca session_store, no persiste nada, no altera
+# `decisiones` (DECISIÓN 062 — explorar no es decidir). Misma falta de
+# restricciones Pydantic sobre periodos_retorno que DistributionDecisionRequest,
+# por el mismo motivo: la validación de rango produce 400 DIST_SELECTION_INVALID
+# a mano en el borde, no un 422 genérico.
+
+
+class DesignEventsRecalcRequest(BaseModel):
+    distribucion: str
+    metodo: str
+    periodos_retorno: list[float]
+
+
+class EventoDisenoItem(BaseModel):
+    periodo_retorno: float
+    valor: float | None
+
+
+class DesignEventsRecalcResponse(BaseModel):
+    eventos_diseno: list[EventoDisenoItem]
+    curva_ajuste: list[EventoDisenoItem]
+
+
 # --- Response: POST /analysis/preview-columns (DECISIÓN 047) ---
 
 

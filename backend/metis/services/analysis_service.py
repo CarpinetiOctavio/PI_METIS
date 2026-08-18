@@ -21,6 +21,13 @@ from metis.services import session_store
 _MODULOS_POR_DISTRIBUCION = dict(_DISTRIBUCIONES)
 
 
+class MetodoNoAjustadoError(Exception):
+    """La combinación distribución+método pedida no tiene parámetros
+    ajustados en el ranking persistido (no está, o status != 'ok') —
+    Bloque C2c, DECISIÓN 062. El borde del endpoint la traduce a 400
+    DIST_METHOD_NOT_FITTED."""
+
+
 def _sse(tipo: str, payload: dict) -> str:
     return f"event: {tipo}\ndata: {json.dumps(payload)}\n\n"
 
@@ -217,6 +224,22 @@ def _serializar_etapa2(result: Etapa2Result, seleccion: dict | None = None) -> d
         "puntos_empiricos": [punto_empirico_dict(p) for p in result.puntos_empiricos],
         "seleccion": seleccion,
     }
+
+
+def _calcular_curva_ajuste(
+    modulo, parametros: dict, periodos_retorno: list[float], max_t_empirico: float
+) -> list[EventoDiseno]:
+    """Muestreo denso de 60 puntos en escala logarítmica para el gráfico de
+    ajuste — compartido entre stream_analysis() (Bloque C) y
+    recalcular_eventos_diseno() (Bloque C2c, historial interactivo). No son
+    los T que pidió el usuario (eventos_diseno ya los cubre): cubre desde
+    T=1.05 hasta el mayor entre el T pedido y el T empírico máximo de la
+    muestra, para que la curva tape el mismo rango que los puntos
+    empíricos del gráfico de ajuste.
+    """
+    t_max_curva = max(max(periodos_retorno, default=1.05), max_t_empirico)
+    periodos_curva = np.geomspace(1.05, max(t_max_curva, 1.06), num=60).tolist()
+    return calcular_eventos_diseno(modulo, parametros, periodos_curva)
 
 
 def _emitir_resultado(result: Etapa1Result, iteracion: int) -> list[str]:
@@ -660,22 +683,13 @@ async def stream_analysis(
                     modulo, metodo_result.parametros, periodos_retorno
                 )
                 # Bloque C — curva continua de la distribución ajustada,
-                # para el gráfico de ajuste (empíricos vs. curva). No son
-                # los eventos de diseño que pidió el usuario (T discretos,
-                # ej. [2, 5, ..., 500]): es un muestreo denso en escala log
-                # de T=1.05 hasta el mayor entre el T pedido y el T empírico
-                # máximo de la muestra, para que la curva cubra el mismo
-                # rango que los puntos empíricos.
+                # para el gráfico de ajuste (empíricos vs. curva).
                 max_t_empirico = max(
                     (p.periodo_retorno for p in etapa2_result.puntos_empiricos),
                     default=1.05,
                 )
-                t_max_curva = max(max(periodos_retorno, default=1.05), max_t_empirico)
-                periodos_curva = np.geomspace(
-                    1.05, max(t_max_curva, 1.06), num=60
-                ).tolist()
-                curva_ajuste = calcular_eventos_diseno(
-                    modulo, metodo_result.parametros, periodos_curva
+                curva_ajuste = _calcular_curva_ajuste(
+                    modulo, metodo_result.parametros, periodos_retorno, max_t_empirico
                 )
             else:
                 # Selección sin parámetros ajustados (status != "ok", o un
@@ -892,6 +906,83 @@ async def get_analysis_by_id(
         "serie": analysis.serie,
         "timestamps": analysis.timestamps,
         "configuracion": analysis.configuracion,
+    }
+
+
+async def recalcular_eventos_diseno(
+    analysis_id: uuid.UUID,
+    user_id: uuid.UUID,
+    distribucion: str,
+    metodo: str,
+    periodos_retorno: list[float],
+    db: AsyncSession,
+) -> dict | None:
+    """Bloque C2c (plan post-avance) — recálculo stateless de eventos de
+    diseño desde el historial, para explorar una distribución distinta de
+    la elegida durante el stream sin reajustar nada: los `parametros` de
+    las 28 combinaciones ya están en `analysis_results.etapa2.ranking`
+    (DECISIÓN 055).
+
+    No toca session_store (no hay stream en curso), no persiste nada y no
+    altera `decisiones` — DECISIÓN 062, "explorar no es decidir".
+
+    Retorna None si el análisis no existe, no pertenece al usuario, o no
+    tiene Etapa 2 ejecutada (`etapa2` es `None`) — mismo guard de
+    pertenencia que get_analysis_by_id(), el borde del endpoint lo traduce
+    a 404 ANALYSIS_NOT_FOUND sin distinguir los tres casos entre sí.
+    Levanta MetodoNoAjustadoError si la combinación pedida no aparece en el
+    ranking o no tiene `parametros` (status != "ok") — 400
+    DIST_METHOD_NOT_FITTED.
+    """
+    stmt = (
+        select(Analysis, AnalysisResult)
+        .join(AnalysisResult, AnalysisResult.analysis_id == Analysis.id)
+        .where(Analysis.id == analysis_id, Analysis.user_id == user_id)
+    )
+    row = (await db.execute(stmt)).first()
+    if row is None:
+        return None
+
+    _, result = row
+    etapa2 = result.etapa2
+    if etapa2 is None:
+        return None
+
+    dist_dict = next(
+        (d for d in etapa2["ranking"] if d["distribucion"] == distribucion), None
+    )
+    metodo_dict = (
+        next((m for m in dist_dict["metodos"] if m["metodo"] == metodo), None)
+        if dist_dict is not None
+        else None
+    )
+    if (
+        metodo_dict is None
+        or metodo_dict["status"] != "ok"
+        or metodo_dict["parametros"] is None
+    ):
+        raise MetodoNoAjustadoError()
+
+    modulo = _MODULOS_POR_DISTRIBUCION[distribucion]
+    parametros = metodo_dict["parametros"]
+    eventos = calcular_eventos_diseno(modulo, parametros, periodos_retorno)
+
+    max_t_empirico = max(
+        (p["periodo_retorno"] for p in etapa2.get("puntos_empiricos", [])),
+        default=1.05,
+    )
+    curva_ajuste = _calcular_curva_ajuste(
+        modulo, parametros, periodos_retorno, max_t_empirico
+    )
+
+    return {
+        "eventos_diseno": [
+            {"periodo_retorno": e.periodo_retorno, "valor": e.valor} for e in eventos
+        ],
+        "curva_ajuste": [
+            {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
+            for e in curva_ajuste
+        ],
     }
 
 

@@ -74,6 +74,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "Esta distribución está deshabilitada porque la serie tiene ceros.",
   DIST_ZEROS_TOLERATED:
     "La serie tiene ceros y este ajuste se calculó igual — el comportamiento ante ceros está pendiente de confirmación con Facundo.",
+  DIST_METHOD_NOT_FITTED:
+    "Esa combinación de distribución y método no tiene parámetros ajustados en este análisis.",
 
   // Stream
   PARSE_ERROR:
@@ -82,6 +84,8 @@ export const ERROR_TEXT: Record<string, string> = {
   SESSION_TIMEOUT:
     "Se agotó el tiempo de espera para decidir sobre el dato atípico.",
   SESSION_NOT_FOUND: "La sesión de análisis no existe o ya expiró.",
+  ANALYSIS_NOT_FOUND:
+    "El análisis no existe, no te pertenece, o no tiene Etapa 2 ejecutada.",
   STREAM_CONNECTION_ERROR:
     "Se perdió la conexión con el servidor durante el análisis.",
   STREAM_CLOSED_EARLY:
