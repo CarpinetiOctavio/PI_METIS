@@ -1,26 +1,125 @@
 /* Bloque E4 (pasada 5) — envuelve la card + el panel de muestra de
-   columnas. Sin panel montado (sin archivo, o preview no "ready") queda
-   como bloque simple: la card se centra sola por su propio
-   margin: 0 auto, sin necesitar ningún override acá. */
+   columnas. Sin panel montado (sin archivo, preview no "ready", o el panel
+   está cerrado) queda como bloque simple: la card se centra sola por su
+   propio margin: 0 auto, sin necesitar ningún override acá.
+   Bloque E (plan post-avance) — el panel pasa a ser acoplable: tres
+   posiciones (`data-dock`) que resuelven el grid con `grid-template-areas`
+   distintas, más un divisor redimensionable entre "main" y "panel". El
+   ancho/alto en sí vive en las custom properties --column-panel-width/
+   --column-panel-height, escritas por ConfigPage.tsx (estado inicial) y
+   reescritas en vivo durante el arrastre — ver useColumnPanelDock.ts. */
 .config-shell {
   display: block;
+}
+
+.config-shell__divider {
+  display: none;
 }
 
 @media (min-width: 1100px) {
   .config-shell--with-panel {
     display: grid;
-    grid-template-columns: 560px 1fr;
-    gap: 20px;
-    align-items: start;
+    gap: 0;
   }
 
   .config-shell--with-panel .config-card {
-    margin: 0;
+    margin: 0 auto;
+    grid-area: main;
+    min-width: 0;
   }
 
   .config-shell--with-panel .column-preview-panel {
+    grid-area: panel;
+    min-width: 0;
+  }
+
+  .config-shell--with-panel .config-shell__divider {
+    grid-area: divider;
+  }
+
+  /* Derecha — default. */
+  .config-shell--with-panel[data-dock="right"] {
+    grid-template-columns: 1fr 10px var(--column-panel-width, 420px);
+    grid-template-areas: "main divider panel";
+    align-items: start;
+  }
+
+  /* Izquierda. */
+  .config-shell--with-panel[data-dock="left"] {
+    grid-template-columns: var(--column-panel-width, 420px) 10px 1fr;
+    grid-template-areas: "panel divider main";
+    align-items: start;
+  }
+
+  .config-shell--with-panel[data-dock="right"] .column-preview-panel,
+  .config-shell--with-panel[data-dock="left"] .column-preview-panel {
     position: sticky;
     top: 20px;
+    max-height: calc(100vh - 40px);
+  }
+
+  .config-shell--with-panel[data-dock="right"] .column-preview-panel .column-preview-panel__scroll,
+  .config-shell--with-panel[data-dock="left"] .column-preview-panel .column-preview-panel__scroll {
+    max-height: calc(100vh - 140px);
+  }
+
+  /* Abajo. */
+  .config-shell--with-panel[data-dock="bottom"] {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 10px var(--column-panel-height, 260px);
+    grid-template-areas: "main" "divider" "panel";
+  }
+
+  .config-shell--with-panel[data-dock="bottom"] .column-preview-panel {
+    height: 100%;
+  }
+
+  .config-shell__divider {
+    display: block;
+    position: relative;
+    background: transparent;
+  }
+
+  .config-shell__divider::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    border-radius: 2px;
+    background: var(--line-strong);
+    transition: background var(--t-fast) var(--ease-out);
+  }
+
+  .config-shell--with-panel[data-dock="right"] .config-shell__divider,
+  .config-shell--with-panel[data-dock="left"] .config-shell__divider {
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .config-shell--with-panel[data-dock="right"] .config-shell__divider::before,
+  .config-shell--with-panel[data-dock="left"] .config-shell__divider::before {
+    width: 2px;
+    height: 100%;
+  }
+
+  .config-shell--with-panel[data-dock="bottom"] .config-shell__divider {
+    cursor: row-resize;
+    touch-action: none;
+  }
+
+  .config-shell--with-panel[data-dock="bottom"] .config-shell__divider::before {
+    width: 100%;
+    height: 2px;
+  }
+
+  .config-shell__divider:hover::before,
+  .config-shell__divider:focus-visible::before {
+    background: var(--acc);
+  }
+
+  .config-shell__divider:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
   }
 }
 

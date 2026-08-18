@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision062.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision063.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -189,3 +189,4 @@ situ.
 | [060](decision060.md) | Guard de dominio x0/µ ≥ min(serie) en Exponencial x0-β y Generalizada de Pareto (Momentos) | 17/08/2026 | Aplicada |
 | [061](decision061.md) | Default "tolerar y advertir" ante ceros en ExpX0Beta/GenPareto/GenExp — resuelve el default de implementación, no la pregunta de dominio | 17/08/2026 | Aplicada |
 | [062](decision062.md) | Historial interactivo: explorar otra distribución no es decidir — el recálculo no toca `decisiones` ni `session_store` | 18/08/2026 | Decidida — implementación en curso |
+| [063](decision063.md) | Panel de columnas acoplado, no ventana flotante — superposición vs. reflow, y el costo de accesibilidad de un gestor de ventanas propio | 18/08/2026 | Decidida y aplicada |

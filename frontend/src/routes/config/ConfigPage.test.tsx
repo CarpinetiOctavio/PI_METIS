@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { renderPage } from "../../test/renderPage";
 import { ConfigPage } from "./ConfigPage";
+import { RESIZE_KEYBOARD_STEP } from "./useColumnPanelDock";
 import type { AnalysisStreamForm } from "../../api/types";
 
 function StreamProbe() {
@@ -447,5 +448,113 @@ describe("ConfigPage", () => {
     expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
     const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
     expect(form.mes_inicio_anio).toBe(9);
+  });
+
+  // Bloque E (plan post-avance) — panel de columnas acoplable.
+
+  function stubFetchConPreview() {
+    stubFetch({
+      preview: {
+        ok: true,
+        body: {
+          columnas: [
+            { nombre: "anio", indice: 0, muestra: ["1980", "1981", "1982"] },
+            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
+          ],
+          filas: 40,
+        },
+      },
+    });
+  }
+
+  async function subirArchivoDeMuestra() {
+    const file = new File(["anio,caudal\n1980,94.71\n"], "serie.csv", {
+      type: "text/csv",
+    });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+    await screen.findByRole("columnheader", { name: "anio" });
+  }
+
+  it("E — cierra el panel con el botón × y lo reabre con 'Ver columnas', sin perder las columnas", async () => {
+    stubFetchConPreview();
+    renderConfigPage();
+    await waitForReady();
+    await subirArchivoDeMuestra();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar panel de columnas" }));
+    expect(screen.queryByRole("columnheader", { name: "anio" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver columnas" }));
+    expect(screen.getByRole("columnheader", { name: "anio" })).toBeInTheDocument();
+  });
+
+  it("E — elegir una posición de acople marca el botón activo y actualiza data-dock en el shell", async () => {
+    stubFetchConPreview();
+    const { container } = renderConfigPage();
+    await waitForReady();
+    await subirArchivoDeMuestra();
+
+    const shell = container.querySelector(".config-shell");
+    expect(shell).toHaveAttribute("data-dock", "right");
+    expect(screen.getByRole("button", { name: "Derecha" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Izquierda" }));
+
+    expect(shell).toHaveAttribute("data-dock", "left");
+    expect(screen.getByRole("button", { name: "Izquierda" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Derecha" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("E — persiste posición de acople y abierto/cerrado en localStorage (metis-column-panel)", async () => {
+    stubFetchConPreview();
+    renderConfigPage();
+    await waitForReady();
+    await subirArchivoDeMuestra();
+
+    fireEvent.click(screen.getByRole("button", { name: "Abajo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar panel de columnas" }));
+
+    const stored = JSON.parse(localStorage.getItem("metis-column-panel") ?? "null");
+    expect(stored).toMatchObject({ dock: "bottom", open: false });
+  });
+
+  it("E — el divisor responde a las flechas del teclado y actualiza aria-valuenow", async () => {
+    stubFetchConPreview();
+    renderConfigPage();
+    await waitForReady();
+    await subirArchivoDeMuestra();
+
+    const divisor = screen.getByRole("separator", {
+      name: "Redimensionar panel de columnas",
+    });
+    const inicial = Number(divisor.getAttribute("aria-valuenow"));
+
+    // dock="right" (default): ArrowLeft aleja el divisor del panel — el
+    // panel crece.
+    fireEvent.keyDown(divisor, { key: "ArrowLeft" });
+    expect(Number(divisor.getAttribute("aria-valuenow"))).toBe(inicial + RESIZE_KEYBOARD_STEP);
+
+    fireEvent.keyDown(divisor, { key: "ArrowRight" });
+    expect(Number(divisor.getAttribute("aria-valuenow"))).toBe(inicial);
+  });
+
+  it("E — no muestra el divisor ni el panel cuando no hay preview lista", async () => {
+    stubFetch(); // default: preview en 500 → nunca llega a "ready"
+    renderConfigPage();
+    await waitForReady();
+
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver columnas" })).not.toBeInTheDocument();
   });
 });

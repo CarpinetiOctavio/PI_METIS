@@ -1,11 +1,68 @@
 .column-preview-panel {
-  /* Sticky/posición la resuelve .config-shell--with-panel (Bloque E4) —
-     acá solo la presentación de la tabla en sí. */
+  /* Sticky/posición/alto lo resuelve .config-shell (data-dock, Bloque E) —
+     acá solo la presentación del panel en sí. display:flex es seguro sin
+     una altura explícita (right/left): se comporta como bloque apilado. Con
+     acople "bottom" .config-shell fuerza height:100% para que el scroll
+     interno funcione dentro de la fila de grid de alto fijo. */
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.column-preview-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.column-preview-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Selector de acople — mismo lenguaje visual que .seg en ConfigPage, pero
+   más compacto: cabe en la barra de título del panel. */
+.column-preview-panel__dock button {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.column-preview-panel__close {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--mut);
+  width: 24px;
+  height: 24px;
+  line-height: 1;
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    color var(--t-fast) var(--ease-out);
+}
+
+.column-preview-panel__close:hover {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+.column-preview-panel__close:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
 }
 
 .column-preview-panel__scroll {
   overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .column-preview-panel__table {

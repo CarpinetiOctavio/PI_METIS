@@ -1,4 +1,12 @@
-import { useState, type DragEvent, type FormEvent } from "react";
+import {
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { postPreviewColumns } from "../../api/analysis";
@@ -7,6 +15,7 @@ import { etiquetaSelectorMes } from "../../i18n/mesInicioAnio";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
 import { ColumnPreviewPanel } from "./ColumnPreviewPanel";
+import { clamp, RESIZE_KEYBOARD_STEP, useColumnPanelDock } from "./useColumnPanelDock";
 import "./ConfigPage.css";
 
 const DOCE_MESES = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -100,6 +109,13 @@ export function ConfigPage() {
   // uno ahora mismo.
   const [columnaResaltada, setColumnaResaltada] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  // Bloque E (plan post-avance) — posición de acople, ancho/alto y
+  // abierto/cerrado del panel, persistidos en localStorage.
+  const panel = useColumnPanelDock();
+  const shellRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startPos: number; startSize: number; pendingSize: number } | null>(
+    null,
+  );
 
   // UX-D — el anónimo siempre usa la UI Experto, sin selector de modo
   // (frontend/frontend-design/metis-wireframes-fase1-decisiones.md, "UX-D").
@@ -184,13 +200,81 @@ export function ConfigPage() {
     navigate("/stream", { state: { form } });
   }
 
+  // Bloque E (plan post-avance) — "right"/"bottom" anclan el panel al borde
+  // opuesto al que se arrastra (el panel crece si el divisor se aleja de él);
+  // "left" ancla al propio borde arrastrado (el panel crece si el divisor se
+  // acerca al resto de la pantalla). Mismo signo para pointer y teclado.
+  function cssVarNombre(dock: typeof panel.dock): string {
+    return dock === "bottom" ? "--column-panel-height" : "--column-panel-width";
+  }
+
+  function handleResizePointerDown(event: PointerEvent<HTMLDivElement>) {
+    // jsdom (tests) no implementa setPointerCapture — opcional a propósito,
+    // el arrastre en sí no depende de la captura para funcionar acá.
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    const startPos = panel.dock === "bottom" ? event.clientY : event.clientX;
+    dragRef.current = { startPos, startSize: panel.size, pendingSize: panel.size };
+  }
+
+  function handleResizePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!dragRef.current || !shellRef.current) return;
+    const pos = panel.dock === "bottom" ? event.clientY : event.clientX;
+    const delta =
+      panel.dock === "left" ? pos - dragRef.current.startPos : dragRef.current.startPos - pos;
+    const next = clamp(dragRef.current.startSize + delta, panel.limits.min, panel.limits.max);
+    // Detalle de implementación (plan §E) — escribir directo a la custom
+    // property vía ref, no vía setState: si no, cada píxel de arrastre
+    // re-renderiza ConfigPage entera con sus dos <select> y el dropzone.
+    // panel.setSize() recién se llama al soltar (pointerup/pointercancel).
+    shellRef.current.style.setProperty(cssVarNombre(panel.dock), `${next}px`);
+    dragRef.current.pendingSize = next;
+  }
+
+  function handleResizePointerUp() {
+    if (dragRef.current) panel.setSize(dragRef.current.pendingSize);
+    dragRef.current = null;
+  }
+
+  function handleResizeKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const esVertical = panel.dock !== "bottom";
+    let delta = 0;
+    if (esVertical) {
+      if (event.key === "ArrowLeft") delta = panel.dock === "right" ? RESIZE_KEYBOARD_STEP : -RESIZE_KEYBOARD_STEP;
+      else if (event.key === "ArrowRight") delta = panel.dock === "right" ? -RESIZE_KEYBOARD_STEP : RESIZE_KEYBOARD_STEP;
+    } else {
+      if (event.key === "ArrowUp") delta = RESIZE_KEYBOARD_STEP;
+      else if (event.key === "ArrowDown") delta = -RESIZE_KEYBOARD_STEP;
+    }
+    if (delta === 0) return;
+    event.preventDefault();
+    panel.setSize(clamp(panel.size + delta, panel.limits.min, panel.limits.max));
+  }
+
+  const panelVisible = preview.status === "ready" && panel.open;
+  const shellStyle: CSSProperties | undefined = panelVisible
+    ? ({ [cssVarNombre(panel.dock)]: `${panel.size}px` } as CSSProperties)
+    : undefined;
+
   return (
     <div
-      className={`config-shell${preview.status === "ready" ? " config-shell--with-panel" : ""}`}
+      ref={shellRef}
+      data-dock={panel.dock}
+      className={`config-shell${panelVisible ? " config-shell--with-panel" : ""}`}
+      style={shellStyle}
     >
       <div className="card config-card">
         <h1 className="h">Nuevo análisis</h1>
         <p className="sub">Cargá tus datos, elegí el modo una vez y ejecutá.</p>
+        {preview.status === "ready" && !panel.open && (
+          <button
+            type="button"
+            className="b b-sec"
+            style={{ marginBottom: 11 }}
+            onClick={() => panel.setOpen(true)}
+          >
+            Ver columnas
+          </button>
+        )}
         {error && (
           <div className="banner crit" role="alert">
             <span className="ic">!</span> {error}
@@ -444,12 +528,32 @@ export function ConfigPage() {
           </Magnet>
         </form>
       </div>
-      {preview.status === "ready" && (
-        <ColumnPreviewPanel
-          columnas={preview.columnas}
-          filas={preview.filas}
-          columnaResaltada={columnaResaltada}
-        />
+      {panelVisible && (
+        <>
+          <div
+            className="config-shell__divider"
+            role="separator"
+            aria-orientation={panel.dock === "bottom" ? "horizontal" : "vertical"}
+            aria-label="Redimensionar panel de columnas"
+            aria-valuenow={Math.round(panel.size)}
+            aria-valuemin={panel.limits.min}
+            aria-valuemax={panel.limits.max}
+            tabIndex={0}
+            onPointerDown={handleResizePointerDown}
+            onPointerMove={handleResizePointerMove}
+            onPointerUp={handleResizePointerUp}
+            onPointerCancel={handleResizePointerUp}
+            onKeyDown={handleResizeKeyDown}
+          />
+          <ColumnPreviewPanel
+            columnas={preview.columnas}
+            filas={preview.filas}
+            columnaResaltada={columnaResaltada}
+            dock={panel.dock}
+            onDockChange={panel.setDock}
+            onClose={() => panel.setOpen(false)}
+          />
+        </>
       )}
     </div>
   );
