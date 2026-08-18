@@ -253,3 +253,45 @@ def test_anderson_k_max_ceil_no_floor_est03():
     assert resultado.estadistico == pytest.approx(
         max(abs(r) for r in r_values), abs=1e-6
     )
+
+
+# ── explicacion (Bloque D, plan post-avance — DECISIÓN 064) ─────────────────
+
+
+@pytest.mark.unit
+def test_anderson_explicacion_terminos_reproducen_el_estadistico(serie_facundo):
+    resultado = calcular_anderson(serie_facundo)
+
+    assert resultado.explicacion is not None
+    assert resultado.explicacion.ecuacion == "III-1"
+    terminos = resultado.explicacion.terminos
+    # numerador/denominador del lag reportado deben reproducir "estadistico"
+    # exactamente — es la misma división que hace el código, no una
+    # aproximación redundante.
+    assert terminos["numerador"] / terminos["denominador"] == pytest.approx(
+        resultado.estadistico, abs=1e-9
+    )
+    assert terminos["n"] == len(serie_facundo)
+    assert 1 <= terminos["k"] <= terminos["k_max"]
+    assert terminos["tolerancia"] == math.ceil(terminos["k_max"] * 0.10)
+
+
+@pytest.mark.unit
+def test_wald_explicacion_terminos_reproducen_el_estadistico():
+    serie = [float(i % 30 + 10) for i in range(41)]
+    resultado = calcular_wald_wolfowitz(serie)
+
+    assert resultado.explicacion is not None
+    assert resultado.explicacion.ecuacion == "III-4"
+    terminos = resultado.explicacion.terminos
+    z_reconstruido = (terminos["r"] - terminos["mu_r"]) / terminos["sigma_r"]
+    assert z_reconstruido == pytest.approx(resultado.estadistico, abs=1e-9)
+    assert terminos["n1"] + terminos["n2"] == terminos["n"]
+
+
+@pytest.mark.unit
+def test_wald_no_ejecutada_sin_explicacion():
+    # Serie degenerada (n1=0) — no hay fórmula que sustituir.
+    resultado = calcular_wald_wolfowitz([50.0] * 15)
+    assert resultado.veredicto == "no_ejecutada"
+    assert resultado.explicacion is None

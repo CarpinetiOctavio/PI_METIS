@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import t as t_dist
 
-from metis.core.types import TestResult
+from metis.core.types import Explicacion, TestResult
 
 # Grubbs-Beck (Chow, Bulletin 17B Apéndice 4) usa 10% de significancia —
 # distinto del 5% global de Etapa 1 (Anderson, Wald, Helmert, etc.).
@@ -72,6 +72,17 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
         valor_atipico = float(arr[idx])
         indice_atipico = idx
 
+    explicacion = Explicacion(
+        ecuacion="Bulletin 17B, Apéndice 4 (Grubbs-Beck) — DECISIÓN 018",
+        terminos={
+            "n": n,
+            "media_log": float(media),
+            "s_log": float(s),
+            "nu": nu,
+            "t_bonferroni": float(t_val),
+        },
+    )
+
     return TestResult(
         prueba="chow",
         estadistico=estadistico,
@@ -81,4 +92,5 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
         warning_nivel=warning_nivel,
         valor_atipico=valor_atipico,
         indice_atipico=indice_atipico,
+        explicacion=explicacion,
     )

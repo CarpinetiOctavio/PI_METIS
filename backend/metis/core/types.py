@@ -9,6 +9,22 @@ class WarningItem:
 
 
 @dataclass
+class Explicacion:
+    """Piezas para reconstruir, en modo paso a paso, la fórmula con los
+    valores de ESTA serie ya sustituidos — Bloque D del plan post-avance,
+    DECISIÓN 064. `core/` calcula y expone los términos intermedios que la
+    prueba ya usó de todos modos; el frontend solo renderiza (sustituye en
+    una plantilla) e interpreta en lenguaje natural — nunca recalcula
+    estadística. `ecuacion` referencia la ecuación de
+    `.claude/rules/core/formulas-etapa1.md` (ej. "III-8"), nunca se
+    implementa un término nuevo sin esa referencia, misma regla que rige
+    cualquier fórmula del proyecto."""
+
+    ecuacion: str
+    terminos: dict[str, float | int | None]
+
+
+@dataclass
 class TestResult:
     prueba: str
     estadistico: float | None
@@ -20,6 +36,7 @@ class TestResult:
     n2: int | None = None
     valor_atipico: float | None = None
     indice_atipico: int | None = None
+    explicacion: Explicacion | None = None
 
 
 @dataclass

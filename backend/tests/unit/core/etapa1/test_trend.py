@@ -150,3 +150,38 @@ def test_ninguno_rechaza_sin_warning():
     )
     codigos = [w.codigo for w in warnings]
     assert "TEST_WARNING_TREND" not in codigos
+
+
+# ── explicacion (Bloque D, plan post-avance — DECISIÓN 064) ─────────────────
+
+
+@pytest.mark.unit
+def test_mann_kendall_explicacion(serie_facundo):
+    resultado = calcular_mann_kendall(serie_facundo)
+
+    assert resultado.explicacion is not None
+    assert resultado.explicacion.ecuacion == "A.55"
+    terminos = resultado.explicacion.terminos
+    assert terminos["n"] == len(serie_facundo)
+    assert terminos["var_s"] > 0
+
+
+@pytest.mark.unit
+def test_mann_kendall_no_ejecutada_sin_explicacion():
+    resultado = calcular_mann_kendall([10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0])
+    assert resultado.veredicto == "no_ejecutada"
+    assert resultado.explicacion is None
+
+
+@pytest.mark.unit
+def test_ks_explicacion_terminos_reproducen_el_estadistico(serie_facundo):
+    resultado = calcular_ks_tendencia(serie_facundo)
+
+    assert resultado.explicacion is not None
+    assert resultado.explicacion.ecuacion == "A.57"
+    terminos = resultado.explicacion.terminos
+    z_reconstruido = (
+        terminos["d"]
+        * ((terminos["n1"] * terminos["n2"]) / (terminos["n1"] + terminos["n2"])) ** 0.5
+    )
+    assert z_reconstruido == pytest.approx(resultado.estadistico, abs=1e-9)

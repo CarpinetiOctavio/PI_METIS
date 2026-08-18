@@ -3,7 +3,7 @@ import math
 import numpy as np
 from scipy.stats import norm
 
-from metis.core.types import TestResult, WarningItem
+from metis.core.types import Explicacion, TestResult, WarningItem
 
 ALPHA = 0.05
 Z_CRIT = norm.ppf(1 - ALPHA / 2)  # 1.96
@@ -21,6 +21,7 @@ def calcular_anderson(serie: list[float]) -> TestResult:
     k_max = math.ceil(n / 3)  # DECISIÓN 016 — docs/decisiones/decision016.md
     r_values = []
     r_crit_upper_values = []
+    numerador_values = []
 
     for k in range(1, k_max + 1):
         numerador = np.sum((arr[: n - k] - media) * (arr[k:] - media))
@@ -28,6 +29,7 @@ def calcular_anderson(serie: list[float]) -> TestResult:
         r_crit_upper = (-1 + Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
         r_values.append(r_k)
         r_crit_upper_values.append(r_crit_upper)
+        numerador_values.append(float(numerador))
 
     idx_max = int(np.argmax(np.abs(r_values)))
     estadistico = float(r_values[idx_max])
@@ -39,7 +41,8 @@ def calcular_anderson(serie: list[float]) -> TestResult:
         if r_values[k - 1] > r_crit_upper_values[k - 1]
         or r_values[k - 1] < (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
     )
-    aprobada = lags_fuera <= math.ceil(k_max * 0.10)
+    tolerancia = math.ceil(k_max * 0.10)
+    aprobada = lags_fuera <= tolerancia
 
     veredicto = "aprobada" if aprobada else "rechazada"
     warning_codigo = None
@@ -49,6 +52,25 @@ def calcular_anderson(serie: list[float]) -> TestResult:
         warning_codigo = "TEST_CRITICAL_INDEPENDENCE"
         warning_nivel = "critico"
 
+    # Bloque D (plan post-avance, DECISIÓN 064) — la fórmula sustituida
+    # corresponde al lag k que produjo el estadístico reportado (idx_max),
+    # no a los k_max lags calculados — mismo lag que "estadistico" ya
+    # reporta. k_max/lags_fuera/tolerancia alimentan la interpretación de
+    # la regla del 10% (nunca un único par estadístico/crítico).
+    explicacion = Explicacion(
+        ecuacion="III-1",
+        terminos={
+            "n": n,
+            "k": idx_max + 1,
+            "media": float(media),
+            "numerador": numerador_values[idx_max],
+            "denominador": float(denominador),
+            "k_max": k_max,
+            "lags_fuera": lags_fuera,
+            "tolerancia": tolerancia,
+        },
+    )
+
     return TestResult(
         prueba="anderson",
         estadistico=estadistico,
@@ -56,6 +78,7 @@ def calcular_anderson(serie: list[float]) -> TestResult:
         veredicto=veredicto,
         warning_codigo=warning_codigo,
         warning_nivel=warning_nivel,
+        explicacion=explicacion,
     )
 
 
@@ -105,6 +128,18 @@ def calcular_wald_wolfowitz(serie: list[float]) -> TestResult:
         warning_codigo = "TEST_WARNING_SMALL_SAMPLE"
         warning_nivel = "normal"
 
+    explicacion = Explicacion(
+        ecuacion="III-4",
+        terminos={
+            "n": n,
+            "n1": n1,
+            "n2": n2,
+            "r": runs,
+            "mu_r": float(mu_u),
+            "sigma_r": float(sigma_u),
+        },
+    )
+
     return TestResult(
         prueba="wald_wolfowitz",
         estadistico=float(z_stat),
@@ -112,6 +147,7 @@ def calcular_wald_wolfowitz(serie: list[float]) -> TestResult:
         veredicto=veredicto,
         warning_codigo=warning_codigo,
         warning_nivel=warning_nivel,
+        explicacion=explicacion,
     )
 
 

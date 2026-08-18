@@ -111,3 +111,29 @@ def test_k_n_n30_aproxima_valor_tabla_referencia():
 
     resultado = calcular_chow(SERIE_CON_ATIPICO, "otro")
     assert resultado.valor_critico == pytest.approx(k_n_30, abs=1e-9)
+
+
+# ── explicacion (Bloque D, plan post-avance — DECISIÓN 064) ─────────────────
+
+
+@pytest.mark.unit
+def test_chow_explicacion_terminos_reproducen_el_estadistico(serie_facundo):
+    resultado = calcular_chow(serie_facundo, "caudal_precipitacion")
+
+    assert resultado.explicacion is not None
+    assert "Bulletin 17B" in resultado.explicacion.ecuacion
+    terminos = resultado.explicacion.terminos
+    log_serie = np.log(np.array(serie_facundo, dtype=float))
+    z_max_reconstruido = np.max(
+        np.abs((log_serie - terminos["media_log"]) / terminos["s_log"])
+    )
+    assert z_max_reconstruido == pytest.approx(resultado.estadistico, abs=1e-9)
+    assert terminos["nu"] == terminos["n"] - 2
+
+
+@pytest.mark.unit
+def test_chow_no_ejecutada_sin_explicacion():
+    serie = [0.0] + [10.0] * 14
+    resultado = calcular_chow(serie, "caudal_precipitacion")
+    assert resultado.veredicto == "no_ejecutada"
+    assert resultado.explicacion is None

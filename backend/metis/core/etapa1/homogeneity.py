@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import t as t_dist
 
-from metis.core.types import TestResult, WarningItem
+from metis.core.types import Explicacion, TestResult, WarningItem
 
 ALPHA = 0.05
 
@@ -26,6 +26,11 @@ def calcular_helmert(serie: list[float]) -> TestResult:
     aprobada = abs(diferencia) <= limite
     veredicto = "aprobada" if aprobada else "rechazada"
 
+    explicacion = Explicacion(
+        ecuacion="III-7",
+        terminos={"n": n, "s": secuencias, "c": cambios},
+    )
+
     return TestResult(
         prueba="helmert",
         estadistico=float(estadistico),
@@ -33,6 +38,7 @@ def calcular_helmert(serie: list[float]) -> TestResult:
         veredicto=veredicto,
         warning_codigo="TEST_WARNING_HOMOGENEITY" if not aprobada else None,
         warning_nivel="normal" if not aprobada else None,
+        explicacion=explicacion,
     )
 
 
@@ -63,6 +69,18 @@ def calcular_t_student(
     aprobada = abs(estadistico) <= valor_critico
     veredicto = "aprobada" if aprobada else "rechazada"
 
+    explicacion = Explicacion(
+        ecuacion="III-8",
+        terminos={
+            "x1_barra": float(media1),
+            "x2_barra": float(media2),
+            "sp": float(sp),
+            "n1": n1,
+            "n2": n2,
+            "nu": nu,
+        },
+    )
+
     return TestResult(
         prueba="t_student",
         estadistico=float(estadistico),
@@ -72,6 +90,7 @@ def calcular_t_student(
         warning_nivel="normal" if not aprobada else None,
         n1=n1,
         n2=n2,
+        explicacion=explicacion,
     )
 
 
@@ -158,6 +177,29 @@ def calcular_cramer(
     else:
         estadistico_rep, vc_rep = t_w2, vc_w2
 
+    # Bloque D (plan post-avance, DECISIÓN 064) — a diferencia de las demás
+    # pruebas, Cramer reporta un único estadístico/crítico "binding" pero la
+    # fórmula sustituida en paso a paso muestra los DOS bloques (60%/30%,
+    # Ec. III-13 a III-15) — es lo que el docente necesita ver para entender
+    # por qué "aprobada" exige que ambos, no solo el reportado, aprueben.
+    explicacion = Explicacion(
+        ecuacion="III-15",
+        terminos={
+            "n": n,
+            "n_w1": n_w1,
+            "n_w2": n_w2,
+            "media_global": media_global,
+            "s_global": s_global,
+            "tau_w1": float(tau_w1),
+            "tau_w2": float(tau_w2),
+            "t_w1": t_w1,
+            "t_w2": t_w2,
+            "vc_w1": vc_w1,
+            "vc_w2": vc_w2,
+            "nu": nu,
+        },
+    )
+
     return TestResult(
         prueba="cramer",
         estadistico=estadistico_rep,
@@ -167,6 +209,7 @@ def calcular_cramer(
         warning_nivel="critico" if not aprobada else None,
         n1=n_w1,
         n2=n_w2,
+        explicacion=explicacion,
     )
 
 
