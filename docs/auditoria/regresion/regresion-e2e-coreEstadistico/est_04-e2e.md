@@ -125,6 +125,26 @@ el typo literal.
 \*\* Gamma3p Momentos: reconstruido a mano con g_METIS=1.9293 → β=4/g²=1.0748,
 α=S/√β=19.003, x0=x̄-S√β=3.605 > min(2.0) → NO_APLICABLE, confirmado.
 
+**Nota posterior — DECISIÓN 060 (17/08/2026).** El guard de dominio
+bloquea el resultado de Exponencial x0-β Momentos de esta tabla:
+x0=4.3279 > min(serie)=2.0 viola IV-68/69 — METIS hoy devuelve
+`NO_APLICABLE`. No cambia el mejor método de esa distribución (MV,
+EEA=4.24, ya era mejor que Momentos, EEA=4.77).
+
+El mismo guard en `gen_pareto.py` sí tiene impacto real acá, aunque Gen.
+Pareto Momentos nunca tuvo fila propia en esta tabla (sin referencia de
+tesis para comparar): antes del guard, Momentos daba el mejor ajuste de
+la distribución (µ=4.090, EEA=4.41, puesto 5/13 del ranking de esta
+estación). Con el guard, el único método que queda disponible es MPP,
+con EEA=180.416.853 — la distribución cae al puesto 13/13 (el peor). No
+es un bug nuevo de MPP: ya era así de malo para esta serie, solo que
+antes quedaba tapado por un resultado de Momentos que violaba el
+dominio.
+
+DECISIÓN 061 (misma fecha) no aplica a esta estación — sin ceros reales.
+Detalle completo en `docs/decisiones/decision060.md` y
+`docs/decisiones/decision061.md`.
+
 ---
 
 ### 4. Hallazgos relevantes — con causa e implicancia

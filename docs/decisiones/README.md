@@ -22,6 +22,18 @@ beneficio real. El orden de este índice es numérico, no cronológico, por
 el mismo motivo: nadie cita "la decisión de tal fecha", todo el repo cita
 por número.
 
+**Antes de crear `decisionNNN.md` con un número nuevo, correr `git fetch`
+y comparar contra `origin/staging`** (`git ls-tree -r --name-only
+origin/staging -- docs/decisiones/` para ver el máximo real del remoto).
+El siguiente número libre en el checkout local no es necesariamente el
+siguiente número libre en el remoto — dos ramas de trabajo pueden tomar
+el mismo número en paralelo sin que ninguna de las dos lo sepa hasta el
+merge. Ya pasó una vez (17/08/2026): `DECISIÓN 059` se asignó en paralelo
+a "selector de intensidad de animación" (mergeado a `staging`) y a un
+trabajo de auditoría de Etapa 2 sin pushear — el segundo se renumeró a
+`060` antes de commitear, sin conflicto real de Git de por medio porque
+se detectó a tiempo con este mismo chequeo.
+
 ## Addendums
 
 Un addendum (corrección o ampliación de alcance posterior a la fecha

@@ -1140,6 +1140,107 @@ borrado en el mismo commit que esta sección.
 
 ---
 
+## Auditoría dirigida de restricciones de dominio — Etapa 2 (EN CURSO, desde 13/08/2026)
+
+Continuación de la misma racha de "atacar pendientes acumulados" que
+cerró el plan de arriba (12/08/2026) — pero de otra naturaleza: no es un
+plan de features con PRs, es una auditoría dirigida a preguntas de
+dominio abiertas en Etapa 2, listadas desde hace semanas en
+`docs/auditoria/pendientes/pendientes-facundo.md` sin que nadie las
+empujara activamente. Llevada por Octavio en paralelo con dos
+asistentes — una sesión de auditoría dedicada ("Chat") y Claude Code
+sobre este repo — con cross-verificación obligatoria: ningún hallazgo
+entra a los documentos de auditoría sin que la otra parte lo revise
+contra el código real o el texto de la tesis, no contra lo que la
+primera parte reportó de palabra.
+
+**Estructura nueva:** `docs/auditoria/hallazgos/` (13/08/2026) —
+auditorías dirigidas a un tema puntual, posteriores al cierre de las
+cuatro fases originales de `auditoria/fases/` y explícitamente no
+numeradas como continuación de esa secuencia ("fase 5"), porque no lo
+son. Un archivo por tema, no por fecha; cada entrada adentro sí va
+fechada. Primer archivo: `restricciones-dominio-etapa2.md`. Ver
+`docs/README.md` para el criterio completo de por qué esta carpeta y no
+otra.
+
+### Resuelto como decisión de implementación de METIS — no requirió a Facundo
+
+- **DECISIÓN 060** (`docs/decisiones/decision060.md`, 17/08/2026) —
+  guard de dominio `x0`/`µ` ≥ `min(serie)` en Exponencial x0-β y
+  Generalizada de Pareto, método Momentos (mismo guard que ya tenían
+  Gamma 3p y Log-Normal 3p). Verificado contra las 9 estaciones reales
+  de la tesis: 6 de 9 violaban en Exponencial x0-β, 3 de 9 en Gen.
+  Pareto, sin que nada lo detectara antes — devolvían `STATUS_OK` con un
+  ajuste que viola el soporte que la propia fórmula declara (IV-68/69,
+  IV-145/146).
+- **DECISIÓN 061** (`docs/decisiones/decision061.md`, 17/08/2026) — de
+  las 5 distribuciones marcadas
+  `PENDING_ZEROS_CONFIRMATION=True`, 3 bloqueaban cero en la serie sin
+  ninguna base matemática (verificado método por método: de 9
+  combinaciones distribución/método, solo 1 —Generalizada
+  Exponencial/MV— tiene una necesidad real de bloquear, `log(1-e^-λx)`
+  indefinido en x=0). Default cambiado a "calcular igual y advertir"
+  (`DIST_ZEROS_TOLERATED`, mismo mecanismo que `DIST_HIGH_EEA`) donde la
+  fórmula lo permite — **resuelve el default de implementación
+  mientras se espera confirmación, no la pregunta de dominio en sí**,
+  que sigue abierta.
+- **Repaso de numeración de estación cerrado** en `pendientes-facundo.md`
+  — la NOTA 10/07/2026 dudaba de rotulado cruzado en 4 secciones (mismo
+  tipo de error ya confirmado una vez en la tabla de GVE Momentos).
+  Verificado a mano por Octavio contra la ficha real de la tesis en dos
+  rondas (13/08 y 17/08/2026): las 4 secciones (Gen. Exp Momentos-L,
+  Gamma 3p x0>min, LP3 Método Directo, Log-Normal 2p) quedan confirmadas
+  sin ningún cruce entre estaciones.
+
+**Consecuencia verificada de DECISIÓN 060, documentada, no oculta:**
+cambia resultados que `docs/auditoria/regresion/regresion-e2e-coreEstadistico/`
+ya tenía marcados `PASS` — 6 estaciones para Exponencial x0-β Momentos,
+3 para Gen. Pareto Momentos (con efecto real en el puesto del ranking de
+esa estación: mejora en est_08, empeora en est_04 y est_07). Notas
+fechadas 17/08/2026 agregadas en cada `est_0X-e2e.md` afectado y en
+`regresion/README.md` — las capas `regresion-unitaria/` y
+`regresion-pipeline/` tienen las mismas cifras ahora obsoletas sin nota
+propia, señalado en `regresion/README.md` en vez de repetido 12 veces.
+
+### Pendientes que sí o sí deben escalarse a Facundo — no se resuelven por cuenta propia
+
+Detalle completo de cada una en `pendientes-facundo.md`:
+
+- **Gen. Exponencial, Momentos-L — λ negativo en las 9 de 9 estaciones**
+  de la tesis. Derivación matemática propia (verificada) muestra que
+  λ<0 no da una distribución válida para ningún x>0, pero la tesis no
+  lo declara como restricción explícita en IV-83/84 — falta que Facundo
+  confirme si es intencional.
+- **Comportamiento ante ceros — la pregunta de fondo.** DECISIÓN 061
+  fija el default mientras se espera, pero no contesta si un cero tiene
+  sentido físico para Gamma 3p, Log-Normal 3p, Exponencial x0-β, Gen.
+  Pareto o Gen. Exponencial. Sigue completamente abierta.
+- **LP3 Método Directo** — la tesis reporta parámetros y EEA para B
+  fuera de (3,6] en 3 estaciones (est_03, est_07, est_08); METIS aplica
+  la restricción de IV-249 y la tesis no. Sin resolver.
+- **Log-Normal 2p** — el criterio de `NO_APLICABLE` de la tesis no es
+  universal entre estaciones (est_06 rompe el patrón que sí siguen
+  est_03/est_04). Sin resolver.
+- **Gamma 3p + MPP** — fórmula ausente del Capítulo IV pese a que la
+  Tabla IV-1 la lista como aplicable. Hipótesis sin confirmar en
+  `fase1-unitarias.md` (Greenwood et al. 1979 exige forma invertible,
+  Gamma no lo es) — no alcanza para implementar sin que Facundo lo
+  confirme o aporte otra fuente.
+- **Discrepancias de EEA sin explicación (Causa C)** — varias
+  combinaciones distribución/método donde METIS reconstruye a mano el
+  EEA de la tesis a partir de los propios parámetros de Facundo y no
+  coincide. Sin acceso al Excel real, no hay forma de saber por qué
+  desde este lado.
+
+**Estado: EN CURSO.** Quedan hallazgos de `hallazgos/` y preguntas de
+`pendientes-facundo.md` sin cerrar — la auditoría sigue activa en
+paralelo con la sesión dedicada ("Chat"). No confundir con "cerrado":
+a diferencia del plan de arriba, este bloque no tiene un punto de
+cierre único, es un frente continuo mientras haya preguntas de dominio
+abiertas en Etapa 2.
+
+---
+
 ## Decisiones pendientes — no implementar hasta confirmar
 
 - **Partición de Cramer personalizada** — inalcanzable hoy por el endpoint

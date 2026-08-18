@@ -53,6 +53,42 @@ Solo los PASS/FAIL bloquean el avance al paso siguiente si hay FAIL.
   lam <= 0, el resultado esperado puede ser NO_APLICABLE en
   lugar del valor numérico de la tesis. Verificar caso a caso.
 
+## Resultados que dejaron de reproducirse — DECISIÓN 060/061 (17/08/2026)
+
+Las tres capas de este directorio son snapshots de fidelidad contra la
+tesis en el momento en que se auditó cada estación (09-15/07/2026) — no
+se actualizan retroactivamente cuando una decisión posterior cambia el
+comportamiento del código. Dos decisiones del 17/08/2026 cambian
+resultados que estas capas ya habían marcado `PASS`:
+
+- **DECISIÓN 060** (`docs/decisiones/decision060.md`) agrega un guard de
+  dominio (x0/µ ≥ min(serie) → `NO_APLICABLE`) a Exponencial x0-β y
+  Generalizada de Pareto, método Momentos. Afecta **Exponencial x0-β
+  Momentos** en est_01, est_04, est_06, est_07, est_08, est_09 (6 de 9) —
+  el valor que estas tres capas documentan como `PASS ~0%` ya no se
+  reproduce, METIS devuelve `NO_APLICABLE`. También afecta
+  **Generalizada de Pareto Momentos** en est_04, est_07, est_08 (sin fila
+  propia en estos archivos, sin referencia de tesis para comparar, pero
+  con impacto real en el ranking de esas 3 estaciones — detalle en
+  `decision060.md` y en la nota posterior de cada `est_0X-e2e.md`
+  afectado).
+- **DECISIÓN 061** (`docs/decisiones/decision061.md`) no afecta ningún
+  resultado ya documentado en estas tres capas — ninguna de las 9 series
+  reales de la tesis tiene un cero genuino, y el cambio de default solo
+  se activa ante un cero real.
+
+**Alcance de la corrección aplicada:** las notas posteriores fechadas
+17/08/2026 se agregaron en `regresion-e2e-coreEstadistico/` (la capa de
+consolidación, ver sección de arriba) para las 6 estaciones de
+Exponencial x0-β. **No se replicaron en `regresion-unitaria/` ni
+`regresion-pipeline/`** — tienen las mismas filas `PASS` para los mismos
+casos (ej. `regresion-unitaria/est_04_las_tapias_rioLasTapias-unitaria.md:280`,
+`regresion-pipeline/est_04_las_tapias_rioLasTapias-pipeline.md:280`, y
+análogas en est_01/06/07/08/09), pero editar 12 archivos más con la
+misma nota repetida no agregaba trazabilidad nueva — este párrafo cumple
+esa función para las dos capas restantes. Si hace falta la nota
+puntual también ahí, pedirla explícitamente.
+
 ## Estado real de las 9 estaciones (Fase 4, cerrada)
 
 Criterio de PASS: parámetros de cada fórmula reproducidos correctamente

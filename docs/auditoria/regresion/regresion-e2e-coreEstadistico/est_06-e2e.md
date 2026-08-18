@@ -131,6 +131,15 @@ acá, sin novedad.
 | LP3 | Indirecto | EEA | 7.2840 | 7.2097 | +1.03% |
 | LP3 | MV | α, β, y0, EEA | 0.3225 / 3.6950 / 2.4205 / 10.9881 | NO_CONVERGE | METIS converge — raíz genuina verificada, DECISIÓN 019 |
 
+**Nota posterior — DECISIÓN 060 (17/08/2026).** El guard de dominio
+bloquea el resultado de Exponencial x0-β Momentos de esta tabla:
+x0=16.339 > min(serie)=14.0 viola IV-68/69 — METIS hoy devuelve
+`NO_APLICABLE`. **No afecta la conclusión de esta estación**: el modelo
+ganador de Facundo es Exponencial x0-β **MV** (fila de arriba,
+EEA=5.7364) — ese resultado no cambió, sigue "Aprobado — PASS total"
+(ver §4, Hallazgo A). DECISIÓN 061 no aplica acá — sin ceros reales.
+Detalle completo en `docs/decisiones/decision060.md`.
+
 ---
 
 ### 4. Hallazgos relevantes — con causa e implicancia
