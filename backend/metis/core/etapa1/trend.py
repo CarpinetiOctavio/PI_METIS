@@ -2,7 +2,7 @@ import numpy as np
 import pymannkendall as mk
 from scipy.stats import ks_2samp, norm
 
-from metis.core.types import TestResult, WarningItem
+from metis.core.types import Explicacion, TestResult, WarningItem
 
 ALPHA = 0.05
 Z_CRIT = norm.ppf(1 - ALPHA / 2)  # 1.96
@@ -42,6 +42,11 @@ def calcular_mann_kendall(serie: list[float]) -> TestResult:
         warning_codigo = None
         warning_nivel = None
 
+    explicacion = Explicacion(
+        ecuacion="A.55",
+        terminos={"n": n, "s": float(resultado.s), "var_s": float(resultado.var_s)},
+    )
+
     return TestResult(
         prueba="mann_kendall",
         estadistico=estadistico,
@@ -49,6 +54,7 @@ def calcular_mann_kendall(serie: list[float]) -> TestResult:
         veredicto=veredicto,
         warning_codigo=warning_codigo,
         warning_nivel=warning_nivel,
+        explicacion=explicacion,
     )
 
 
@@ -84,6 +90,11 @@ def calcular_ks_tendencia(serie: list[float]) -> TestResult:
     warning_codigo = "TEST_WARNING_TREND" if not aprobada else None
     warning_nivel = "normal" if not aprobada else None
 
+    explicacion = Explicacion(
+        ecuacion="A.57",
+        terminos={"n1": n1, "n2": n2, "d": float(d_stat)},
+    )
+
     return TestResult(
         prueba="kolmogorov_smirnov",
         estadistico=estadistico,
@@ -91,6 +102,7 @@ def calcular_ks_tendencia(serie: list[float]) -> TestResult:
         veredicto=veredicto,
         warning_codigo=warning_codigo,
         warning_nivel=warning_nivel,
+        explicacion=explicacion,
     )
 
 

@@ -106,6 +106,17 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
             "n2": tr.n2,
             "valor_atipico": tr.valor_atipico,
             "indice_atipico": tr.indice_atipico,
+            # Bloque D (plan post-avance, DECISIÓN 064) — piezas para la
+            # fórmula sustituida en modo paso a paso. None para pruebas
+            # "no_ejecutada" (nada que sustituir).
+            "explicacion": (
+                {
+                    "ecuacion": tr.explicacion.ecuacion,
+                    "terminos": tr.explicacion.terminos,
+                }
+                if tr.explicacion
+                else None
+            ),
         }
 
     def warning_dict(w) -> dict:

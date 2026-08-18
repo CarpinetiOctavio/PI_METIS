@@ -233,6 +233,14 @@ no-test (DECISIÓN 058), en paralelo con `test_result_dict()` — mismo campo
 que ya existía en `TestResult`, nunca se serializaba en ninguno de los dos
 caminos.
 
+**Bloque D del plan post-avance (DECISIÓN 064) no toca este evento.** El
+campo nuevo `explicacion` (ver más abajo, payload de `result_etapa1`) solo
+se serializa en `test_result_dict()` — el evento `test_result` de arriba
+alimenta el timeline transitorio de `StreamPage` (una tabla compacta,
+idéntica en los dos modos mientras el stream corre), no `Etapa1ResultView`
+— ahí no hay nada que renderizar de forma distinta según paso a paso vs.
+experto todavía, así que agregarlo acá sería payload sin consumidor.
+
 **Payload de `result_etapa1`** — agregado el bloque `datos` en el PR 3 del
 plan de cierre de pendientes no-test (DECISIÓN 058). Antes de este PR el
 evento llevaba `contract`/`descriptive`/las cuatro baterías de pruebas/los
@@ -245,7 +253,16 @@ payload para CU-01.
 {
   "contract": { "...": "..." },
   "descriptive": { "...": "..." },
-  "independencia": [ { "...": "...", "indice_atipico": null } ],
+  "independencia": [
+    {
+      "...": "...",
+      "indice_atipico": null,
+      "explicacion": {
+        "ecuacion": "III-1",
+        "terminos": {"n": 40, "k": 1, "media": 42.5, "numerador": 3120.4, "denominador": 18904.2, "k_max": 14, "lags_fuera": 1, "tolerancia": 2}
+      }
+    }
+  ],
   "homogeneidad": [ "..." ],
   "tendencia": [ "..." ],
   "atipicos": [ { "...": "...", "indice_atipico": 17 } ],
@@ -280,6 +297,26 @@ calculó la prueba en su propio espacio, sin traducir.
 puebla con carga mensual y `mes_inicio_anio != 1` — ver DECISIÓN 058 §§1-3
 para la partición completa (qué vive en `analyses` vs. en
 `analysis_results.etapa1`) y el cálculo de tamaño de payload.
+
+**`explicacion` — agregado en el Bloque D del plan post-avance (DECISIÓN
+064).** Cada `TestResult` de las 8 pruebas de Etapa 1 (Anderson,
+Wald-Wolfowitz, Helmert, t de Student, Cramer, Mann-Kendall,
+Kolmogorov-Smirnov, Chow) gana `explicacion: {ecuacion, terminos} | null` —
+`null` en cualquier prueba con `veredicto == "no_ejecutada"` (nada que
+sustituir). `terminos` son los valores intermedios que la prueba ya calculó
+de todos modos (`core/etapa1/*.py`), no una segunda fuente de verdad
+matemática: el frontend en modo paso a paso (`Etapa1ResultView`, Bloque D3)
+solo renderiza — sustituye `terminos` en una plantilla y arma una
+interpretación en castellano — nunca recalcula ni deriva un estadístico
+nuevo. `ecuacion` referencia `.claude/rules/core/formulas-etapa1.md` (ej.
+`"III-8"`), o, para Chow, la fuente real de su valor crítico (Bulletin 17B,
+no un número de ecuación de la tesis — DECISIÓN 018). Cramer es la única
+prueba donde `terminos` lleva más datos que `estadistico`/`valor_critico`
+por sí solos explican: los dos bloques (60%/30%, `t_w1`/`t_w2`) viajan
+siempre, no solo el "binding" que `calcular_cramer()` ya reportaba — el
+docente necesita ver por qué `aprobada` exige que los dos aprueben, no solo
+el reportado. `analysis_results.etapa1` persiste el mismo payload para
+CU-01 — `explicacion` llega igual al historial.
 
 ---
 

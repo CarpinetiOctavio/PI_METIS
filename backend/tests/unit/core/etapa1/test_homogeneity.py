@@ -6,6 +6,8 @@ import pytest
 from metis.core.etapa1.homogeneity import (
     _cramer_bloque,
     calcular_cramer,
+    calcular_helmert,
+    calcular_t_student,
     determinar_nivel_homogeneidad,
 )
 from metis.core.types import TestResult
@@ -147,3 +149,59 @@ def test_cramer_estadistico_es_t_w2_binding(serie_facundo):
     assert resultado.veredicto == "aprobada"
     assert resultado.n1 == 24
     assert resultado.n2 == 12
+
+
+# ── explicacion (Bloque D, plan post-avance — DECISIÓN 064) ─────────────────
+
+
+@pytest.mark.unit
+def test_helmert_explicacion_terminos_reproducen_diferencia(serie_facundo):
+    resultado = calcular_helmert(serie_facundo)
+
+    assert resultado.explicacion is not None
+    assert resultado.explicacion.ecuacion == "III-7"
+    terminos = resultado.explicacion.terminos
+    assert terminos["s"] - terminos["c"] == pytest.approx(
+        resultado.estadistico, abs=1e-9
+    )
+    assert terminos["s"] + terminos["c"] == terminos["n"] - 1
+
+
+@pytest.mark.unit
+def test_t_student_explicacion_terminos_reproducen_el_estadistico(serie_facundo):
+    n1, n2 = 20, 20
+    resultado = calcular_t_student(serie_facundo, n1=n1, n2=n2)
+
+    assert resultado.explicacion is not None
+    assert resultado.explicacion.ecuacion == "III-8"
+    terminos = resultado.explicacion.terminos
+    denom = terminos["sp"] * math.sqrt(1 / terminos["n1"] + 1 / terminos["n2"])
+    t_reconstruido = (terminos["x1_barra"] - terminos["x2_barra"]) / denom
+    assert t_reconstruido == pytest.approx(resultado.estadistico, abs=1e-9)
+    assert terminos["nu"] == n1 + n2 - 2
+
+
+@pytest.mark.unit
+def test_cramer_explicacion_incluye_ambos_bloques(serie_facundo):
+    resultado = calcular_cramer(serie_facundo)
+
+    assert resultado.explicacion is not None
+    assert resultado.explicacion.ecuacion == "III-15"
+    terminos = resultado.explicacion.terminos
+    # Los dos bloques (60%/30%) viajan siempre, no solo el "binding" que
+    # quedó en estadistico/valor_critico — el docente necesita ver por qué
+    # aprobada exige que los dos, no solo el reportado, aprueben.
+    assert terminos["t_w1"] == pytest.approx(0.2358, abs=1e-3)
+    assert terminos["t_w2"] == pytest.approx(0.7859, abs=1e-3)
+    assert terminos["t_w2"] == pytest.approx(resultado.estadistico, abs=1e-9)
+    assert terminos["n_w1"] == resultado.n1
+    assert terminos["n_w2"] == resultado.n2
+
+
+@pytest.mark.unit
+def test_cramer_s_global_cero_sin_explicacion():
+    # Serie constante — s_global=0, calcular_cramer retorna no_ejecutada
+    # antes de tener ningún término que sustituir.
+    resultado = calcular_cramer([50.0] * 20)
+    assert resultado.veredicto == "no_ejecutada"
+    assert resultado.explicacion is None
