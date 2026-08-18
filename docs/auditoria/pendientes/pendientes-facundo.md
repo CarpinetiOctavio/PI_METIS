@@ -145,6 +145,15 @@ citas de esas dos secciones tenía estación mal rotulada. **LP3 Método
 Directo y Log-Normal 2p — NO_APLICABLE siguen sin este repaso**, la
 duda de numeración de esta nota sigue abierta para esas dos.
 
+**ACTUALIZACIÓN 17/08/2026 — repaso manual hecho para las 4 de 4
+secciones, sin rotulado cruzado. Nota cerrada.** Octavio verificó las
+dos secciones que quedaban pendientes — "LP3 Método Directo" (3 citas:
+est_03, est_07, est_08) y "Log-Normal 2p — NO_APLICABLE" (3 citas:
+est_03, est_04, est_06) — contra la ficha real de la tesis. Ninguna de
+las 6 citas tenía estación mal rotulada. Con esto, las cuatro secciones
+que esta nota señalaba como dudosas quedan confirmadas sin rotulado
+cruzado — la nota queda cerrada, sin repaso pendiente.
+
 **ACTUALIZACIÓN 15/07/2026 — confirmado con verificación de CV explícita en
 est_07 y est_08, sin ambigüedad de numeración.** Mismo patrón: el α de
 METIS reproduce exacto el CV real de los datos (CV=S/x̄); el α de tesis no.
@@ -202,6 +211,14 @@ Son ya 3 estaciones (est_03, est_07, est_08) con B fuera de rango donde la
 tesis reporta valores de todas formas — la pregunta original sigue sin
 resolver, ahora con más evidencia de que no es un caso aislado de est_03.
 
+**ACTUALIZACIÓN 17/08/2026 — verificado manualmente contra la tesis, sin
+rotulado cruzado.** Octavio confirmó las 3 citas (est_03: B=2.63,
+α=0.333, β=0.724, y0=3.840, EEA=64.3705; est_07: B=2.7302, α=0.359,
+β=0.158, y0=3.884, EEA=26.4022; est_08: B=2.7178, α=0.036, β=157.69,
+y0=4.967, EEA=76.4185) contra la ficha real de cada estación puntual —
+coinciden todas, sin cruce entre estaciones. La pregunta original sigue
+abierta — esto solo cierra la duda de numeración de la NOTA 10/07/2026.
+
 ### Log-Normal 2p — NO_APLICABLE sin ceros en la serie
 Facundo reporta NO_APLICABLE para LN2p en est_03 y est_04 aunque
 la serie no tiene ceros. METIS calcula EEA normalmente.
@@ -215,6 +232,16 @@ casi idénticos, EEA diverge) en vez de NO_APLICABLE.
 
 Pregunta: ¿Bajo qué condición marcás LN2p como no aplicable? ¿Por qué
 no se aplica en est_06 si sí se aplicó en est_03/est_04?
+
+**ACTUALIZACIÓN 17/08/2026 — verificado manualmente contra la tesis, sin
+rotulado cruzado.** Octavio confirmó las 3 citas (est_03: La Tapa —
+NO_APLICABLE sin EEA; est_04: Las Tapias, Río Las Tapias — NO_APLICABLE
+sin EEA; est_06: Las Tapias, Río San Bartolomé — EEA=7.4379 reportado)
+contra la ficha real de cada estación puntual — coinciden todas. En
+particular, el EEA=7.4379 de est_06 no está cruzado con est_04 pese a
+compartir el mismo topónimo de localidad con río distinto — el par que
+más se prestaba a confundirse. La pregunta original sigue abierta —
+esto solo cierra la duda de numeración de la NOTA 10/07/2026.
 
 ### Gamma 3p — parámetros calculados con x0 > min(serie)
 Facundo reporta parámetros para Gamma 3p Momentos y MPP en est_03
