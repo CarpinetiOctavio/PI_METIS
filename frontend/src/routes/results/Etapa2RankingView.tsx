@@ -81,17 +81,25 @@ function formatEeaConPct(eea: number | null, mediaSerie: number | null | undefin
 function DistribucionCard({
   item,
   esMejor,
+  metodoElegido,
   onElegir,
+  textoAccion,
   resolving,
   mediaSerie,
 }: Readonly<{
   item: DistribucionResult;
   esMejor: boolean;
+  // Bloque C3 — método de la elección registrada del análisis, si esta
+  // card es la distribución elegida (undefined si no aplica o si estamos
+  // en modo "lectura"/"stream", donde no hay ninguna elección todavía).
+  metodoElegido?: string;
   onElegir?: (distribucion: string, metodo: string) => void;
+  textoAccion: { principal: string; porMetodo: string };
   resolving?: boolean;
   mediaSerie?: number | null;
 }>) {
-  const [expandido, setExpandido] = useState(false);
+  const esElegida = metodoElegido !== undefined;
+  const [expandido, setExpandido] = useState(esElegida);
   const puedeElegirMejor = Boolean(onElegir) && item.mejor_metodo !== null;
 
   return (
@@ -103,8 +111,11 @@ function DistribucionCard({
         <span className="sp" />
         {/* constraints.md — "METIS no sugiere distribución ganadora": la
             etiqueta declara el hecho objetivo (menor EEA de la grilla), no
-            una recomendación. Nunca "recomendada/óptima/ganadora". */}
+            una recomendación. Nunca "recomendada/óptima/ganadora". Las dos
+            etiquetas pueden coincidir o no — que se vea que no coinciden es
+            información docente (Bloque C3, DECISIÓN 062), no se ocultan. */}
         {esMejor && <span className="pill ok">menor EEA</span>}
+        {esElegida && <span className="pill acc">elegida en el análisis</span>}
       </div>
       <p className="fn" style={{ margin: "4px 0 8px" }}>
         {formatInt(item.n_parametros)} parámetro{item.n_parametros === 1 ? "" : "s"}
@@ -127,7 +138,7 @@ function DistribucionCard({
               disabled={resolving}
               onClick={() => onElegir!(item.distribucion, item.mejor_metodo!)}
             >
-              Elegir este ajuste
+              {textoAccion.principal}
             </button>
           </SpecularHighlight>
         </Magnet>
@@ -158,7 +169,14 @@ function DistribucionCard({
                 que no convergen). */}
             {item.metodos.map((m) => (
               <tr key={m.metodo}>
-                <td>{m.metodo}</td>
+                <td>
+                  {m.metodo}
+                  {m.metodo === metodoElegido && (
+                    <span className="fn" style={{ marginLeft: 6 }}>
+                      (elegido en el análisis)
+                    </span>
+                  )}
+                </td>
                 <td className="num">{formatEeaConPct(m.eea, mediaSerie)}</td>
                 <td>
                   <span className={`pill ${m.status === "ok" ? "ok" : "wait"}`}>
@@ -174,7 +192,7 @@ function DistribucionCard({
                         disabled={resolving}
                         onClick={() => onElegir(item.distribucion, m.metodo)}
                       >
-                        Elegir
+                        {textoAccion.porMetodo}
                       </button>
                     )}
                   </td>
@@ -218,13 +236,30 @@ function agruparWarnings(warnings: WarningItem[]): WarningGroup[] {
   ];
 }
 
+// Bloque C3 (plan post-avance) — tres modos explícitos, no un cuarto prop
+// booleano encima de onElegir (DECISIÓN 062). "stream": pausa real del
+// pipeline (StreamPage), la elección desbloquea distribution-decision.
+// "lectura": sin ningún botón (ResultsPage, y HistoryDetailPage cuando el
+// análisis no tiene Etapa 2 ejecutada). "exploracion": botones activos
+// pero el callback pega al endpoint de recálculo stateless, no decide nada
+// — HistoryDetailPage. El texto del botón cambia según el modo para que
+// "explorar" nunca se lea como "decidir".
+export type Etapa2RankingViewModo = "stream" | "lectura" | "exploracion";
+
+const TEXTO_ACCION: Record<Etapa2RankingViewModo, { principal: string; porMetodo: string }> = {
+  stream: { principal: "Elegir este ajuste", porMetodo: "Elegir" },
+  exploracion: { principal: "Explorar este ajuste", porMetodo: "Explorar" },
+  lectura: { principal: "Elegir este ajuste", porMetodo: "Elegir" }, // nunca se renderiza sin onElegir
+};
+
 /**
  * Grilla completa de Etapa 2 — espejo del payload real de
  * result_etapa2_ranking (_serializar_etapa2()), sin aplanar a un top-3.
  *
- * `onElegir` presente = modo interactivo (dentro del stream en pausa,
- * StreamPage). Ausente = modo de solo lectura (ResultsPage, HistoryDetailPage
- * mostrando un análisis ya resuelto) — sin botones "Elegir".
+ * `modo` decide la interactividad y el texto de los botones (ver arriba).
+ * Si se omite, se infiere de `onElegir` por compatibilidad con los
+ * llamadores existentes ("stream" si está presente, "lectura" si no) — los
+ * llamadores nuevos deberían pasarlo explícito.
  *
  * `mediaSerie` — media de la serie analizada (Etapa1Result.descriptive.media
  * en cada llamador), opcional: solo habilita el "% de la media" junto al EEA
@@ -234,19 +269,38 @@ function agruparWarnings(warnings: WarningItem[]): WarningGroup[] {
  * esta vista, validado en el cliente antes de llamarlo. StreamPage ya no
  * manda un default fijo, lo que el usuario haya dejado en el campo es lo
  * que viaja.
+ *
+ * `seleccionRegistrada` (Bloque C3) — distribución+método de
+ * `etapa2.seleccion`, si el análisis ya tiene una elección persistida.
+ * Marca la card correspondiente como "elegida en el análisis", distinto de
+ * "menor EEA" — las dos etiquetas pueden no coincidir.
  */
 export function Etapa2RankingView({
   etapa2,
+  modo,
   onElegir,
   resolving,
   mediaSerie,
+  seleccionRegistrada,
 }: Readonly<{
   etapa2: Etapa2Result;
+  modo?: Etapa2RankingViewModo;
   onElegir?: (distribucion: string, metodo: string, periodosRetorno: number[]) => void;
   resolving?: boolean;
   mediaSerie?: number | null;
+  seleccionRegistrada?: { distribucion: string; metodo: string } | null;
 }>) {
-  const [verTodas, setVerTodas] = useState(false);
+  const modoEfectivo: Etapa2RankingViewModo = modo ?? (onElegir ? "stream" : "lectura");
+  const textoAccion = TEXTO_ACCION[modoEfectivo];
+
+  // Si la elección registrada quedó fuera de las TOP_VISIBLE, arrancar con
+  // la grilla completa — sin esto, "elegida en el análisis" podría no
+  // verse nunca sin que el usuario supiera que hay que hacer clic en "ver
+  // las N restantes".
+  const indiceElegida = seleccionRegistrada
+    ? etapa2.ranking.findIndex((d) => d.distribucion === seleccionRegistrada.distribucion)
+    : -1;
+  const [verTodas, setVerTodas] = useState(indiceElegida >= TOP_VISIBLE);
   const [periodosInput, setPeriodosInput] = useState(PERIODOS_RETORNO_DEFAULT.join(", "));
   const [periodosError, setPeriodosError] = useState<string | null>(null);
 
@@ -341,7 +395,13 @@ export function Etapa2RankingView({
             key={item.distribucion}
             item={item}
             esMejor={hayMejor && index === 0}
+            metodoElegido={
+              seleccionRegistrada?.distribucion === item.distribucion
+                ? seleccionRegistrada.metodo
+                : undefined
+            }
             onElegir={onElegir ? handleElegir : undefined}
+            textoAccion={textoAccion}
             resolving={resolving}
             mediaSerie={mediaSerie}
           />

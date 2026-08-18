@@ -349,10 +349,24 @@ export interface DistribucionResult {
   mejor_metodo: string | null;
 }
 
+// Bloque C2a (plan post-avance) — la elección de distribución+método hecha
+// durante el stream original y sus resultados, persistidos junto al
+// ranking para que el historial la muestre sin recalcular nada. `null`
+// cuando no se llegó a elegir ninguna (stream abandonado en la pausa) —
+// mismo criterio sin backfill que `timestamps` (DECISIÓN 058 §4).
+export interface SeleccionEtapa2 {
+  distribucion: string;
+  metodo: string;
+  periodos_retorno: number[];
+  eventos_diseno: EventoDiseno[];
+  curva_ajuste: EventoDiseno[];
+}
+
 export interface Etapa2Result {
   ranking: DistribucionResult[];
   warnings: WarningItem[];
   puntos_empiricos: PuntoEmpirico[];
+  seleccion: SeleccionEtapa2 | null;
 }
 
 // Posición de ploteo Weibull de un dato observado (empirical.py::
@@ -376,6 +390,21 @@ export interface DistributionDecisionRequest {
   distribucion: string;
   metodo: string;
   periodos_retorno: number[];
+}
+
+// Bloque C2c (plan post-avance) — POST /analysis/{id}/design-events,
+// recálculo stateless desde el historial (DECISIÓN 062). Misma forma que
+// DistributionDecisionRequest sin session_id: no hay ningún stream de por
+// medio, se pega directo sobre un análisis ya persistido.
+export interface DesignEventsRecalcRequest {
+  distribucion: string;
+  metodo: string;
+  periodos_retorno: number[];
+}
+
+export interface DesignEventsRecalcResponse {
+  eventos_diseno: EventoDiseno[];
+  curva_ajuste: EventoDiseno[];
 }
 
 export interface DistributionDecisionResponse {
