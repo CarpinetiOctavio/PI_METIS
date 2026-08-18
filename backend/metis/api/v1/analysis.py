@@ -8,6 +8,8 @@ from metis.api.deps import get_current_user, get_db, get_optional_user
 from metis.core.validacion.parser import leer_columnas_preview
 from metis.db.models.user import User
 from metis.schemas.analysis import (
+    DesignEventsRecalcRequest,
+    DesignEventsRecalcResponse,
     DistributionDecisionRequest,
     DistributionDecisionResponse,
     OutlierDecisionRequest,
@@ -15,7 +17,9 @@ from metis.schemas.analysis import (
     PreviewColumnsResponse,
 )
 from metis.services.analysis_service import (
+    MetodoNoAjustadoError,
     get_analysis_by_id,
+    recalcular_eventos_diseno,
     registrar_distribution_decision,
     registrar_outlier_decision,
 )
@@ -219,23 +223,33 @@ _SESSION_NOT_FOUND = HTTPException(
 )
 
 
+def _validar_seleccion_distribucion(
+    distribucion: str, metodo: str, periodos_retorno: list[float]
+) -> None:
+    """DECISIÓN 052 — validado en el borde, no con restricciones Pydantic:
+    necesita responder 400 DIST_SELECTION_INVALID, no el 422 genérico que
+    FastAPI dispararía solo. T > 1 porque F = 1 - 1/T necesita T > 1 para
+    caer en (0,1) — mismo guard que cuantil() en core/, duplicado acá para
+    devolver un error legible en vez de un 500. Compartida con
+    /analysis/{id}/design-events (Bloque C2c) — la forma del request es la
+    misma, el destino de la decisión es lo único que cambia."""
+    if (
+        not distribucion
+        or not metodo
+        or not (1 <= len(periodos_retorno) <= 20)
+        or any(t <= 1 for t in periodos_retorno)
+    ):
+        raise _DIST_SELECTION_INVALIDA
+
+
 @router.post("/distribution-decision", response_model=DistributionDecisionResponse)
 async def distribution_decision(
     body: DistributionDecisionRequest,
     current_user: User | None = Depends(get_optional_user),
 ):
-    # DECISIÓN 052 — validado en el borde, no con restricciones Pydantic:
-    # necesita responder 400 DIST_SELECTION_INVALID, no el 422 genérico que
-    # FastAPI dispararía solo. T > 1 porque F = 1 - 1/T necesita T > 1 para
-    # caer en (0,1) — mismo guard que cuantil() en core/, duplicado acá para
-    # devolver un error legible en vez de un 500.
-    if (
-        not body.distribucion
-        or not body.metodo
-        or not (1 <= len(body.periodos_retorno) <= 20)
-        or any(t <= 1 for t in body.periodos_retorno)
-    ):
-        raise _DIST_SELECTION_INVALIDA
+    _validar_seleccion_distribucion(
+        body.distribucion, body.metodo, body.periodos_retorno
+    )
 
     result = await registrar_distribution_decision(
         session_id=str(body.session_id),
@@ -262,3 +276,56 @@ async def get_analysis(
     if result is None:
         raise HTTPException(status_code=404, detail="Análisis no encontrado")
     return result
+
+
+_ANALYSIS_NOT_FOUND = HTTPException(
+    status_code=404,
+    detail={
+        "error": {
+            "codigo": "ANALYSIS_NOT_FOUND",
+            "mensaje": "El análisis no existe, no pertenece al usuario, o no tiene Etapa 2 ejecutada.",
+        }
+    },
+)
+
+_DIST_METHOD_NOT_FITTED = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "DIST_METHOD_NOT_FITTED",
+            "mensaje": "Esa combinación de distribución y método no tiene parámetros ajustados.",
+        }
+    },
+)
+
+
+@router.post("/{analysis_id}/design-events", response_model=DesignEventsRecalcResponse)
+async def recalcular_design_events(
+    analysis_id: uuid.UUID,
+    body: DesignEventsRecalcRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Bloque C2c (plan post-avance) — recálculo stateless desde el
+    # historial. DECISIÓN 062: no toca session_store, no persiste nada, no
+    # altera `decisiones`. Requiere JWT y pertenencia del análisis, mismo
+    # guard que GET /history/{id}.
+    _validar_seleccion_distribucion(
+        body.distribucion, body.metodo, body.periodos_retorno
+    )
+
+    try:
+        result = await recalcular_eventos_diseno(
+            analysis_id=analysis_id,
+            user_id=current_user.id,
+            distribucion=body.distribucion,
+            metodo=body.metodo,
+            periodos_retorno=body.periodos_retorno,
+            db=db,
+        )
+    except MetodoNoAjustadoError:
+        raise _DIST_METHOD_NOT_FITTED from None
+
+    if result is None:
+        raise _ANALYSIS_NOT_FOUND
+    return DesignEventsRecalcResponse(**result)

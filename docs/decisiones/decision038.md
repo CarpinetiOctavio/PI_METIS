@@ -190,6 +190,15 @@ de códigos con un prefijo nuevo, el regex correspondiente necesita ese
 prefijo agregado a su lista o dejará de detectar esa familia — es una
 limitación conocida, no automática como un parser real.
 
+**Actualización 18/08/2026 (Bloque C2c, DECISIÓN 062):** `ANALYSIS_NOT_FOUND`
+(`POST /analysis/{id}/design-events`) agregó el prefijo `ANALYSIS` a la
+lista de `scripts/check-error-catalog.sh` — backend-emitido, igual que
+`SESSION`, no exclusivo de frontend como `VALIDATION`/`STREAM`. Ejemplo real
+de la limitación de arriba: sin este agregado, el script no habría fallado
+(el código nuevo simplemente queda invisible para las tres comprobaciones,
+no genera un `FAIL` falso ni verdadero) — hay que acordarse de sumar el
+prefijo a mano cada vez, el chequeo no se autodetecta a sí mismo.
+
 **Automatización — ver M2 del plan de pasada 3
 (`docs/frontend/plan-mejora-frontend-pasada3.md`).** Esta verificación deja
 de depender de que alguien la corra a mano: se agrega como step de CI en
