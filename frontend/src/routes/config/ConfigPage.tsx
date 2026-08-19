@@ -444,6 +444,18 @@ export function ConfigPage() {
                 Otro
               </button>
             </div>
+            {/* Bloque F (plan post-avance, Opción 1) — el efecto real de este
+                control es chico y no se ve en ningún otro lado de la UI:
+                un warning de signo y qué código reporta Chow ante ceros.
+                Sin esta nota, el usuario no tiene forma de saber qué cambia
+                al tocar el toggle. */}
+            <p className="fn">
+              Con <b>Caudal/Precip.</b>, METIS avisa si hay valores negativos
+              (no existen físicamente) y trata los ceros de forma distinta en
+              la prueba de Chow, que trabaja sobre logaritmos. Con{" "}
+              <b>Otro</b>, un valor negativo es un dato válido (ej. una
+              temperatura bajo cero).
+            </p>
           </fieldset>
           <fieldset className="field">
             <legend>Alcance del análisis</legend>
