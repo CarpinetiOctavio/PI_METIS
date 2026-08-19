@@ -1,7 +1,17 @@
 # DECISIÓN 062 — Historial interactivo: explorar otra distribución no es decidir
 
 **Fecha:** 18 de Agosto de 2026
-**Estado:** Decidida — implementación en curso (Bloque C2c del [plan post-avance](../plan-post-avance.md))
+**Estado:** Aplicada — backend (Bloque C2c, `POST /analysis/{id}/design-events`)
+y frontend (Bloque C3, `HistoryDetailPage` interactiva) del [plan post-avance](../plan-post-avance.md),
+ambos mergeados a `staging`.
+
+**Corrección 18/08/2026 (Bloque I, relevamiento final del plan):** esta
+sección decía "implementación en curso (Bloque C2c)" — desactualizado desde
+que el Bloque C3 (frontend) se cerró y mergeó (PR #67) el mismo día. El
+párrafo sobre "el frontend (Bloque C3) muestra siempre..." más abajo ya
+describía el comportamiento real, solo el encabezado había quedado atrás —
+encontrado auditando el relevamiento final (Bloque I), no un cambio de
+comportamiento.
 
 ### Contexto
 
