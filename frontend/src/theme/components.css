@@ -495,9 +495,15 @@
 /* Bloque C3 (plan post-avance) — "elegida en el análisis" en el historial
    interactivo, distinto de .pill.ok ("menor EEA"): es un hecho de
    auditoría, no un juicio de calidad de ajuste. Reusa --acc, ya usado por
-   el resto de la identidad "Instrumento" para foco/selección. */
+   el resto de la identidad "Instrumento" para foco/selección.
+   H2 (DECISIÓN 043) — par nuevo, no estaba en la auditoría de la pasada 2
+   (este pill se agregó recién en el Bloque C3). Al 16% de mezcla el texto
+   --acc sobre su propio fondo daba 4.29:1 en claro, por debajo de 4.5:1 —
+   12% alcanza 4.53:1 sin tocar --acc (usado en todo el resto de la app
+   para foco/selección; cambiar el color, no la mezcla, tenía mucho más
+   radio de impacto para un solo pill). */
 .pill.acc {
-  background: color-mix(in srgb, var(--acc) 16%, transparent);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
   color: var(--acc);
 }
 
