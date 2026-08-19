@@ -188,6 +188,6 @@ situ.
 | [059](decision059.md) | Selector de intensidad de animación (alta/media/sin animaciones) | 14/08/2026 | Implementada |
 | [060](decision060.md) | Guard de dominio x0/µ ≥ min(serie) en Exponencial x0-β y Generalizada de Pareto (Momentos) | 17/08/2026 | Aplicada |
 | [061](decision061.md) | Default "tolerar y advertir" ante ceros en ExpX0Beta/GenPareto/GenExp — resuelve el default de implementación, no la pregunta de dominio | 17/08/2026 | Aplicada |
-| [062](decision062.md) | Historial interactivo: explorar otra distribución no es decidir — el recálculo no toca `decisiones` ni `session_store` | 18/08/2026 | Decidida — implementación en curso |
+| [062](decision062.md) | Historial interactivo: explorar otra distribución no es decidir — el recálculo no toca `decisiones` ni `session_store` | 18/08/2026 | Aplicada (backend + frontend) |
 | [063](decision063.md) | Panel de columnas acoplado, no ventana flotante — superposición vs. reflow, y el costo de accesibilidad de un gestor de ventanas propio | 18/08/2026 | Decidida y aplicada |
 | [064](decision064.md) | Paso a paso docente: `core/` calcula la fórmula sustituida (`TestResult.explicacion`), el frontend solo renderiza e interpreta | 18/08/2026 | Aplicada (backend + frontend) |
