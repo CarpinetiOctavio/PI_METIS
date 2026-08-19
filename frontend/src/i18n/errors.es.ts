@@ -19,8 +19,15 @@ export const ERROR_TEXT: Record<string, string> = {
     "No se pudo determinar la resolución temporal de la serie.",
 
   // Contrato — parámetros de request
+  // CONTRACT_CRAMER_PARTICION_UNSUPPORTED retirado (Bloque H1, DECISIÓN
+  // 036) — el backend ya no lo emite, reemplazado por
+  // CONTRACT_CRAMER_PARTICION_INVALID. Se conserva la entrada por
+  // trazabilidad (check-error-catalog.sh exige simetría con api-contracts.md,
+  // que también lo conserva documentado como retirado).
   CONTRACT_CRAMER_PARTICION_UNSUPPORTED:
     "La partición personalizada de Cramer todavía no está disponible. Usá la partición por defecto.",
+  CONTRACT_CRAMER_PARTICION_INVALID:
+    "La partición de Cramer no es válida — revisá que los dos porcentajes estén entre 1 y 100 y que el primero sea mayor que el segundo.",
   CONTRACT_ETAPAS_INVALID: "El alcance del análisis pedido no es válido.",
   CONTRACT_MES_INICIO_INVALID: "El mes de inicio del año debe estar entre 1 y 12.",
 

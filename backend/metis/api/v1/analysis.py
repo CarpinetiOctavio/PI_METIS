@@ -1,13 +1,16 @@
+import json
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.api.deps import get_current_user, get_db, get_optional_user
 from metis.core.validacion.parser import leer_columnas_preview
 from metis.db.models.user import User
 from metis.schemas.analysis import (
+    CramerParticionCustom,
     DesignEventsRecalcRequest,
     DesignEventsRecalcResponse,
     DistributionDecisionRequest,
@@ -69,6 +72,50 @@ def _validar_mes_inicio(mes_inicio_anio: int) -> int:
     if not (1 <= mes_inicio_anio <= 12):
         raise _MES_INICIO_INVALIDO
     return mes_inicio_anio
+
+
+def _cramer_particion_invalida(mensaje: str) -> HTTPException:
+    return HTTPException(
+        status_code=400,
+        detail={
+            "error": {"codigo": "CONTRACT_CRAMER_PARTICION_INVALID", "mensaje": mensaje}
+        },
+    )
+
+
+def _parsear_cramer_particion(raw: str) -> dict | str:
+    """Bloque H1 (plan post-avance, DECISIÓN 036, opción 1) — 'default' pasa
+    tal cual; cualquier otro valor se parsea como JSON y se valida como
+    CramerParticionCustom. calcular_cramer() siempre supo recibir un dict
+    (la rama `else` ya indexaba particion["n1_pct"]/["n2_pct"]) — el bug
+    real era que nunca le llegaba uno, nunca que la rama estuviera mal.
+
+    n1_pct > n2_pct se valida acá a mano (no con un Field de Pydantic
+    comparando dos campos): el bloque 1 es el período largo y el 2 el
+    corto — invertidos, Cramer no mide lo que dice medir. Que los bloques
+    resultantes tengan al menos 2 datos depende de `n`, desconocido en este
+    punto — esa validación vive en calcular_cramer() y produce
+    no_ejecutada, no un 400 acá.
+    """
+    if raw == "default":
+        return raw
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        raise _cramer_particion_invalida(
+            "cramer_particion debe ser 'default' o un JSON con n1_pct y n2_pct."
+        ) from None
+    try:
+        particion = CramerParticionCustom.model_validate(data)
+    except ValidationError:
+        raise _cramer_particion_invalida(
+            "n1_pct y n2_pct deben ser números entre 1 y 100."
+        ) from None
+    if particion.n1_pct <= particion.n2_pct:
+        raise _cramer_particion_invalida(
+            "n1_pct debe ser mayor que n2_pct — el primer bloque es el período largo."
+        )
+    return {"n1_pct": particion.n1_pct, "n2_pct": particion.n2_pct}
 
 
 # DECISIÓN 050 — mismo valor que client_max_body_size en nginx/nginx.conf y
@@ -142,24 +189,12 @@ async def stream_analysis(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
-    # DECISIÓN 036 (Bloque D) — cramer_particion distinto de "default" llega
-    # como str vía multipart y calcular_cramer() indexa particion["n1_pct"]
-    # asumiendo dict, lo que producía TypeError -> 500 no manejado. Esto NO
-    # implementa la partición personalizada (ninguna de las tres opciones de
-    # la decisión fue elegida) — solo cierra el 500 con un 400 controlado.
-    if cramer_particion != "default":
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": {
-                    "codigo": "CONTRACT_CRAMER_PARTICION_UNSUPPORTED",
-                    "mensaje": (
-                        "La partición personalizada de Cramer todavía no está"
-                        " implementada. Usá 'default'."
-                    ),
-                }
-            },
-        )
+    # DECISIÓN 036 (Bloque H1, plan post-avance) — cramer_particion se
+    # parsea y valida acá antes de que llegue a services/. Cierra el
+    # TypeError que motivó la guarda anterior (CONTRACT_CRAMER_PARTICION_UNSUPPORTED,
+    # ver api-contracts.md) implementando la opción 1 de verdad, no solo
+    # bloqueando cualquier valor distinto de "default".
+    cramer_particion_parseada = _parsear_cramer_particion(cramer_particion)
 
     etapas_parseadas = _parsear_etapas(etapas)
     mes_inicio_valido = _validar_mes_inicio(mes_inicio_anio)
@@ -174,7 +209,7 @@ async def stream_analysis(
             columna_y=columna_y,
             tipo_variable=tipo_variable,
             modo=modo,
-            cramer_particion=cramer_particion,
+            cramer_particion=cramer_particion_parseada,
             etapas=etapas_parseadas,
             session_id=session_id,
             user_id=current_user.id if current_user else None,

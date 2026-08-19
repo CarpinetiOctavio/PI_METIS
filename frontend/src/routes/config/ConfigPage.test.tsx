@@ -571,4 +571,92 @@ describe("ConfigPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/trata los ceros de forma distinta en la prueba de Chow/)).toBeInTheDocument();
   });
+
+  // Bloque H1 (plan post-avance, DECISIÓN 036) — partición de Cramer personalizada.
+
+  async function llenarCamposMinimos() {
+    const file = new File(["1,100"], "serie.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+    // Deja asentarse el preview fallido (stub por defecto en 500) antes de
+    // seguir — mismo motivo que el resto de los tests de este archivo.
+    await screen.findByText(/No pudimos leer las columnas/);
+    fireEvent.change(screen.getByLabelText("Columna X"), { target: { value: "anio" } });
+    fireEvent.change(screen.getByLabelText("Columna Y"), { target: { value: "caudal" } });
+  }
+
+  it("H1 — 'Personalizada' muestra dos campos con los defaults 60/30 visibles", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+
+    expect(screen.queryByLabelText("% período largo")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Personalizada" }));
+
+    expect(screen.getByLabelText("% período largo")).toHaveValue("60");
+    expect(screen.getByLabelText("% período corto")).toHaveValue("30");
+  });
+
+  it("H1 — manda la partición personalizada como objeto en el form", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+    await llenarCamposMinimos();
+
+    fireEvent.click(screen.getByRole("button", { name: "Personalizada" }));
+    fireEvent.change(screen.getByLabelText("% período largo"), { target: { value: "70" } });
+    fireEvent.change(screen.getByLabelText("% período corto"), { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
+    const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
+    expect(form.cramer_particion).toEqual({ n1_pct: 70, n2_pct: 20 });
+  });
+
+  it("H1 — rechaza n1_pct ≤ n2_pct con un error inline, sin navegar", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+    await llenarCamposMinimos();
+
+    fireEvent.click(screen.getByRole("button", { name: "Personalizada" }));
+    fireEvent.change(screen.getByLabelText("% período largo"), { target: { value: "20" } });
+    fireEvent.change(screen.getByLabelText("% período corto"), { target: { value: "60" } });
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/período largo/);
+    expect(screen.queryByTestId("stream-state")).not.toBeInTheDocument();
+  });
+
+  it("H1 — rechaza un porcentaje fuera de [1, 100] con un error inline", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+    await llenarCamposMinimos();
+
+    fireEvent.click(screen.getByRole("button", { name: "Personalizada" }));
+    fireEvent.change(screen.getByLabelText("% período largo"), { target: { value: "150" } });
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/entre 1 y 100/);
+    expect(screen.queryByTestId("stream-state")).not.toBeInTheDocument();
+  });
+
+  it("H1 — volver a 'Default 60/30' manda 'default' de nuevo, no el último valor personalizado", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+    await llenarCamposMinimos();
+
+    fireEvent.click(screen.getByRole("button", { name: "Personalizada" }));
+    fireEvent.change(screen.getByLabelText("% período largo"), { target: { value: "70" } });
+    fireEvent.click(screen.getByRole("button", { name: "Default 60/30" }));
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
+    const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
+    expect(form.cramer_particion).toBe("default");
+  });
 });

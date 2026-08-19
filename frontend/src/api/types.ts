@@ -40,15 +40,19 @@ export interface OkResponse {
 export type TipoVariable = "caudal_precipitacion" | "otro";
 export type Modo = "paso_a_paso" | "experto";
 
+// Bloque H1 (plan post-avance, DECISIÓN 036) — "default" o un objeto con
+// los dos porcentajes. api/sse.ts::buildFormData() manda el objeto como
+// JSON string en el mismo campo Form — el contrato multipart no ganó un
+// campo nuevo, solo lo que viaja adentro del que ya existía.
+export type CramerParticion = "default" | { n1_pct: number; n2_pct: number };
+
 export interface AnalysisStreamForm {
   archivo: File;
   columna_x: string;
   columna_y: string;
   tipo_variable: TipoVariable;
   modo: Modo;
-  // "Personalizada" está roto en el wiring real del backend — solo "default"
-  // funciona (ver frontend-integration.md §3, nota crítica de cramer_particion).
-  cramer_particion?: "default";
+  cramer_particion?: CramerParticion;
   // DECISIÓN 054 — solo "1" y "1,2" son valores válidos para el backend.
   // Sin selector de alcance todavía en ConfigPage (eso es Bloque B4 del plan
   // de Etapa 2) — default "1" mantiene el comportamiento actual sin cambios.

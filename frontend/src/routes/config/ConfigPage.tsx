@@ -10,7 +10,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { postPreviewColumns } from "../../api/analysis";
-import type { AnalysisStreamForm, ColumnaPreview, Modo, TipoVariable } from "../../api/types";
+import type {
+  AnalysisStreamForm,
+  ColumnaPreview,
+  CramerParticion,
+  Modo,
+  TipoVariable,
+} from "../../api/types";
 import { etiquetaSelectorMes } from "../../i18n/mesInicioAnio";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
@@ -75,6 +81,36 @@ function etiquetaColumna(col: ColumnaPreview, todas: ColumnaPreview[]): string {
   return duplicado ? `${col.nombre} (col. ${col.indice + 1})` : col.nombre;
 }
 
+// Bloque H1 (plan post-avance, DECISIÓN 036) — mismas reglas que valida el
+// backend (_parsear_cramer_particion, api/v1/analysis.py): 1-100, y
+// n1_pct > n2_pct porque el bloque 1 es el período largo. Validado acá para
+// mostrar el error inline antes de mandar el request, no como un 400
+// CONTRACT_CRAMER_PARTICION_INVALID genérico — mismo patrón que
+// parsePeriodosRetorno() en Etapa2RankingView.tsx.
+function parseCramerParticion(
+  modo: "default" | "personalizada",
+  n1Input: string,
+  n2Input: string,
+): { value: CramerParticion } | { error: string } {
+  if (modo === "default") return { value: "default" };
+
+  const n1 = Number(n1Input);
+  const n2 = Number(n2Input);
+  if (!Number.isFinite(n1) || !Number.isFinite(n2)) {
+    return { error: "Los dos porcentajes de la partición deben ser números." };
+  }
+  if (n1 < 1 || n1 > 100 || n2 < 1 || n2 > 100) {
+    return { error: "Los dos porcentajes de la partición deben estar entre 1 y 100." };
+  }
+  if (n1 <= n2) {
+    return {
+      error:
+        "El primer porcentaje (período largo) debe ser mayor que el segundo (período corto).",
+    };
+  }
+  return { value: { n1_pct: n1, n2_pct: n2 } };
+}
+
 type PreviewState =
   | { status: "idle" }
   | { status: "loading" }
@@ -93,6 +129,12 @@ export function ConfigPage() {
     "caudal_precipitacion",
   );
   const [modo, setModo] = useState<Modo>("paso_a_paso");
+  // Bloque H1 (plan post-avance, DECISIÓN 036) — inputs como texto libre
+  // (no number controlado) para poder mostrar "" mientras el usuario borra
+  // el campo, igual que el resto de los inputs de este formulario.
+  const [cramerModo, setCramerModo] = useState<"default" | "personalizada">("default");
+  const [cramerN1Input, setCramerN1Input] = useState("60");
+  const [cramerN2Input, setCramerN2Input] = useState("30");
   // Bloque B6 del plan de Etapa 2 — sin selector antes, siempre se mandaba
   // "1" implícito (default de AnalysisStreamForm.etapas). DECISIÓN 054 solo
   // acepta "1" | "1,2" en el borde del endpoint.
@@ -182,6 +224,11 @@ export function ConfigPage() {
       setError("Completá las dos columnas.");
       return;
     }
+    const cramerParticion = parseCramerParticion(cramerModo, cramerN1Input, cramerN2Input);
+    if ("error" in cramerParticion) {
+      setError(cramerParticion.error);
+      return;
+    }
     setError(null);
 
     const form: AnalysisStreamForm = {
@@ -190,7 +237,7 @@ export function ConfigPage() {
       columna_y: columnaY.trim(),
       tipo_variable: tipoVariable,
       modo: modoEfectivo,
-      cramer_particion: "default",
+      cramer_particion: cramerParticion.value,
       etapas,
       mes_inicio_anio: mesInicioAnio,
     };
@@ -515,21 +562,64 @@ export function ConfigPage() {
               </div>
             </div>
           )}
+          {/* Bloque H1 (plan post-avance, DECISIÓN 036) — antes deshabilitado
+              por completo (el backend no podía recibir una partición
+              personalizada sin crashear, ver decision036.md). */}
           <div className="card soft config-cramer">
             <p className="ct">Partición de Cramer</p>
             <div className="seg">
-              <button type="button" className="on" disabled>
+              <button
+                type="button"
+                className={cramerModo === "default" ? "on" : ""}
+                aria-pressed={cramerModo === "default"}
+                onClick={() => setCramerModo("default")}
+              >
                 Default 60/30
               </button>
               <button
                 type="button"
-                disabled
-                title="No disponible — ver docs/decisiones/decision036.md"
+                className={cramerModo === "personalizada" ? "on" : ""}
+                aria-pressed={cramerModo === "personalizada"}
+                onClick={() => setCramerModo("personalizada")}
               >
                 Personalizada
               </button>
             </div>
-            <p className="fn">La partición personalizada no está disponible todavía.</p>
+            {cramerModo === "personalizada" && (
+              <div className="row" style={{ marginTop: 8 }}>
+                <div className="col field">
+                  <label htmlFor="config-cramer-n1">% período largo</label>
+                  <input
+                    id="config-cramer-n1"
+                    className="input"
+                    type="text"
+                    inputMode="decimal"
+                    value={cramerN1Input}
+                    onChange={(event) => setCramerN1Input(event.target.value)}
+                  />
+                </div>
+                <div className="col field">
+                  <label htmlFor="config-cramer-n2">% período corto</label>
+                  <input
+                    id="config-cramer-n2"
+                    className="input"
+                    type="text"
+                    inputMode="decimal"
+                    value={cramerN2Input}
+                    onChange={(event) => setCramerN2Input(event.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+            {/* Nota de dominio (formulas-etapa1.md §6) — sin esto, dos
+                porcentajes sugieren razonablemente "principio y final" del
+                registro, cuando en realidad los dos se toman siempre del
+                final. */}
+            <p className="fn">
+              {cramerModo === "default"
+                ? "Los dos bloques (60% y 30%) se toman del final del registro."
+                : "Los dos bloques se toman del final del registro — el primer porcentaje es el período más largo."}
+            </p>
           </div>
           <Magnet style={{ width: "100%", marginTop: 12 }}>
             <SpecularHighlight style={{ width: "100%" }}>

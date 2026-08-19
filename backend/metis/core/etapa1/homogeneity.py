@@ -130,6 +130,28 @@ def calcular_cramer(
         n_w1 = int(np.ceil(n * particion["n1_pct"] / 100))
         n_w2 = round(n * particion["n2_pct"] / 100)
 
+    # Bloque H1 (plan post-avance, DECISIÓN 036) — con una partición
+    # personalizada de porcentajes chicos sobre una serie corta, n_w puede
+    # dar 0 o 1: un bloque de un solo dato no mide nada (tau_w es la
+    # diferencia contra un único valor) y antes dependía por completo de
+    # que _cramer_bloque() tropezara con denom≤0 para no seguir — no
+    # siempre pasa. Guard explícito, antes de calcular nada: mismo
+    # resultado (no_ejecutada) que ya usan las otras salidas tempranas de
+    # esta función, así que el usuario ve el mismo código conocido en vez
+    # de, en el peor caso, un estadístico calculado sobre un bloque sin
+    # sentido estadístico.
+    if n_w1 < 2 or n_w2 < 2:
+        return TestResult(
+            prueba="cramer",
+            estadistico=None,
+            valor_critico=None,
+            veredicto="no_ejecutada",
+            warning_codigo="TEST_NOT_EXECUTED_CONDITION",
+            warning_nivel="normal",
+            n1=n_w1,
+            n2=n_w2,
+        )
+
     media_global = float(np.mean(arr))
     s_global = float(np.std(arr, ddof=1))
 

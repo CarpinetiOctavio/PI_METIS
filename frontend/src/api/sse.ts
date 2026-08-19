@@ -92,7 +92,14 @@ function buildFormData(form: AnalysisStreamForm): FormData {
   body.append("columna_y", form.columna_y);
   body.append("tipo_variable", form.tipo_variable);
   body.append("modo", form.modo);
-  body.append("cramer_particion", form.cramer_particion ?? "default");
+  // Bloque H1 (DECISIÓN 036) — un objeto se manda como JSON string en el
+  // mismo campo Form; "default" (o ausente) tal cual. El backend distingue
+  // los dos casos por el contenido del string, no por un campo aparte.
+  const cramerParticion = form.cramer_particion ?? "default";
+  body.append(
+    "cramer_particion",
+    typeof cramerParticion === "string" ? cramerParticion : JSON.stringify(cramerParticion),
+  );
   body.append("etapas", form.etapas ?? "1");
   body.append("mes_inicio_anio", String(form.mes_inicio_anio ?? 7));
   return body;
