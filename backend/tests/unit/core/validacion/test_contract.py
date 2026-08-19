@@ -104,14 +104,23 @@ def test_timestamps_duplicados():
 
 
 @pytest.mark.unit
-def test_timestamps_desordenados():
+def test_timestamps_desordenados_ya_no_los_detecta_validar_contrato():
+    # Bloque H3 (plan post-avance, DECISIÓN 030) — CONTRACT_WRONG_ORDER se
+    # movió a un chequeo bloqueante en ejecutar_etapa1(), ANTES de que
+    # validar_contrato() se llame siquiera (tiene que evaluar timestamps
+    # crudos, pre-agregación — ver contract.py). validar_contrato() en
+    # aislamiento ya no puede detectarlo: si a esta altura se está
+    # llamando, es porque el desorden ya se descartó como bloqueante
+    # aguas arriba. El test real de "desorden bloquea" vive en
+    # test_pipeline_etapa1.py, contra ejecutar_etapa1() completo — acá
+    # solo se deja constancia de que la responsabilidad se movió, no que
+    # desapareció.
     serie = [float(i) for i in range(30)]
     timestamps = list(range(1980, 2010))
     timestamps[5], timestamps[6] = timestamps[6], timestamps[5]  # swap dos años
     result = validar_contrato(serie, "otro", "anual", timestamps=timestamps)
-    assert result.bloqueante is False
     codigos = [w.codigo for w in result.warnings]
-    assert "CONTRACT_WRONG_ORDER" in codigos
+    assert "CONTRACT_WRONG_ORDER" not in codigos
 
 
 @pytest.mark.unit

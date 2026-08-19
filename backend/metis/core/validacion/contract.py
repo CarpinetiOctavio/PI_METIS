@@ -5,6 +5,29 @@ from metis.core.utils import es_numerico
 from metis.core.validacion.parser import parsear_timestamps
 
 
+def timestamps_desordenados(timestamps: list) -> bool:
+    """True si `timestamps` NO está en orden cronológico ascendente (no
+    estrictamente — duplicados adyacentes no cuentan como desorden, eso lo
+    cubre CONTRACT_DUPLICATE_TIMESTAMPS aparte).
+
+    Bloque H3 (plan post-avance, DECISIÓN 030) — comparación directa con
+    `<` (vía `sorted()`), sin pasar por `parsear_timestamps()`: funciona
+    igual para años enteros y para fechas ISO-8601 de texto (la
+    comparación lexicográfica de fechas de ancho fijo coincide con el
+    orden cronológico). Es la ARITMÉTICA de fechas de texto la que falla
+    (ver `_espaciado_regular()` más abajo), no la comparación con `<`.
+
+    Si el tipo no es comparable entre sí (una mezcla real no debería
+    pasar en la práctica — una sola columna parseada por el parser es
+    homogénea) no se puede determinar el orden con certeza: se trata como
+    "en orden" en vez de bloquear un caso que no se puede evaluar.
+    """
+    try:
+        return list(timestamps) != sorted(timestamps)
+    except TypeError:
+        return False
+
+
 def validar_contrato(
     serie: list,
     tipo_variable: str,
@@ -85,14 +108,18 @@ def validar_contrato(
                 )
             )
 
-        if timestamps != sorted(timestamps):
-            warnings.append(
-                WarningItem(
-                    codigo="CONTRACT_WRONG_ORDER",
-                    nivel="normal",
-                    descripcion="La serie no está en orden cronológico",
-                )
-            )
+        # CONTRACT_WRONG_ORDER se movió a un chequeo bloqueante en
+        # ejecutar_etapa1(), ANTES del paso 0 (agregación) — Bloque H3
+        # (plan post-avance, DECISIÓN 030). Ya no vive acá por dos motivos:
+        # (1) pasa de warning a error bloqueante, un tratamiento que esta
+        # función no le da a nada más que no sea n<10/sin resolución
+        # temporal (esos si están acá, como early-return, no como warning
+        # de esta lista); (2) para que sirva de algo tiene que evaluar los
+        # timestamps CRUDOS, antes de agregar — si corriera acá (después
+        # de agregar_a_maximos_anuales(), que construye timestamps
+        # siempre ascendentes por range()) sería código muerto para
+        # cualquier serie mensual, exactamente el hallazgo que motivó
+        # este bloque.
 
         if not _espaciado_regular(timestamps, resolucion_temporal):
             warnings.append(

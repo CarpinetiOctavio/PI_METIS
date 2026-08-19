@@ -156,7 +156,7 @@ situ.
 | [027](decision027.md) | Migración Alembic `46f270df2e87` renombrada a `003` | 17/07/2026 | Aplicada |
 | [028](decision028.md) | Gobernanza de ramas: staging y main | 18/07/2026 | Establecida — pendiente de consulta a IT (registry CI/CD) |
 | [029](decision029.md) | GVE ML: error de orden de serie en IV-243/244 | 19/05/2026 | Implementado |
-| [030](decision030.md) | Elevar CONTRACT_WRONG_ORDER a error bloqueante (orden cronológico) | 18/07/2026 | Pendiente de implementar — contradice "único caso: n<10" hasta que se aplique |
+| [030](decision030.md) | Elevar CONTRACT_WRONG_ORDER a error bloqueante (orden cronológico) — evaluado sobre timestamps crudos, antes de la agregación mensual | 18/07/2026 | Aplicada (18/08/2026) |
 | [031](decision031.md) | Reorganización de repo post-cierre de Core Etapa 2 | 18/07/2026 | Aplicada — pendiente de hash de commit |
 | [032](decision032.md) | Auth: orden mail-antes-que-commit en `register`, ventana residual aceptada | 19/07/2026 | Implementado — pendiente de verificación exhaustiva por test |
 | [033](decision033.md) | Bump de FastAPI/Starlette diferido, con criterios explícitos de habilitación | 19/07/2026 | Diferido — condicionado a dos criterios explícitos |

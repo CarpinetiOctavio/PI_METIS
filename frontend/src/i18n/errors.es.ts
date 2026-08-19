@@ -17,6 +17,10 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_SERIES_TOO_SHORT: "La serie tiene menos de 10 datos. No se puede analizar.",
   CONTRACT_NO_TEMPORAL_RESOLUTION:
     "No se pudo determinar la resolución temporal de la serie.",
+  // Bloqueante desde el 18/08/2026 (DECISIÓN 030, Bloque H3) — antes era
+  // warning. Evaluado sobre los timestamps crudos, antes de la agregación.
+  CONTRACT_WRONG_ORDER:
+    "La serie no está en orden cronológico. No se puede analizar — subí los datos ordenados de más antiguo a más reciente.",
 
   // Contrato — parámetros de request
   // CONTRACT_CRAMER_PARTICION_UNSUPPORTED retirado (Bloque H1, DECISIÓN
@@ -38,7 +42,6 @@ export const ERROR_TEXT: Record<string, string> = {
     "Hay valores negativos en una serie de caudal/precipitación.",
   CONTRACT_MISSING_VALUES: "Hay valores faltantes o celdas vacías.",
   CONTRACT_DUPLICATE_TIMESTAMPS: "Se detectaron duplicados en el eje temporal.",
-  CONTRACT_WRONG_ORDER: "La serie no está en orden cronológico.",
   CONTRACT_IRREGULAR_SPACING: "El espaciado temporal es irregular.",
   CONTRACT_NON_NUMERIC_VALUES: "Hay valores no numéricos mezclados en la serie.",
   CONTRACT_PARTIAL_YEARS_TRIMMED:

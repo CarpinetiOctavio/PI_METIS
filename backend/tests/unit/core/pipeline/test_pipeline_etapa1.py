@@ -60,6 +60,87 @@ def test_strings_con_menos_de_10_numericos_bloqueante():
     assert resultado.independencia == []
 
 
+# ── Bloque H3 (plan post-avance, DECISIÓN 030) — orden cronológico ────────────
+# Tests que separan explícitamente "desorden bloquea" de "datos faltantes NO
+# bloquean" — son dos cosas distintas, la decisión original insiste en no
+# mezclarlas (ver docs/decisiones/decision030.md).
+
+
+@pytest.mark.unit
+def test_timestamps_desordenados_bloquea_serie_anual():
+    serie = [float(i) for i in range(30)]
+    timestamps = list(range(1980, 2010))
+    timestamps[5], timestamps[6] = timestamps[6], timestamps[5]  # swap dos años
+
+    resultado = ejecutar_etapa1(serie, "otro", "anual", timestamps=timestamps)
+
+    assert resultado.contract.bloqueante is True
+    assert resultado.contract.codigo_error == "CONTRACT_WRONG_ORDER"
+    assert resultado.nivel_confianza == "rechazado"
+    assert resultado.independencia == []
+
+
+@pytest.mark.unit
+def test_timestamps_en_orden_con_datos_faltantes_no_bloquea():
+    # Distinción explícita: un dato faltante (None) NO es desorden — sigue
+    # su tratamiento actual (CONTRACT_MISSING_VALUES, warning normal), sin
+    # que el chequeo nuevo de orden lo confunda con el caso bloqueante.
+    serie = [float(i) for i in range(29)] + [None]
+    timestamps = list(range(1980, 2010))
+
+    resultado = ejecutar_etapa1(serie, "otro", "anual", timestamps=timestamps)
+
+    assert resultado.contract.bloqueante is False
+    assert resultado.nivel_confianza != "rechazado"
+    codigos = [w.codigo for w in resultado.warnings]
+    assert "CONTRACT_MISSING_VALUES" in codigos
+    assert "CONTRACT_WRONG_ORDER" not in codigos
+
+
+@pytest.mark.unit
+def test_sin_timestamps_el_chequeo_de_orden_no_se_evalua():
+    # timestamps=None (CU-03 sin columna de fecha, por ejemplo) — nada que
+    # ordenar, el pipeline sigue corriendo normalmente en vez de fallar
+    # por intentar comparar None.
+    resultado = ejecutar_etapa1(SERIE_VALIDADA, "otro", "anual", timestamps=None)
+    assert resultado.contract.bloqueante is False
+    assert resultado.nivel_confianza == "validado"
+
+
+@pytest.mark.unit
+def test_bug_agregacion_mensual_desordenada_pierde_periodos_en_silencio_antes_bloquea_ahora():
+    # El segundo problema, más grave, que la DECISIÓN 030 original no
+    # contemplaba: agregar_a_maximos_anuales() toma timestamps[0]/[-1]
+    # como si fueran el dato más antiguo/reciente del registro para fijar
+    # el rango de períodos a agregar. Verificado ANTES de este fix, contra
+    # el código sin parchear: con 3 años completos (36 meses reales)
+    # desordenados así (2000, 2002, 2001 — dos bloques anuales
+    # invertidos), agregar_a_maximos_anuales() devolvía serie=[año 2000,
+    # año 2001] con periodos_descartados=[] — el año 2002 completo
+    # desaparecía sin ningún rastro, ni warning ni error. Con el chequeo
+    # de orden ANTES del paso 0, este archivo bloquea antes de llegar
+    # siquiera a agregar_a_maximos_anuales() — la pérdida silenciosa deja
+    # de ser posible por construcción, no por casualidad.
+    timestamps = (
+        _fechas_mensuales(2000, 1, 12)
+        + _fechas_mensuales(2002, 1, 12)
+        + _fechas_mensuales(2001, 1, 12)
+    )
+    serie = [float(i) for i in range(len(timestamps))]
+
+    resultado = ejecutar_etapa1(
+        serie,
+        "otro",
+        resolucion_temporal="mensual",
+        timestamps=timestamps,
+        mes_inicio_anio=1,
+    )
+
+    assert resultado.contract.bloqueante is True
+    assert resultado.contract.codigo_error == "CONTRACT_WRONG_ORDER"
+    assert resultado.nivel_confianza == "rechazado"
+
+
 # ── Pipeline completo ─────────────────────────────────────────────────────────
 
 
@@ -133,9 +214,30 @@ def test_t_student_usa_particion_mitad_mitad_no_particion_cramer():
     # Serie real est_02 (Vado de Río Seco — Río Barrancas, n=24), tesis Facundo:
     # t esperado=-1.76, GL=22, valor_critico=2.0739, veredicto="aprobada".
     serie_est02 = [
-        98.0, 44.0, 97.0, 52.0, 90.0, 247.0, 191.0, 54.0, 112.0, 42.0,
-        60.0, 157.0, 61.0, 45.0, 91.0, 257.0, 458.0, 381.0, 251.0, 151.0,
-        122.0, 58.0, 145.0, 158.0,
+        98.0,
+        44.0,
+        97.0,
+        52.0,
+        90.0,
+        247.0,
+        191.0,
+        54.0,
+        112.0,
+        42.0,
+        60.0,
+        157.0,
+        61.0,
+        45.0,
+        91.0,
+        257.0,
+        458.0,
+        381.0,
+        251.0,
+        151.0,
+        122.0,
+        58.0,
+        145.0,
+        158.0,
     ]
     resultado = ejecutar_etapa1(serie_est02, "otro", "anual")
     t_student = next(t for t in resultado.homogeneidad if t.prueba == "t_student")
