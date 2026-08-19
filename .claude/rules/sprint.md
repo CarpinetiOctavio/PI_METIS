@@ -1243,14 +1243,21 @@ abiertas en Etapa 2.
 
 ## Decisiones pendientes — no implementar hasta confirmar
 
-- **Partición de Cramer personalizada** — inalcanzable hoy por el endpoint
+- ~~**Partición de Cramer personalizada** — inalcanzable hoy por el endpoint
   `POST /api/v1/analysis/stream`: `cramer_particion` llega siempre como `str`
   vía `multipart/form-data`, y `calcular_cramer` indexa `particion["n1_pct"]`
   asumiendo `dict` en cualquier valor distinto de `"default"` → `TypeError`
   no manejado. El botón "Personalizada" de `ConfigPage.tsx` está `disabled`
   en consecuencia. Tres opciones evaluadas sin decisión cerrada — ver
   `docs/decisiones/decision036.md` — DECISIÓN 036. No implementar ninguna
-  sin decidir entre las tres opciones primero.
+  sin decidir entre las tres opciones primero.~~ **CERRADO 18/08/2026 por
+  DECISIÓN 036** (Bloque H1 del plan post-avance, opción 1): `cramer_particion`
+  distinto de `"default"` se parsea como JSON y se valida
+  (`CramerParticionCustom`, recreado) antes de llegar a `services/` — JSON
+  malformado, fuera de rango, o `n1_pct ≤ n2_pct` → 400
+  `CONTRACT_CRAMER_PARTICION_INVALID`. `calcular_cramer()` no cambió su
+  firma — el bug siempre fue que la rama `else` nunca recibía el `dict` que
+  ya sabía indexar. Botón "Personalizada" habilitado en `ConfigPage.tsx`.
 
 - ~~**`etapas` se recibe y se descarta en `POST /analysis/stream`** —
   `api/v1/analysis.py` declara `etapas: str = Form("1")` pero nunca lo pasa

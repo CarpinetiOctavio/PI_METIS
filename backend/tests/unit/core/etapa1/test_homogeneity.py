@@ -114,6 +114,24 @@ def test_cramer_particion_custom(serie_facundo):
 
 
 @pytest.mark.unit
+def test_cramer_particion_custom_bloque_chico_no_ejecutada(serie_facundo):
+    # Bloque H1 (plan post-avance, DECISIÓN 036) — con n=40 y n2_pct=2,
+    # n_w2 = round(40*0.02) = 1: un solo dato no mide nada (tau_w es la
+    # diferencia contra un único valor). Antes de este guard dependía de
+    # que _cramer_bloque() tropezara con denom≤0 para no seguir — acá se
+    # verifica el guard explícito, no el efecto secundario incidental.
+    particion = {"n1_pct": 60, "n2_pct": 2}
+    resultado = calcular_cramer(serie_facundo, particion=particion)
+
+    assert resultado.veredicto == "no_ejecutada"
+    assert resultado.warning_codigo == "TEST_NOT_EXECUTED_CONDITION"
+    assert resultado.estadistico is None
+    assert (
+        resultado.n2 == 1
+    )  # round(40*0.02) — confirma que sí se disparó el guard nuevo, no otra rama
+
+
+@pytest.mark.unit
 def test_cramer_tau_y_t_intermedios_ec_iii15(serie_facundo):
     # Verifica valores intermedios contra cálculo manual con serie_facundo (n=40).
     # n_w1=ceil(40*0.60)=24, n_w2=min(ceil(40*0.30),16)=12.

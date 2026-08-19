@@ -1,7 +1,7 @@
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # --- Tipos compartidos ---
 
@@ -10,12 +10,29 @@ OutlierDecision = Literal["rechazar", "aceptar"]
 Veredicto = Literal["aprobada", "rechazada"]
 WarningNivel = Literal["critico", "normal"]
 
-# DECISIÓN 054 — AnalysisRequest y CramerParticionCustom se borraron: el
-# endpoint POST /analysis/stream es multipart/form-data con un UploadFile,
-# que no modela bien con un BaseModel plano. Los Form(...) sueltos que ya
-# declara api/v1/analysis.py son el modelo real; mantener un modelo Pydantic
-# paralelo que ninguna ruta importaba era código muerto que afirmaba una
-# validación tipada que nunca corría en runtime — ver DECISIÓN 037.
+# DECISIÓN 054 — AnalysisRequest se borró: el endpoint POST /analysis/stream
+# es multipart/form-data con un UploadFile, que no modela bien con un
+# BaseModel plano. Los Form(...) sueltos que ya declara api/v1/analysis.py
+# son el modelo real. CramerParticionCustom se borró en el mismo commit por
+# el mismo motivo aparente (código muerto que ninguna ruta importaba) pero
+# se volvió a crear en el Bloque H1 del plan post-avance (DECISIÓN 036) —
+# ahí sí está cableada de verdad, ver _parsear_cramer_particion() en
+# api/v1/analysis.py.
+
+
+class CramerParticionCustom(BaseModel):
+    """Bloque H1 (plan post-avance, DECISIÓN 036, opción 1) — validado en el
+    borde del endpoint antes de llegar a
+    core/etapa1/homogeneity.py::calcular_cramer(), que siempre supo recibir
+    un dict con estas dos claves exactas. Rango [1, 100] acá; que
+    n1_pct > n2_pct (bloque 1 = período largo) se valida aparte porque
+    Pydantic no expresa bien una comparación entre dos campos en un solo
+    Field(); que los bloques resultantes tengan al menos 2 datos depende de
+    `n` (desconocido en este punto) y se valida dentro de calcular_cramer()
+    como no_ejecutada, no acá."""
+
+    n1_pct: float = Field(ge=1, le=100)
+    n2_pct: float = Field(ge=1, le=100)
 
 
 # --- Request/Response: POST /analysis/outlier-decision ---

@@ -369,4 +369,31 @@ describe("useAnalysisStream", () => {
     await waitFor(() => expect(result.current.state.fase).toBe("error"));
     expect(result.current.state.error?.codigo).toBe("STREAM_CONNECTION_ERROR");
   });
+
+  // Bloque H1 (plan post-avance, DECISIÓN 036) — cramer_particion personalizada.
+
+  it("manda cramer_particion='default' tal cual cuando no es personalizada", async () => {
+    mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useAnalysisStream());
+    act(() => result.current.start(makeForm()));
+
+    const body = lastOptions().body as FormData;
+    expect(body.get("cramer_particion")).toBe("default");
+  });
+
+  it("manda un objeto cramer_particion como JSON string en el mismo campo", async () => {
+    mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useAnalysisStream());
+    act(() =>
+      result.current.start({
+        ...makeForm(),
+        cramer_particion: { n1_pct: 70, n2_pct: 20 },
+      }),
+    );
+
+    const body = lastOptions().body as FormData;
+    expect(body.get("cramer_particion")).toBe(
+      JSON.stringify({ n1_pct: 70, n2_pct: 20 }),
+    );
+  });
 });

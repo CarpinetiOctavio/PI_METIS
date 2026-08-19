@@ -94,17 +94,38 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
 - Con JWT válido (@ucc.edu.ar): persiste análisis, habilita exportación
 - Sin JWT: sesión efímera, sin persistencia
 
-**Nota de implementación — `cramer_particion` personalizada no implementada.**
-El contrato de arriba documenta `{n1_pct, n2_pct}` como valor válido, pero el
+**Nota de implementación — histórico, ver "Cerrado" más abajo.** El
+contrato de arriba documenta `{n1_pct, n2_pct}` como valor válido, pero el
 endpoint real (`api/v1/analysis.py`) declara el campo como `Form(str)`.
 **Corrección 05/08/2026 (DECISIÓN 036, Bloque D):** cualquier valor distinto
-del literal `"default"` ahora responde 400 `CONTRACT_CRAMER_PARTICION_UNSUPPORTED`
+del literal `"default"` respondía 400 `CONTRACT_CRAMER_PARTICION_UNSUPPORTED`
 en el borde del endpoint, **antes** de llegar a
-`core/etapa1/homogeneity.py::calcular_cramer` — ya no produce un `TypeError`
-no manejado / 500. Esto no implementa la partición personalizada (sigue sin
-existir ninguna de las tres opciones evaluadas en la decisión), solo cierra
-el 500. Hoy el frontend nunca envía otra cosa que `"default"`. Ver
-`docs/decisiones/decision036.md` — DECISIÓN 036.
+`core/etapa1/homogeneity.py::calcular_cramer` — ya no producía un `TypeError`
+no manejado / 500. Eso no implementaba la partición personalizada, solo
+cerraba el 500 — ver la corrección de abajo para el estado real.
+
+**Cerrado 18/08/2026 (DECISIÓN 036, Bloque H1 del plan post-avance) —
+partición personalizada implementada de punta a punta.** `cramer_particion`
+recibe el literal `"default"` sin cambios, o un **string JSON** con
+`{n1_pct, n2_pct}` (opción 1 de la decisión — el contrato anidado ya
+documentado arriba, sin agregar campos `Form` nuevos). Se parsea y valida en
+el borde del endpoint (`api/v1/analysis.py::_parsear_cramer_particion()`,
+modelo `schemas/analysis.py::CramerParticionCustom`) antes de llegar a
+`services/`: `n1_pct`/`n2_pct` entre 1 y 100, y `n1_pct > n2_pct` (el bloque
+1 es el período largo, el 2 el corto — invertidos, Cramer no mide lo que
+dice medir). JSON malformado o fuera de estas reglas → 400
+`CONTRACT_CRAMER_PARTICION_INVALID`, que reemplaza a
+`CONTRACT_CRAMER_PARTICION_UNSUPPORTED` (retirado, ver catálogo más abajo).
+`core/etapa1/homogeneity.py::calcular_cramer()` no cambió su firma — la
+rama `else` ya sabía indexar un `dict`, el bug real siempre fue que nunca le
+llegaba uno (ver DECISIÓN 036 para el diagnóstico completo). Sí ganó un
+guard nuevo: si los tamaños resultantes de bloque dan `< 2` datos (posible
+con porcentajes chicos sobre una serie corta, algo que solo se sabe después
+de parsear el archivo, no en el borde del endpoint) la prueba responde
+`no_ejecutada` con `TEST_NOT_EXECUTED_CONDITION` — antes dependía de que
+`_cramer_bloque()` tropezara con `denom≤0` de casualidad para no seguir.
+Frontend: botón "Personalizada" habilitado en `ConfigPage`, con la misma
+validación de rango/orden mostrada inline antes de mandar el request.
 
 **Cerrado 09/08/2026 (DECISIÓN 054, Bloque A del plan de Etapa 2) —
 `etapas` cableado de punta a punta.** La nota anterior de esta sección
@@ -626,14 +647,23 @@ sección.
 
 ### Contrato — parámetros de request (no de la serie)
 ```
-CONTRACT_CRAMER_PARTICION_UNSUPPORTED  cramer_particion distinto de "default" (DECISIÓN 036)
+CONTRACT_CRAMER_PARTICION_INVALID      cramer_particion mal formado, fuera de rango, o
+                                        n1_pct ≤ n2_pct (DECISIÓN 036, Bloque H1)
 CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
 CONTRACT_MES_INICIO_INVALID            mes_inicio_anio fuera de [1..12] (DECISIÓN 057)
 ```
 A diferencia de los dos grupos de arriba (series de datos), estos códigos validan
 un parámetro del request en `POST /analysis/stream` antes de tocar el archivo
 subido o el pipeline — 400, no bloquean una serie válida, bloquean una opción
-inválida o todavía no implementada.
+inválida.
+
+**`CONTRACT_CRAMER_PARTICION_UNSUPPORTED` — retirado 18/08/2026 (Bloque H1).**
+Ya no lo emite el backend: reemplazado por `CONTRACT_CRAMER_PARTICION_INVALID`
+apenas la partición personalizada se implementó de verdad (antes, ese código
+rechazaba *cualquier* valor no-`"default"`, implementado o no — ahora
+`CONTRACT_CRAMER_PARTICION_INVALID` solo rechaza partición realmente inválida).
+Se deja documentado acá, no se borra, por trazabilidad de auditoría — mismo
+criterio que `design-events` más arriba en este archivo.
 
 ### Etapa 1 — pruebas
 ```
