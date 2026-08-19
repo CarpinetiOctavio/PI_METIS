@@ -92,6 +92,17 @@ export interface WarningItem {
   descripcion: string;
 }
 
+// Bloque D del plan post-avance (DECISIÓN 064) — términos intermedios que
+// la prueba ya calculó, para reconstruir la fórmula sustituida en modo
+// paso a paso. `terminos` es heterogéneo por prueba (Anderson expone
+// numerador/denominador, Cramer expone los dos bloques 60%/30%…) — el
+// backend no fuerza una forma común, así que acá tampoco. `i18n/explicaciones.ts`
+// sabe qué claves esperar según `TestResultDetail.prueba`.
+export interface Explicacion {
+  ecuacion: string;
+  terminos: Record<string, number | null>;
+}
+
 export interface TestResultDetail {
   prueba: string;
   estadistico: number | null;
@@ -105,6 +116,7 @@ export interface TestResultDetail {
   // PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058) — ya
   // existía en el backend (TestResult), nunca se serializaba.
   indice_atipico: number | null;
+  explicacion: Explicacion | null;
 }
 
 // Timestamp normalizado — PR 3 (DECISIÓN 058 §4.4): siempre ISO-8601 str +

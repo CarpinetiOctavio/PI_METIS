@@ -35,3 +35,56 @@
   font-weight: 400;
   border-bottom: 1px solid var(--line);
 }
+
+/* Bloque D del plan post-avance (DECISIÓN 064) — modo paso a paso: un
+   bloque por prueba con la fórmula sustituida (HTML plano) + interpretación,
+   en vez de la tabla compacta de modo experto. */
+.results-explicacion {
+  gap: 12px;
+}
+
+.results-test {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.results-test:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.results-test__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.results-test__formula {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.results-test__formula code {
+  font-size: 12px;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.results-test__ecuacion {
+  display: block;
+}
+
+.results-test__interpretacion {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--mut);
+}
+
+.results-group__regla {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-strong);
+}
