@@ -12,7 +12,8 @@ Services/ orquesta el pipeline y emite eventos SSE. Core/ solo calcula.
 ### Orden de ejecución (fijo, no configurable)
 
 ```
-0. Agregación temporal (Bloque F4)         ← solo si resolucion_temporal=="mensual", antes de todo lo demás
+0a. Orden cronológico (Bloque H3)          ← sobre timestamps crudos, bloqueante, antes de TODO lo demás
+0. Agregación temporal (Bloque F4)         ← solo si resolucion_temporal=="mensual", antes del contrato
 1. Validación del contrato de datos        ← primera barrera, puede ser bloqueante
 2. Estadística descriptiva                 ← automática, siempre, antes de cualquier prueba
 3. Independencia: Anderson + Wald-Wolfowitz
@@ -22,6 +23,44 @@ Services/ orquesta el pipeline y emite eventos SSE. Core/ solo calcula.
 ```
 
 **α = 5% fijo en toda la V1.0. No es configurable.**
+
+### Paso 0a — Orden cronológico (DECISIÓN 030, Bloque H3 del plan post-avance)
+
+Segunda excepción real a "detecta y advierte, no bloquea" (la primera es
+`CONTRACT_SERIES_TOO_SHORT`). `ejecutar_etapa1()` evalúa
+`core/validacion/contract.py::timestamps_desordenados(timestamps)` sobre
+los timestamps **crudos**, antes de cualquier otra cosa — incluida la
+agregación mensual del paso 0. Si están desordenados, bloquea con
+`CONTRACT_WRONG_ORDER` (`nivel_confianza="rechazado"`, mismo tratamiento
+que `CONTRACT_SERIES_TOO_SHORT`) sin llegar a tocar `validar_contrato()` ni
+`agregar_a_maximos_anuales()`. `timestamps=None` no evalúa nada (CU-03 sin
+columna de fecha, por ejemplo).
+
+**Por qué tiene que evaluarse ANTES del paso 0, no después:**
+`agregar_a_maximos_anuales()` construye sus propios timestamps con
+`range(periodo_inicio, periodo_fin + 1)` — siempre ascendentes por
+construcción. Evaluar el orden sobre esa salida (como hacía
+`validar_contrato()` antes de este bloque) es código muerto para
+*cualquier* serie mensual: nunca puede detectar nada. Peor: esa misma
+función toma `timestamps[0]`/`timestamps[-1]` como el dato más
+antiguo/reciente del registro para fijar qué períodos agregar — con un
+archivo desordenado puede **excluir períodos reales del registro en
+silencio**, sin warning ni error. Verificado antes de implementar: 3 años
+completos (36 meses reales) con dos bloques anuales invertidos entre sí
+agregaban solo 2 años, con `periodos_descartados=[]` — el tercer año
+desaparecía sin ningún rastro. `tests/unit/core/pipeline/test_pipeline_etapa1.py`
+tiene el test que reproduce exactamente este caso.
+
+Verificado, antes de volver esto bloqueante, que ninguna de las 9 series
+de referencia de la auditoría (Fase 4,
+`docs/auditoria/regresion/regresion-unitaria/`) tiene desorden cronológico
+— este cambio no invalida ningún resultado ya auditado y cerrado. Ver
+`docs/decisiones/decision030.md`.
+
+**Datos faltantes NO son desorden.** Un valor `None`/vacío en una fecha
+presente y en orden sigue su tratamiento actual
+(`CONTRACT_MISSING_VALUES`, warning no bloqueante) — la distinción es
+exclusivamente sobre el orden temporal, no sobre la completitud.
 
 ### Paso 0 — Agregación temporal (DECISIÓN 057, Bloque F del plan de Etapa 2)
 
@@ -62,7 +101,13 @@ escribir esta parte del Bloque F, cubierto por
 ### Contrato de datos — validaciones en orden
 
 ```python
-# BLOQUEANTE — detiene el pipeline completamente
+# BLOQUEANTE — evaluado antes que cualquier otra cosa, incluida la
+# agregación mensual (paso 0a, sobre timestamps crudos — ver arriba)
+if timestamps is not None and timestamps_desordenados(timestamps):
+    emit("contract_error", {"codigo": "CONTRACT_WRONG_ORDER"})
+    return
+
+# BLOQUEANTE — detiene el pipeline completamente (validar_contrato(), post-agregación)
 if len(serie) < 10:
     emit("contract_error", {"codigo": "CONTRACT_SERIES_TOO_SHORT", "datos": len(serie), "minimo": 10})
     return  # nada más se ejecuta
@@ -78,7 +123,7 @@ if len(serie) < 30:
 if tipo_variable == "caudal_precipitacion" and any(v < 0 for v in serie):
     emit("contract_warning", {"codigo": "CONTRACT_NEGATIVE_VALUES"})
 
-# ... resto de validaciones (faltantes, duplicados, orden, espaciado, no numéricos)
+# ... resto de validaciones (faltantes, duplicados, espaciado, no numéricos)
 ```
 
 ### Pruebas de independencia

@@ -622,7 +622,12 @@ AUTH_EMAIL_NOT_VERIFIED           Email sin verificar (login)
 ```
 CONTRACT_SERIES_TOO_SHORT        Serie con menos de 10 datos
 CONTRACT_NO_TEMPORAL_RESOLUTION  Resolución temporal no declarada
+CONTRACT_WRONG_ORDER             Timestamps fuera de orden cronológico (DECISIÓN 030, Bloque H3)
 ```
+`CONTRACT_WRONG_ORDER` es bloqueante desde el 18/08/2026 (DECISIÓN 030,
+Bloque H3 del plan post-avance) — antes era warning, ver "Contrato —
+warnings" más abajo para la nota completa de por qué se movió y qué código
+lo evalúa.
 
 ### Contrato — warnings
 ```
@@ -630,7 +635,6 @@ CONTRACT_LENGTH_WARNING          Entre 10 y 29 datos
 CONTRACT_NEGATIVE_VALUES         Valores negativos en caudal_precipitacion
 CONTRACT_MISSING_VALUES          Valores faltantes o celdas vacías
 CONTRACT_DUPLICATE_TIMESTAMPS    Duplicados temporales
-CONTRACT_WRONG_ORDER             Orden cronológico incorrecto
 CONTRACT_IRREGULAR_SPACING       Espaciado temporal irregular
 CONTRACT_NON_NUMERIC_VALUES      Valores no numéricos mezclados
 CONTRACT_PARTIAL_YEARS_TRIMMED   Agregación mensual (Bloque F4): años parciales recortados en los extremos del registro
@@ -644,6 +648,25 @@ antes de `validar_contrato()` cuando `resolucion_temporal == "mensual"`
 (DECISIÓN 057). Se agrupan acá por dominio (contrato de datos temporal), no
 por el módulo que los emite — mismo criterio que ya aplica el resto de esta
 sección.
+
+**`CONTRACT_WRONG_ORDER` — movido a bloqueante 18/08/2026 (DECISIÓN 030,
+Bloque H3 del plan post-avance), segunda excepción real al principio
+"detecta y advierte, no bloquea" (la primera es `CONTRACT_SERIES_TOO_SHORT`).**
+Ya no lo emite `validar_contrato()` — se evalúa en
+`core/pipeline/pipeline_etapa1.py::ejecutar_etapa1()`, **antes** del paso 0
+(agregación temporal), sobre los timestamps crudos tal como llegaron. Es la
+única forma de que el chequeo sirva de algo: `agregar_a_maximos_anuales()`
+construye sus timestamps con `range()`, siempre ascendentes por
+construcción, así que evaluar el orden *después* de agregar sería código
+muerto para cualquier serie mensual — y, más grave, `agregar_a_maximos_anuales()`
+usa `timestamps[0]`/`timestamps[-1]` para fijar qué períodos agregar; con
+un archivo desordenado puede excluir períodos reales del registro **en
+silencio**, sin ningún warning (verificado: 3 años completos de datos
+mensuales con dos bloques anuales invertidos entre sí agregaban solo 2
+años, con `periodos_descartados=[]` — el tercer año desaparecía sin
+rastro). Verificado antes de implementar que ninguna de las 9 series de
+referencia de la auditoría (Fase 4) tiene desorden cronológico — este
+cambio no invalida ningún resultado ya auditado.
 
 ### Contrato — parámetros de request (no de la serie)
 ```
