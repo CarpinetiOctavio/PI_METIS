@@ -1,6 +1,7 @@
-import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
+import type { Etapa1Result, Modo, TestResultDetail, WarningNivel } from "../../api/types";
 import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
+import { formatearFormula, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
 import { CountUp } from "../../components/CountUp";
 import { Etapa1SerieTemporalChart } from "./Etapa1SerieTemporalChart";
 import { Etapa1ChowChart } from "./Etapa1ChowChart";
@@ -93,6 +94,59 @@ function GroupTable({ items }: Readonly<{ items: TestResultDetail[] }>) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+// Bloque D del plan post-avance (DECISIÓN 064) — modo paso a paso.
+function VeredictoPill({
+  veredicto,
+  warningNivel,
+}: Readonly<{ veredicto: TestResultDetail["veredicto"]; warningNivel: WarningNivel | null }>) {
+  if (veredicto === "aprobada") return <span className="pill ok">aprobada</span>;
+  if (veredicto === "rechazada") {
+    return (
+      <span className={`pill ${warningNivel === "critico" ? "crit" : "warn"}`}>rechazada</span>
+    );
+  }
+  return <span className="fn">no ejecutada</span>;
+}
+
+// Un test por bloque: encabezado (prueba + veredicto), fórmula sustituida
+// (HTML plano, DECISIÓN 064) y su interpretación en castellano. Sin
+// `explicacion` (rama no_ejecutada) solo queda el encabezado + el motivo.
+function GroupExplicacion({ items }: Readonly<{ items: TestResultDetail[] }>) {
+  if (items.length === 0) {
+    return <p className="fn">No ejecutada.</p>;
+  }
+  return (
+    <div className="stack results-explicacion">
+      {items.map((t) => {
+        const formula = formatearFormula(t);
+        const interpretacion = interpretar(t);
+        return (
+          <div key={t.prueba} className="results-test">
+            <div className="results-test__header">
+              <b>{t.prueba}</b> <VeredictoPill veredicto={t.veredicto} warningNivel={t.warning_nivel} />
+            </div>
+            {formula ? (
+              <div className="results-test__formula">
+                {formula.map((linea) => (
+                  <code key={linea}>{linea}</code>
+                ))}
+                {t.explicacion && (
+                  <span className="fn results-test__ecuacion">Ec. {t.explicacion.ecuacion}</span>
+                )}
+              </div>
+            ) : (
+              <p className="fn">
+                No ejecutada{t.warning_codigo ? ` — ${t.warning_codigo}` : ""}.
+              </p>
+            )}
+            {interpretacion && <p className="results-test__interpretacion">{interpretacion}</p>}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -239,7 +293,10 @@ export function Etapa1ResultView({
           pasoAPaso ? (
             <details key={group.key} className="card results-group">
               <summary>{group.label}</summary>
-              <GroupTable items={group.items} />
+              <GroupExplicacion items={group.items} />
+              {REGLA_GRUPO[group.key] && (
+                <p className="fn results-group__regla">{REGLA_GRUPO[group.key]}</p>
+              )}
             </details>
           ) : (
             <div key={group.key} className="card">

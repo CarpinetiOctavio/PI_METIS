@@ -1,9 +1,9 @@
 # DECISIÓN 064 — Paso a paso docente: `core/` calcula, el frontend renderiza e interpreta
 
 **Fecha:** 18 de Agosto de 2026
-**Estado:** Backend aplicado (`feature/paso-a-paso-backend-explicacion`) — el
-frontend que consume este contrato es un PR aparte (Bloque D del
-[plan post-avance](../plan-post-avance.md)).
+**Estado:** Aplicada — backend (`feature/paso-a-paso-backend-explicacion`) y
+frontend (`feature/paso-a-paso-frontend-render`, apilada sobre la anterior)
+del Bloque D del [plan post-avance](../plan-post-avance.md).
 
 ### Contexto — el número reservado ya estaba tomado
 
@@ -107,7 +107,7 @@ renderizar distinto entre modos todavía; agregar el campo sería payload sin
 consumidor). El PR de frontend (Bloque D del plan, mini-plan propio) es el
 que hace que el modo paso a paso deje de ser un acordeón vacío.
 
-### Criterio de hecho
+### Criterio de hecho — backend
 
 - `explicacion.terminos` de cada prueba reconstruye `estadistico` con
   precisión de punto flotante completa (`abs=1e-9`), no solo "en el orden
@@ -118,6 +118,49 @@ que hace que el modo paso a paso deje de ser un acordeón vacío.
   con `n<10`, Chow con ceros).
 - `pytest -m "unit or integration"` en verde (320 passed, 1 skipped —
   +12 sobre la línea base).
+
+### Frontend — qué se agregó
+
+`frontend/src/i18n/explicaciones.ts` — `formatearFormula()` (8 plantillas,
+una por prueba, HTML plano) e `interpretar()` (interpretación en
+castellano, sensible al veredicto), más `REGLA_GRUPO` (las tres reglas de
+D1: Anderson manda, Cramer manda, y la regla OR de tendencia — `atipicos`
+no tiene, un solo test no tiene jerarquía que explicar). `Etapa1ResultView`
+gana `GroupExplicacion` (un bloque por prueba: encabezado + fórmula +
+interpretación) que reemplaza a `GroupTable` solo en modo paso a paso; modo
+experto no cambia — sigue siendo la tabla compacta original.
+
+La única aritmética que hace el frontend es cosmética: t de Student no
+persiste el denominador `Sp·√(1/n₁+1/n₂)` en `terminos` (solo `sp`, `n1`,
+`n2`), así que `formatearFormula()` lo reconstruye para mostrarlo — el
+mismo número que `core/` ya usó para llegar a `estadistico`, no un cálculo
+nuevo.
+
+**Mann-Kendall no reconstruye la tipificación de Z.** `formulas-etapa1.md`
+§7 no deja una fórmula citable para la corrección por empates que aplica
+`pymannkendall` (la delega a la librería, con la nota "aproximación normal
+con corrección por empates") — mostrar una ecuación inventada ahí habría
+sido peor que no mostrar ninguna. `formatearFormula()` para
+`mann_kendall` muestra `S` y `Var(S)` (los términos que sí están
+documentados) y nombra la corrección en prosa, sin fingir una sustitución
+exacta que no está verificada.
+
+### Criterio de hecho — frontend
+
+- `i18n/explicaciones.test.ts` (16 tests) — cada plantilla reproduce
+  `estadistico`/`valor_critico` a partir de `terminos`; `interpretar()`
+  cambia de redacción según `veredicto`; Cramer distingue "los dos bloques
+  aprueban" de "al menos uno rechaza".
+- `Etapa1ResultView.test.tsx` (5 tests) — modo experto no muestra fórmula
+  ni regla de grupo; modo paso a paso sí; una prueba `no_ejecutada` muestra
+  el motivo sin fórmula vacía; `atipicos` no muestra regla de grupo.
+- `npx tsc -b`, `npm run lint`, `npm test` (305 passed), `npm run build` —
+  todos en verde.
+- Verificado en el navegador de dev contra el backend real (Docker, CU-01
+  con modo paso a paso): las 8 pruebas con fórmula + interpretación reales
+  sobre una serie de 40 años, incluidos los dos bloques de Cramer y la nota
+  de Mann-Kendall sin fórmula inventada — confirmado contra el texto real
+  del DOM, no solo contra los tests.
 
 **Ver también:** [DECISIÓN 063](decision063.md) — mismo criterio de
 código propio antes que dependencia grande, para el panel acoplable.

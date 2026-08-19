@@ -19,6 +19,7 @@ function testResult(overrides: Partial<TestResultDetail> = {}): TestResultDetail
     n2: null,
     valor_atipico: null,
     indice_atipico: null,
+    explicacion: null,
     ...overrides,
   };
 }
