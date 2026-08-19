@@ -24,7 +24,9 @@ export const instrumentoTokens: { light: ThemeTokenSet; dark: ThemeTokenSet } = 
     surf2: "#E9EEF2",
     ink: "#0B0E12",
     mut: "#5B6672",
-    fnt: "#9AA5B1",
+    // H2 (plan post-avance, DECISIÓN 043) — recalculado sobre los tokens
+    // actuales; ver tokens.instrumento.css y decision043.md.
+    fnt: "#697888",
     line: "#D7DFE7",
     lineStrong: "#C6D0D8",
     acc: "#0E7490",
@@ -32,9 +34,9 @@ export const instrumentoTokens: { light: ThemeTokenSet; dark: ThemeTokenSet } = 
     onAcc: "#FFFFFF",
     acc2: "#4D7C0F",
     glow: "#7DD3E8",
-    ok: "#128A4E",
-    warn: "#B5791A",
-    crit: "#C24444",
+    ok: "#0E6D3E",
+    warn: "#825713",
+    crit: "#A83737",
   },
   dark: {
     bg: "#090C10",
@@ -42,7 +44,7 @@ export const instrumentoTokens: { light: ThemeTokenSet; dark: ThemeTokenSet } = 
     surf2: "#191F29",
     ink: "#E6EDF3",
     mut: "#8A97A6",
-    fnt: "#566270",
+    fnt: "#728193",
     line: "#212A36",
     lineStrong: "#33404E",
     acc: "#22D3EE",
