@@ -2,6 +2,7 @@ import type { Etapa1Result, Modo, TestResultDetail, WarningNivel } from "../../a
 import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import { formatearFormula, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
+import { errorText } from "../../i18n/errors.es";
 import { CountUp } from "../../components/CountUp";
 import { Etapa1SerieTemporalChart } from "./Etapa1SerieTemporalChart";
 import { Etapa1ChowChart } from "./Etapa1ChowChart";
@@ -89,6 +90,16 @@ function GroupTable({ items }: Readonly<{ items: TestResultDetail[] }>) {
                   {t.n2 !== null && `n2=${t.n2}`})
                 </span>
               )}
+              {/* Bloque F (plan post-avance) — antes esta celda quedaba en
+                  literalmente "no_ejecutada" sin decir por qué (fila vacía
+                  sin explicación). warning_codigo ya distingue las tres
+                  causas reales (ceros, condición previa, muestra chica). */}
+              {t.veredicto === "no_ejecutada" && t.warning_codigo && (
+                <span className="fn results-test__motivo">
+                  {" "}
+                  — {errorText(t.warning_codigo)}
+                </span>
+              )}
             </td>
           </tr>
         ))}
@@ -139,7 +150,7 @@ function GroupExplicacion({ items }: Readonly<{ items: TestResultDetail[] }>) {
               </div>
             ) : (
               <p className="fn">
-                No ejecutada{t.warning_codigo ? ` — ${t.warning_codigo}` : ""}.
+                {t.warning_codigo ? errorText(t.warning_codigo) : "No ejecutada."}
               </p>
             )}
             {interpretacion && <p className="results-test__interpretacion">{interpretacion}</p>}

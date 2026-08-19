@@ -558,6 +558,20 @@ describe("ConfigPage", () => {
     expect(screen.queryByRole("button", { name: "Ver columnas" })).not.toBeInTheDocument();
   });
 
+  // Bloque F (plan post-avance, Opción 1) — nota explicando qué hace
+  // realmente "Tipo de variable".
+
+  it("F — explica qué cambia el toggle de tipo de variable", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+
+    expect(
+      screen.getByText(/METIS avisa si hay valores negativos/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/trata los ceros de forma distinta en la prueba de Chow/)).toBeInTheDocument();
+  });
+
   // Bloque H1 (plan post-avance, DECISIÓN 036) — partición de Cramer personalizada.
 
   async function llenarCamposMinimos() {

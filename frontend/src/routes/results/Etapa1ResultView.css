@@ -18,6 +18,15 @@
   margin-bottom: 10px;
 }
 
+/* Bloque F (plan post-avance) — el motivo de una prueba no_ejecutada, en
+   la tabla compacta de modo experto. Bloque propio para que una oración
+   completa no quede apretada contra "no_ejecutada (n1=…)" en la misma
+   línea. */
+.results-test__motivo {
+  display: block;
+  margin-top: 2px;
+}
+
 /* S2 (limpieza SonarCloud): la tabla de descriptivos usa <th scope="row">
    para el rótulo de cada fila (accesibilidad — antes era un <td>, un
    lector de pantalla no podía asociar "40" con "n"). `table.t th` en

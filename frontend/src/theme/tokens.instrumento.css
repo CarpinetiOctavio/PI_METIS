@@ -19,7 +19,13 @@
   --surf2: #e9eef2;
   --ink: #0b0e12;
   --mut: #5b6672;
-  --fnt: #9aa5b1;
+  /* H2 (plan post-avance, DECISIÓN 043) — recalculado sobre los tokens
+     actuales, no la tabla congelada de la pasada 2: fnt/ok/warn/crit
+     oscurecidos lo mínimo necesario para llegar a 4.5:1 contra --surf
+     (texto plano) y contra su propio fondo color-mix (chips de .pill/
+     .step .node/.banner) — mismo matiz, no cambia de color. Ver
+     decision043.md para la metodología completa y el test que lo verifica. */
+  --fnt: #697888;
   --line: #d7dfe7;
   --line-strong: #c6d0d8;
   --acc: #0e7490;
@@ -27,9 +33,9 @@
   --on-acc: #ffffff;
   --acc2: #4d7c0f;
   --glow: #7dd3e8;
-  --ok: #128a4e;
-  --warn: #b5791a;
-  --crit: #c24444;
+  --ok: #0e6d3e;
+  --warn: #825713;
+  --crit: #a83737;
 
   /* Elevación (pasada 5, Bloque C1) — no van a tokens.ts: no son un valor
      hex, tokenParity.test.ts las ignora sin necesitar cambios. */
@@ -43,7 +49,8 @@
   --surf2: #191f29;
   --ink: #e6edf3;
   --mut: #8a97a6;
-  --fnt: #566270;
+  /* H2 — solo --fnt no cumplía 4.5:1 en oscuro (ok/warn/crit ya pasaban). */
+  --fnt: #728193;
   --line: #212a36;
   --line-strong: #33404e;
   --acc: #22d3ee;
