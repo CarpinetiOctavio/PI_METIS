@@ -88,10 +88,21 @@ describe("Etapa1ResultView — Bloque D (plan post-avance, DECISIÓN 064)", () =
     expect(within(grupoAtipicos).queryByText(/manda/)).not.toBeInTheDocument();
   });
 
-  it("una prueba no_ejecutada (sin explicacion) muestra el motivo, no una fórmula vacía", () => {
+  it("una prueba no_ejecutada (sin explicacion) muestra el motivo en castellano, no una fórmula vacía", () => {
     render(<Etapa1ResultView result={makeResult()} modo="paso_a_paso" />);
     expect(
-      screen.getByText(/No ejecutada — TEST_NOT_EXECUTED_CONDITION/),
+      screen.getByText("La prueba no se ejecutó: no se cumple una condición previa."),
     ).toBeInTheDocument();
+  });
+
+  // Bloque F (plan post-avance) — la fila de una prueba no_ejecutada dejó de
+  // quedar en blanco: ahora explica el motivo real (ceros, condición previa,
+  // muestra chica), no solo el código.
+  it("modo experto también explica el motivo de una prueba no_ejecutada, no solo el código", () => {
+    render(<Etapa1ResultView result={makeResult()} modo="experto" />);
+    expect(
+      screen.getByText(/La prueba no se ejecutó: no se cumple una condición previa\./),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/TEST_NOT_EXECUTED_CONDITION/)).not.toBeInTheDocument();
   });
 });
