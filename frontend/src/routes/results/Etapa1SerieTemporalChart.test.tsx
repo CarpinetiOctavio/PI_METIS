@@ -6,6 +6,7 @@ import type { Etapa1Datos } from "../../api/types";
 function datosAnual(): Etapa1Datos {
   return {
     resolucion_original: "anual",
+    resolucion_serie_original: "anual",
     serie_efectiva: [94.71, 89.83, 105.13],
     timestamps_efectivos: [
       { iso: "1980-01-01", anio: 1980 },
@@ -22,6 +23,7 @@ function datosAnual(): Etapa1Datos {
 function datosMensualConCalendario(): Etapa1Datos {
   return {
     resolucion_original: "mensual",
+    resolucion_serie_original: "mensual",
     serie_efectiva: [94.71, 89.83],
     timestamps_efectivos: [
       { iso: "2000-01-01", anio: 2000 },
@@ -81,6 +83,20 @@ describe("Etapa1SerieTemporalChart", () => {
     render(<Etapa1SerieTemporalChart datos={datos} />);
 
     expect(screen.queryByText("Criterio de año")).not.toBeInTheDocument();
+  });
+
+  it("for a daily upload: shows the toggle and a note that the series is annual maxima from daily data", () => {
+    const datos: Etapa1Datos = {
+      ...datosMensualConCalendario(),
+      resolucion_original: "diaria",
+      resolucion_serie_original: "mensual",
+    };
+    render(<Etapa1SerieTemporalChart datos={datos} />);
+
+    expect(screen.getByText("Criterio de año")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Máximos anuales agregados desde los datos diarios/),
+    ).toBeInTheDocument();
   });
 
   it("renders nothing when there are no effective timestamps", () => {

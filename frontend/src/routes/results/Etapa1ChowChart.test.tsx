@@ -6,6 +6,7 @@ import type { Etapa1Datos, TestResultDetail } from "../../api/types";
 function datosSinAtipico(): Etapa1Datos {
   return {
     resolucion_original: "anual",
+    resolucion_serie_original: "anual",
     serie_efectiva: [94.71, 89.83, 105.13],
     timestamps_efectivos: [
       { iso: "1980-01-01", anio: 1980 },

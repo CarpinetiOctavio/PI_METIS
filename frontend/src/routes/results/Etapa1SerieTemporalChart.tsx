@@ -10,19 +10,22 @@ import type { Etapa1Datos } from "../../api/types";
  * (año), no logarítmico — a diferencia de los gráficos de Etapa 2, que
  * usan T (período de retorno) en escala log.
  *
- * Toggle configurada/calendario solo si la carga fue mensual y el backend
- * mandó serie_calendario — con carga anual el criterio de año ya lo fijó
- * el usuario al armar el archivo, no hay una segunda agregación posible
- * para comparar (DECISIÓN 058 §1/§2). serie_calendario trae sus PROPIOS
- * timestamps (corrección del PR 4 sobre la decisión original) porque puede
- * tener más o menos puntos que serie_efectiva.
+ * Toggle configurada/calendario solo si la carga fue mensual o diaria y el
+ * backend mandó serie_calendario — con carga anual el criterio de año ya lo
+ * fijó el usuario al armar el archivo, no hay una segunda agregación posible
+ * para comparar (DECISIÓN 058 §1/§2; diaria por docs/plan-resolucion-diaria.md
+ * R3.4). serie_calendario trae sus PROPIOS timestamps (corrección del PR 4
+ * sobre la decisión original) porque puede tener más o menos puntos que
+ * serie_efectiva.
  */
 export function Etapa1SerieTemporalChart({
   datos,
 }: Readonly<{ datos: Etapa1Datos }>) {
   const [vista, setVista] = useState<"configurada" | "calendario">("configurada");
-  const puedeAlternar =
-    datos.resolucion_original === "mensual" && datos.serie_calendario !== null;
+  const cargaConAgregacion =
+    datos.resolucion_original === "mensual" ||
+    datos.resolucion_original === "diaria";
+  const puedeAlternar = cargaConAgregacion && datos.serie_calendario !== null;
   const usandoCalendario = puedeAlternar && vista === "calendario";
 
   if (!datos.timestamps_efectivos) return null;
@@ -43,6 +46,11 @@ export function Etapa1SerieTemporalChart({
   return (
     <div className="card">
       <p className="ct">Serie temporal</p>
+      {datos.resolucion_original === "diaria" && (
+        <p className="fn">
+          Máximos anuales agregados desde los datos diarios subidos.
+        </p>
+      )}
       {puedeAlternar && (
         <fieldset className="field">
           <legend>Criterio de año</legend>

@@ -144,11 +144,20 @@ export interface SerieCalendario {
 // no-test (DECISIÓN 058). Ver .claude/rules/core/statistical-pipeline.md
 // para el detalle completo de cada campo.
 export interface Etapa1Datos {
-  resolucion_original: "anual" | "mensual" | null;
+  resolucion_original: "anual" | "mensual" | "diaria" | null;
+  // R3.3 opción 2 (docs/plan-resolucion-diaria.md) — a qué resolución está
+  // `serie_original` en ESTE payload, distinto de `resolucion_original` (la
+  // del archivo subido): con carga diaria el backend serializa la agregación
+  // MENSUAL (~480 ítems), no la serie diaria cruda (~14.600). "anual" (o
+  // null, sin timestamps) cuando serie_original es null.
+  resolucion_serie_original: "anual" | "mensual" | "diaria" | null;
   serie_efectiva: number[];
   timestamps_efectivos: TimestampNormalizado[] | null;
-  // Solo presentes si resolucion_original === "mensual" — con carga anual
-  // son idénticos a los _efectiva, el backend no los duplica.
+  // Presentes con carga mensual o diaria (para el boxplot y la serie
+  // temporal). Con carga anual son idénticos a los _efectiva y el backend
+  // no los duplica (null). Con carga diaria son la agregación a máximos
+  // mensuales — resolucion_serie_original === "mensual", aunque el archivo
+  // fuera diario.
   serie_original: number[] | null;
   timestamps_originales: TimestampNormalizado[] | null;
   // Ya mapeado a posición en serie_efectiva — null si no hay atípico (o si
