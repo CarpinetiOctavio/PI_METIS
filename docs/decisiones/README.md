@@ -191,3 +191,5 @@ situ.
 | [062](decision062.md) | Historial interactivo: explorar otra distribución no es decidir — el recálculo no toca `decisiones` ni `session_store` | 18/08/2026 | Aplicada (backend + frontend) |
 | [063](decision063.md) | Panel de columnas acoplado, no ventana flotante — superposición vs. reflow, y el costo de accesibilidad de un gestor de ventanas propio | 18/08/2026 | Decidida y aplicada |
 | [064](decision064.md) | Paso a paso docente: `core/` calcula la fórmula sustituida (`TestResult.explicacion`), el frontend solo renderiza e interpreta | 18/08/2026 | Aplicada (backend + frontend) |
+| [065](decision065.md) | Resolución diaria como formato de entrada — camino A, directo diaria→anual, cobertura asimétrica extremos/interior, payload como agregación mensual | 28/08/2026 | Decidida y aplicada (backend + frontend) |
+| [066](decision066.md) | El dominio de análisis de METIS es la serie de máximos anuales — el "no" al camino B (analizar valores sub-anuales sin agregar) | 28/08/2026 | Decidida (decisión de alcance, sin implementación) |

@@ -60,12 +60,32 @@ calendario es simplemente el caso `mes_inicio_anio = 1`, no un modo aparte
 con un toggle — ver `core/validacion/aggregation.py::agregar_a_maximos_anuales()`
 y `docs/decisiones/decision057.md`.
 
-**Recorte de extremos.** El registro se recorta a años completos: los meses
-que sobran en cualquiera de los dos extremos (el registro casi nunca arranca
-o termina justo en el mes de inicio) se descartan, nunca se completan ni
-interpolan — warning no bloqueante `CONTRACT_PARTIAL_YEARS_TRIMMED`. Un año
-incompleto en el medio del registro (no en un extremo) se descarta con un
-código distinto, `CONTRACT_INCOMPLETE_YEARS_DISCARDED`.
+**Aplica a resolución mensual y diaria.** Desde `docs/decisiones/decision065.md`
+(28/08/2026) `agregar_a_maximos_anuales()` acepta `resolucion="diaria"`
+además de `"mensual"`, por el mismo camino A y directo diaria→anual (no
+encadenado). La unidad de completitud de un año pasa de 12 meses a 365/366
+días (bisiestos incluidos, también el febrero del año siguiente cuando
+`mes_inicio_anio ≠ 1`). El "no" a analizar los valores diarios/mensuales
+sin agregar es `docs/decisiones/decision066.md`.
+
+**Recorte de extremos.** El registro se recorta a años completos: las
+unidades (meses o días) que sobran en cualquiera de los dos extremos (el
+registro casi nunca arranca o termina justo en el mes de inicio) se
+descartan, nunca se completan ni interpolan — warning no bloqueante
+`CONTRACT_PARTIAL_YEARS_TRIMMED`.
+
+**Regla asimétrica de cobertura (DECISIÓN 065, R2.3).** Los años de los dos
+**extremos** siempre exigen 100 % de cobertura — descartar el extremo
+parcial es lo que DECISIÓN 057 ya prescribe, y ahí la parcialidad es la
+regla. Un año **interior** incompleto se descarta con
+`CONTRACT_INCOMPLETE_YEARS_DISCARDED` si su cobertura no alcanza
+`cobertura_minima_interior`; si la alcanza pero está por debajo del 100 %,
+se acepta y se emite `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (nivel normal) con
+cuántas unidades le faltaron — su máximo está sesgado a la baja y no puede
+quedar invisible. Valor provisorio `cobertura_minima_interior = 1.0`
+(estricto, `COBERTURA_MINIMA_INTERIOR` en `aggregation.py`) mientras R0.1
+espera respuesta de Facundo — con `1.0` el interior también exige 100 % y
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` no se emite todavía.
 
 **Etiquetado.** Un año que arranca en el mes de inicio del año Y y corre
 hasta el mes anterior de Y+1 se etiqueta con Y — el año calendario en que
@@ -94,9 +114,12 @@ aplica al gráfico de Chow**: Chow corrió sobre `serie_efectiva` (la
 agregación con el `mes_inicio_anio` configurado), y su atípico es un punto
 de esa serie específica — en la agregación calendario ese punto puede no
 existir o valer otra cosa. El gráfico de Chow se dibuja solo sobre la serie
-analizada, sin toggle. El toggle, donde aplica, solo se muestra con carga
-mensual — con carga anual el criterio de año ya lo fijó el usuario al armar
-el archivo, no hay una segunda agregación posible para comparar.
+analizada, sin toggle. El toggle, donde aplica, se muestra con carga
+mensual **o diaria** (DECISIÓN 065) — con carga anual el criterio de año ya
+lo fijó el usuario al armar el archivo, no hay una segunda agregación
+posible para comparar. Con carga diaria, el boxplot mensual grafica los
+**máximos mensuales** agregados (no los valores mensuales), rotulado
+explícitamente como tal.
 
 ### PDF de exportación — CU-01
 Se genera on-demand, no se almacena en disco.
