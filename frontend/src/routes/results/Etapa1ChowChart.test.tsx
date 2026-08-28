@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Etapa1ChowChart } from "./Etapa1ChowChart";
-import type { Etapa1Datos } from "../../api/types";
+import type { Etapa1Datos, TestResultDetail } from "../../api/types";
 
 function datosSinAtipico(): Etapa1Datos {
   return {
@@ -24,6 +24,34 @@ function datosConAtipico(): Etapa1Datos {
     ...datosSinAtipico(),
     serie_efectiva: [94.71, 89.83, 500.0],
     indice_atipico: 2,
+  };
+}
+
+function chowConFajas(
+  overrides: Partial<TestResultDetail> = {},
+): TestResultDetail {
+  return {
+    prueba: "chow",
+    estadistico: 1.41,
+    valor_critico: 1.15,
+    veredicto: "rechazada",
+    warning_codigo: "TEST_WARNING_OUTLIER_DETECTED",
+    warning_nivel: "normal",
+    n1: null,
+    n2: null,
+    valor_atipico: 500.0,
+    indice_atipico: 2,
+    explicacion: {
+      ecuacion: "Bulletin 17B, Apéndice 4 (Grubbs-Beck) — DECISIÓN 018",
+      terminos: {
+        n: 3,
+        media_log: 4.7,
+        s_log: 0.3,
+        nu: 1,
+        t_bonferroni: 12.7,
+      },
+    },
+    ...overrides,
   };
 }
 
@@ -50,6 +78,53 @@ describe("Etapa1ChowChart", () => {
     // se rompe la continuidad de la serie.
     const linea = container.querySelector('path[data-series="linea"]');
     expect(linea?.getAttribute("d")).toBeTruthy();
+  });
+
+  it("paints the outlier marker with the --crit token (stands out in light mode)", () => {
+    const { container } = render(<Etapa1ChowChart datos={datosConAtipico()} />);
+
+    const circulo = container.querySelector(
+      'g[data-series="atipico"] circle',
+    ) as SVGCircleElement | null;
+    expect(circulo?.style.fill).toBe("var(--crit)");
+  });
+
+  it("draws the máximos/mínimos bands as dashed reference lines when Chow ran", () => {
+    const { container } = render(
+      <Etapa1ChowChart datos={datosConAtipico()} chow={chowConFajas()} />,
+    );
+
+    const fajaMax = container.querySelector('path[data-series="faja-max"]');
+    const fajaMin = container.querySelector('path[data-series="faja-min"]');
+    expect(fajaMax?.getAttribute("d")).toBeTruthy();
+    expect(fajaMin?.getAttribute("d")).toBeTruthy();
+    // Punteadas — no se confunden con la serie de datos.
+    expect((fajaMax as SVGPathElement).style.strokeDasharray).not.toBe("");
+    expect((fajaMin as SVGPathElement).style.strokeDasharray).not.toBe("");
+  });
+
+  it("does not draw bands when Chow was not executed (no explicacion)", () => {
+    const { container } = render(
+      <Etapa1ChowChart
+        datos={datosSinAtipico()}
+        chow={chowConFajas({
+          veredicto: "no_ejecutada",
+          estadistico: null,
+          valor_critico: null,
+          explicacion: null,
+        })}
+      />,
+    );
+
+    expect(container.querySelector('path[data-series="faja-max"]')).not.toBeInTheDocument();
+    expect(container.querySelector('path[data-series="faja-min"]')).not.toBeInTheDocument();
+  });
+
+  it("does not draw bands when no chow prop is passed", () => {
+    const { container } = render(<Etapa1ChowChart datos={datosConAtipico()} />);
+
+    expect(container.querySelector('path[data-series="faja-max"]')).not.toBeInTheDocument();
+    expect(container.querySelector('path[data-series="faja-min"]')).not.toBeInTheDocument();
   });
 
   it("never shows a calendario/configurado toggle — Chow is an apartamiento parcial of the two-version rule", () => {

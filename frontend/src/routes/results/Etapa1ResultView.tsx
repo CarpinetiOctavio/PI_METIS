@@ -280,7 +280,11 @@ export function Etapa1ResultView({
       {result.datos && (
         <div className="stack" style={{ marginTop: 14 }}>
           <Etapa1SerieTemporalChart datos={result.datos} />
-          <Etapa1ChowChart datos={result.datos} mesInicioAnio={mesInicioAnio} />
+          <Etapa1ChowChart
+            datos={result.datos}
+            chow={result.atipicos.find((t) => t.prueba === "chow")}
+            mesInicioAnio={mesInicioAnio}
+          />
           <Etapa1BoxplotMensualChart datos={result.datos} mesInicioAnio={mesInicioAnio} />
         </div>
       )}
