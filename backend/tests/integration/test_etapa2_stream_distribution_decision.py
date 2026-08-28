@@ -14,17 +14,12 @@ punta. La persistencia real (CU-01) queda para un test de integración
 aparte, no es lo que este bloque "estrena".
 """
 
-import json
-import uuid
-
 import numpy as np
 import pytest
 
 from metis.services import session_store
-from metis.services.analysis_service import (
-    registrar_distribution_decision,
-    stream_analysis,
-)
+from metis.services.analysis_service import registrar_distribution_decision
+from tests.integration._sse_helpers import parse_sse, run_stream
 
 # Misma serie que SERIE_VALIDADA en test_pipeline_etapa1.py/test_full_pipeline.py
 # — numpy seed=9, uniform(10, 100), n=50. Todas las pruebas de Etapa 1
@@ -34,63 +29,50 @@ from metis.services.analysis_service import (
 _rng = np.random.default_rng(seed=9)
 _SERIE_VALIDADA = _rng.uniform(10, 100, size=50).tolist()
 
+_PERIODOS = [2, 5, 10, 25, 50, 100, 200, 500]
+
 
 def _csv_de_serie_valida() -> bytes:
     filas = [f"{1970 + i},{valor}" for i, valor in enumerate(_SERIE_VALIDADA)]
     return ("anio,caudal\n" + "\n".join(filas) + "\n").encode()
 
 
-def _parse_sse(evento: str) -> tuple[str, dict]:
-    lineas = evento.strip("\n").split("\n")
-    tipo = lineas[0].removeprefix("event: ")
-    data = json.loads(lineas[1].removeprefix("data: "))
-    return tipo, data
+def _run_etapa2(**overrides):
+    """run_stream() con los kwargs propios de este archivo: columna de año
+    puro y etapas=[1, 2] salvo que el test pida otra cosa."""
+    return run_stream(
+        _csv_de_serie_valida(),
+        columna_x="anio",
+        etapas=overrides.pop("etapas", [1, 2]),
+        **overrides,
+    )
 
 
-@pytest.fixture(autouse=True)
-def _limpiar_sessions():
-    session_store._sessions.clear()
-    yield
-    session_store._sessions.clear()
+def _primera_ajustada(ranking: list[dict]) -> dict:
+    """La primera distribución del ranking que efectivamente ajustó
+    (mejor_eea no nulo) — igual que elegiría un usuario real desde
+    RankingPage."""
+    return next(d for d in ranking if d["mejor_eea"] is not None)
 
 
 @pytest.mark.integration
 async def test_stream_con_etapas_1_2_pausa_en_ranking_y_termina_con_eventos():
-    session_id = str(uuid.uuid4())
-
-    gen = stream_analysis(
-        content=_csv_de_serie_valida(),
-        filename="serie.csv",
-        columna_x="anio",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1, 2],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-    )
+    gen, session_id = _run_etapa2()
 
     tipos_recibidos: list[str] = []
     resultado_decision = None
 
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
+        tipo, data = parse_sse(evento_crudo)
         tipos_recibidos.append(tipo)
 
         if tipo == "result_etapa2_ranking":
-            # El ranking real ya está serializado acá — elegimos la primera
-            # distribución que efectivamente ajustó (mejor_eea no nulo),
-            # igual que haría un usuario real desde RankingPage.
-            elegida = next(
-                d for d in data["ranking"] if d["mejor_eea"] is not None
-            )
+            elegida = _primera_ajustada(data["ranking"])
             resultado_decision = await registrar_distribution_decision(
                 session_id=session_id,
                 distribucion=elegida["distribucion"],
                 metodo=elegida["mejor_metodo"],
-                periodos_retorno=[2, 5, 10, 25, 50, 100, 200, 500],
+                periodos_retorno=_PERIODOS,
             )
 
     assert resultado_decision == {"ok": True, "pipeline_continua": True}
@@ -114,37 +96,18 @@ async def test_stream_con_etapas_1_2_pausa_en_ranking_y_termina_con_eventos():
 
 @pytest.mark.integration
 async def test_result_etapa2_eventos_trae_los_periodos_retorno_pedidos():
-    session_id = str(uuid.uuid4())
+    gen, session_id = _run_etapa2()
 
-    gen = stream_analysis(
-        content=_csv_de_serie_valida(),
-        filename="serie.csv",
-        columna_x="anio",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1, 2],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-    )
-
-    periodos_pedidos = [2, 5, 10, 25, 50, 100, 200, 500]
     payload_eventos = None
-
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
-
+        tipo, data = parse_sse(evento_crudo)
         if tipo == "result_etapa2_ranking":
-            elegida = next(
-                d for d in data["ranking"] if d["mejor_eea"] is not None
-            )
+            elegida = _primera_ajustada(data["ranking"])
             await registrar_distribution_decision(
                 session_id=session_id,
                 distribucion=elegida["distribucion"],
                 metodo=elegida["mejor_metodo"],
-                periodos_retorno=periodos_pedidos,
+                periodos_retorno=_PERIODOS,
             )
         elif tipo == "result_etapa2_eventos":
             payload_eventos = data
@@ -152,7 +115,7 @@ async def test_result_etapa2_eventos_trae_los_periodos_retorno_pedidos():
     assert payload_eventos is not None
     assert [
         e["periodo_retorno"] for e in payload_eventos["eventos_diseno"]
-    ] == periodos_pedidos
+    ] == _PERIODOS
     # Serie sin ceros y distribución con parámetros ajustados -> ningún
     # evento debería quedar en None para este fixture.
     assert all(e["valor"] is not None for e in payload_eventos["eventos_diseno"])
@@ -163,36 +126,19 @@ async def test_result_etapa2_ranking_trae_puntos_empiricos():
     # Bloque C — insumo del gráfico de ajuste, independiente de la
     # distribución elegida: tiene que viajar en el evento de ranking, antes
     # de que el usuario decida nada.
-    session_id = str(uuid.uuid4())
-
-    gen = stream_analysis(
-        content=_csv_de_serie_valida(),
-        filename="serie.csv",
-        columna_x="anio",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1, 2],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-    )
+    gen, session_id = _run_etapa2()
 
     payload_ranking = None
-
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
+        tipo, data = parse_sse(evento_crudo)
         if tipo == "result_etapa2_ranking":
             payload_ranking = data
-            elegida = next(
-                d for d in data["ranking"] if d["mejor_eea"] is not None
-            )
+            elegida = _primera_ajustada(data["ranking"])
             await registrar_distribution_decision(
                 session_id=session_id,
                 distribucion=elegida["distribucion"],
                 metodo=elegida["mejor_metodo"],
-                periodos_retorno=[2, 5, 10, 25, 50, 100, 200, 500],
+                periodos_retorno=_PERIODOS,
             )
 
     assert payload_ranking is not None
@@ -205,36 +151,18 @@ async def test_result_etapa2_ranking_trae_puntos_empiricos():
 
 @pytest.mark.integration
 async def test_result_etapa2_eventos_trae_curva_ajuste_continua():
-    session_id = str(uuid.uuid4())
+    gen, session_id = _run_etapa2()
 
-    gen = stream_analysis(
-        content=_csv_de_serie_valida(),
-        filename="serie.csv",
-        columna_x="anio",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1, 2],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-    )
-
-    periodos_pedidos = [2, 5, 10, 25, 50, 100, 200, 500]
     payload_eventos = None
-
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
+        tipo, data = parse_sse(evento_crudo)
         if tipo == "result_etapa2_ranking":
-            elegida = next(
-                d for d in data["ranking"] if d["mejor_eea"] is not None
-            )
+            elegida = _primera_ajustada(data["ranking"])
             await registrar_distribution_decision(
                 session_id=session_id,
                 distribucion=elegida["distribucion"],
                 metodo=elegida["mejor_metodo"],
-                periodos_retorno=periodos_pedidos,
+                periodos_retorno=_PERIODOS,
             )
         elif tipo == "result_etapa2_eventos":
             payload_eventos = data
@@ -251,7 +179,7 @@ async def test_result_etapa2_eventos_trae_curva_ajuste_continua():
     assert periodos_curva == sorted(periodos_curva)
     # La curva cubre al menos el rango de los períodos pedidos por el
     # usuario (T=500 en este fixture).
-    assert periodos_curva[-1] >= max(periodos_pedidos)
+    assert periodos_curva[-1] >= max(_PERIODOS)
     assert all(p["valor"] is not None for p in curva)
 
 
@@ -259,23 +187,9 @@ async def test_result_etapa2_eventos_trae_curva_ajuste_continua():
 async def test_etapas_1_solo_no_pausa_en_etapa_2():
     """Con etapas=[1] el comportamiento debe ser exactamente el de antes
     de esta decisión — el criterio de hecho explícito del Bloque A."""
-    session_id = str(uuid.uuid4())
+    gen, _ = _run_etapa2(etapas=[1])
 
-    gen = stream_analysis(
-        content=_csv_de_serie_valida(),
-        filename="serie.csv",
-        columna_x="anio",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-    )
-
-    tipos_recibidos = [_parse_sse(e)[0] async for e in gen]
+    tipos_recibidos = [parse_sse(e)[0] async for e in gen]
 
     assert "result_etapa1" in tipos_recibidos
     assert "result_etapa2_ranking" not in tipos_recibidos

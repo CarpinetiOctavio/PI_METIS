@@ -48,6 +48,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "Se recortaron años parciales en los extremos del registro al agregar a máximos anuales.",
   CONTRACT_INCOMPLETE_YEARS_DISCARDED:
     "Se descartó al menos un año incompleto dentro del registro al agregar a máximos anuales.",
+  CONTRACT_INCOMPLETE_YEARS_ACCEPTED:
+    "Se aceptó al menos un año con cobertura incompleta al agregar a máximos anuales — su máximo puede estar sesgado a la baja.",
 
   // Etapa 1 — pruebas
   TEST_CRITICAL_INDEPENDENCE:

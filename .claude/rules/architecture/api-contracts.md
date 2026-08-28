@@ -637,17 +637,29 @@ CONTRACT_MISSING_VALUES          Valores faltantes o celdas vacías
 CONTRACT_DUPLICATE_TIMESTAMPS    Duplicados temporales
 CONTRACT_IRREGULAR_SPACING       Espaciado temporal irregular
 CONTRACT_NON_NUMERIC_VALUES      Valores no numéricos mezclados
-CONTRACT_PARTIAL_YEARS_TRIMMED   Agregación mensual (Bloque F4): años parciales recortados en los extremos del registro
-CONTRACT_INCOMPLETE_YEARS_DISCARDED  Agregación mensual (Bloque F4): año incompleto descartado dentro del registro (no en un extremo)
+CONTRACT_PARTIAL_YEARS_TRIMMED   Agregación mensual/diaria (Bloque F4 / R2): años parciales recortados en los extremos del registro
+CONTRACT_INCOMPLETE_YEARS_DISCARDED  Agregación mensual/diaria (Bloque F4 / R2): año incompleto descartado dentro del registro (no en un extremo)
+CONTRACT_INCOMPLETE_YEARS_ACCEPTED   Agregación mensual/diaria (R2.3): año interior aceptado con cobertura < 100% — su máximo puede estar sesgado a la baja
 ```
-`CONTRACT_PARTIAL_YEARS_TRIMMED` y `CONTRACT_INCOMPLETE_YEARS_DISCARDED` los
-emite `core/pipeline/pipeline_etapa1.py::_warnings_de_agregacion()`, no
+`CONTRACT_PARTIAL_YEARS_TRIMMED`, `CONTRACT_INCOMPLETE_YEARS_DISCARDED` y
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` los emite
+`core/pipeline/pipeline_etapa1.py::_warnings_de_agregacion()`, no
 `core/validacion/contract.py` — son resultado de
 `core/validacion/aggregation.py::agregar_a_maximos_anuales()`, que corre
-antes de `validar_contrato()` cuando `resolucion_temporal == "mensual"`
-(DECISIÓN 057). Se agrupan acá por dominio (contrato de datos temporal), no
-por el módulo que los emite — mismo criterio que ya aplica el resto de esta
-sección.
+antes de `validar_contrato()` cuando `resolucion_temporal in ("mensual",
+"diaria")` (DECISIÓN 057; diaria por `docs/plan-resolucion-diaria.md` R2-R3).
+Se agrupan acá por dominio (contrato de datos temporal), no por el módulo
+que los emite — mismo criterio que ya aplica el resto de esta sección.
+
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (R2.3) solo se emite cuando un año
+**interior** se acepta con cobertura por debajo del 100% — posible únicamente
+con `cobertura_minima_interior < 1.0`. El valor provisorio es `1.0`
+(estricto, R0.1 pendiente de Facundo), así que hoy este código **no se emite
+nunca**: el código, el catálogo, la traducción y el test entran igual para
+que habilitar el umbral sea cambiar una constante
+(`COBERTURA_MINIMA_INTERIOR` en `core/validacion/aggregation.py`) y nada más.
+Los años de los **extremos** siempre exigen 100% (regla asimétrica) y se
+recortan con `CONTRACT_PARTIAL_YEARS_TRIMMED`.
 
 **`CONTRACT_WRONG_ORDER` — movido a bloqueante 18/08/2026 (DECISIÓN 030,
 Bloque H3 del plan post-avance), segunda excepción real al principio

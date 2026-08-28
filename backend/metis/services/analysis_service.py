@@ -13,7 +13,11 @@ from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
 from metis.core.pipeline.pipeline_etapa2 import _DISTRIBUCIONES
 from metis.core.types import Etapa1Result
 from metis.core.utils import es_numerico, filtrar_numericos
-from metis.core.validacion.aggregation import agregar_a_maximos_anuales
+from metis.core.validacion.aggregation import (
+    COBERTURA_MINIMA_INTERIOR,
+    agregar_a_maximos_anuales,
+    agregar_a_maximos_mensuales,
+)
 from metis.core.validacion.parser import parse_file, parsear_timestamps
 from metis.db.models import Analysis, AnalysisResult
 from metis.services import session_store
@@ -71,10 +75,24 @@ def _calcular_serie_calendario(
     timestamps no hay forma de ubicar cada valor en el eje X — se devuelve
     `{serie, timestamps}`, no un array suelto.
     """
-    if result.resolucion_original != "mensual" or mes_inicio_anio == 1:
+    if result.resolucion_original not in ("mensual", "diaria") or mes_inicio_anio == 1:
         return None
+    # R3.4 (docs/plan-resolucion-diaria.md) — `resolucion=` es OBLIGATORIO.
+    # Sin él, con los defaults de agregar_a_maximos_anuales() esta segunda
+    # agregación correría en modo "mensual" sobre datos diarios: la clave de
+    # agrupación sería (año, mes), la asignación sobreescribe, y
+    # serie_calendario terminaría siendo el máximo de los últimos días de
+    # cada mes — silencioso, plausible y equivocado. Corre sobre
+    # result.serie_original (la serie DIARIA cruda, no la agregación mensual
+    # del payload) — el camino directo diaria → anual, el mismo que la serie
+    # configurada, para no comparar dos series calculadas con métodos
+    # distintos en el mismo gráfico (R0.3).
     agregacion = agregar_a_maximos_anuales(
-        result.serie_original, result.timestamps_originales, mes_inicio=1
+        result.serie_original,
+        result.timestamps_originales,
+        mes_inicio=1,
+        resolucion=result.resolucion_original,
+        cobertura_minima_interior=COBERTURA_MINIMA_INTERIOR[result.resolucion_original],
     )
     return {
         "serie": agregacion.serie,
@@ -122,7 +140,7 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
     def warning_dict(w) -> dict:
         return {"codigo": w.codigo, "nivel": w.nivel, "descripcion": w.descripcion}
 
-    hubo_agregacion = result.resolucion_original == "mensual"
+    hubo_agregacion = result.resolucion_original in ("mensual", "diaria")
 
     # Bloque F5/PR3 (DECISIÓN 058 §5) — indice_atipico ya viaja en
     # serie_efectiva-space: calcular_chow() corre sobre valores_numericos,
@@ -130,19 +148,45 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
     # otro filtrado de por medio). No hace falta un mapeo adicional acá.
     indice_atipico = _extraer_indice_atipico(result)
 
+    # R3.3 opción 2 (docs/plan-resolucion-diaria.md) — qué serie cruda viaja
+    # en el payload y a qué resolución. Con carga diaria NO se serializa la
+    # serie diaria cruda (~14.600 ítems, ~637 KB — contradice el
+    # dimensionamiento de DECISIÓN 058): se serializa la agregación a
+    # máximos MENSUALES (~480 ítems). `resolucion_serie_original` le dice al
+    # frontend a qué resolución está `serie_original` — distinto de
+    # `resolucion_original` (la del archivo). El rótulo del boxplot
+    # ("máximos mensuales agregados desde datos diarios") es responsabilidad
+    # del frontend (PR 3). Etapa1Result.serie_original NO se toca: sigue
+    # siendo la serie diaria cruda que alimenta _calcular_serie_calendario().
+    if result.resolucion_original == "diaria":
+        serie_original_payload, timestamps_originales_payload = (
+            agregar_a_maximos_mensuales(
+                result.serie_original, result.timestamps_originales
+            )
+        )
+        resolucion_serie_original = "mensual"
+    elif result.resolucion_original == "mensual":
+        serie_original_payload = result.serie_original
+        timestamps_originales_payload = result.timestamps_originales
+        resolucion_serie_original = "mensual"
+    else:
+        # Carga anual — serie_original es idéntica a serie_efectiva,
+        # duplicarla es peso muerto (DECISIÓN 058 §1).
+        serie_original_payload = None
+        timestamps_originales_payload = None
+        resolucion_serie_original = result.resolucion_original
+
     datos = {
         "resolucion_original": result.resolucion_original,
+        "resolucion_serie_original": resolucion_serie_original,
         "serie_efectiva": result.serie_efectiva,
         "timestamps_efectivos": _serializar_timestamps(
             result.timestamps_efectivos, agregados=hubo_agregacion
         ),
-        # serie_original/timestamps_originales solo si hubo agregación real
-        # — con carga anual son idénticos a los _efectiva, duplicarlos es
-        # peso muerto (DECISIÓN 058 §1).
-        "serie_original": result.serie_original if hubo_agregacion else None,
+        "serie_original": serie_original_payload,
         "timestamps_originales": (
-            _serializar_timestamps(result.timestamps_originales, agregados=False)
-            if hubo_agregacion
+            _serializar_timestamps(timestamps_originales_payload, agregados=False)
+            if timestamps_originales_payload is not None
             else None
         ),
         "indice_atipico": indice_atipico,

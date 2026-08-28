@@ -12,31 +12,26 @@ la serie anual agregada (~15 elementos) — habría borrado un dato mensual
 en una posición sin relación con el atípico real.
 """
 
-import json
-import uuid
-
 import numpy as np
 import pytest
 
-from metis.services import session_store
-from metis.services.analysis_service import (
-    registrar_outlier_decision,
-    stream_analysis,
-)
+from metis.services.analysis_service import registrar_outlier_decision
+from tests.integration._sse_helpers import parse_sse, run_stream
 
 _rng = np.random.default_rng(seed=3)
 
 
-def _csv_mensual_con_atipico() -> bytes:
-    """15 años de datos mensuales (ene2000-dic2014), valores moderados
-    salvo un único mes de 2007 con un valor mucho más grande — garantiza
-    que el máximo anual agregado de 2007 sea un atípico real para Chow."""
+def _csv_mensual(anios: int, *, anio_pico: int | None = None) -> bytes:
+    """`anios` años de datos mensuales desde ene2000, valores moderados
+    (50-100). Con `anio_pico`, un único mes (junio) de ese año con un valor
+    mucho más grande — garantiza que el máximo anual agregado sea un atípico
+    real para Chow."""
     filas = ["fecha,caudal"]
     anio, mes = 2000, 1
-    for i in range(15 * 12):
+    for _ in range(anios * 12):
         valor = _rng.uniform(50, 100)
-        if anio == 2007 and mes == 6:
-            valor = 5000.0  # atípico garantizado para el año agregado 2007
+        if anio == anio_pico and mes == 6:
+            valor = 5000.0
         filas.append(f"{anio:04d}-{mes:02d}-01,{valor:.4f}")
         mes += 1
         if mes > 12:
@@ -45,54 +40,16 @@ def _csv_mensual_con_atipico() -> bytes:
     return ("\n".join(filas) + "\n").encode()
 
 
-def _parse_sse(evento: str) -> tuple[str, dict]:
-    lineas = evento.strip("\n").split("\n")
-    tipo = lineas[0].removeprefix("event: ")
-    data = json.loads(lineas[1].removeprefix("data: "))
-    return tipo, data
-
-
-@pytest.fixture(autouse=True)
-def _limpiar_sessions():
-    session_store._sessions.clear()
-    yield
-    session_store._sessions.clear()
-
-
 @pytest.mark.integration
 async def test_serie_mensual_se_agrega_y_termina_en_15_anios_sin_atipico_previo():
-    # etapas=[1] solamente, mes_inicio_anio=1 (calendario) — sin el pico de
-    # 2007, para aislar primero que la agregación en sí funciona de punta a
-    # punta antes de mezclar con el flujo de Chow.
-    session_id = str(uuid.uuid4())
-    filas = ["fecha,caudal"]
-    anio, mes = 2000, 1
-    for _ in range(15 * 12):
-        filas.append(f"{anio:04d}-{mes:02d}-01,{_rng.uniform(50, 100):.4f}")
-        mes += 1
-        if mes > 12:
-            mes = 1
-            anio += 1
-    csv = ("\n".join(filas) + "\n").encode()
-
-    gen = stream_analysis(
-        content=csv,
-        filename="serie.csv",
-        columna_x="fecha",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-        mes_inicio_anio=1,
-    )
+    # etapas=[1] solamente, mes_inicio_anio=1 (calendario) — sin pico, para
+    # aislar que la agregación en sí funciona de punta a punta antes de
+    # mezclar con el flujo de Chow.
+    gen, _ = run_stream(_csv_mensual(15), mes_inicio_anio=1)
 
     payload_result = None
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
+        tipo, data = parse_sse(evento_crudo)
         if tipo == "result_etapa1":
             payload_result = data
 
@@ -103,29 +60,14 @@ async def test_serie_mensual_se_agrega_y_termina_en_15_anios_sin_atipico_previo(
 
 @pytest.mark.integration
 async def test_rechazar_atipico_sobre_serie_mensual_agregada_no_rompe_el_indice():
-    session_id = str(uuid.uuid4())
-
-    gen = stream_analysis(
-        content=_csv_mensual_con_atipico(),
-        filename="serie.csv",
-        columna_x="fecha",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-        mes_inicio_anio=1,
-    )
+    gen, session_id = run_stream(_csv_mensual(15, anio_pico=2007), mes_inicio_anio=1)
 
     tipos_recibidos: list[str] = []
     valor_atipico = None
     payload_final = None
 
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
+        tipo, data = parse_sse(evento_crudo)
         tipos_recibidos.append(tipo)
 
         if tipo == "outlier_detected":
