@@ -128,11 +128,67 @@ def test_columna_de_anio_y_mes_como_fecha_sigue_siendo_mensual():
     # No-regresión: fechas mensuales en formato ISO (no años puros de 4
     # dígitos como valor completo) deben seguir infiriendo "mensual".
     fechas = pd.date_range("1980-01-01", periods=24, freq="MS")
-    filas_csv = "\n".join(
-        f"{fecha.date()},{100 + i}" for i, fecha in enumerate(fechas)
-    )
+    filas_csv = "\n".join(f"{fecha.date()},{100 + i}" for i, fecha in enumerate(fechas))
     csv = f"fecha,caudal\n{filas_csv}\n".encode()
 
     resultado = parse_file(csv, "serie.csv", columna_x="fecha", columna_y="caudal")
 
     assert resultado.resolucion_temporal == "mensual"
+
+
+@pytest.mark.unit
+def test_columna_de_fechas_diarias_infiere_resolucion_diaria():
+    # R1.1 (docs/plan-resolucion-diaria.md) — moda de deltas == 1 día -> "diaria".
+    fechas = pd.date_range("1980-01-01", periods=60, freq="D")
+    filas_csv = "\n".join(f"{fecha.date()},{100 + i}" for i, fecha in enumerate(fechas))
+    csv = f"fecha,caudal\n{filas_csv}\n".encode()
+
+    resultado = parse_file(csv, "serie.csv", columna_x="fecha", columna_y="caudal")
+
+    assert resultado.resolucion_temporal == "diaria"
+    assert len(resultado.serie) == 60
+
+
+@pytest.mark.unit
+def test_serie_diaria_con_huecos_sigue_infiriendo_diaria():
+    # La moda -no el promedio- protege el caso real: un registro diario con
+    # cortes de energía / faja perdida sigue teniendo moda 1 (mismo argumento
+    # que F2.3 para mensual).
+    fechas = list(pd.date_range("1980-01-01", periods=20, freq="D"))
+    fechas += list(
+        pd.date_range("1980-03-01", periods=20, freq="D")
+    )  # hueco de ~40 días
+    filas_csv = "\n".join(f"{f.date()},{100 + i}" for i, f in enumerate(fechas))
+    csv = f"fecha,caudal\n{filas_csv}\n".encode()
+
+    resultado = parse_file(csv, "serie.csv", columna_x="fecha", columna_y="caudal")
+
+    assert resultado.resolucion_temporal == "diaria"
+
+
+@pytest.mark.unit
+def test_serie_semanal_y_quincenal_no_se_confunden_con_diaria():
+    # R1.1 — `== 1`, no `<= 24`: 7 días (semanal) y 15 (quincenal) no tienen
+    # regla de agregación en METIS -> None -> CONTRACT_NO_TEMPORAL_RESOLUTION.
+    for freq in ("7D", "15D"):
+        fechas = pd.date_range("1980-01-01", periods=30, freq=freq)
+        filas_csv = "\n".join(f"{f.date()},{100 + i}" for i, f in enumerate(fechas))
+        csv = f"fecha,caudal\n{filas_csv}\n".encode()
+
+        resultado = parse_file(csv, "serie.csv", columna_x="fecha", columna_y="caudal")
+
+        assert resultado.resolucion_temporal is None, f"freq={freq}"
+
+
+@pytest.mark.unit
+def test_serie_horaria_cae_en_none_por_el_truncamiento_de_days():
+    # R1.1 — `.days` trunca: deltas de 1 hora -> 0 días -> moda 0 -> None.
+    # Bloqueo correcto y deseado (METIS no procesa sub-diario); el test lo
+    # fija para que un refactor a total_seconds() no lo rompa en silencio.
+    fechas = pd.date_range("1980-01-01", periods=48, freq="h")
+    filas_csv = "\n".join(f"{f},{100 + i}" for i, f in enumerate(fechas))
+    csv = f"fecha,caudal\n{filas_csv}\n".encode()
+
+    resultado = parse_file(csv, "serie.csv", columna_x="fecha", columna_y="caudal")
+
+    assert resultado.resolucion_temporal is None
