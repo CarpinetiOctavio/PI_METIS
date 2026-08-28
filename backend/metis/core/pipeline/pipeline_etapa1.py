@@ -19,6 +19,7 @@ from metis.core.etapa1.trend import (
 from metis.core.types import ContractResult, Etapa1Result, WarningItem
 from metis.core.utils import filtrar_numericos
 from metis.core.validacion.aggregation import (
+    COBERTURA_MINIMA_INTERIOR,
     MOTIVO_HUECO_INTERIOR,
     AgregacionResult,
     agregar_a_maximos_anuales,
@@ -26,7 +27,15 @@ from metis.core.validacion.aggregation import (
 from metis.core.validacion.contract import timestamps_desordenados, validar_contrato
 
 
-def _warnings_de_agregacion(agregacion: AgregacionResult) -> list[WarningItem]:
+def _warnings_de_agregacion(
+    agregacion: AgregacionResult, resolucion: str
+) -> list[WarningItem]:
+    # R3.2 (docs/plan-resolucion-diaria.md) — la unidad de completitud
+    # depende de la resolución de entrada. Los códigos de error NO cambian:
+    # CONTRACT_PARTIAL_YEARS_TRIMMED / CONTRACT_INCOMPLETE_YEARS_DISCARDED
+    # tienen nombres neutros a la resolución y significan lo mismo.
+    unidad = "días" if resolucion == "diaria" else "meses"
+
     extremos = [
         p for p in agregacion.periodos_descartados if p.motivo != MOTIVO_HUECO_INTERIOR
     ]
@@ -38,7 +47,8 @@ def _warnings_de_agregacion(agregacion: AgregacionResult) -> list[WarningItem]:
 
     if extremos:
         detalle = ", ".join(
-            f"{p.anio} ({p.meses_presentes}/12 meses)" for p in extremos
+            f"{p.anio} ({p.unidades_presentes}/{p.unidades_esperadas} {unidad})"
+            for p in extremos
         )
         periodo_efectivo = (
             f"{agregacion.timestamps[0]}–{agregacion.timestamps[-1]}"
@@ -66,6 +76,28 @@ def _warnings_de_agregacion(agregacion: AgregacionResult) -> list[WarningItem]:
                 descripcion=(
                     f"Se descartaron {len(interiores)} año(s) incompleto(s) "
                     f"dentro del registro: {anios}."
+                ),
+            )
+        )
+
+    # R2.3 — años interiores aceptados por debajo del 100 % de cobertura.
+    # Solo posible con cobertura_minima_interior < 1.0 (hoy el default 1.0
+    # deja esta lista siempre vacía); el máximo de esos años está sesgado a
+    # la baja y no puede quedar invisible.
+    aceptados = agregacion.periodos_incompletos_aceptados
+    if aceptados:
+        detalle = ", ".join(
+            f"{p.anio} (faltan {p.unidades_faltantes} de {p.unidades_esperadas} {unidad})"
+            for p in aceptados
+        )
+        warnings.append(
+            WarningItem(
+                codigo="CONTRACT_INCOMPLETE_YEARS_ACCEPTED",
+                nivel="normal",
+                descripcion=(
+                    f"Se aceptaron {len(aceptados)} año(s) con cobertura "
+                    f"incompleta al agregar a máximos anuales: {detalle}. El "
+                    f"máximo de esos años puede estar sesgado a la baja."
                 ),
             )
         )
@@ -143,20 +175,26 @@ def ejecutar_etapa1(
             resolucion_original=resolucion_original,
         )
 
-    # ── 0. Agregación temporal (Bloque F4) ────────────────────────────────────
+    # ── 0. Agregación temporal (Bloque F4 / R2-R3) ───────────────────────────
     # Antes de validar_contrato() — así el conteo de la regla de n opera ya
-    # sobre la serie agregada, y una serie mensual nunca corre la batería
-    # estadística sobre los valores crudos (F2.1). Con resolucion_temporal
-    # != "mensual" (incluido None) esta rama no hace nada — comportamiento
-    # idéntico al de antes de este bloque.
+    # sobre la serie agregada, y una serie mensual o diaria nunca corre la
+    # batería estadística sobre los valores crudos (F2.1). Con
+    # resolucion_temporal fuera de {"mensual", "diaria"} (incluido None y
+    # "anual") esta rama no hace nada — comportamiento idéntico al de antes.
     warnings_agregacion: list[WarningItem] = []
-    if resolucion_temporal == "mensual":
-        agregacion = agregar_a_maximos_anuales(serie, timestamps, mes_inicio_anio)
+    if resolucion_temporal in ("mensual", "diaria"):
+        agregacion = agregar_a_maximos_anuales(
+            serie,
+            timestamps,
+            mes_inicio_anio,
+            resolucion=resolucion_temporal,
+            cobertura_minima_interior=COBERTURA_MINIMA_INTERIOR[resolucion_temporal],
+        )
         serie = agregacion.serie
         timestamps = agregacion.timestamps
+        warnings_agregacion = _warnings_de_agregacion(agregacion, resolucion_temporal)
         resolucion_temporal = "anual"  # ya agregada — el resto del pipeline
         # la trata como cualquier serie anual, sin saber que hubo agregación
-        warnings_agregacion = _warnings_de_agregacion(agregacion)
 
     # ── 1. Contrato de datos ──────────────────────────────────────────────────
     contract = validar_contrato(
