@@ -87,6 +87,19 @@ def _inferir_resolucion(timestamps: list) -> str | None:
     # de la serie siga siendo mensual. La MODA de los deltas no se deja
     # arrastrar por un outlier — refleja el espaciado que la serie realmente
     # tiene la mayor parte del tiempo.
+    #
+    # R1.1 (docs/plan-resolucion-diaria.md) — `moda_dias == 1` es "diaria", y
+    # es `== 1` a propósito, no `<= 24`:
+    #   - una moda de 7 días es un registro semanal; una de 15, quincenal.
+    #     Ninguno tiene regla de agregación en METIS; devolver "diaria" para
+    #     ellos los haría entrar al pipeline con una noción de "año completo"
+    #     que no les corresponde. Quedan en None ->
+    #     CONTRACT_NO_TEMPORAL_RESOLUTION, que es honesto: METIS no sabe
+    #     procesarlos.
+    #   - lo sub-diario también cae en None, por un efecto de `.days`: TRUNCA.
+    #     Una serie horaria da deltas de 0 días -> moda 0 -> None. Es el
+    #     bloqueo correcto y deseado; va como test explícito. Si alguien
+    #     reescribe la inferencia con total_seconds() tiene que preservarlo.
     if len(timestamps) < 2:
         return None
     try:
@@ -97,6 +110,8 @@ def _inferir_resolucion(timestamps: list) -> str | None:
             return "anual"
         if moda_dias >= 25:
             return "mensual"
+        if moda_dias == 1:
+            return "diaria"
         return None
     except Exception:
         return None
