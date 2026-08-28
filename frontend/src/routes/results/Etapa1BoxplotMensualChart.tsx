@@ -26,9 +26,18 @@ function ordenDeMeses(mesInicio: number): number[] {
 
 /**
  * Boxplot mensual — doce cajas, una por mes, sobre `datos.serie_original`
- * + `timestamps_originales` (la serie mensual CRUDA, no la agregada). PR 5
- * del plan de cierre de pendientes no-test. Se renderiza solo con carga
- * mensual — con carga anual no hay meses que agrupar.
+ * + `timestamps_originales`. PR 5 del plan de cierre de pendientes no-test.
+ * Se renderiza cuando esa serie está en granularidad mensual
+ * (`resolucion_serie_original === "mensual"`) — con carga anual no hay
+ * meses que agrupar.
+ *
+ * Qué representa cada caja depende de la resolución del ARCHIVO
+ * (`resolucion_original`, docs/plan-resolucion-diaria.md R3.3b):
+ *  - archivo mensual → la distribución de los valores mensuales del registro;
+ *  - archivo diario → la distribución de los MÁXIMOS mensuales agregados
+ *    desde los datos diarios (el backend serializa esa agregación, no la
+ *    serie diaria cruda). Mismo dibujo, otra estadística — el subtítulo lo
+ *    aclara, no puede quedar implícito.
  *
  * El toggle configurado/calendario acá NO recalcula los datos (a
  * diferencia del de `Etapa1SerieTemporalChart`): los 12 grupos de valores
@@ -45,12 +54,14 @@ export function Etapa1BoxplotMensualChart({
   );
 
   if (
-    datos.resolucion_original !== "mensual" ||
+    datos.resolucion_serie_original !== "mensual" ||
     !datos.serie_original ||
     !datos.timestamps_originales
   ) {
     return null;
   }
+
+  const desdeDiaria = datos.resolucion_original === "diaria";
 
   const timestamps = datos.timestamps_originales;
   const porMes = new Map<number, number[]>();
@@ -76,6 +87,11 @@ export function Etapa1BoxplotMensualChart({
   return (
     <div className="card">
       <p className="ct">Boxplot mensual</p>
+      <p className="fn">
+        {desdeDiaria
+          ? "Cada caja es la distribución de los máximos mensuales agregados desde los datos diarios subidos — no de los valores diarios."
+          : "Cada caja es la distribución de los valores mensuales del registro."}
+      </p>
       {puedeAlternarOrden && (
         <fieldset className="field">
           <legend>Orden de meses</legend>

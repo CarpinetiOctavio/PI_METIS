@@ -19,6 +19,7 @@ function datosMensuales(): Etapa1Datos {
   }
   return {
     resolucion_original: "mensual",
+    resolucion_serie_original: "mensual",
     serie_efectiva: [120, 121],
     timestamps_efectivos: [
       { iso: "2000-01-01", anio: 2000 },
@@ -34,6 +35,7 @@ function datosMensuales(): Etapa1Datos {
 function datosAnuales(): Etapa1Datos {
   return {
     resolucion_original: "anual",
+    resolucion_serie_original: "anual",
     serie_efectiva: [94.71, 89.83],
     timestamps_efectivos: [
       { iso: "1980-01-01", anio: 1980 },
@@ -44,6 +46,13 @@ function datosAnuales(): Etapa1Datos {
     indice_atipico: null,
     serie_calendario: null,
   };
+}
+
+// Carga diaria: el backend serializa serie_original como la agregación a
+// máximos MENSUALES (R3.3 opción 2) — resolucion_serie_original === "mensual"
+// aunque el archivo era diario.
+function datosDesdeDiaria(): Etapa1Datos {
+  return { ...datosMensuales(), resolucion_original: "diaria" };
 }
 
 describe("Etapa1BoxplotMensualChart", () => {
@@ -61,6 +70,28 @@ describe("Etapa1BoxplotMensualChart", () => {
 
     const boxes = container.querySelectorAll(".box-plot__box");
     expect(boxes).toHaveLength(12);
+  });
+
+  it("renders for a daily upload too, with a subtitle saying the boxes are monthly maxima", () => {
+    const { container } = render(
+      <Etapa1BoxplotMensualChart datos={datosDesdeDiaria()} />,
+    );
+
+    expect(container.querySelectorAll(".box-plot__box")).toHaveLength(12);
+    expect(
+      screen.getByText(/máximos mensuales agregados desde los datos diarios/),
+    ).toBeInTheDocument();
+  });
+
+  it("a monthly upload gets the 'valores mensuales' subtitle, not the daily one", () => {
+    render(<Etapa1BoxplotMensualChart datos={datosMensuales()} />);
+
+    expect(
+      screen.getByText(/distribución de los valores mensuales del registro/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/datos diarios/),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the calendario/configurado order toggle only when mesInicioAnio is set and different from 1", () => {
