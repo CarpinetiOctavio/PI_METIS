@@ -32,6 +32,9 @@ export interface ChartSeries {
   label: string;
   data: ChartPoint[];
   colorVar: string; // nombre de variable CSS, ej. "--acc"
+  // Línea de referencia (umbral, faja) — se dibuja punteada para que no se
+  // confunda con una serie de datos. Solo aplica a kind === "line".
+  dashed?: boolean;
 }
 
 interface InteractiveChartProps {
@@ -337,7 +340,10 @@ export function InteractiveChart({
                   key={s.id}
                   d={d}
                   className="interactive-chart__line"
-                  style={{ stroke: `var(${s.colorVar})` }}
+                  style={{
+                    stroke: `var(${s.colorVar})`,
+                    strokeDasharray: s.dashed ? "6 4" : undefined,
+                  }}
                   data-series={s.id}
                 />
               );

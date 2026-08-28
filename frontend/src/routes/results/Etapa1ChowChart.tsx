@@ -2,7 +2,7 @@ import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartSeries } from "../../charts/InteractiveChart";
 import { formatAxis } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
-import type { Etapa1Datos } from "../../api/types";
+import type { Etapa1Datos, TestResultDetail } from "../../api/types";
 
 /**
  * Gráfico de Chow — la serie analizada (serie_efectiva) con el atípico
@@ -19,11 +19,25 @@ import type { Etapa1Datos } from "../../api/types";
  * `indice_atipico` ya viene mapeado a posición en `serie_efectiva`
  * (DECISIÓN 058 §5) — sin traducir nada acá. `null` tras rechazar el
  * atípico (iteración 2 del stream): la serie se dibuja sin marcador.
+ *
+ * Fajas de máximos y mínimos — Chow (Grubbs-Beck) marca un dato como
+ * atípico cuando |ln(x) − media_log| / s_log supera K_N. Llevado a la
+ * escala original de la serie, eso son dos umbrales horizontales:
+ *   exp(media_log ± K_N · s_log)
+ * entre los que cae la población "normal". Se dibujan punteados a partir
+ * de `media_log`/`s_log` (`chow.explicacion.terminos`, DECISIÓN 064) y
+ * K_N (`chow.valor_critico`). Si Chow no se ejecutó (serie con ceros o
+ * valores ≤ 0) `explicacion` es null y las fajas no se dibujan.
  */
 export function Etapa1ChowChart({
   datos,
+  chow,
   mesInicioAnio,
-}: Readonly<{ datos: Etapa1Datos; mesInicioAnio?: number }>) {
+}: Readonly<{
+  datos: Etapa1Datos;
+  chow?: TestResultDetail;
+  mesInicioAnio?: number;
+}>) {
   if (!datos.timestamps_efectivos) return null;
   const timestamps = datos.timestamps_efectivos;
 
@@ -39,14 +53,64 @@ export function Etapa1ChowChart({
 
   const series: ChartSeries[] = [
     { id: "linea", kind: "line", label: "Serie analizada", colorVar: "--acc", data: todosLosPuntos },
-    { id: "normales", kind: "points", label: "Datos", colorVar: "--acc", data: puntosSinAtipico },
   ];
+
+  const mediaLog = chow?.explicacion?.terminos.media_log;
+  const sLog = chow?.explicacion?.terminos.s_log;
+  const kN = chow?.valor_critico;
+  if (
+    todosLosPuntos.length > 0 &&
+    typeof mediaLog === "number" &&
+    typeof sLog === "number" &&
+    typeof kN === "number"
+  ) {
+    const xs = todosLosPuntos.map((p) => p.x);
+    const xMin = Math.min(...xs);
+    const xMax = Math.max(...xs);
+    const limiteSuperior = Math.exp(mediaLog + kN * sLog);
+    const limiteInferior = Math.exp(mediaLog - kN * sLog);
+    series.push(
+      {
+        id: "faja-max",
+        kind: "line",
+        label: "Faja de máximos",
+        colorVar: "--mut",
+        dashed: true,
+        data: [
+          { x: xMin, y: limiteSuperior },
+          { x: xMax, y: limiteSuperior },
+        ],
+      },
+      {
+        id: "faja-min",
+        kind: "line",
+        label: "Faja de mínimos",
+        colorVar: "--mut",
+        dashed: true,
+        data: [
+          { x: xMin, y: limiteInferior },
+          { x: xMax, y: limiteInferior },
+        ],
+      },
+    );
+  }
+
+  series.push({
+    id: "normales",
+    kind: "points",
+    label: "Datos",
+    colorVar: "--acc",
+    data: puntosSinAtipico,
+  });
   if (puntoAtipico) {
     series.push({
       id: "atipico",
       kind: "points",
       label: "Atípico (Chow)",
-      colorVar: "--acc2",
+      // --crit (rojo) en vez de --acc2: en modo claro --acc2 (verde oliva)
+      // se confundía con --acc (teal) del resto de los puntos. --crit
+      // destaca en ambos temas y es el token semántico de "anomalía".
+      colorVar: "--crit",
       data: [puntoAtipico],
     });
   }
@@ -60,7 +124,7 @@ export function Etapa1ChowChart({
       <InteractiveChart
         series={series}
         xScale="linear"
-        ariaLabel="Gráfico de Chow: serie analizada con el atípico marcado"
+        ariaLabel="Gráfico de Chow: serie analizada, fajas de máximos y mínimos, y el atípico marcado"
         xLabel="Año"
         yLabel="Valor"
         xTickFormat={(v) => String(Math.round(v))}

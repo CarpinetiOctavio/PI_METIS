@@ -91,6 +91,31 @@ describe("InteractiveChart", () => {
     expect(markerGroup?.querySelectorAll("circle")).toHaveLength(2);
   });
 
+  it("renders a dashed line series with stroke-dasharray, solid ones without", () => {
+    const { container } = render(
+      <InteractiveChart
+        series={[
+          { id: "datos", kind: "line", label: "Datos", colorVar: "--acc", data: [
+            { x: 10, y: 20 },
+            { x: 100, y: 80 },
+          ] },
+          { id: "umbral", kind: "line", label: "Umbral", colorVar: "--mut", dashed: true, data: [
+            { x: 10, y: 50 },
+            { x: 100, y: 50 },
+          ] },
+        ]}
+        ariaLabel="Gráfico de prueba"
+        xLabel="T"
+        yLabel="Valor"
+      />,
+    );
+
+    const solida = container.querySelector('path[data-series="datos"]') as SVGPathElement;
+    const punteada = container.querySelector('path[data-series="umbral"]') as SVGPathElement;
+    expect(solida.style.strokeDasharray).toBe("");
+    expect(punteada.style.strokeDasharray).not.toBe("");
+  });
+
   it("shows a tooltip with the exact (x, y) of the nearest point on hover", () => {
     const { container } = render(
       <InteractiveChart
