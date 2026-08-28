@@ -122,18 +122,32 @@ def _esperados(periodo: int, mes_inicio: int, resolucion: str) -> set[tuple]:
     return meses
 
 
-def _clave_unidad(fecha, resolucion: str) -> tuple:
-    """Clave de agrupación de una fecha dentro de su período.
+def _clave_unidad(fecha, resolucion: str) -> tuple[int, int, int]:
+    """Clave de agrupación de una fecha dentro de su período — siempre una
+    3-tupla (año, mes, día).
 
-    CRÍTICO para diaria: con la clave en granularidad de mes, el diccionario
-    de `agregar_a_maximos_anuales()` se quedaría con el ÚLTIMO día de cada
-    mes y descartaría el resto en silencio (asigna, no maximiza) — un
-    máximo anual plausible pero incorrecto. La clave TIENE que incluir el
-    día cuando `resolucion == "diaria"`.
+    CRÍTICO para diaria: sin el día en la clave, el diccionario de
+    `agregar_a_maximos_anuales()` se quedaría con el ÚLTIMO día de cada mes
+    y descartaría el resto en silencio (asigna, no maximiza) — un máximo
+    anual plausible pero incorrecto.
+
+    En modo mensual el día se fija en 0 (nunca un día real): dos filas del
+    mismo mes con fechas distintas colapsan a la misma clave, igual que
+    antes — el dato mensual siempre representa el mes entero.
     """
-    if resolucion == "diaria":
-        return (fecha.year, fecha.month, fecha.day)
-    return (fecha.year, fecha.month)
+    dia = fecha.day if resolucion == "diaria" else 0
+    return (fecha.year, fecha.month, dia)
+
+
+def _motivo_descarte(periodo: int, periodo_inicio: int, periodo_fin: int) -> str:
+    """Por qué se descarta un período incompleto. Los extremos del registro
+    son parciales por naturaleza (el registro empieza/termina ahí); un
+    período interior incompleto es un agujero — motivo distinto (R2.3)."""
+    if periodo == periodo_inicio:
+        return MOTIVO_EXTREMO_INICIO
+    if periodo == periodo_fin:
+        return MOTIVO_EXTREMO_FIN
+    return MOTIVO_HUECO_INTERIOR
 
 
 def agregar_a_maximos_anuales(
@@ -221,17 +235,10 @@ def agregar_a_maximos_anuales(
                 )
             continue
 
-        if periodo == periodo_inicio:
-            motivo = MOTIVO_EXTREMO_INICIO
-        elif periodo == periodo_fin:
-            motivo = MOTIVO_EXTREMO_FIN
-        else:
-            motivo = MOTIVO_HUECO_INTERIOR
-
         descartados.append(
             PeriodoDescartado(
                 anio=periodo,
-                motivo=motivo,
+                motivo=_motivo_descarte(periodo, periodo_inicio, periodo_fin),
                 unidades_presentes=n_presentes,
                 unidades_faltantes=n_esperadas - n_presentes,
                 unidades_esperadas=n_esperadas,
