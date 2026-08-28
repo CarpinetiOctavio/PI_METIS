@@ -202,7 +202,7 @@ POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1
 METIS detecta y advierte, pero **no bloquea** — excepto dos excepciones reales:
 
 - **< 10 datos → error bloqueante.** Pipeline se detiene.
-- **Timestamps fuera de orden cronológico → error bloqueante.** Pipeline se detiene, evaluado antes que cualquier otra cosa (incluida la agregación mensual) — DECISIÓN 030, cerrada 18/08/2026 (Bloque H3 del plan post-avance). Datos faltantes NO son desorden y no bloquean — la distinción es exclusivamente sobre el orden temporal, nunca sobre la completitud. Ver docs/decisiones/decision030.md y `.claude/rules/core/statistical-pipeline.md`, "Paso 0a".
+- **Timestamps fuera de orden cronológico → error bloqueante.** Pipeline se detiene, evaluado antes que cualquier otra cosa (incluida la agregación temporal mensual o diaria) — DECISIÓN 030, cerrada 18/08/2026 (Bloque H3 del plan post-avance). Datos faltantes NO son desorden y no bloquean — la distinción es exclusivamente sobre el orden temporal, nunca sobre la completitud. Ver docs/decisiones/decision030.md y `.claude/rules/core/statistical-pipeline.md`, "Paso 0a".
 - **10–29 datos → warning no bloqueante.** Pipeline continúa. Responsabilidad del usuario.
 - **≥ 30 datos → condiciones recomendables.** Sin warning por longitud.
 

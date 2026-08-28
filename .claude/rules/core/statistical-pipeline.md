@@ -13,7 +13,7 @@ Services/ orquesta el pipeline y emite eventos SSE. Core/ solo calcula.
 
 ```
 0a. Orden cronológico (Bloque H3)          ← sobre timestamps crudos, bloqueante, antes de TODO lo demás
-0. Agregación temporal (Bloque F4)         ← solo si resolucion_temporal=="mensual", antes del contrato
+0. Agregación temporal (Bloque F4 / DEC 065)  ← solo si resolucion_temporal ∈ {"mensual","diaria"}, antes del contrato
 1. Validación del contrato de datos        ← primera barrera, puede ser bloqueante
 2. Estadística descriptiva                 ← automática, siempre, antes de cualquier prueba
 3. Independencia: Anderson + Wald-Wolfowitz
@@ -62,29 +62,40 @@ presente y en orden sigue su tratamiento actual
 (`CONTRACT_MISSING_VALUES`, warning no bloqueante) — la distinción es
 exclusivamente sobre el orden temporal, no sobre la completitud.
 
-### Paso 0 — Agregación temporal (DECISIÓN 057, Bloque F del plan de Etapa 2)
+### Paso 0 — Agregación temporal (DECISIÓN 057 mensual, DECISIÓN 065 diaria)
 
-Si `resolucion_temporal == "mensual"`, `ejecutar_etapa1()` llama a
-`core/validacion/aggregation.py::agregar_a_maximos_anuales(serie, timestamps,
-mes_inicio_anio)` **antes** de `validar_contrato()` — no en `services/`. El
-resto del pipeline (contrato, las seis pruebas, Chow, Etapa 2) corre sobre la
-serie de máximos anuales ya agregada, exactamente como si el usuario hubiera
-subido una serie anual — `resolucion_temporal` se fuerza a `"anual"`
-internamente después de agregar.
+Si `resolucion_temporal in ("mensual", "diaria")`, `ejecutar_etapa1()` llama
+a `core/validacion/aggregation.py::agregar_a_maximos_anuales(serie,
+timestamps, mes_inicio_anio, resolucion=resolucion_temporal,
+cobertura_minima_interior=COBERTURA_MINIMA_INTERIOR[resolucion_temporal])`
+**antes** de `validar_contrato()` — no en `services/`. El resto del pipeline
+(contrato, las seis pruebas, Chow, Etapa 2) corre sobre la serie de máximos
+anuales ya agregada, exactamente como si el usuario hubiera subido una serie
+anual — `resolucion_temporal` se fuerza a `"anual"` internamente después de
+agregar. Con carga diaria el camino es **directo** diaria→anual (no
+encadenado diaria→mensual→anual) — ver DECISIÓN 065, punto 1.
 
 `mes_inicio_anio ∈ [1..12]` (default `7`, `POST /analysis/stream`) define el
 mes de inicio del año — el año calendario es el caso `mes_inicio_anio = 1`,
 no un modo aparte (ver `constraints.md`, sección "Año hidrológico —
-configurable, no una constante").
+configurable, no una constante"). La unidad de completitud de un año es de
+12 meses (`resolucion="mensual"`) o 365/366 días (`resolucion="diaria"`,
+bisiestos y el febrero del año siguiente resueltos por `pd.date_range`).
 
-**Recorte de extremos y hueco interior:** los años parciales en los dos
-extremos del registro se descartan (warning `CONTRACT_PARTIAL_YEARS_TRIMMED`,
-no bloqueante); un año incompleto en el medio del registro se descarta con
-un código distinto (`CONTRACT_INCOMPLETE_YEARS_DISCARDED`) porque significa
-otra cosa — un agujero, no un borde. El recorte ocurre **antes** del conteo
-de la regla de n: un registro que queda con menos de 10 años agregados
-bloquea con `CONTRACT_SERIES_TOO_SHORT`, igual que cualquier otra serie
-corta.
+**Recorte de extremos, hueco interior y cobertura asimétrica:** las
+unidades parciales en los dos extremos del registro se descartan (warning
+`CONTRACT_PARTIAL_YEARS_TRIMMED`, no bloqueante) — los extremos **siempre**
+exigen 100 %. Un año **interior** incompleto se descarta con
+`CONTRACT_INCOMPLETE_YEARS_DISCARDED` si su cobertura no alcanza
+`cobertura_minima_interior`; si la alcanza pero está por debajo del 100 %,
+se acepta y se emite `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (nivel normal,
+DECISIÓN 065 R2.3) con cuántas unidades faltaron. Valor provisorio
+`cobertura_minima_interior = 1.0` (estricto) mientras R0.1 espera a Facundo
+— con `1.0`, `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` no se emite todavía y el
+comportamiento es idéntico al mensual pre-DECISIÓN 065. El recorte ocurre
+**antes** del conteo de la regla de n: un registro que queda con menos de
+10 años agregados bloquea con `CONTRACT_SERIES_TOO_SHORT`, igual que
+cualquier otra serie corta.
 
 **`Etapa1Result.serie_efectiva`/`timestamps_efectivos`** — la serie y los
 timestamps sobre los que la batería estadística realmente corrió: iguales a
@@ -317,6 +328,7 @@ payload para CU-01.
   "warnings": [ "..." ],
   "datos": {
     "resolucion_original": "mensual",
+    "resolucion_serie_original": "mensual",
     "serie_efectiva": [94.71, 89.83],
     "timestamps_efectivos": [{"iso": "1980-01-01", "anio": 1980}],
     "serie_original": [12.1, 15.7],
@@ -326,6 +338,19 @@ payload para CU-01.
   }
 }
 ```
+
+**`datos.resolucion_serie_original`** (`"anual" | "mensual" | "diaria" |
+null`) — agregado en DECISIÓN 065 (punto 3): a qué resolución está
+`datos.serie_original` en **este** payload, distinto de `resolucion_original`
+(la del archivo subido). Con carga diaria el backend **no** serializa la
+serie diaria cruda (~14.600 ítems, ~637 KB — contradecía el
+dimensionamiento de DECISIÓN 058); serializa la agregación a máximos
+mensuales (`agregar_a_maximos_mensuales()`, ~480 ítems), así que
+`resolucion_serie_original == "mensual"` aunque `resolucion_original ==
+"diaria"`. `Etapa1Result.serie_original` no se toca — sigue siendo la diaria
+cruda que alimenta `_calcular_serie_calendario()`. El frontend usa este
+campo para rotular el boxplot mensual ("máximos mensuales agregados desde
+datos diarios" vs. "valores mensuales del registro").
 
 Cada `TestResult` (en `independencia`/`homogeneidad`/`tendencia`/`atipicos`)
 gana `indice_atipico` — ya existía en `core/types.py::TestResult`, nunca se
@@ -337,11 +362,17 @@ DECISIÓN 058 §5), mientras que el de cada `TestResult` individual es el que
 calculó la prueba en su propio espacio, sin traducir.
 
 `datos.serie_original`/`datos.timestamps_originales` solo viajan si
-`resolucion_original == "mensual"` — con carga anual son idénticos a los
-`_efectiva`, duplicarlos es peso muerto. `datos.serie_calendario` solo se
-puebla con carga mensual y `mes_inicio_anio != 1` — ver DECISIÓN 058 §§1-3
-para la partición completa (qué vive en `analyses` vs. en
-`analysis_results.etapa1`) y el cálculo de tamaño de payload.
+`resolucion_original in ("mensual", "diaria")` — con carga anual son
+idénticos a los `_efectiva`, duplicarlos es peso muerto. Con carga diaria
+son la agregación a máximos mensuales, no la diaria cruda (DECISIÓN 065,
+punto 3 — ver `resolucion_serie_original` arriba). `datos.serie_calendario`
+se puebla con carga mensual **o diaria** y `mes_inicio_anio != 1` — con
+carga diaria se calcula por el camino directo diaria→anual con `mes_inicio=1`
+(`_calcular_serie_calendario()` pasa `resolucion=` explícito; sin eso
+correría en modo mensual sobre datos diarios y devolvería el máximo de los
+últimos días de cada mes, silencioso y mal). Ver DECISIÓN 058 §§1-3 para la
+partición completa (qué vive en `analyses` vs. en `analysis_results.etapa1`)
+y el cálculo de tamaño de payload.
 
 **`explicacion` — agregado en el Bloque D del plan post-avance (DECISIÓN
 064).** Cada `TestResult` de las 8 pruebas de Etapa 1 (Anderson,

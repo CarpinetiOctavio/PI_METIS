@@ -811,23 +811,66 @@ Actualmente ambas distribuciones tienen `METODOS_APLICABLES = ("momentos",
 Pregunta: si Facundo confirma que deben listarse como un solo método,
 ¿corresponde eliminar "momentos" del tuple y dejar solo "mv"?
 
-## Bloque F del plan de Etapa 2 — agregación temporal (09/08/2026)
+## Agregación temporal — mensual (09/08/2026) y diaria (28/08/2026)
 
-Ver `docs/plan-etapa2-implementacion.md` §7 (F3-F6) para el detalle completo
-y `docs/decisiones/decision057.md` para la decisión de producto ya tomada
-(mes de inicio del año configurable, recorte de extremos parciales) — las
-tres preguntas de abajo NO bloquean esa parte, ya implementada. Solo
-bloquean el hueco interior y el caso `tipo_variable == "otro"`.
+Ver `docs/decisiones/decision057.md` (mensual) y `docs/decisiones/decision065.md`
+(diaria) para las decisiones de producto ya tomadas (mes de inicio del año
+configurable, recorte de extremos parciales, camino directo diaria→anual,
+regla asimétrica de cobertura). Las preguntas de abajo **no** bloquean la
+agregación en sí, ya implementada — con una excepción: **R0.2 (media diaria
+vs. pico) bloquea la exposición de la carga diaria en la UI**, no su
+implementación. `docs/decisiones/decision066.md` documenta por qué METIS no
+analiza los valores sub-anuales sin agregar (camino B).
 
-### Hueco interior — ¿se descarta siempre, o hay un umbral de meses?
+### Hueco interior — ¿se descarta siempre, o hay un umbral de meses/días? (R0.1)
 Un año del medio al que le faltan meses (una estación fuera de servicio
 seis meses en 2007) no es lo mismo que un extremo parcial — recortarlo
 partiría el registro en dos. Implementado provisoriamente: se descarta
-cualquier año interior que no tenga los 12 meses completos, con
+cualquier año interior que no tenga cobertura completa (12/12 meses, o
+365/366 días con carga diaria — DECISIÓN 065), con
 `CONTRACT_INCOMPLETE_YEARS_DISCARDED`.
 Pregunta: ¿se descarta el año incompleto del medio sin excepción, o hay un
-umbral de meses mínimos (ej. ≥ 11 meses se acepta) por debajo del cual
-recién corresponde descartarlo?
+umbral mínimo de cobertura (ej. ≥ 95 % de días, "sin huecos en la temporada
+húmeda") por debajo del cual recién corresponde descartarlo?
+**El código ya está preparado:** `agregar_a_maximos_anuales()` tiene el
+parámetro `cobertura_minima_interior` (constante `COBERTURA_MINIMA_INTERIOR`
+en `aggregation.py`), hoy en `1.0` (estricto). Bajarlo emite
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` con los días faltantes de cada año
+aceptado — el sesgo a la baja queda declarado, no oculto. Los años de los
+**extremos** siempre exigen 100 % (DECISIÓN 057), esto es solo para el
+interior.
+*Adjuntar a la respuesta el conteo de días faltantes por año de al menos un
+registro real — sin eso la respuesta es una opinión, no un criterio. El
+fixture `serie_diaria_40anios.csv` del repo NO sirve como evidencia: con
+criterio estricto da 39 años completos + 2019 recortado, sin necesidad de
+relajar nada.*
+
+### Media diaria vs. pico instantáneo — ¿qué variable trae un archivo diario? (R0.2, BLOQUEANTE DE EXPOSICIÓN)
+Un limnígrafo diario suele reportar **media diaria**, no el pico
+instantáneo del día. Si la tesis construye sus máximos anuales a partir de
+picos instantáneos, agregar la serie de máximos anuales desde medias
+diarias **subestima sistemáticamente** — y el sesgo no se corrige en
+software, hay que saber qué variable trae el archivo. Es la pregunta
+hidrológica más importante del plan de resolución diaria.
+Pregunta: ¿qué variable se espera en un archivo diario? ¿Corresponde
+advertirlo? Si la respuesta es "puede ser cualquiera de las dos", hace
+falta un campo nuevo en la configuración del análisis, persistido en
+`analyses.configuracion` junto a `mes_inicio_anio` (mismo motivo de
+auditoría: cambia el resultado, sin él el historial no es reproducible).
+**Condición de salida (DECISIÓN 065):** los PRs del plan se mergean y diaria
+funciona en el backend con tests, pero el frontend no agrega ningún selector
+ni copy que la anuncie hasta tener esta respuesta.
+
+### Diaria → anual directo, o encadenado diaria → mensual → anual (R0.3)
+Cambia el resultado cuando hay meses parcialmente faltantes: el encadenado
+descarta el mes y evalúa el año sobre 11 meses; el directo evalúa la
+cobertura del año completo de una.
+**Implementado (DECISIÓN 065, punto 1):** directo diaria → anual — preserva
+la máxima información y hace que `mes_inicio_anio` opere sobre un solo
+nivel. Con carga diaria el sistema calcula además una agregación mensual
+**solo para graficar** (payload, boxplot mensual), que NO alimenta la serie
+anual.
+Pregunta: ¿se confirma el directo, o la práctica de la tesis encadena?
 
 ### Función de agregación para tipo_variable == "otro"
 `core/validacion/aggregation.py::agregar_a_maximos_anuales()` agrega

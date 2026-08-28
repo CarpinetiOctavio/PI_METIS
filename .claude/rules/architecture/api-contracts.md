@@ -624,6 +624,13 @@ CONTRACT_SERIES_TOO_SHORT        Serie con menos de 10 datos
 CONTRACT_NO_TEMPORAL_RESOLUTION  Resolución temporal no declarada
 CONTRACT_WRONG_ORDER             Timestamps fuera de orden cronológico (DECISIÓN 030, Bloque H3)
 ```
+`CONTRACT_NO_TEMPORAL_RESOLUTION` — `parser.py::_inferir_resolucion()` la
+determina por la moda de los deltas entre timestamps: `>= 300` días →
+`"anual"`, `>= 25` → `"mensual"`, `== 1` → `"diaria"` (DECISIÓN 065), y
+cualquier otra cosa (semanal, quincenal, sub-diario truncado a 0 por
+`.days`) → `None`, que dispara este código bloqueante. `"diaria"` deja de
+bloquear desde DECISIÓN 065 y se agrega a máximos anuales igual que
+`"mensual"` (paso 0, ver abajo).
 `CONTRACT_WRONG_ORDER` es bloqueante desde el 18/08/2026 (DECISIÓN 030,
 Bloque H3 del plan post-avance) — antes era warning, ver "Contrato —
 warnings" más abajo para la nota completa de por qué se movió y qué código
@@ -647,16 +654,16 @@ CONTRACT_INCOMPLETE_YEARS_ACCEPTED   Agregación mensual/diaria (R2.3): año int
 `core/validacion/contract.py` — son resultado de
 `core/validacion/aggregation.py::agregar_a_maximos_anuales()`, que corre
 antes de `validar_contrato()` cuando `resolucion_temporal in ("mensual",
-"diaria")` (DECISIÓN 057; diaria por `docs/plan-resolucion-diaria.md` R2-R3).
+"diaria")` (DECISIÓN 057 para mensual; DECISIÓN 065 para diaria).
 Se agrupan acá por dominio (contrato de datos temporal), no por el módulo
 que los emite — mismo criterio que ya aplica el resto de esta sección.
 
-`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (R2.3) solo se emite cuando un año
-**interior** se acepta con cobertura por debajo del 100% — posible únicamente
-con `cobertura_minima_interior < 1.0`. El valor provisorio es `1.0`
-(estricto, R0.1 pendiente de Facundo), así que hoy este código **no se emite
-nunca**: el código, el catálogo, la traducción y el test entran igual para
-que habilitar el umbral sea cambiar una constante
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (DECISIÓN 065, R2.3) solo se emite
+cuando un año **interior** se acepta con cobertura por debajo del 100% —
+posible únicamente con `cobertura_minima_interior < 1.0`. El valor
+provisorio es `1.0` (estricto, R0.1 pendiente de Facundo), así que hoy este
+código **no se emite nunca**: el código, el catálogo, la traducción y el
+test entran igual para que habilitar el umbral sea cambiar una constante
 (`COBERTURA_MINIMA_INTERIOR` en `core/validacion/aggregation.py`) y nada más.
 Los años de los **extremos** siempre exigen 100% (regla asimétrica) y se
 recortan con `CONTRACT_PARTIAL_YEARS_TRIMMED`.

@@ -1140,6 +1140,60 @@ borrado en el mismo commit que esta sección.
 
 ---
 
+## Plan de resolución diaria — EN CURSO (desde 28/08/2026)
+
+`docs/plan-resolucion-diaria.md` (revisión 2) — acepta
+`resolucion_temporal == "diaria"` como formato de entrada y lo agrega a
+máximos anuales por el **camino A**, igual que mensual (DECISIÓN 057). Sale
+del [informe de viabilidad](../../docs/informe-viabilidad-resoluciones-temporales.md),
+que descartó el camino B (analizar valores sub-anuales sin agregar) por
+riesgo académico. Bloques `R1`–`R6`. Decisiones:
+[065](../../docs/decisiones/decision065.md) (el "sí" al camino A para
+diaria — directo diaria→anual, cobertura asimétrica extremos/interior,
+payload como agregación mensual, `== 1` en la inferencia) y
+[066](../../docs/decisiones/decision066.md) (el "no" al camino B —
+defendible por sí solo, no depende de que el resto se implemente).
+
+- **PR 1 — R1.1 (`parser.py`).** Mergeado ([#77](https://github.com/CarpinetiOctavio/PI_METIS/pull/77)).
+  `_inferir_resolucion()` gana `moda_dias == 1 -> "diaria"`. `== 1` a
+  propósito: semanal/quincenal y sub-diario (truncado por `.days`) quedan
+  en `None`.
+- **PR 2 — R2+R3 (`aggregation.py`, pipeline, payload).** Mergeado ([#78](https://github.com/CarpinetiOctavio/PI_METIS/pull/78)).
+  `agregar_a_maximos_anuales(..., resolucion, cobertura_minima_interior)`
+  con defaults que reproducen el camino mensual bit a bit; `_esperados()`
+  genérico (bisiestos vía `pd.date_range`); clave de agrupación con día en
+  modo diario (trampa: asigna, no maximiza); regla asimétrica de cobertura
+  + `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (nuevo, no se emite con el umbral
+  provisorio `1.0`); `agregar_a_maximos_mensuales()` para el payload
+  (opción 2 — la serie diaria cruda no llega al frontend); campo nuevo
+  `datos.resolucion_serie_original`; `_calcular_serie_calendario()` con
+  `resolucion=` explícito (fix R3.4). `PeriodoDescartado`: `meses_*` ->
+  `unidades_*`. Helpers de integración extraídos a
+  `tests/integration/_sse_helpers.py` (dedup SonarCloud).
+- **PR 3 — R4 (frontend).** Mergeado ([#79](https://github.com/CarpinetiOctavio/PI_METIS/pull/79)).
+  `api/types.ts`: `resolucion_original` gana `"diaria"`, campo nuevo
+  `resolucion_serie_original`. `Etapa1BoxplotMensualChart` /
+  `Etapa1SerieTemporalChart`: guard sobre `resolucion_serie_original`,
+  toggle habilitado para diaria, y **rótulos** distintos según el archivo
+  era mensual o diario ("máximos mensuales agregados desde datos diarios"
+  vs. "valores mensuales del registro").
+- **PR 4 — R6 (decisiones + docs).** EN CURSO. `decision065.md`,
+  `decision066.md`, y actualización de `constraints.md` /
+  `statistical-pipeline.md` / `api-contracts.md` / `pendientes-facundo.md`
+  (R0.1–R0.3) / `sprint.md` / `CLAUDE.md`.
+
+**Preguntas abiertas a Facundo** (`pendientes-facundo.md`, sección
+"Agregación temporal"): **R0.1** (umbral de cobertura del año interior —
+posición provisoria `1.0` estricto), **R0.2** (media diaria vs. pico
+instantáneo — **bloquea la exposición en la UI**, no la implementación),
+**R0.3** (directo vs. encadenado — implementado directo).
+
+**Pendiente de cierre (DoD, no lo cubre CI):** las 9 series de regresión
+dan idéntico; smoke test manual con `docs/series prueba/serie_diaria_40anios.csv`
+→ 39 años; tamaño real del evento SSE diario medido.
+
+---
+
 ## Auditoría dirigida de restricciones de dominio — Etapa 2 (EN CURSO, desde 13/08/2026)
 
 Continuación de la misma racha de "atacar pendientes acumulados" que
