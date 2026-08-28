@@ -13,17 +13,11 @@ Cubre los dos casos que R5 marca como fáciles de volver a romper:
      últimos días de cada mes — silencioso y equivocado.
 """
 
-import json
-import uuid
-
 import pandas as pd
 import pytest
 
-from metis.services import session_store
-from metis.services.analysis_service import (
-    registrar_outlier_decision,
-    stream_analysis,
-)
+from metis.services.analysis_service import registrar_outlier_decision
+from tests.integration._sse_helpers import parse_sse, run_stream
 
 
 def _csv_diario(
@@ -51,42 +45,13 @@ def _csv_diario(
     return ("\n".join(filas) + "\n").encode()
 
 
-def _parse_sse(evento: str) -> tuple[str, dict]:
-    lineas = evento.strip("\n").split("\n")
-    tipo = lineas[0].removeprefix("event: ")
-    data = json.loads(lineas[1].removeprefix("data: "))
-    return tipo, data
-
-
-@pytest.fixture(autouse=True)
-def _limpiar_sessions():
-    session_store._sessions.clear()
-    yield
-    session_store._sessions.clear()
-
-
 @pytest.mark.integration
 async def test_serie_diaria_se_agrega_y_termina_en_15_anios():
-    session_id = str(uuid.uuid4())
-
-    gen = stream_analysis(
-        content=_csv_diario(2000, 15),
-        filename="serie.csv",
-        columna_x="fecha",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-        mes_inicio_anio=1,
-    )
+    gen, _ = run_stream(_csv_diario(2000, 15), mes_inicio_anio=1)
 
     payload_result = None
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
+        tipo, data = parse_sse(evento_crudo)
         if tipo == "result_etapa1":
             payload_result = data
 
@@ -108,21 +73,8 @@ async def test_serie_diaria_se_agrega_y_termina_en_15_anios():
 
 @pytest.mark.integration
 async def test_rechazar_atipico_sobre_serie_diaria_agregada_no_rompe_el_indice():
-    session_id = str(uuid.uuid4())
-
-    gen = stream_analysis(
-        content=_csv_diario(2000, 15, anio_pico=2007),
-        filename="serie.csv",
-        columna_x="fecha",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-        mes_inicio_anio=1,
+    gen, session_id = run_stream(
+        _csv_diario(2000, 15, anio_pico=2007), mes_inicio_anio=1
     )
 
     tipos_recibidos: list[str] = []
@@ -130,7 +82,7 @@ async def test_rechazar_atipico_sobre_serie_diaria_agregada_no_rompe_el_indice()
     payload_final = None
 
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
+        tipo, data = parse_sse(evento_crudo)
         tipos_recibidos.append(tipo)
         if tipo == "outlier_detected":
             valor_atipico = data["valor_atipico"]
@@ -174,34 +126,17 @@ async def test_serie_calendario_diaria_por_camino_directo():
     # los máximos mensuales por un camino encadenado, y sobre todo no el
     # 10.0 de los últimos días de mes que devolvería la llamada sin
     # `resolucion=`.
-    session_id = str(uuid.uuid4())
-
-    gen = stream_analysis(
-        content=_csv_diario(2000, 15),
-        filename="serie.csv",
-        columna_x="fecha",
-        columna_y="caudal",
-        tipo_variable="otro",
-        modo="experto",
-        cramer_particion="default",
-        etapas=[1],
-        session_id=session_id,
-        user_id=None,
-        db=None,
-        mes_inicio_anio=7,
-    )
+    gen, _ = run_stream(_csv_diario(2000, 15), mes_inicio_anio=7)
 
     payload_result = None
     async for evento_crudo in gen:
-        tipo, data = _parse_sse(evento_crudo)
+        tipo, data = parse_sse(evento_crudo)
         if tipo == "result_etapa1":
             payload_result = data
 
     assert payload_result is not None
     serie_cal = payload_result["datos"]["serie_calendario"]
     assert serie_cal is not None
-    # Años calendario completos: 2000..2014 (el pico de julio los hace
-    # completos por sí solos solo si el año entero está — mes_inicio=1).
     valores = serie_cal["serie"]
     anios = [t["anio"] for t in serie_cal["timestamps"]]
     # Para cada año calendario presente, el valor es el pico de julio de ese
