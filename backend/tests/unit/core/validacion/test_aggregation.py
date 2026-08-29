@@ -405,3 +405,56 @@ def test_maximos_mensuales_ignora_faltantes_y_ordena_cronologicamente():
 
     assert ts_mensual == ["2001-01-01", "2001-02-01"]
     assert serie_mensual == [1.0, 9.0]
+
+
+# ──────────── colisión de clave: timestamp duplicado (DECISIÓN 067) ──────────
+# CONTRACT_DUPLICATE_TIMESTAMPS es warning NO bloqueante, así que la
+# agregación recibe series con timestamps repetidos. La regla es conservar el
+# MAYOR, nunca el último del archivo — antes de DECISIÓN 067,
+# agregar_a_maximos_anuales() asignaba y el pico real del año podía
+# desaparecer sin que nada lo señalara.
+
+
+@pytest.mark.unit
+def test_diaria_timestamp_duplicado_conserva_el_maximo_no_el_ultimo():
+    timestamps = _fechas_diarias("2001-01-01", "2001-12-31")
+    serie = [1.0] * len(timestamps)
+    serie[timestamps.index("2001-06-15")] = 999.0  # pico real del año
+    # el archivo repite el 15/06 al final, con un valor mucho menor
+    timestamps = [*timestamps, "2001-06-15"]
+    serie = [*serie, 0.5]
+
+    resultado = agregar_a_maximos_anuales(
+        serie, timestamps, mes_inicio=1, resolucion="diaria"
+    )
+
+    assert resultado.serie == [999.0]
+    assert resultado.timestamps == [2001]
+    # el duplicado no rompe la completitud: sigue siendo el mismo día
+    assert resultado.periodos_descartados == []
+
+
+@pytest.mark.unit
+def test_mensual_timestamp_duplicado_conserva_el_maximo_no_el_ultimo():
+    timestamps = _fechas_mensuales(2001, 1, 12)
+    serie = [1.0] * 12
+    serie[5] = 777.0  # pico real: junio
+    timestamps = [*timestamps, "2001-06-01"]
+    serie = [*serie, 2.0]
+
+    resultado = agregar_a_maximos_anuales(serie, timestamps, mes_inicio=1)
+
+    assert resultado.serie == [777.0]
+    assert resultado.periodos_descartados == []
+
+
+@pytest.mark.unit
+def test_maximos_mensuales_duplicado_conserva_el_maximo():
+    # misma regla en la otra función del módulo — las dos comparten
+    # _acumular_maximo() justamente para no volver a divergir
+    serie_mensual, ts_mensual = agregar_a_maximos_mensuales(
+        [500.0, 10.0], ["2001-01-15", "2001-01-15"]
+    )
+
+    assert ts_mensual == ["2001-01-01"]
+    assert serie_mensual == [500.0]

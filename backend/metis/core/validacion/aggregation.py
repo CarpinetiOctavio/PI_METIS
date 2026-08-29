@@ -126,10 +126,17 @@ def _clave_unidad(fecha, resolucion: str) -> tuple[int, int, int]:
     """Clave de agrupación de una fecha dentro de su período — siempre una
     3-tupla (año, mes, día).
 
-    CRÍTICO para diaria: sin el día en la clave, el diccionario de
-    `agregar_a_maximos_anuales()` se quedaría con el ÚLTIMO día de cada mes
-    y descartaría el resto en silencio (asigna, no maximiza) — un máximo
-    anual plausible pero incorrecto.
+    CRÍTICO para diaria, por la CUENTA DE COMPLETITUD. Sin el día en la
+    clave, un período diario tendría a lo sumo 12 entradas en vez de
+    365/366: `cobertura = 12/366` y el año se descartaría entero como
+    incompleto. El máximo en sí ya no estaría en riesgo desde DECISIÓN 067
+    (`_acumular_maximo()` conserva el mayor ante colisión, así que colapsar
+    los días de un mes daría el máximo mensual y el máximo del año seguiría
+    siendo correcto) — pero antes de ese fix la asignación directa se
+    quedaba con el último día de cada mes y producía un máximo anual
+    plausible y equivocado. Se conserva el registro de las dos razones: la
+    clave tiene que llevar el día por la completitud, y esa era además la
+    segunda línea de defensa del máximo.
 
     En modo mensual el día se fija en 0 (nunca un día real): dos filas del
     mismo mes con fechas distintas colapsan a la misma clave, igual que
@@ -137,6 +144,28 @@ def _clave_unidad(fecha, resolucion: str) -> tuple[int, int, int]:
     """
     dia = fecha.day if resolucion == "diaria" else 0
     return (fecha.year, fecha.month, dia)
+
+
+def _acumular_maximo(unidades: dict, clave: tuple, valor) -> None:
+    """Registra `valor` bajo `clave` conservando el MAYOR ante colisión.
+
+    Una colisión son dos filas del archivo que caen en la misma unidad de
+    agregación. El caso real es un timestamp duplicado — y
+    `CONTRACT_DUPLICATE_TIMESTAMPS` es warning NO bloqueante, así que el
+    pipeline llega hasta acá con duplicados sin detenerse.
+
+    DECISIÓN 067: hasta 28/08/2026 esto era una asignación directa
+    (`unidades[clave] = float(valor)`) dentro de
+    `agregar_a_maximos_anuales()` — ganaba la ÚLTIMA fila del archivo, no la
+    mayor, así que un duplicado posterior de menor valor borraba el pico
+    real del año sin que nada lo señalara. `agregar_a_maximos_mensuales()`
+    sí maximizaba: dos funciones de este mismo módulo, las dos llamadas
+    "máximos", con semántica opuesta ante el mismo caso. La acumulación vive
+    acá, en una sola función, para que no puedan volver a divergir.
+    """
+    v = float(valor)
+    if clave not in unidades or v > unidades[clave]:
+        unidades[clave] = v
 
 
 def _motivo_descarte(periodo: int, periodo_inicio: int, periodo_fin: int) -> str:
@@ -184,6 +213,10 @@ def agregar_a_maximos_anuales(
     no estuviera presente — rompe la completitud del período exactamente
     igual que una unidad ausente del registro.
 
+    Dos filas que caen en la misma unidad (timestamp duplicado, warning no
+    bloqueante) se resuelven conservando el MAYOR — ver `_acumular_maximo()`
+    y DECISIÓN 067.
+
     Devuelve serie=[] si no queda ningún período completo — el pipeline lo
     trata como cualquier serie corta (CONTRACT_SERIES_TOO_SHORT si queda
     bajo el mínimo de 10).
@@ -196,7 +229,7 @@ def agregar_a_maximos_anuales(
             continue
         periodo = _periodo_de(fecha.year, fecha.month, mes_inicio)
         clave = _clave_unidad(fecha, resolucion)
-        por_periodo.setdefault(periodo, {})[clave] = float(valor)
+        _acumular_maximo(por_periodo.setdefault(periodo, {}), clave, valor)
 
     if not por_periodo:
         return AgregacionResult(serie=[], timestamps=[])
@@ -278,10 +311,7 @@ def agregar_a_maximos_mensuales(
     for fecha, valor in zip(fechas, serie):
         if not es_numerico(valor):
             continue
-        clave = (fecha.year, fecha.month)
-        v = float(valor)
-        if clave not in por_mes or v > por_mes[clave]:
-            por_mes[clave] = v
+        _acumular_maximo(por_mes, (fecha.year, fecha.month), valor)
     claves = sorted(por_mes)
     return (
         [por_mes[k] for k in claves],

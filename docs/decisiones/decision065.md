@@ -72,7 +72,32 @@ cobertura_minima_interior)`):
 *"el máximo de un año parcial está sesgado a la baja por construcción"*, y
 en un extremo la parcialidad es la regla, no la excepción: el registro
 empieza o termina ahí. En el interior, un hueco del 2 % es una falla de
-instrumentación sobre un año que sí se midió entero. **Con esta regla,
+instrumentación sobre un año que sí se midió entero.
+
+**Precisión agregada el 28/08/2026** (hallazgo F4 de
+[`docs/revision-resolucion-diaria.md`](../revision-resolucion-diaria.md); se
+agrega, no reemplaza al párrafo de arriba). El argumento tal como estaba
+escrito es de **frecuencia** — "en un extremo la parcialidad es la regla" —
+y por sí solo no distingue los dos casos: el sesgo a la baja del máximo de
+un año incompleto es **idéntico** en un extremo y en el interior. El
+argumento que sí los distingue es **epistémico**:
+
+- En un **extremo**, los días que faltan **no existen**: el registro empieza
+  o termina ahí, y la parcialidad es un borde de los datos disponibles, no
+  una pérdida. No hay un año completo del cual falte una parte — hay un año
+  que nunca se midió entero.
+- En el **interior**, los días que faltan **existieron y no se registraron**:
+  hubo un año hidrológico completo, y pudo haber ocurrido en el hueco una
+  crecida que no quedó medida. Aceptar un interior al 95 % es apostar,
+  explícitamente, a que el pico cayó en el 95 % observado — una apuesta que
+  se puede hacer, y que `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` deja registrada.
+  En un extremo esa apuesta ni siquiera tiene objeto.
+
+La decisión y el código **no cambian**: sigue siendo 100 % en los extremos y
+`cobertura_minima_interior` en el interior. Lo que cambia es la
+justificación que se lleva a la defensa, porque la asimetría es exactamente
+el tipo de regla que un tribunal pregunta y la respuesta de frecuencia es
+más débil que el diseño. **Con esta regla,
 DECISIÓN 057 queda intacta y no hay que reabrirla** — este plan solo agrega
 una tolerancia nueva donde antes no había ninguna regla escrita. Un umbral
 único para todos los años habría desactivado DECISIÓN 057 justo en los
