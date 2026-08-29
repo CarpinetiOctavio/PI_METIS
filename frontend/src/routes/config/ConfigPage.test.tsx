@@ -373,13 +373,16 @@ describe("ConfigPage", () => {
 
   // Bloque F5 del plan de Etapa 2 (DECISIÓN 057) — selector de mes de inicio.
 
-  it("deshabilita el selector de mes cuando la columna X elegida es un año puro", async () => {
+  // Sube un CSV cuya columna X ("fecha") tiene la muestra dada — la
+  // heurística de preselección elige esa columna por patrón, no por nombre,
+  // así que sirve tanto para año puro como para fecha diaria/mensual.
+  async function subirColumnaXCon(muestraX: string[]) {
     stubFetch({
       preview: {
         ok: true,
         body: {
           columnas: [
-            { nombre: "anio", indice: 0, muestra: ["1980", "1981", "1982"] },
+            { nombre: "fecha", indice: 0, muestra: muestraX },
             { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
           ],
           filas: 40,
@@ -388,44 +391,25 @@ describe("ConfigPage", () => {
     });
     renderConfigPage();
     await waitForReady();
-
-    const file = new File(["anio,caudal\n1980,94.71\n"], "serie.csv", {
+    const file = new File(["fecha,caudal\n1980-01-01,94.71\n"], "serie.csv", {
       type: "text/csv",
     });
     fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
       target: { files: [file] },
     });
-
-    // La heurística preselecciona "anio" (año puro) en Columna X.
     await screen.findByRole("combobox", { name: "Columna X" });
+  }
+
+  it("deshabilita el selector de mes cuando la columna X elegida es un año puro", async () => {
+    await subirColumnaXCon(["1980", "1981", "1982"]);
+
     expect(screen.getByLabelText("Mes de inicio del año")).toBeDisabled();
     expect(screen.getByText(/ya son años/)).toBeInTheDocument();
   });
 
   it("habilita el selector de mes cuando la columna X elegida es una fecha completa", async () => {
-    stubFetch({
-      preview: {
-        ok: true,
-        body: {
-          columnas: [
-            { nombre: "fecha", indice: 0, muestra: ["1980-01-15", "1980-02-15"] },
-            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83"] },
-          ],
-          filas: 40,
-        },
-      },
-    });
-    renderConfigPage();
-    await waitForReady();
+    await subirColumnaXCon(["1980-01-15", "1980-02-15"]);
 
-    const file = new File(["fecha,caudal\n1980-01-15,94.71\n"], "serie.csv", {
-      type: "text/csv",
-    });
-    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
-      target: { files: [file] },
-    });
-
-    await screen.findByRole("combobox", { name: "Columna X" });
     expect(screen.getByLabelText("Mes de inicio del año")).toBeEnabled();
   });
 
@@ -452,32 +436,8 @@ describe("ConfigPage", () => {
 
   // PR 2.5 (DECISIÓN 065 / R0.2) — selector "pico vs. media" para series diarias.
 
-  async function subirFechaCon(muestraFecha: string[]) {
-    stubFetch({
-      preview: {
-        ok: true,
-        body: {
-          columnas: [
-            { nombre: "fecha", indice: 0, muestra: muestraFecha },
-            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
-          ],
-          filas: 40,
-        },
-      },
-    });
-    renderConfigPage();
-    await waitForReady();
-    const file = new File(["fecha,caudal\n1980-01-01,94.71\n"], "serie.csv", {
-      type: "text/csv",
-    });
-    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
-      target: { files: [file] },
-    });
-    await screen.findByRole("combobox", { name: "Columna X" });
-  }
-
   it("muestra el selector de tipo de dato diario solo si la columna X parece diaria", async () => {
-    await subirFechaCon(["1980-01-01", "1980-01-02", "1980-01-03"]);
+    await subirColumnaXCon(["1980-01-01", "1980-01-02", "1980-01-03"]);
 
     expect(screen.getByText("Tipo de dato diario")).toBeInTheDocument();
     expect(
@@ -486,13 +446,13 @@ describe("ConfigPage", () => {
   });
 
   it("no muestra el selector diario para una columna mensual", async () => {
-    await subirFechaCon(["1980-01-15", "1980-02-15"]);
+    await subirColumnaXCon(["1980-01-15", "1980-02-15"]);
 
     expect(screen.queryByText("Tipo de dato diario")).not.toBeInTheDocument();
   });
 
   it("manda variable_diaria='media' cuando el usuario elige 'Medias diarias'", async () => {
-    await subirFechaCon(["1980-01-01", "1980-01-02", "1980-01-03"]);
+    await subirColumnaXCon(["1980-01-01", "1980-01-02", "1980-01-03"]);
 
     fireEvent.click(screen.getByRole("button", { name: "Medias diarias" }));
     fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
