@@ -394,3 +394,32 @@ def test_recorte_mensual_que_deja_n_menor_a_10_es_bloqueante():
     assert resultado.contract.bloqueante is True
     assert resultado.contract.codigo_error == "CONTRACT_SERIES_TOO_SHORT"
     assert resultado.nivel_confianza == "rechazado"
+
+
+@pytest.mark.unit
+def test_carga_diaria_el_recorte_deja_n_menor_a_10_y_bloquea():
+    # R5 (docs/plan-resolucion-diaria.md) — espejo diario del test mensual de
+    # recorte: el conteo de la regla de n opera sobre la serie YA agregada,
+    # así que un registro que pierde años por recorte de extremos puede
+    # quedar bajo el piso y bloquear como cualquier serie corta. No es una
+    # excepción nueva del camino diario, es la regla existente aplicada
+    # después del paso 0.
+    #
+    # 2000-04-01 → 2010-09-30 con mes_inicio_anio=1: 2000 y 2010 son años
+    # parciales (se recortan) y quedan 2001..2009 = 9 años completos < 10.
+    timestamps = _fechas_diarias("2000-04-01", "2010-09-30")
+    serie = [float(i % 53) for i in range(len(timestamps))]
+
+    resultado = ejecutar_etapa1(
+        serie,
+        "otro",
+        resolucion_temporal="diaria",
+        timestamps=timestamps,
+        mes_inicio_anio=1,
+    )
+
+    assert resultado.contract.bloqueante is True
+    assert resultado.contract.codigo_error == "CONTRACT_SERIES_TOO_SHORT"
+    assert resultado.nivel_confianza == "rechazado"
+    # el recorte se reporta igual, aunque el pipeline se haya detenido
+    assert "CONTRACT_PARTIAL_YEARS_TRIMMED" in [w.codigo for w in resultado.warnings]

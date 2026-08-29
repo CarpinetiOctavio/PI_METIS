@@ -1188,9 +1188,35 @@ posición provisoria `1.0` estricto), **R0.2** (media diaria vs. pico
 instantáneo — **bloquea la exposición en la UI**, no la implementación),
 **R0.3** (directo vs. encadenado — implementado directo).
 
-**Pendiente de cierre (DoD, no lo cubre CI):** las 9 series de regresión
-dan idéntico; smoke test manual con `docs/series prueba/serie_diaria_40anios.csv`
-→ 39 años; tamaño real del evento SSE diario medido.
+- **PR 5 — fix de F1 + cierre de la revisión.** `fix/agregacion-colision-timestamp-duplicado`.
+  [DECISIÓN 067](../../docs/decisiones/decision067.md): `_acumular_maximo()` compartido por
+  `agregar_a_maximos_anuales()` y `agregar_a_maximos_mensuales()` — ante colisión de clave
+  (timestamp duplicado, warning no bloqueante) se conserva el **máximo**, no la última fila del
+  archivo. Antes, un duplicado posterior de menor valor borraba el pico real del año sin ningún
+  rastro. Bug preexistente de DECISIÓN 057, también para carga mensual. Cierra además F3 (test
+  de `n < 10` con carga diaria) y F4 (precisión epistémica de la asimetría de cobertura, addendum
+  a DECISIÓN 065).
+
+**DoD cerrado (28/08/2026, verificado en `docs/revision-resolucion-diaria.md`):**
+
+- **Las 9 series de regresión dan salida byte a byte idéntica** al baseline — comparado con
+  `git worktree` sobre volcado de Etapa 1 completa + Etapa 2 con todas las combinaciones
+  distribución/método/status/EEA (14.156 bytes, `cmp` limpio). Verificado dos veces: contra
+  `45ca826` (antes del plan) y contra `origin/staging` (antes del fix de F1).
+- **Smoke test con `docs/series prueba/serie_diaria_40anios.csv`:** 39 años, recorte correcto de
+  1979 y 2019. Confirma el manejo de bisiestos cruzando el borde de año — con `mes_inicio_anio=7`
+  el período 1979 espera 366 días por febrero de **1980**, no de 1979.
+- **Tamaño real del evento SSE diario: 35,5 KB** (bloque `datos` ~31 KB) — 18× menos que los
+  637 KB de la serie diaria cruda, y por debajo del peor caso mensual que DECISIÓN 058
+  dimensionó en ~59 KB. La opción 2 de R3.3 funcionó como se proyectó.
+
+**Revisión de código independiente:** `docs/revision-resolucion-diaria.md` — cinco hallazgos,
+cuatro cerrados, uno de housekeeping (`git worktree prune` desde Windows). Registra además que
+R1.2 del plan partía de una premisa equivocada, y que la implementación hizo bien en no seguirla
+(ver `docs/pendientes-tecnicos.md`, `_espaciado_regular()` inerte para toda serie agregada).
+
+**Queda pendiente de trazabilidad:** el PR 2.5 (`variable_diaria`) no dejó decisión numerada ni
+addendum a DECISIÓN 065 — conviene cerrarlo antes de la defensa.
 
 ---
 

@@ -845,6 +845,26 @@ fixture `serie_diaria_40anios.csv` del repo NO sirve como evidencia: con
 criterio estricto da 39 años completos + 2019 recortado, sin necesidad de
 relajar nada.*
 
+**Qué hacer con el código según la respuesta (agregado 28/08/2026, hallazgo
+F2 de `docs/revision-resolucion-diaria.md`).** Con `COBERTURA_MINIMA_INTERIOR`
+en `1.0` para las dos resoluciones, hoy **nunca se ejecutan** en producción:
+`PeriodoAceptadoConHueco`, `AgregacionResult.periodos_incompletos_aceptados`,
+la rama de `agregar_a_maximos_anuales()` que la puebla, el warning
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` y su string en `errors.es.ts` — unas 40
+líneas cableadas y probadas (tres tests voltean el umbral) esperando esta
+respuesta. Para que no queden como código muerto permanente por olvido:
+
+- Si la respuesta es **"hay umbral"** → bajar la constante para la resolución
+  que corresponda. El resto ya funciona, es un cambio de una línea.
+- Si la respuesta es **"estricto, sin excepción"** → **borrar esas 40 líneas
+  y el código de error**, no dejarlas. Se retira `CONTRACT_INCOMPLETE_YEARS_ACCEPTED`
+  del catálogo en las tres direcciones (regla de DECISIÓN 038), con el mismo
+  tratamiento que se le dio a `CONTRACT_CRAMER_PARTICION_UNSUPPORTED` cuando
+  quedó sin emisor.
+
+Cerrar esta pregunta sin ejecutar una de las dos ramas deja el módulo con una
+funcionalidad que no existe y que igual hay que mantener.
+
 ### Media diaria vs. pico instantáneo — ¿qué variable trae un archivo diario? (R0.2, BLOQUEANTE DE EXPOSICIÓN)
 Un limnígrafo diario suele reportar **media diaria**, no el pico
 instantáneo del día. Si la tesis construye sus máximos anuales a partir de

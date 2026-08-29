@@ -193,3 +193,4 @@ situ.
 | [064](decision064.md) | Paso a paso docente: `core/` calcula la fórmula sustituida (`TestResult.explicacion`), el frontend solo renderiza e interpreta | 18/08/2026 | Aplicada (backend + frontend) |
 | [065](decision065.md) | Resolución diaria como formato de entrada — camino A, directo diaria→anual, cobertura asimétrica extremos/interior, payload como agregación mensual | 28/08/2026 | Decidida y aplicada (backend + frontend) |
 | [066](decision066.md) | El dominio de análisis de METIS es la serie de máximos anuales — el "no" al camino B (analizar valores sub-anuales sin agregar) | 28/08/2026 | Decidida (decisión de alcance, sin implementación) |
+| [067](decision067.md) | Colisión de clave en la agregación: se conserva el máximo, no la última fila del archivo — `_acumular_maximo()` compartido | 28/08/2026 | Decidida y aplicada (backend) |
