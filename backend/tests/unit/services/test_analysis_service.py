@@ -213,6 +213,7 @@ async def test_persistir_guarda_nombre_archivo_en_configuracion():
         modo="experto",
         cramer_particion="default",
         mes_inicio_anio=7,
+        variable_diaria="pico",
         etapas=[1],
         result=_etapa1_result_minimo(),
         etapa2_result=None,
@@ -230,3 +231,4 @@ async def test_persistir_guarda_nombre_archivo_en_configuracion():
     # no reemplaza el dict.
     assert analysis_guardado.configuracion["cramer_particion"] == "default"
     assert analysis_guardado.configuracion["mes_inicio_anio"] == 7
+    assert analysis_guardado.configuracion["variable_diaria"] == "pico"

@@ -381,6 +381,17 @@ describe("useAnalysisStream", () => {
     expect(body.get("cramer_particion")).toBe("default");
   });
 
+  it("manda variable_diaria — el valor del form, o 'pico' por default", async () => {
+    mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useAnalysisStream());
+
+    act(() => result.current.start(makeForm()));
+    expect((lastOptions().body as FormData).get("variable_diaria")).toBe("pico");
+
+    act(() => result.current.start({ ...makeForm(), variable_diaria: "media" }));
+    expect((lastOptions().body as FormData).get("variable_diaria")).toBe("media");
+  });
+
   it("manda un objeto cramer_particion como JSON string en el mismo campo", async () => {
     mockedFetchEventSource.mockImplementation(() => new Promise(() => {}));
     const { result } = renderHook(() => useAnalysisStream());

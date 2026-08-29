@@ -82,6 +82,7 @@ async def test_stream_analysis_archivo_sobre_el_limite_da_400_antes_de_tocar_bd(
             modo="experto",
             cramer_particion="default",
             mes_inicio_anio=7,
+            variable_diaria="pico",
             db=None,
             current_user=None,
         )

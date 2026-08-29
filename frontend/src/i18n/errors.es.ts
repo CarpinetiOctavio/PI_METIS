@@ -34,6 +34,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "La partición de Cramer no es válida — revisá que los dos porcentajes estén entre 1 y 100 y que el primero sea mayor que el segundo.",
   CONTRACT_ETAPAS_INVALID: "El alcance del análisis pedido no es válido.",
   CONTRACT_MES_INICIO_INVALID: "El mes de inicio del año debe estar entre 1 y 12.",
+  CONTRACT_VARIABLE_DIARIA_INVALID:
+    "El tipo de dato de la serie diaria no es válido — debe ser pico o media diaria.",
 
   // Contrato — warnings
   CONTRACT_LENGTH_WARNING:
@@ -50,6 +52,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "Se descartó al menos un año incompleto dentro del registro al agregar a máximos anuales.",
   CONTRACT_INCOMPLETE_YEARS_ACCEPTED:
     "Se aceptó al menos un año con cobertura incompleta al agregar a máximos anuales — su máximo puede estar sesgado a la baja.",
+  CONTRACT_DAILY_SERIES_AGGREGATED:
+    "La serie diaria se agregó a máximos anuales. Si la columna son medias diarias (no picos), los máximos y los eventos de diseño pueden subestimar el pico instantáneo real.",
 
   // Etapa 1 — pruebas
   TEST_CRITICAL_INDEPENDENCE:
