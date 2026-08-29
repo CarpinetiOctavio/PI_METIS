@@ -452,13 +452,13 @@ describe("ConfigPage", () => {
 
   // PR 2.5 (DECISIÓN 065 / R0.2) — selector "pico vs. media" para series diarias.
 
-  it("muestra el selector de tipo de dato diario solo si la columna X parece diaria", async () => {
+  async function subirFechaCon(muestraFecha: string[]) {
     stubFetch({
       preview: {
         ok: true,
         body: {
           columnas: [
-            { nombre: "fecha", indice: 0, muestra: ["1980-01-01", "1980-01-02", "1980-01-03"] },
+            { nombre: "fecha", indice: 0, muestra: muestraFecha },
             { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
           ],
           filas: 40,
@@ -467,15 +467,18 @@ describe("ConfigPage", () => {
     });
     renderConfigPage();
     await waitForReady();
-
     const file = new File(["fecha,caudal\n1980-01-01,94.71\n"], "serie.csv", {
       type: "text/csv",
     });
     fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
       target: { files: [file] },
     });
-
     await screen.findByRole("combobox", { name: "Columna X" });
+  }
+
+  it("muestra el selector de tipo de dato diario solo si la columna X parece diaria", async () => {
+    await subirFechaCon(["1980-01-01", "1980-01-02", "1980-01-03"]);
+
     expect(screen.getByText("Tipo de dato diario")).toBeInTheDocument();
     expect(
       screen.getByText(/pueden quedar por debajo del pico instantáneo real/),
@@ -483,61 +486,20 @@ describe("ConfigPage", () => {
   });
 
   it("no muestra el selector diario para una columna mensual", async () => {
-    stubFetch({
-      preview: {
-        ok: true,
-        body: {
-          columnas: [
-            { nombre: "fecha", indice: 0, muestra: ["1980-01-15", "1980-02-15"] },
-            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83"] },
-          ],
-          filas: 40,
-        },
-      },
-    });
-    renderConfigPage();
-    await waitForReady();
+    await subirFechaCon(["1980-01-15", "1980-02-15"]);
 
-    const file = new File(["fecha,caudal\n1980-01-15,94.71\n"], "serie.csv", {
-      type: "text/csv",
-    });
-    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
-      target: { files: [file] },
-    });
-
-    await screen.findByRole("combobox", { name: "Columna X" });
     expect(screen.queryByText("Tipo de dato diario")).not.toBeInTheDocument();
   });
 
   it("manda variable_diaria='media' cuando el usuario elige 'Medias diarias'", async () => {
-    stubFetch({
-      preview: {
-        ok: true,
-        body: {
-          columnas: [
-            { nombre: "fecha", indice: 0, muestra: ["1980-01-01", "1980-01-02", "1980-01-03"] },
-            { nombre: "caudal", indice: 1, muestra: ["94.71", "89.83", "105.13"] },
-          ],
-          filas: 40,
-        },
-      },
-    });
-    renderConfigPage();
-    await waitForReady();
-
-    const file = new File(["fecha,caudal\n1980-01-01,94.71\n"], "serie.csv", {
-      type: "text/csv",
-    });
-    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
-      target: { files: [file] },
-    });
-    await screen.findByText("Tipo de dato diario");
+    await subirFechaCon(["1980-01-01", "1980-01-02", "1980-01-03"]);
 
     fireEvent.click(screen.getByRole("button", { name: "Medias diarias" }));
     fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
 
-    expect(await screen.findByTestId("stream-state")).toBeInTheDocument();
-    const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
+    const form = JSON.parse(
+      (await screen.findByTestId("stream-state")).textContent ?? "null",
+    );
     expect(form.variable_diaria).toBe("media");
   });
 
