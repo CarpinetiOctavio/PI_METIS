@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from metis.core.pipeline import ejecutar_etapa1
@@ -14,6 +15,10 @@ def _fechas_mensuales(anio_inicio: int, mes_inicio: int, cantidad: int) -> list[
             mes = 1
             anio += 1
     return fechas
+
+
+def _fechas_diarias(inicio: str, fin: str) -> list[str]:
+    return [d.strftime("%Y-%m-%d") for d in pd.date_range(inicio, fin, freq="D")]
 
 
 # Serie que produce nivel_confianza="validado" — todas las pruebas aprueban.
@@ -301,6 +306,73 @@ def test_serie_mensual_con_recorte_emite_warning_partial_years_trimmed():
     assert len(resultado.serie_efectiva) == 11
     codigos = [w.codigo for w in resultado.warnings]
     assert "CONTRACT_PARTIAL_YEARS_TRIMMED" in codigos
+
+
+@pytest.mark.unit
+def test_carga_diaria_emite_daily_series_aggregated_informativo_por_default():
+    # PR 2.5 (R0.2) — con carga diaria y variable_diaria por default ("pico"),
+    # se emite CONTRACT_DAILY_SERIES_AGGREGATED con texto informativo, sin
+    # advertencia de sesgo.
+    timestamps = _fechas_diarias("2000-01-01", "2011-12-31")  # 12 años calendario
+    serie = [float(i % 37) for i in range(len(timestamps))]
+
+    resultado = ejecutar_etapa1(
+        serie,
+        "otro",
+        resolucion_temporal="diaria",
+        timestamps=timestamps,
+        mes_inicio_anio=1,
+    )
+
+    assert resultado.contract.bloqueante is False
+    assert len(resultado.serie_efectiva) == 12
+    daily = next(
+        w for w in resultado.warnings if w.codigo == "CONTRACT_DAILY_SERIES_AGGREGATED"
+    )
+    assert daily.nivel == "normal"
+    assert "picos o máximos diarios" in daily.descripcion
+    assert "subestimar" not in daily.descripcion
+
+
+@pytest.mark.unit
+def test_carga_diaria_media_advierte_sesgo_a_la_baja():
+    # variable_diaria="media" -> el mismo código, texto que advierte que los
+    # máximos anuales y los eventos de diseño subestiman el pico instantáneo.
+    timestamps = _fechas_diarias("2000-01-01", "2011-12-31")
+    serie = [float(i % 37) for i in range(len(timestamps))]
+
+    resultado = ejecutar_etapa1(
+        serie,
+        "otro",
+        resolucion_temporal="diaria",
+        timestamps=timestamps,
+        mes_inicio_anio=1,
+        variable_diaria="media",
+    )
+
+    daily = next(
+        w for w in resultado.warnings if w.codigo == "CONTRACT_DAILY_SERIES_AGGREGATED"
+    )
+    assert "MEDIAS diarias" in daily.descripcion
+    assert "subestimar el pico instantáneo real" in daily.descripcion
+
+
+@pytest.mark.unit
+def test_carga_mensual_no_emite_daily_series_aggregated():
+    timestamps = _fechas_mensuales(2000, 1, 12 * 12)
+    serie = [float(i) for i in range(len(timestamps))]
+
+    resultado = ejecutar_etapa1(
+        serie,
+        "otro",
+        resolucion_temporal="mensual",
+        timestamps=timestamps,
+        mes_inicio_anio=1,
+        variable_diaria="media",  # se pasa igual, pero la serie no es diaria
+    )
+
+    codigos = [w.codigo for w in resultado.warnings]
+    assert "CONTRACT_DAILY_SERIES_AGGREGATED" not in codigos
 
 
 @pytest.mark.unit

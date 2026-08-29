@@ -18,7 +18,9 @@ from fastapi.responses import StreamingResponse
 from metis.api.v1.analysis import stream_analysis
 
 
-def _archivo(content: bytes = b"anio,caudal\n1980,94.71\n", filename: str = "serie.csv") -> UploadFile:
+def _archivo(
+    content: bytes = b"anio,caudal\n1980,94.71\n", filename: str = "serie.csv"
+) -> UploadFile:
     return UploadFile(file=io.BytesIO(content), filename=filename)
 
 
@@ -36,6 +38,7 @@ async def test_etapas_uno_dos_no_lanza():
         modo="experto",
         cramer_particion="default",
         mes_inicio_anio=7,
+        variable_diaria="pico",
         db=None,
         current_user=None,
     )
@@ -56,6 +59,7 @@ async def test_etapas_invalida_da_400_no_500():
             modo="experto",
             cramer_particion="default",
             mes_inicio_anio=7,
+            variable_diaria="pico",
             db=None,
             current_user=None,
         )
@@ -76,6 +80,7 @@ async def test_etapas_vacia_da_400():
             modo="experto",
             cramer_particion="default",
             mes_inicio_anio=7,
+            variable_diaria="pico",
             db=None,
             current_user=None,
         )
@@ -102,6 +107,7 @@ async def test_etapas_invalida_se_valida_antes_de_leer_el_archivo():
             modo="experto",
             cramer_particion="default",
             mes_inicio_anio=7,
+            variable_diaria="pico",
             db=None,
             current_user=None,
         )

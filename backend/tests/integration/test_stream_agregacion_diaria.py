@@ -116,6 +116,44 @@ async def test_rechazar_atipico_sobre_serie_diaria_agregada_no_rompe_el_indice()
     anios_efectivos = [t["anio"] for t in datos["timestamps_efectivos"]]
     assert anios_efectivos == [a for a in range(2000, 2015) if a != 2007]
 
+    # PR 2.5 — el warning de "serie diaria agregada" es del archivo subido,
+    # no de la segunda pasada de Etapa 1: tiene que sobrevivir al rechazo
+    # del atípico (la segunda ejecución corre con resolucion_temporal="anual"
+    # y no lo re-emite; services/ lo arrastra desde la primera).
+    codigos = [w["codigo"] for w in payload_final["warnings"]]
+    assert "CONTRACT_DAILY_SERIES_AGGREGATED" in codigos
+
+
+@pytest.mark.integration
+async def test_variable_diaria_media_advierte_sesgo_en_el_warning():
+    # variable_diaria="media" -> el warning CONTRACT_DAILY_SERIES_AGGREGATED
+    # avisa que los máximos anuales pueden subestimar el pico instantáneo.
+    gen, _ = run_stream(
+        _csv_diario(2000, 15), mes_inicio_anio=1, variable_diaria="media"
+    )
+
+    payload = None
+    async for evento_crudo in gen:
+        tipo, data = parse_sse(evento_crudo)
+        if tipo == "outlier_detected":
+            # aceptar para no filtrar ningún año y llegar a result_etapa1
+            await registrar_outlier_decision(
+                session_id=data["session_id"],
+                decision="aceptar",
+                dato_atipico=data["valor_atipico"],
+                db=None,
+            )
+        elif tipo == "result_etapa1":
+            payload = data
+
+    assert payload is not None
+    daily = next(
+        w
+        for w in payload["warnings"]
+        if w["codigo"] == "CONTRACT_DAILY_SERIES_AGGREGATED"
+    )
+    assert "subestimar el pico instantáneo real" in daily["descripcion"]
+
 
 @pytest.mark.integration
 async def test_serie_calendario_diaria_por_camino_directo():

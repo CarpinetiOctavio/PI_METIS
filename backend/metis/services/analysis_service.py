@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from metis.core.etapa2.design_events import calcular_eventos_diseno
 from metis.core.etapa2.types import Etapa2Result, EventoDiseno
 from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
+from metis.core.pipeline.pipeline_etapa1 import CODIGOS_WARNING_AGREGACION
 from metis.core.pipeline.pipeline_etapa2 import _DISTRIBUCIONES
 from metis.core.types import Etapa1Result
 from metis.core.utils import es_numerico, filtrar_numericos
@@ -518,6 +519,7 @@ async def stream_analysis(
     user_id: uuid.UUID | None,
     db: AsyncSession,
     mes_inicio_anio: int = 7,
+    variable_diaria: str = "pico",
 ) -> AsyncGenerator[str, None]:
     # DECISIÓN 054 — etapas ya llega validado y parseado desde el borde del
     # endpoint. Con etapas == [1] todo lo de abajo se comporta exactamente
@@ -543,6 +545,7 @@ async def stream_analysis(
             timestamps=parsed.timestamps,
             cramer_particion=cramer_particion,
             mes_inicio_anio=mes_inicio_anio,
+            variable_diaria=variable_diaria,
         )
 
         for evento in _emitir_resultado(result, iteracion=1):
@@ -631,6 +634,7 @@ async def stream_analysis(
                     # el usuario haya elegido otro mes (DECISIÓN 057) — mismo
                     # hallazgo V2.
                     mes_inicio_anio=mes_inicio_anio,
+                    variable_diaria=variable_diaria,
                 )
                 # PR 3 (DECISIÓN 058) — esta segunda ejecución corre sobre
                 # serie_filtrada (ya agregada), así que no tiene forma de
@@ -644,6 +648,21 @@ async def stream_analysis(
                 result_final.serie_original = result.serie_original
                 result_final.timestamps_originales = result.timestamps_originales
                 result_final.resolucion_original = result.resolucion_original
+                # PR 2.5 — la segunda ejecución fuerza resolucion_temporal="anual",
+                # así que NO re-emite los warnings del paso 0 (recorte de
+                # extremos, hueco interior, serie diaria). Esos describen el
+                # archivo subido, no esta pasada: se arrastran desde la
+                # primera ejecución, igual que serie_original. Sin esto,
+                # rechazar un atípico borraba CONTRACT_PARTIAL_YEARS_TRIMMED /
+                # CONTRACT_DAILY_SERIES_AGGREGATED del resultado final.
+                warnings_agregacion_previos = [
+                    w for w in result.warnings if w.codigo in CODIGOS_WARNING_AGREGACION
+                ]
+                result_final.warnings = warnings_agregacion_previos + [
+                    w
+                    for w in result_final.warnings
+                    if w.codigo not in CODIGOS_WARNING_AGREGACION
+                ]
                 serie_final = serie_filtrada
 
                 for evento in _emitir_resultado(result_final, iteracion=2):
@@ -804,6 +823,7 @@ async def stream_analysis(
                 modo=modo,
                 cramer_particion=cramer_particion,
                 mes_inicio_anio=mes_inicio_anio,
+                variable_diaria=variable_diaria,
                 etapas=etapas,
                 result=result_final,
                 etapa2_result=etapa2_result,
@@ -829,6 +849,7 @@ async def _persistir(
     modo: str,
     cramer_particion: dict | str,
     mes_inicio_anio: int,
+    variable_diaria: str,
     etapas: list[int],
     result: Etapa1Result,
     etapa2_result: Etapa2Result | None,
@@ -858,9 +879,16 @@ async def _persistir(
         # migración que este fix no amerita (DECISIÓN, ver PR). Vive en
         # configuracion (JSONB, ya existe) igual que cramer_particion y
         # mes_inicio_anio.
+        # variable_diaria (PR 2.5, R0.2) — mismo criterio que mes_inicio_anio:
+        # dos análisis del mismo archivo diario declarado como "pico" vs.
+        # "media" no dan resultados distintos hoy (el max() es el mismo),
+        # pero sí un warning distinto y una interpretación distinta de los
+        # eventos de diseño — el historial tiene que registrar cuál se
+        # eligió. Se guarda siempre, aunque la resolución no sea diaria.
         configuracion={
             "cramer_particion": cramer_particion,
             "mes_inicio_anio": mes_inicio_anio,
+            "variable_diaria": variable_diaria,
             "nombre_archivo": filename,
         },
     )

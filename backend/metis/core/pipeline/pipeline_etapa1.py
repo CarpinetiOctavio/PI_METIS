@@ -27,8 +27,24 @@ from metis.core.validacion.aggregation import (
 from metis.core.validacion.contract import timestamps_desordenados, validar_contrato
 
 
+# Códigos que emite _warnings_de_agregacion() — describen el archivo subido
+# (recorte de extremos, hueco interior, serie diaria), no la pasada de
+# Etapa 1 en sí. Cuando el usuario rechaza un atípico de Chow hay una
+# segunda ejecución de ejecutar_etapa1() sobre la serie ya agregada
+# (resolucion_temporal="anual", sin paso 0) — services/ arrastra estos
+# warnings desde la primera ejecución, igual que serie_original.
+CODIGOS_WARNING_AGREGACION = frozenset(
+    {
+        "CONTRACT_PARTIAL_YEARS_TRIMMED",
+        "CONTRACT_INCOMPLETE_YEARS_DISCARDED",
+        "CONTRACT_INCOMPLETE_YEARS_ACCEPTED",
+        "CONTRACT_DAILY_SERIES_AGGREGATED",
+    }
+)
+
+
 def _warnings_de_agregacion(
-    agregacion: AgregacionResult, resolucion: str
+    agregacion: AgregacionResult, resolucion: str, variable_diaria: str = "pico"
 ) -> list[WarningItem]:
     # R3.2 (docs/plan-resolucion-diaria.md) — la unidad de completitud
     # depende de la resolución de entrada. Los códigos de error NO cambian:
@@ -102,6 +118,33 @@ def _warnings_de_agregacion(
             )
         )
 
+    # PR 2.5 (R0.2) — con carga diaria, dejar constancia de que los máximos
+    # anuales son un derivado del registro diario, y qué contiene ese
+    # registro. METIS no puede saberlo solo: `variable_diaria` lo declara el
+    # usuario. Si son medias diarias, el máximo anual (y los eventos de
+    # diseño de Etapa 2) subestiman el pico instantáneo real — sesgo que NO
+    # se corrige en software (ver docs/decisiones/decision066.md).
+    if resolucion == "diaria":
+        if variable_diaria == "media":
+            descripcion = (
+                "La serie se agregó a máximos anuales desde datos diarios "
+                "declarados como MEDIAS diarias: los máximos anuales y los "
+                "eventos de diseño pueden subestimar el pico instantáneo real. "
+                "METIS no corrige este sesgo — depende de la fuente del registro."
+            )
+        else:
+            descripcion = (
+                "La serie se agregó a máximos anuales desde datos diarios, "
+                "declarados como picos o máximos diarios."
+            )
+        warnings.append(
+            WarningItem(
+                codigo="CONTRACT_DAILY_SERIES_AGGREGATED",
+                nivel="normal",
+                descripcion=descripcion,
+            )
+        )
+
     return warnings
 
 
@@ -112,6 +155,7 @@ def ejecutar_etapa1(
     timestamps: list | None = None,
     cramer_particion: dict | str = "default",
     mes_inicio_anio: int = 7,
+    variable_diaria: str = "pico",
 ) -> Etapa1Result:
 
     # Capturados ANTES del paso 0 — PR 3 del plan de cierre de pendientes
@@ -192,7 +236,9 @@ def ejecutar_etapa1(
         )
         serie = agregacion.serie
         timestamps = agregacion.timestamps
-        warnings_agregacion = _warnings_de_agregacion(agregacion, resolucion_temporal)
+        warnings_agregacion = _warnings_de_agregacion(
+            agregacion, resolucion_temporal, variable_diaria
+        )
         resolucion_temporal = "anual"  # ya agregada — el resto del pipeline
         # la trata como cualquier serie anual, sin saber que hubo agregación
 

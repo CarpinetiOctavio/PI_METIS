@@ -58,6 +58,20 @@ function esNumerica(muestra: string[]): boolean {
   return muestra.every((v) => v.trim() !== "" && !Number.isNaN(Number(v)));
 }
 
+// PR 2.5 (DECISIÓN 065 / R0.2) — muestra el selector de "pico vs. media"
+// solo si la columna X parece una serie diaria: los dos primeros valores
+// (filas consecutivas del archivo) separados por ~1 día. Heurística de
+// arranque, no una validación — el backend infiere la resolución de verdad;
+// si acá se equivoca, el selector no aparece y se manda el default "pico".
+function pareceDiaria(muestra: string[]): boolean {
+  if (muestra.length < 2 || esAnioPuro(muestra)) return false;
+  const t0 = Date.parse(muestra[0]);
+  const t1 = Date.parse(muestra[1]);
+  if (Number.isNaN(t0) || Number.isNaN(t1)) return false;
+  const dias = Math.abs(t1 - t0) / 86_400_000;
+  return dias >= 0.5 && dias <= 2;
+}
+
 function preseleccionar(columnas: ColumnaPreview[]): { x: string; y: string } {
   const colX = columnas.find((c) => pareceFechaOAnio(c.muestra));
   const colY = columnas.find((c) => c !== colX && esNumerica(c.muestra));
@@ -145,6 +159,9 @@ export function ConfigPage() {
   // resolución ya es anual, así el frontend no necesita adivinar nada que
   // el backend no pueda re-verificar.
   const [mesInicioAnio, setMesInicioAnio] = useState(7);
+  // PR 2.5 (DECISIÓN 065 / R0.2) — default "pico", igual que el backend. Se
+  // manda siempre; solo tiene efecto con carga diaria.
+  const [variableDiaria, setVariableDiaria] = useState<"pico" | "media">("pico");
   const [error, setError] = useState<string | null>(null);
   // Bloque E3 (pasada 5) — movida por onFocus/onBlur de los <select>, no por
   // su valor: resalta en ColumnPreviewPanel qué columna está eligiendo cada
@@ -173,6 +190,9 @@ export function ConfigPage() {
       ? preview.columnas.find((c) => String(c.indice) === columnaX)
       : undefined;
   const serieYaEsAnual = columnaXInfo ? esAnioPuro(columnaXInfo.muestra) : false;
+  const serieParecediaria = columnaXInfo
+    ? pareceDiaria(columnaXInfo.muestra)
+    : false;
 
   async function handleFileChange(file: File | null) {
     setArchivo(file);
@@ -240,6 +260,7 @@ export function ConfigPage() {
       cramer_particion: cramerParticion.value,
       etapas,
       mes_inicio_anio: mesInicioAnio,
+      variable_diaria: variableDiaria,
     };
     // El form (incluido el File) viaja como router state — no persiste a un
     // refresh, pero StreamPage lo consume una sola vez al montar, así que no
@@ -468,9 +489,44 @@ export function ConfigPage() {
             <p className="fn">
               {serieYaEsAnual
                 ? "La columna X ya son años — este criterio no aplica, la serie no se agrega."
-                : "Define cómo se agrupan los datos en años antes de analizar la serie (solo tiene efecto si la serie es mensual)."}
+                : "Define cómo se agrupan los datos en años antes de analizar la serie (solo tiene efecto si la serie es mensual o diaria)."}
             </p>
           </div>
+          {serieParecediaria && (
+            <fieldset className="field">
+              <legend>Tipo de dato diario</legend>
+              <div className="seg">
+                <button
+                  type="button"
+                  className={variableDiaria === "pico" ? "on" : ""}
+                  aria-pressed={variableDiaria === "pico"}
+                  onClick={() => setVariableDiaria("pico")}
+                >
+                  Picos diarios
+                </button>
+                <button
+                  type="button"
+                  className={variableDiaria === "media" ? "on" : ""}
+                  aria-pressed={variableDiaria === "media"}
+                  onClick={() => setVariableDiaria("media")}
+                >
+                  Medias diarias
+                </button>
+              </div>
+              {/* PR 2.5 (R0.2) — METIS agrega la serie diaria a máximos
+                  anuales con max(): el número es el mismo sea pico o media.
+                  Lo que cambia es la lectura del resultado, así que se
+                  advierte, no se corrige. */}
+              <p className="fn">
+                METIS construye los máximos anuales tomando el mayor valor
+                diario de cada año. Con <b>picos diarios</b> eso aproxima el
+                pico anual real. Con <b>medias diarias</b> los máximos
+                anuales (y los eventos de diseño de Etapa 2) pueden quedar
+                por debajo del pico instantáneo real — METIS lo advierte,
+                pero no lo corrige.
+              </p>
+            </fieldset>
+          )}
           <fieldset className="field">
             <legend>Tipo de variable</legend>
             <div className="seg">

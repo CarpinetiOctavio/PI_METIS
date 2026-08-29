@@ -74,6 +74,29 @@ def _validar_mes_inicio(mes_inicio_anio: int) -> int:
     return mes_inicio_anio
 
 
+_VARIABLE_DIARIA_VALIDAS = ("pico", "media")
+_VARIABLE_DIARIA_INVALIDA = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "CONTRACT_VARIABLE_DIARIA_INVALID",
+            "mensaje": "variable_diaria debe ser 'pico' o 'media'.",
+        }
+    },
+)
+
+
+def _validar_variable_diaria(variable_diaria: str) -> str:
+    """PR 2.5 (docs/plan-resolucion-diaria.md, R0.2) — declara qué contiene
+    la columna de una serie diaria: 'pico' (picos o máximos diarios) o
+    'media' (medias diarias). Solo tiene efecto cuando la resolución
+    inferida es 'diaria'; para el resto se acepta y se ignora, mismo
+    criterio que mes_inicio_anio."""
+    if variable_diaria not in _VARIABLE_DIARIA_VALIDAS:
+        raise _VARIABLE_DIARIA_INVALIDA
+    return variable_diaria
+
+
 def _cramer_particion_invalida(mensaje: str) -> HTTPException:
     return HTTPException(
         status_code=400,
@@ -186,6 +209,7 @@ async def stream_analysis(
     modo: str = Form("experto"),
     cramer_particion: str = Form("default"),
     mes_inicio_anio: int = Form(7),
+    variable_diaria: str = Form("pico"),
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
@@ -198,6 +222,7 @@ async def stream_analysis(
 
     etapas_parseadas = _parsear_etapas(etapas)
     mes_inicio_valido = _validar_mes_inicio(mes_inicio_anio)
+    variable_diaria_valida = _validar_variable_diaria(variable_diaria)
     content = await _leer_archivo_limitado(archivo)
     session_id = str(uuid.uuid4())
 
@@ -215,6 +240,7 @@ async def stream_analysis(
             user_id=current_user.id if current_user else None,
             db=db,
             mes_inicio_anio=mes_inicio_valido,
+            variable_diaria=variable_diaria_valida,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
