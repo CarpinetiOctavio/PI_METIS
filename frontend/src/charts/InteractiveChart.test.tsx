@@ -91,6 +91,38 @@ describe("InteractiveChart", () => {
     expect(markerGroup?.querySelectorAll("circle")).toHaveLength(2);
   });
 
+  it("F4 — highlight() marks exactly one point bigger and with --acc-hi, defaults untouched", () => {
+    const base = series();
+    const withHighlight: ChartSeries[] = [
+      base[0],
+      { ...base[1], highlight: (p) => p.x === 70 },
+    ];
+    const { container } = render(
+      <InteractiveChart
+        series={withHighlight}
+        ariaLabel="Gráfico de prueba"
+        xLabel="T"
+        yLabel="Valor"
+      />,
+    );
+
+    const circles = Array.from(
+      container.querySelectorAll('g[data-series="marcadores"] circle'),
+    ) as SVGCircleElement[];
+    const resaltados = circles.filter(
+      (c) => c.getAttribute("data-highlighted") === "true",
+    );
+    expect(resaltados).toHaveLength(1);
+
+    const normal = circles.find((c) => !c.hasAttribute("data-highlighted"))!;
+    expect(Number(resaltados[0].getAttribute("r"))).toBeGreaterThan(
+      Number(normal.getAttribute("r")),
+    );
+    // el punto normal conserva su colorVar; el resaltado usa --acc-hi
+    expect(normal.style.fill).toBe("var(--acc2)");
+    expect(resaltados[0].style.fill).toBe("var(--acc-hi)");
+  });
+
   it("renders a dashed line series with stroke-dasharray, solid ones without", () => {
     const { container } = render(
       <InteractiveChart

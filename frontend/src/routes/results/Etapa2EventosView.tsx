@@ -80,6 +80,7 @@ export function Etapa2EventosView({
         <Etapa2EventosChart
           eventosDiseno={eventos.eventos_diseno}
           curvaAjuste={eventos.curva_ajuste}
+          periodoResaltado={seleccionado}
         />
       </div>
     </div>

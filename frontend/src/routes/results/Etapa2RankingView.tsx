@@ -153,54 +153,62 @@ function DistribucionCard({
         {expandido ? "Ocultar métodos" : `Ver los ${item.metodos.length} métodos`}
       </button>
       {expandido && (
-        <table className="t" style={{ marginTop: 8 }}>
-          <thead>
-            <tr>
-              <th>Método</th>
-              <th>EEA</th>
-              <th>Estado</th>
-              {onElegir && <th />}
-            </tr>
-          </thead>
-          <tbody>
-            {/* Métodos que fallaron (no_converge/no_aplicable/disabled_zeros)
-                se listan siempre, nunca ocultos — son la mitad de lo que un
-                alumno tiene que ver (la tesis misma reporta combinaciones
-                que no convergen). */}
-            {item.metodos.map((m) => (
-              <tr key={m.metodo}>
-                <td>
-                  {m.metodo}
-                  {m.metodo === metodoElegido && (
-                    <span className="fn" style={{ marginLeft: 6 }}>
-                      (elegido en el análisis)
-                    </span>
-                  )}
-                </td>
-                <td className="num">{formatEeaConPct(m.eea, mediaSerie)}</td>
-                <td>
-                  <span className={`pill ${m.status === "ok" ? "ok" : "wait"}`}>
-                    {STATUS_LABEL[m.status]}
-                  </span>
-                </td>
-                {onElegir && (
+        <div className="etapa2-metodos-scroll">
+          <table className="t">
+            <thead>
+              <tr>
+                <th>Método</th>
+                <th>EEA</th>
+                <th>Estado</th>
+                {onElegir && <th />}
+              </tr>
+            </thead>
+            <tbody>
+              {/* Métodos que fallaron (no_converge/no_aplicable/disabled_zeros)
+                  se listan siempre, nunca ocultos — son la mitad de lo que un
+                  alumno tiene que ver (la tesis misma reporta combinaciones
+                  que no convergen). */}
+              {item.metodos.map((m) => (
+                <tr key={m.metodo}>
                   <td>
-                    {m.status === "ok" && (
-                      <button
-                        type="button"
-                        className="b b-sec"
-                        disabled={resolving}
-                        onClick={() => onElegir(item.distribucion, m.metodo)}
-                      >
-                        {textoAccion.porMetodo}
-                      </button>
+                    {m.metodo}
+                    {m.metodo === metodoElegido && (
+                      <span className="fn" style={{ marginLeft: 6 }}>
+                        (elegido en el análisis)
+                      </span>
                     )}
                   </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <td className="num">{formatEeaConPct(m.eea, mediaSerie)}</td>
+                  <td>
+                    {m.status === "ok" ? (
+                      <span
+                        className="etapa2-estado-ok"
+                        role="img"
+                        aria-label={STATUS_LABEL.ok}
+                      />
+                    ) : (
+                      <span className="pill wait">{STATUS_LABEL[m.status]}</span>
+                    )}
+                  </td>
+                  {onElegir && (
+                    <td>
+                      {m.status === "ok" && (
+                        <button
+                          type="button"
+                          className="b b-sec"
+                          disabled={resolving}
+                          onClick={() => onElegir(item.distribucion, m.metodo)}
+                        >
+                          {textoAccion.porMetodo}
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </SpotlightCard>
   );

@@ -4,13 +4,57 @@
 
 .etapa2-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  /* F1/F2 (feedback Facundo 02/09) — a 220px cada card caía cerca del
+     mínimo en pantalla ancha y la tabla de 4 columnas de métodos no
+     entraba; .spotlight-card { overflow: hidden } la recortaba sin scroll.
+     320px da 3–4 columnas en un monitor típico (la grilla que Facundo va a
+     mirar proyectada) en vez de 5–6. */
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 12px;
   margin-top: 8px;
 }
 
 .etapa2-card.top {
   border-color: var(--acc);
+}
+
+/* F1/F2 — el desborde de la tabla de métodos se resuelve DENTRO de la card
+   con scroll propio, no sacando overflow:hidden de .spotlight-card (sostiene
+   el recorte del glow radial). En el caso normal casi nunca se activa: los
+   overrides de abajo bajan la presión de ancho de la tabla. */
+.etapa2-metodos-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  margin-top: 8px;
+}
+
+/* Override local — NO tocar table.t global (lo usan Etapa 1, historial y
+   descriptivos). */
+.etapa2-metodos-scroll table.t {
+  margin-top: 0;
+}
+
+.etapa2-metodos-scroll table.t th,
+.etapa2-metodos-scroll table.t td {
+  padding: 6px 8px;
+}
+
+.etapa2-metodos-scroll .b.b-sec {
+  white-space: nowrap;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Columna "Estado" — para status "ok" el texto "ajustado" no agrega nada
+   que la fila no diga ya (tiene EEA y botón). Un punto de color saca ancho
+   de la columna que menos información lleva; el pill queda solo para los
+   estados que sí importan (no_converge / no_aplicable / disabled_zeros). */
+.etapa2-estado-ok {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
 }
 
 /* F4 (fix pre-reunión) — .banner es flex de una sola línea (icono + texto);

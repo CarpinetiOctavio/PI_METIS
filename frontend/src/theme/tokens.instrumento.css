@@ -32,6 +32,9 @@
   --acc-soft: #d4eef3;
   --on-acc: #ffffff;
   --acc2: #4d7c0f;
+  /* F4 (feedback Facundo 02/09) — resalte del marcador del período de
+     retorno seleccionado. Ver tokens.ts para el porqué del violeta. */
+  --acc-hi: #7c3aed;
   --glow: #7dd3e8;
   --ok: #0e6d3e;
   --warn: #825713;
@@ -57,6 +60,8 @@
   --acc-soft: #0c2a33;
   --on-acc: #04252b;
   --acc2: #c6f84e;
+  /* F4 — ver bloque light. */
+  --acc-hi: #a78bfa;
   --glow: #22d3ee;
   --ok: #35d07a;
   --warn: #f4b740;
