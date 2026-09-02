@@ -1,8 +1,9 @@
 import type { Etapa1Result, Modo, TestResultDetail, WarningNivel } from "../../api/types";
 import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
-import { formatearFormula, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
+import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
 import { errorText } from "../../i18n/errors.es";
+import { BlockMath } from "../../components/BlockMath";
 import { CountUp } from "../../components/CountUp";
 import { Etapa1SerieTemporalChart } from "./Etapa1SerieTemporalChart";
 import { Etapa1ChowChart } from "./Etapa1ChowChart";
@@ -123,8 +124,9 @@ function VeredictoPill({
 }
 
 // Un test por bloque: encabezado (prueba + veredicto), fórmula sustituida
-// (HTML plano, DECISIÓN 064) y su interpretación en castellano. Sin
-// `explicacion` (rama no_ejecutada) solo queda el encabezado + el motivo.
+// en pasos LaTeX renderizados con KaTeX (F3, addendum a DECISIÓN 064) y su
+// interpretación en castellano. Sin `explicacion` (rama no_ejecutada) solo
+// queda el encabezado + el motivo.
 function GroupExplicacion({ items }: Readonly<{ items: TestResultDetail[] }>) {
   if (items.length === 0) {
     return <p className="fn">No ejecutada.</p>;
@@ -132,17 +134,17 @@ function GroupExplicacion({ items }: Readonly<{ items: TestResultDetail[] }>) {
   return (
     <div className="stack results-explicacion">
       {items.map((t) => {
-        const formula = formatearFormula(t);
+        const pasos = formatearFormulaLatex(t);
         const interpretacion = interpretar(t);
         return (
           <div key={t.prueba} className="results-test">
             <div className="results-test__header">
               <b>{t.prueba}</b> <VeredictoPill veredicto={t.veredicto} warningNivel={t.warning_nivel} />
             </div>
-            {formula ? (
+            {pasos ? (
               <div className="results-test__formula">
-                {formula.map((linea) => (
-                  <code key={linea}>{linea}</code>
+                {pasos.map((paso) => (
+                  <BlockMath key={paso.latex} math={paso.latex} fallback={paso.fallback} />
                 ))}
                 {t.explicacion && (
                   <span className="fn results-test__ecuacion">Ec. {t.explicacion.ecuacion}</span>

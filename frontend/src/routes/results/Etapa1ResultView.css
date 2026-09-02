@@ -72,11 +72,34 @@
 .results-test__formula {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-bottom: 4px;
+  gap: 6px;
+  margin-bottom: 6px;
+  overflow-x: auto;
 }
 
 .results-test__formula code {
+  font-size: 12px;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+/* F3 (feedback Facundo 02/09, addendum DECISIÓN 064) — KaTeX en bloque, un
+   paso por línea (simbólica → sustitución → resultado). KaTeX centra y
+   deja 1em de margen a .katex-display por default; para una sustitución
+   paso a paso conviene alinear a la izquierda y juntar los pasos. */
+.results-test__math .katex-display {
+  margin: 0;
+  text-align: left;
+}
+
+.results-test__math .katex {
+  font-size: 1.05em;
+  color: var(--ink);
+}
+
+/* Fallback si KaTeX no puede parsear el LaTeX — el texto plano de
+   formatearFormula(), mismo aspecto que tenía antes de este cambio. */
+.results-test__formula-fallback {
   font-size: 12px;
   color: var(--ink);
   word-break: break-word;
