@@ -41,20 +41,24 @@ def test_gen_pareto_mc_converge_serie_facundo(serie_facundo):
 
 
 @pytest.mark.unit
-@pytest.mark.skip(
-    reason="Formula IV-153/154/155 (Gen. Pareto MC) no verificable con certeza "
-    "contra el rasterizado de la tesis sin el Excel original de Facundo. El "
-    "sistema tiene una raíz espuria cerca de eps=0 que pasa los guards actuales "
-    "(sigma>0, _DENOM_GUARD) por cancelación catastrófica — ver ENMIENDA "
-    "20/07/2026 en decision010.md. No se elige un criterio de selección de "
-    "raíz alternativo sin confirmar la fórmula primero."
-)
 def test_gen_pareto_mc_q100_serie_facundo(serie_facundo):
+    # Ya no skip — DECISIÓN 068 (04/09/2026) corrigió _iv153(): la ecuación
+    # vieja era la condición de optimalidad de otro modelo (OLS libre), no
+    # la de la tesis, y con ella desaparece la raíz espuria cerca de eps=0
+    # que motivaba el skip (ENMIENDA 20/07/2026 de decision010.md).
+    # Test de plausibilidad, no de regresión exacta: Gen. Pareto MC nunca
+    # aparece como método testigo en ninguna de las 9 estaciones de la
+    # tesis, así que no hay un q100 de referencia contra el cual comparar
+    # (ver DECISIÓN 068, validación por consistencia interna). epsilon fija
+    # el valor verificado sobre serie_facundo como regresión.
     arr = np.array(serie_facundo)
     res = gen_pareto.ajustar(arr, "mc")
     assert res.status == STATUS_OK
+    assert res.parametros["sigma"] > 0
+    assert res.parametros["mu"] < float(np.min(arr))
+    assert res.parametros["epsilon"] == pytest.approx(0.9697, abs=1e-3)
     q100 = gen_pareto.cuantil(0.99, res.parametros)
-    assert q100 == pytest.approx(90.6333, abs=1e-1)
+    assert q100 > float(np.max(arr))
 
 
 # ── Cuantil ε→0 ───────────────────────────────────────────────────────────────
