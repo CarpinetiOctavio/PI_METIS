@@ -88,3 +88,24 @@ convertirlo en una suposición no verificada más.
 que se confirme con Facundo la formulación exacta de MC para Gen. Pareto.
 `test_gen_pareto_mc_converge_serie_facundo` (solo verifica STATUS_OK, sin
 valor numérico) sigue activo — no depende de cuál raíz se elija.
+
+### ADDENDUM — 4 de Septiembre de 2026 — superado para esta ecuación puntual
+
+[DECISIÓN 068](decision068.md) confirmó que `_iv153()` implementaba una
+ecuación estructuralmente distinta de IV-153 tal como aparece en la
+tesis — la raíz espuria documentada arriba era del sistema *anterior*
+(demostrado algebraicamente ser la condición de optimalidad de una
+regresión OLS libre, no la de la tesis), no una propiedad general de
+"la fórmula MC de Gen. Pareto" en abstracto. Con la fórmula corregida,
+verificado sobre las 9 estaciones reales y una batería de 189 series
+sintéticas adversariales: ninguna produce ambigüedad de raíz (siempre 0
+o 1 raíz válida, nunca 2+). El diagnóstico de la ENMIENDA 20/07/2026
+sigue siendo válido como historia de la ecuación vieja — no se retracta
+nada de lo escrito arriba — pero deja de aplicar como bloqueo: el
+criterio de selección de raíz ("primera que pasa los guards") no
+necesitó cambios para la ecuación nueva, verificado desde cero (no
+asumido) en el mismo cierre de DECISIÓN 068.
+
+`test_gen_pareto_mc_q100_serie_facundo` dejó de estar en `skip` — ver
+DECISIÓN 068 para la validación por consistencia interna adoptada en su
+lugar (sin número de tesis disponible para MC de Gen. Pareto).
