@@ -61,6 +61,32 @@ def test_gen_pareto_mc_q100_serie_facundo(serie_facundo):
     assert q100 > float(np.max(arr))
 
 
+# ── Selección de raíz — sin ambigüedad en batería sintética (Fase 4, DECISIÓN 068) ──
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("seed", range(10))
+def test_gen_pareto_mc_sin_ambiguedad_bateria_sintetica(seed):
+    # "No asumir que el problema de raíces múltiples de la ecuación vieja
+    # (ENMIENDA 20/07/2026, decision010.md) existe o no existe con la
+    # nueva — probarlo de cero" (Fase 4 del cierre de IV-153). Corrido por
+    # fuera de este test contra 189 series sintéticas (lognormal, Pareto,
+    # uniforme, exponencial, con outlier extremo, casi constante,
+    # n=7..100): 0 casos con más de una raíz válida (denom_sigma lejos del
+    # guard, sigma>0, punto fijo de µ converge), 10 con NO_CONVERGE
+    # (esperado, sin ninguna raíz válida) — ver DECISIÓN 068. Este test
+    # fija una muestra determinística chica de esa batería como regresión:
+    # alcanza para detectar si un cambio futuro reintroduce ambigüedad, sin
+    # repetir las 189 en cada corrida de CI.
+    rng = np.random.default_rng(seed)
+    serie = rng.lognormal(mean=3.0, sigma=1.5, size=30)
+    res = gen_pareto.ajustar(serie, "mc")
+    assert res.status in (STATUS_OK, STATUS_NO_CONVERGE)
+    if res.status == STATUS_OK:
+        assert res.parametros["sigma"] > 0
+        assert res.parametros["mu"] < float(np.min(serie))
+
+
 # ── Cuantil ε→0 ───────────────────────────────────────────────────────────────
 
 
