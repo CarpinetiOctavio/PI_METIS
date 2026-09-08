@@ -41,20 +41,50 @@ def test_gen_pareto_mc_converge_serie_facundo(serie_facundo):
 
 
 @pytest.mark.unit
-@pytest.mark.skip(
-    reason="Formula IV-153/154/155 (Gen. Pareto MC) no verificable con certeza "
-    "contra el rasterizado de la tesis sin el Excel original de Facundo. El "
-    "sistema tiene una raíz espuria cerca de eps=0 que pasa los guards actuales "
-    "(sigma>0, _DENOM_GUARD) por cancelación catastrófica — ver ENMIENDA "
-    "20/07/2026 en decision010.md. No se elige un criterio de selección de "
-    "raíz alternativo sin confirmar la fórmula primero."
-)
 def test_gen_pareto_mc_q100_serie_facundo(serie_facundo):
+    # Ya no skip — DECISIÓN 068 (04/09/2026) corrigió _iv153(): la ecuación
+    # vieja era la condición de optimalidad de otro modelo (OLS libre), no
+    # la de la tesis, y con ella desaparece la raíz espuria cerca de eps=0
+    # que motivaba el skip (ENMIENDA 20/07/2026 de decision010.md).
+    # Test de plausibilidad, no de regresión exacta: Gen. Pareto MC nunca
+    # aparece como método testigo en ninguna de las 9 estaciones de la
+    # tesis, así que no hay un q100 de referencia contra el cual comparar
+    # (ver DECISIÓN 068, validación por consistencia interna). epsilon fija
+    # el valor verificado sobre serie_facundo como regresión.
     arr = np.array(serie_facundo)
     res = gen_pareto.ajustar(arr, "mc")
     assert res.status == STATUS_OK
+    assert res.parametros["sigma"] > 0
+    assert res.parametros["mu"] < float(np.min(arr))
+    assert res.parametros["epsilon"] == pytest.approx(0.9697, abs=1e-3)
     q100 = gen_pareto.cuantil(0.99, res.parametros)
-    assert q100 == pytest.approx(90.6333, abs=1e-1)
+    assert q100 > float(np.max(arr))
+
+
+# ── Selección de raíz — sin ambigüedad en batería sintética (Fase 4, DECISIÓN 068) ──
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("seed", range(10))
+def test_gen_pareto_mc_sin_ambiguedad_bateria_sintetica(seed):
+    # "No asumir que el problema de raíces múltiples de la ecuación vieja
+    # (ENMIENDA 20/07/2026, decision010.md) existe o no existe con la
+    # nueva — probarlo de cero" (Fase 4 del cierre de IV-153). Corrido por
+    # fuera de este test contra 189 series sintéticas (lognormal, Pareto,
+    # uniforme, exponencial, con outlier extremo, casi constante,
+    # n=7..100): 0 casos con más de una raíz válida (denom_sigma lejos del
+    # guard, sigma>0, punto fijo de µ converge), 10 con NO_CONVERGE
+    # (esperado, sin ninguna raíz válida) — ver DECISIÓN 068. Este test
+    # fija una muestra determinística chica de esa batería como regresión:
+    # alcanza para detectar si un cambio futuro reintroduce ambigüedad, sin
+    # repetir las 189 en cada corrida de CI.
+    rng = np.random.default_rng(seed)
+    serie = rng.lognormal(mean=3.0, sigma=1.5, size=30)
+    res = gen_pareto.ajustar(serie, "mc")
+    assert res.status in (STATUS_OK, STATUS_NO_CONVERGE)
+    if res.status == STATUS_OK:
+        assert res.parametros["sigma"] > 0
+        assert res.parametros["mu"] < float(np.min(serie))
 
 
 # ── Cuantil ε→0 ───────────────────────────────────────────────────────────────

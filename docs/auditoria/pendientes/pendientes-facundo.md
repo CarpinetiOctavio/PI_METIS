@@ -547,6 +547,25 @@ verificación de baja confianza a **pendiente de implementación**:
 falta reflejar la fórmula confirmada en `gen_pareto.py`, no falta
 verificarla contra la fuente.
 
+**Actualización 04/09/2026 — CERRADO.** La fórmula confirmada por Carlos
+(07/08/2026) resultó estructuralmente distinta de la implementada: trae
+un factor ε² externo y depende directamente de z1/x1 (primer valor
+ordenado de z y de x), ninguno presente en `_iv153()` hasta esta fecha.
+No era "falta reflejar la fórmula", era una ecuación distinta —
+verificada por rasterización directa de la tesis (p.74, 600 DPI) +
+transcripción manual independiente, coincidentes término por término,
+cruzada entre Chat y Code. `_iv153()` corregida — ver
+[DECISIÓN 068](../../decisiones/decision068.md) para la fórmula, la
+genealogía completa de por qué la ecuación vieja no era arbitraria
+(resultó ser la condición de optimalidad de una regresión OLS libre
+legítima, solo que de otro modelo), y la validación por consistencia
+interna adoptada sobre las 9 estaciones reales (no hay MC de Gen. Pareto
+como método testigo en ninguna, así que no existe número de tesis
+contra el cual comparar directamente). No se escala como pregunta
+adicional a Facundo — la fórmula ya está confirmada por Carlos, y la
+pregunta de qué modelo de mínimos cuadrados exacto instancia la tesis
+para este caso no se puede formular como Sí/No.
+
 ---
 
 ### Gamma 3p MV — Causa D extrema en est_08, cambia el #1 del ranking

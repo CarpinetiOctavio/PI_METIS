@@ -25,6 +25,9 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-147 a IV-174
     yi = ln(1-fi)             (IV-164)
     IV-153: condición de optimalidad en ε — sistema trascendental porque
       zi depende de ε. Resolver con scan+brentq sobre IV-153 completo.
+      Fórmula corregida 04/09/2026 tras verificación contra rasterización
+      directa de la tesis — ver DECISIÓN 068 (docs/decisiones/
+      decision068.md) para la ecuación anterior y su genealogía.
     σ̂ = ε·(x̄-xz̄+x1·(z̄-1)) / (z̄2-z̄-z1·(z̄-1))   (IV-154)
     µ̂ = x1 - (ε/µ_k)·(1-z1)   (IV-155, punto fijo en µ — µ en denom es iteración anterior)
     Valor inicial ε y µ: g≥0 → 0.3, g<0 → 0.6          (IV-166)
@@ -215,14 +218,36 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             return z1, zbar, z2bar, xzbar, zybar, z2ybar, xyzbar
 
         def _iv153(eps_val: float) -> float:
-            # IV-153: (x̄·zȳ - xyz̄)·(z̄2 - z̄²) = (xz̄ - x̄·z̄)·(z̄·zȳ - z2ȳ)
-            # Sistema trascendental: zi=(1-fi)^ε entra en todos los promedios
+            # IV-153 (DECISIÓN 068 — ver docs/decisiones/decision068.md):
+            # ε² · [ x̄·z1·zȳ − x̄·z̄2ȳ − xz̄·z1·zȳ + xz̄·z̄2ȳ
+            #        − z̄·x1·z̄2ȳ + x1·z̄2ȳ + z̄2·x1·zȳ − z̄·x1·zȳ ]
+            #   − xyz̄·[ z̄2 − z̄ − z1·z̄ + z1 ] = 0
+            # Verificada por rasterización directa de la tesis (p.74),
+            # doble transcripción independiente + verificación algebraica
+            # de Code (03-04/09/2026). La ecuación anterior (lhs/rhs sin
+            # ε² ni z1/x1) era la condición de optimalidad de una
+            # regresión OLS libre de xi sobre zi(ε) — un método legítimo,
+            # pero no el que pide la tesis: no usaba z1/x1 y no traía ε²
+            # como factor externo. Ver decision068.md para la genealogía
+            # completa y por qué el bug no se detectaba (2 raíces, la
+            # espuria pasaba los guards por cancelación catastrófica
+            # cerca de ε=0 — DECISIÓN 010, enmienda 20/07/2026).
+            # Sistema trascendental: zi=(1-fi)^ε entra en todos los promedios.
             if abs(eps_val) < _DENOM_GUARD:
                 return 1e10
             z1, zbar, z2bar, xzbar, zybar, z2ybar, xyzbar = _avgs(eps_val)
-            lhs = (xbar * zybar - xyzbar) * (z2bar - zbar**2)
-            rhs = (xzbar - xbar * zbar) * (zbar * zybar - z2ybar)
-            return lhs - rhs
+            corchete_a = (
+                xbar * z1 * zybar
+                - xbar * z2ybar
+                - xzbar * z1 * zybar
+                + xzbar * z2ybar
+                - zbar * x1 * z2ybar
+                + x1 * z2ybar
+                + z2bar * x1 * zybar
+                - zbar * x1 * zybar
+            )
+            corchete_b = z2bar - zbar - z1 * zbar + z1  # = denom_sigma (IV-154)
+            return eps_val**2 * corchete_a - xyzbar * corchete_b
 
         # IV-166: valor inicial de ε y µ según asimetría
         eps_init = 0.3 if g >= 0.0 else 0.6

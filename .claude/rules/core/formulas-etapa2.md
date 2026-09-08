@@ -57,13 +57,13 @@ usado en Momentos-L, ver sección siguiente).
 ## Método de Mínimos Cuadrados — IV.2.5
 Fuente: Tesis Facundo, Ecuaciones IV-25 a IV-33.
 
-PENDIENTE DE CONFIRMAR: ¿alguna distribución/método de Etapa 2 usa
-Mínimos Cuadrados explícitamente? No lo identifiqué en el listado de
-métodos por distribución de IV.1 (Momentos, MV, Máxima Entropía,
-Momentos-L, MPP y Mínimos Cuadrados aparecen listados de forma
-genérica, sin mapeo explícito método↔distribución en esa página). Si
-ninguna lo usa, esta sección queda como referencia bibliográfica sin
-función de código asociada — no crear un módulo vacío por completitud.
+CONFIRMADO (04/09/2026, DECISIÓN 068): sí se usa — Generalizada de
+Pareto, método MC (IV-153 a IV-166, ver sección 10 más abajo). Esta
+sección general (IV-25 a IV-33) describe el método en abstracto, como
+regresión lineal múltiple con m variables regresoras, sin instanciar
+el caso específico de Gen. Pareto — el paso intermedio entre esta forma
+genérica y IV-153/154/155 no está desarrollado en ningún lado del
+material disponible de la tesis.
 
 ```
 S = Σ_{i=1}^{n} di² = Σ_{i=1}^{n} [y0(i) - yc(i)]²           # Ec. IV-25
@@ -494,7 +494,17 @@ MC (Mínimos Cuadrados): sistema IV-153 a IV-166
     z2ȳ = (1/n)·sum(zi²·yi)      (IV-161)
     xyz̄ = (1/n)·sum(xi·yi·zi)    (IV-162)
 
-  ε por resolución numérica de IV-153
+  ε por resolución numérica de IV-153 (DECISIÓN 068, 04/09/2026 —
+  corregida; la transcripción anterior de esta sección no traía la
+  ecuación en sí, solo decía "por resolución numérica de IV-153"):
+    ε² · [ x̄·z1·zȳ − x̄·z2ȳ − xz̄·z1·zȳ + xz̄·z2ȳ
+           − z̄·x1·z2ȳ + x1·z2ȳ + z̄2·x1·zȳ − z̄·x1·zȳ ]
+      − xyz̄ · [ z̄2 − z̄ − z1·z̄ + z1 ]
+      = 0
+    Nota: el segundo corchete es idéntico al denominador de IV-154 (ver
+    σ̂ abajo) — no es una ecuación aislada del resto del sistema.
+    Sistema trascendental: zi=(1-fi)^ε entra en todos los promedios,
+    resolver con scan+brentq sobre la ecuación completa.
   σ̂ por IV-154:
     σ̂ = (ε·(x̄-xz̄) + ε·x1·(z̄-1)) / (z̄2-z̄ - z1·(z̄-1))
   µ̂ por IV-155:
