@@ -19,10 +19,16 @@ Fuente: Tesis Facundo, Cap. IV — Ecuaciones IV-77 a IV-89
     Resuelto vía fsolve sobre IV-80/IV-81. Residual verificado (DECISIÓN 010).
 
   ML (Momentos L): IV-83 a IV-88
-    α̂ de: β2/β1 = (ψ(2α+1) - ψ(α+1)) / (ψ(α+1) - ψ(1))    (IV-83)
-    λ̂ = (ψ(α̂+1) + ψ(1)) / β1                                 (IV-84)
-    β1 = M1 (IV-85) = x̄
-    β2 = M2 (IV-86/87) = [1/(n(n-1))]·Σ_{i=1}^{n-1}(n-i)·x_{(i)}  (descendente)
+    α̂ = M̂(2)/M̂(1)  — la LHS de IV-83 usada como estimador directo. NO se
+        resuelve la RHS ψ (α = [ψ(2α+1)−ψ(α+1)]/[ψ(α+1)−ψ(1)]): evaluada
+        en el α de la tesis da ≈0.54 contra un M̂(2)/M̂(1) de 0.71–0.84,
+        parece errata de transcripción de la tesis. Ver DECISIÓN 069.
+    λ̂ = (ψ(α̂+1) + ψ(1)) / M̂(1)                              (IV-84, verbatim; ψ(1) = −γ)
+    M̂(1) por IV-87, M̂(2) por IV-88 — ver _momentos_l().
+    λ̂ < 0 para toda serie no degenerada (α̂ < 1 ⇒ ψ(α̂+1) − γ < 0) ⇒
+        NO_APLICABLE (DECISIÓN 069, mismo eje que DECISIÓN 060: con λ<0,
+        F(x) no es real para x>0). En la práctica el método nunca
+        devuelve un ajuste.
 
   Cuantil: IV-89
     xT = -ln[1 - F(x)^(1/α)] / λ
@@ -34,9 +40,10 @@ RESTRICCIÓN ante ceros: distinta por método, no uniforme.
   - MV: bloqueo por NECESIDAD MATEMÁTICA, no pendiente de dominio —
     log(1-e^(-λ·xi)) = log(1-e^0) = log(0), indefinido en x=0. Sigue
     devolviendo STATUS_DISABLED_ZEROS, sin cambios de DECISIÓN 060.
-  - ML: mismo caso que Momentos — IV-83/84 no aplican log(xi) crudo. Tolera
-    cero — DECISIÓN 060.
-Ver docs/auditoria/hallazgos/restricciones-dominio-etapa2.md.
+  - ML: los ceros son irrelevantes — devuelve NO_APLICABLE para toda
+    entrada (DECISIÓN 069, λ̂ < 0 ⇒ F(x) no real), con o sin ceros.
+Ver docs/auditoria/hallazgos/restricciones-dominio-etapa2.md y
+docs/auditoria/pendientes/pendientes-facundo.md (ADDENDUM 09/09/2026).
 """
 
 import numpy as np
@@ -55,7 +62,7 @@ from metis.core.etapa2.types import (
 N_PARAMETROS: int = 2
 METODOS_APLICABLES: tuple[str, ...] = ("momentos", "mv", "ml")
 PENDING_ZEROS_CONFIRMATION: bool = (
-    True  # solo Momentos/ML — MV bloquea por cálculo, ver DECISIÓN 060
+    True  # solo Momentos — MV bloquea por cálculo; ML es NO_APLICABLE (DECISIÓN 069)
 )
 
 _DENOM_GUARD = 1e-10
