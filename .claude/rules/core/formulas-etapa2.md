@@ -280,8 +280,8 @@ MV:
 Cuantil:
   xT = x0 - β·ln[1 - F(x)]    (IV-74)
 
-RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
-
+RESTRICCIÓN: comportamiento ante ceros — CONFIRMADO (DECISIÓN 061, 21/08/2026): tolerar
+con advertencia. No existe cláusula de dominio en el capítulo IV para esta distribución.
 ---
 
 ## 4. Generalizada Exponencial
@@ -330,8 +330,12 @@ ML (Momentos L): IV-83 a IV-88 — ver DECISIÓN 069 (docs/decisiones/decision06
 Cuantil:
   xT = -ln[1 - F(x)^(1/α)] / λ    (IV-89)
 
-RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
-
+RESTRICCIÓN: comportamiento ante ceros — CONFIRMADO (DECISIÓN 061, 21/08/2026), con
+matices por método:
+  - Momentos: tolerar con advertencia (sin cláusula de dominio en el capítulo IV).
+  - MV: bloquea — matemáticamente indefinida en cero (log en la verosimilitud).
+  - Momentos-L: sin efecto práctico — el método ya es NO_APLICABLE para toda entrada
+    por DECISIÓN 069, independientemente de si hay ceros o no.
 ---
 
 ## 5. Normal
@@ -400,8 +404,8 @@ MV: sistema iterativo IV-117 a IV-119
 Cuantil:
   xT = x0 + exp(µ̂y + UT·σ̂y)               (IV-120)
 
-RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
-
+RESTRICCIÓN: comportamiento ante ceros — CONFIRMADO (DECISIÓN 061, 21/08/2026): tolerar
+con advertencia. No existe cláusula de dominio en el capítulo IV para esta distribución.
 ---
 
 ## 8. Gamma 2 parámetros
@@ -467,8 +471,8 @@ MPP (Momentos de Probabilidad Pesada):
 Cuantil:
   xT = x̂0 + α̂·β̂·(1 - 1/(9·β̂) + UT·√(1/(9·β̂)))³    (IV-144)
 
-RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
-
+RESTRICCIÓN: comportamiento ante ceros — CONFIRMADO (DECISIÓN 061, 21/08/2026): tolerar
+con advertencia. No existe cláusula de dominio en el capítulo IV para esta distribución.
 ---
 
 ## 10. Generalizada Pareto
@@ -562,8 +566,8 @@ Cuantil: IV-174
   Guard: |ε| < _DENOM_GUARD → límite ε→0:
     xT = µ - σ·ln(1-F(x))
 
-RESTRICCIÓN: comportamiento ante ceros PENDIENTE confirmación Facundo
-NOTA: MV y MC frecuentemente No Converge según resultados de la tesis
+RESTRICCIÓN: comportamiento ante ceros — CONFIRMADO (DECISIÓN 061, 21/08/2026): tolerar
+con advertencia. No existe cláusula de dominio en el capítulo IV para esta distribución.
 
 ---
 
