@@ -161,7 +161,7 @@ la verificación de regresión de est_04 (est_07 listado ahí como estación
 | Exponencial x0β | MV | x0, β, EEA | 9.528 / 43.167 / 8.4850 | 9.53 / 43.17 / 8.485 | ~0% |
 | Gen. Exponencial | Momentos | α, λ | 4.7776 / 0.042550 | **2.69 / -0.125** | **+77.6% / signo distinto** — ver hallazgo D |
 | Gen. Exponencial | MV | α, λ, EEA | 4.3923 / 0.041012 / 4.5495 | 4.39 / 0.041 / 4.5495 | ~0% |
-| Gen. Exponencial | ML | α, λ | 0.4427 / -0.011306 | 0.76 / -0.0095 | -41.8% / +19.0% (pendiente IV-84) |
+| Gen. Exponencial | ML | α=M̂2/M̂1, λ | **NO_APLICABLE** (DEC 069) · α̂ interno 0.7602 | 0.76 / -0.0095 | α̂ +0.03% — recupera el método (era desfasaje de índice M̂0/M̂1/M̂2, no bug de signo en IV-84); λ̂<0 ⇒ NO_APLICABLE. Ver README §DECISIÓN 069 y pendientes-facundo.md (ADDENDUM 09/09/2026) |
 | Normal | Mom/MV | µ, σ, EEA | 52.695 / 28.358 / 7.3730 | 52.69 / 28.3584 / 7.7741 | ~0% / -5.16% |
 | Normal | ML | σ, EEA | 28.4826 / 7.3363 | 28.4826 / 7.8195 | 0% / -6.18% |
 | Log-Normal 2p | Mom/MV | µy, σy | 3.8190 / 0.5781 | 3.82 / 0.578 | **~0%** |

@@ -197,6 +197,77 @@ abajo). La pregunta original sobre IV-84 sigue abierta — esto solo
 confirma que la evidencia detrás de la pregunta es sistemática en las
 9 estaciones, no un caso puntual de est_03.
 
+**ADDENDUM 09/09/2026 — CERRADO en cuanto al guard, sin escalar a
+Facundo. La pregunta original queda superada, no respondida.** No era
+un tema de nota faltante en el capítulo IV. Cross-verificado por Chat y
+por Code de forma independiente, ambos rasterizando la p.67 de la tesis
+(dos fuentes de archivo distintas): IV-83 e IV-84 están transcriptas
+verbatim en `gen_exponencial.py`, sin bug de signo ni de coeficiente. El
+bug real era un **desfasaje de índice**: el código usaba la media
+muestral donde IV-83 pide M̂(1) (IV-87), y M̂(1) donde pide M̂(2) (IV-88)
+— y **nunca calculaba M̂(2)**. Además resolvía la RHS ψ de IV-83 como
+ecuación.
+
+Con M̂(1) y M̂(2) correctos (IV-87/88) y `α̂ = M̂(2)/M̂(1)` usado directo
+(la tesis usa la LHS de IV-83 como estimador, no resuelve la RHS), se
+reproduce el α publicado con error **< 0.5% en las 9 estaciones**. Los
+M̂(1)/M̂(2) usados son los de la ficha de la tesis, ya marcados `PASS 0%`
+en la capa `regresion-unitaria/` — METIS los reproduce exacto:
+
+| Estación | M̂(1) tesis | M̂(2) tesis | α̂ = M̂(2)/M̂(1) | α tesis | diff | λ̂ (IV-84 verbatim) | λ tesis | Fuente M̂(1)/M̂(2) |
+|---|---|---|---|---|---|---|---|---|
+| est_01 | 104.751 | 83.065 | 0.7930 | 0.79 | +0.38% | -0.00284 | -0.0031 | `regresion-unitaria/est_01_alpa_corral_rioBarrancas-unitaria.md:65-66` |
+| est_02 | 99.741 | 79.402 | 0.7961 | 0.80 | -0.49% | -0.00296 | -0.0033 | `regresion-unitaria/est_02_vado_rio_seco_rioBarrancas-unitaria.md:60-61` |
+| est_03 | 47.228 | 39.513 | 0.8366 | 0.84 | -0.40% | -0.00562 | -0.0069 | `regresion-unitaria/est_03_la_tapa_rioLasCanitas-unitaria.md:64-65` |
+| est_04 | 17.088 | 13.604 | 0.7961 | 0.80 | -0.49% | -0.01727 | -0.00013 | `regresion-unitaria/est_04_las_tapias_rioLasTapias-unitaria.md:62-63` |
+| est_05 | 33.925 | 27.853 | 0.8210 | 0.82 | +0.12% | -0.00816 | -0.0097 | `regresion-unitaria/est_05_piedra_blanca_rioPiedraBlanca-unitaria.md:65-66` |
+| est_06 | 29.619 | 23.023 | 0.7773 | 0.78 | -0.35% | -0.01044 | -0.0111 | `regresion-unitaria/est_06_las_tapias_rioSanBartolome-unitaria.md:62-63` |
+| est_07 | 34.384 | 26.139 | 0.7602 | 0.76 | +0.03% | -0.00936 | -0.0095 | `regresion-unitaria/est_07_tincunaco_rioChocancharagua-unitaria.md:40-41` |
+| est_08 | 102.898 | 78.539 | 0.7633 | 0.76 | +0.43% | -0.00311 | -0.0032 | `regresion-unitaria/est_08_ume_pay_rioGrande-unitaria.md:69-70` |
+| est_09 | 16.586 | 11.805 | 0.7117 | 0.71 | +0.25% | -0.02167 | -0.0198 | `regresion-unitaria/est_09_la_suela_rioLaSuela-unitaria.md:36-37` |
+
+`λ̂ = (ψ(α̂+1) + ψ(1)) / M̂(1)`, IV-84 tal cual la imprime la tesis
+(`ψ(1) = −γ ≈ −0.5772`). Da **negativo en las 9**, igual que la tesis —
+el signo, que es lo que define la degeneración de la distribución, se
+reproduce en 9/9. La magnitud diverge 1–18% (est_04 es λ_tesis ≈ 0,
+hipersensible al % relativo; en valor absoluto ambos son ≈ 0). Sin el
+Excel de Facundo esa divergencia de magnitud no es determinable —
+candidato: redondeo del α o del M̂(1) en su cálculo. No se persigue: no
+cambia la conclusión.
+
+**λ<0 no es un caso a bloquear "por las dudas" ante la ausencia de una
+nota en el capítulo IV — es el resultado esperado del método para estos
+datos.** Con `α̂ = M̂(2)/M̂(1) < 1` para toda muestra no degenerada (el
+peso relativo de `x_(i)` en M̂(2) vs M̂(1) es `(i−2)/(n−2) ≤ 1`), el
+numerador de IV-84 es `ψ(α̂+1) − γ ≤ ψ(2) − γ = −0.1544 < 0` **siempre**.
+El guard `NO_APLICABLE` se mantiene por el mismo eje que DECISIÓN 060
+(restricción matemática forzosa: con `λ<0`, `F(x) = (1−e^{−λx})^α` no es
+real para `x>0`) — pero ahora es una **decisión de diseño propio de
+METIS**, no una inferencia por ausencia de evidencia textual. Ver
+DECISIÓN 069 (`docs/decisiones/decision069.md`; número verificado libre
+contra `origin/staging` el 09/09/2026, re-verificar antes del merge).
+Impacto en el ranking de Etapa 2: **cero** en las 9 estaciones —
+GenExp/Momentos-L era el peor método de su propia distribución en 9/9
+(EEA 54–395 vs. Momentos/MV 3–36), `mejor_eea` nunca salía de él.
+
+**Coherencia de fechas:** la salida en vivo de METIS registrada en
+`regresion-pipeline/*.md` (sección "Resultados de Regresión METIS", con
+fecha 2026-07-14) es **anterior a este fix** — muestra el α con bug
+(0.24–0.58). El fan-out documental de esta corrección está en
+`regresion/README.md` (subsección DECISIÓN 069) y en los 9
+`regresion-e2e-coreEstadistico/est_0X-e2e.md`.
+
+**Nota separada, NO cerrada — posible errata de transcripción en IV-83.**
+La ecuación ψ que imprime la RHS de IV-83 (relación entre α y β2/β1 vía
+digamma) no reproduce el cociente muestral: evaluada en el α publicado
+da ≈ 0.54, contra un `M̂(2)/M̂(1)` observado de 0.71 a 0.84; resuelta
+como ecuación con target `M̂(2)/M̂(1)` da α de 0.14 a 0.32, sin relación
+con la tesis. Esto **no bloquea nada** — se usa el cociente directo,
+validado contra las 9 estaciones — pero sugiere una divergencia de
+transcripción en la propia tesis, no en METIS. Escalado de forma no
+bloqueante en el documento de escalamiento a Facundo/Carlos (Parte C —
+no requiere respuesta para avanzar).
+
 ### LP3 Método Directo — restricción B ∈ (3, 6]
 METIS aplica NO_APLICABLE cuando B ∉ (3, 6] (est_03: B=2.63).
 Facundo reporta parámetros y EEA=64.37 para el mismo caso.

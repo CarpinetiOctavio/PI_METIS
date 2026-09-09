@@ -182,7 +182,7 @@ con la tesis en ambos casos.
 | Exponencial x0β | MV | x0,β,EEA | 8.2219/19.3767/7.7270 | 8.22/19.38/7.7298 | ~0% |
 | Gen. Exponencial | Momentos | α,λ | 22.7850/0.134974 | 5.23/0.0511 | +335.7%/+164.1% (ver Hallazgo A) |
 | Gen. Exponencial | MV | α,λ,EEA | 9.9341/0.103672/3.5637 | 9.93/0.1037/3.5647 | ~0% |
-| Gen. Exponencial | ML | α,λ | 0.5805/-0.016957 | 0.71/-0.0198 | -18.2%/+14.4% (pendiente IV-84, patrón conocido) |
+| Gen. Exponencial | ML | α=M̂2/M̂1, λ | **NO_APLICABLE** (DEC 069) · α̂ interno 0.7117 | 0.71 / -0.0198 | α̂ +0.25% — recupera el método (era desfasaje de índice M̂0/M̂1/M̂2, no bug de signo en IV-84); λ̂<0 ⇒ NO_APLICABLE. Ver README §DECISIÓN 069 y pendientes-facundo.md (ADDENDUM 09/09/2026) |
 | Normal | Mom/MV | µ,σ,EEA | 27.5986/9.3773/3.0378 | 27.6/9.3769/3.1667 | ~0%/-4.07% (Causa C, mild) |
 | Normal | ML | σ,EEA | 9.8785/2.7934 | 9.877/2.9141 | ~0%/-4.14% (Causa C, mild) |
 | Log-Normal 2p | Mom/MV | µy,σy,EEA | 3.2517/0.4258/3.6828 | 3.25/0.426/3.6601 | **~0%/+0.62% — verificado independientemente (denom n-2), sin Causa C apreciable, caso atípico real — ver Hallazgo G** |

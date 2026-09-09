@@ -108,7 +108,7 @@ acá, sin novedad.
 | Exponencial x0β | MV | x0, β, EEA | 13.184 / 31.00 / **5.7364** | 13.18 / 31.00 / **5.7364** | **~0% — modelo seleccionado, PASS total** |
 | Gen. Exponencial | Momentos | α, λ | 3.0788 / 0.041993 | 2.15 / 0.0128 | +43.2% / +228.1% |
 | Gen. Exponencial | MV | α, λ, EEA | 3.8569 / 0.046915 / 7.7134 | 3.86 / 0.0469 / 7.7134 | ~0% |
-| Gen. Exponencial | ML | α, λ | 0.4025 / -0.014396 | 0.78 / -0.0111 | -48.4% / +29.7% (pendiente IV-84) |
+| Gen. Exponencial | ML | α=M̂2/M̂1, λ | **NO_APLICABLE** (DEC 069) · α̂ interno 0.7773 | 0.78 / -0.0111 | α̂ -0.35% — recupera el método (era desfasaje de índice M̂0/M̂1/M̂2, no bug de signo en IV-84); λ̂<0 ⇒ NO_APLICABLE. Ver README §DECISIÓN 069 y pendientes-facundo.md (ADDENDUM 09/09/2026) |
 | Normal | Mom/MV | µ, σ, EEA | 44.184 / 27.845 / 10.5274 | 44.18 / 27.845 / 10.5 | ~0% / +0.26% |
 | Normal | ML | σ, EEA | 26.6745 / 10.5791 | 26.6745 / 10.6605 | 0% / -0.76% |
 | Log-Normal 2p | Mom/MV | µy, σy, EEA | 3.6120 / 0.5932 / 6.9098 | 3.61 / 0.593 / 7.4379 | ~0% / -7.10% (tesis SÍ reporta EEA acá, a diferencia de est_02-05) |

@@ -125,7 +125,7 @@ señalado en Fase 1 (§3.10) sobre la fragilidad de este método.
 | Exponencial x0β | MV | x0, β, EEA | 37.627 / 104.957 / 27.0591 | 37.63 / 104.96 / 27.0591 | ~0% |
 | Gen. Exponencial | Momentos | α, λ | 1.8910 / 0.010212 | **2.85 / 0.0040** | **-33.65% / +155.29%** |
 | Gen. Exponencial | MV | α, λ, EEA | 2.6281 / 0.012202 / 35.6104 | 2.63 / 0.0122 / 35.6104 | ~0% |
-| Gen. Exponencial | ML | α, λ | 0.3434 / -0.004898 | 0.80 / -0.0033 | -57.08% / -48.41% |
+| Gen. Exponencial | ML | α=M̂2/M̂1, λ | **NO_APLICABLE** (DEC 069) · α̂ interno 0.7961 | 0.80 / -0.0033 | α̂ -0.49% — recupera el método (era desfasaje de índice M̂0/M̂1/M̂2, no bug de signo en IV-84); λ̂<0 ⇒ NO_APLICABLE. Ver README §DECISIÓN 069 y pendientes-facundo.md (ADDENDUM 09/09/2026) |
 | Normal | Mom/MV | µ, σ | 142.583 / 108.715 | 142.58 / 108.7150 | ~0% |
 | Normal | Mom/MV | EEA | 47.0577 | 47.6235 | -1.19% |
 | Normal | ML | σ, EEA | 100.8242 / 47.6573 | 100.8242 / 48.6812 | 0% / -2.10% |

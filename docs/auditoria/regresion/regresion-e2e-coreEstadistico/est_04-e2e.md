@@ -93,7 +93,7 @@ contra las 9 estaciones del dataset sin regresiones — ver hallazgo A.
 | Exponencial x0β | MV | x0, β, EEA | 1.3706 / 22.6571 / 4.2425 | 1.37 / 22.66 / 4.2425 | ~0% |
 | Gen. Exponencial | Momentos | α, λ | 1.5857 / 0.055002 | **1.24 / 0.0356** | **+27.88% / +54.50%** — ver hallazgo D |
 | Gen. Exponencial | MV | α, λ, EEA | 1.8413 / 0.059879 / 5.4460 | 1.84 / 0.0599 / 5.4460 | ~0% |
-| Gen. Exponencial | ML | α, λ | 0.3218 / -0.030047 | 0.80 / -0.00013 | -59.77% / grande (tesis≈0, pendiente IV-84) |
+| Gen. Exponencial | ML | α=M̂2/M̂1, λ | **NO_APLICABLE** (DEC 069) · α̂ interno 0.7961 | 0.80 / -0.00013 | α̂ -0.49% — recupera el método (era desfasaje de índice M̂0/M̂1/M̂2, no bug de signo en IV-84); λ̂<0 ⇒ NO_APLICABLE (λ_tesis≈0, misma degeneración). Ver README §DECISIÓN 069 y pendientes-facundo.md (ADDENDUM 09/09/2026) |
 | Normal | Mom/MV | µ, σ, EEA | 24.028 / 19.700 / 8.5216 | 24.03 / 19.6999 / 8.6648 | ~0% / -1.65% |
 | Normal | ML | σ, EEA | 17.9830 / 8.5897 | 17.9830 / 8.8456 | 0% / -2.89% |
 | Log-Normal 2p | Mom/MV | µy, σy, EEA | 2.8617 / 0.8559 / 3.6177 | 2.86 / 0.856 / **NO_APLICABLE** | params ~0%; tesis no aplica (mismo patrón est_02/03) |

@@ -210,7 +210,7 @@ visto poco) en est_02-06:
 | Gen. Exponencial | Momentos | α, λ | 1.6724 / 0.009431 | **NO_CONVERGE** | METIS converge, tesis no |
 | Gen. Exponencial | MV | α, λ | 1.4512 / 0.008694 | 8.97 / 0.0122 | **-83.82% / -28.74%** |
 | Gen. Exponencial | MV | EEA | 25.4635 | 25.4672 | -0.01% |
-| Gen. Exponencial | ML | α, λ | 0.2992 / -0.005176 | 0.79 / -0.0031 | **-62.13% / -66.98%** |
+| Gen. Exponencial | ML | α=M̂2/M̂1, λ | **NO_APLICABLE** (DEC 069) · α̂ interno 0.7930 | 0.79 / -0.0031 | α̂ +0.38% — recupera el método (era desfasaje de índice M̂0/M̂1/M̂2, no bug de signo en IV-84); λ̂<0 ⇒ NO_APLICABLE. Ver README §DECISIÓN 069 y pendientes-facundo.md (ADDENDUM 09/09/2026) |
 | Normal | Mom/MV | µ, σ | 144.375 / 115.778 | 144.73 / 115.7945 | -0.25% / -0.01% |
 | Normal | Mom/MV | EEA | 36.7760 | 36.1651 | +1.69% |
 | Normal | ML | σ | 114.6473 | 114.7836 | -0.12% |

@@ -49,9 +49,12 @@ Solo los PASS/FAIL bloquean el avance al paso siguiente si hay FAIL.
 - Gamma 3p MPP: EXCLUIDO en todas las estaciones.
   Tabla IV-1 de la tesis indica "Sí" pero el Capítulo IV
   no desarrolla las ecuaciones. Pendiente confirmación Facundo.
-- Gen. Exponencial ML lambda negativo: si METIS tiene guard
-  lam <= 0, el resultado esperado puede ser NO_APLICABLE en
-  lugar del valor numérico de la tesis. Verificar caso a caso.
+- Gen. Exponencial ML (Momentos-L): `NO_APLICABLE` en las 9
+  estaciones desde DECISIÓN 069 (09/09/2026) — el guard `λ ≤ 0`
+  se dispara siempre para esta combinación. Ver la subsección
+  DECISIÓN 069 más abajo. El valor numérico de la tesis
+  (α ≈ 0.71–0.84, λ<0) ya no se compara contra una salida de
+  METIS: METIS devuelve `NO_APLICABLE`.
 
 ## Resultados que dejaron de reproducirse — DECISIÓN 060/061 (17/08/2026)
 
@@ -88,6 +91,50 @@ análogas en est_01/06/07/08/09), pero editar 12 archivos más con la
 misma nota repetida no agregaba trazabilidad nueva — este párrafo cumple
 esa función para las dos capas restantes. Si hace falta la nota
 puntual también ahí, pedirla explícitamente.
+
+## Resultados que dejaron de reproducirse — DECISIÓN 069 (09/09/2026)
+
+Mismo mecanismo que la sección de arriba: una decisión posterior al
+cierre de Fase 4 cambia un resultado que estas capas ya habían
+documentado.
+
+**DECISIÓN 069** (`docs/decisiones/decision069.md`) corrige un desfasaje
+de índice en `gen_exponencial.py`, método **Momentos-L (IV-83/84)**: el
+código usaba la media donde IV-83 pide M̂(1) (IV-87) y M̂(1) donde pide
+M̂(2) (IV-88), y nunca calculaba M̂(2). Afecta **Gen. Exponencial
+Momentos-L en las 9 de 9 estaciones**.
+
+- **Lo que estas capas documentan hoy** (framing viejo): un α con bug
+  (0.24–0.58) contra el α de la tesis (0.71–0.84), con diffs de −60% a
+  −70% anotadas como *"pendiente IV-84 (signo de ψ(1)), DECISIÓN
+  pendiente Facundo"*. **Ese framing es incorrecto en dos puntos**: no
+  era un bug de signo (IV-84 está transcripta verbatim y es fiel a la
+  tesis), y la decisión de dominio está tomada, no pendiente de Facundo.
+- **Lo que se reproduce con el fix**: `α̂ = M̂(2)/M̂(1)` directo reproduce
+  el α publicado con error **< 0.5% en 9/9** (usando los M̂(1)/M̂(2) que
+  la capa `regresion-unitaria/` ya marca `PASS 0%`). La implementación
+  corregida *recupera el método de la tesis* — las diffs de −70% se
+  resuelven. Detalle estación por estación y la tabla completa en
+  `docs/auditoria/pendientes/pendientes-facundo.md`, sección "Gen.
+  Exponencial — Método Momentos L (IV-83/84)", ADDENDUM 09/09/2026.
+- **Lo que devuelve METIS ahora**: `NO_APLICABLE`. Con `α̂ < 1` siempre,
+  `λ̂` (IV-84) es negativo siempre ⇒ `F(x)` no real para `x>0`. Guard
+  `λ ≤ 0 → NO_APLICABLE`, mismo eje que DECISIÓN 060.
+- **Impacto en el ranking de Etapa 2: cero** en las 9. Verificado
+  estación por estación: GenExp/Momentos-L era el peor método de su
+  propia distribución en 9/9 (EEA 54–395 vs. Momentos/MV 3–36),
+  `mejor_eea` nunca salía de él, el orden de distribuciones y el top-3
+  no cambian.
+
+**Alcance de la corrección aplicada:** las notas fechadas 09/09/2026 se
+agregaron en los 9 `regresion-e2e-coreEstadistico/est_0X-e2e.md` (la
+fila de Gen. Exponencial ML de la tabla de comparación). **No se
+replicaron en `regresion-unitaria/` ni `regresion-pipeline/`** — sus
+fichas de tesis (M̂1/M̂2, α, λ) no cambian, y su sección de salida en
+vivo de METIS lleva fecha 2026-07-14, anterior al fix, con el α con bug;
+este párrafo cumple la función de trazabilidad para esas dos capas,
+igual que se hizo con DECISIÓN 060. Si hace falta la nota puntual
+también ahí, pedirla explícitamente.
 
 ## Estado real de las 9 estaciones (Fase 4, cerrada)
 
