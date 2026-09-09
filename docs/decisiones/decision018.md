@@ -81,3 +81,15 @@ citable y más rigurosa disponible, no por ser la confirmada.
 - `tests/unit/core/test_outliers.py` — 2 tests nuevos (ver arriba)
 - `.claude/rules/formulas-etapa1.md` — Sección 9 actualizada con la
   fórmula K_N completa y la limitación explícita de esta decisión
+
+
+### Actualización - 9 de Septiembre de 2026
+
+Confirmado por Carlos Catalini (vía Kevin Massholder): la fórmula de
+Escalante Sandoval & Reyes Chávez (2005) coincide con Grubbs-Beck/Bulletin
+17B, sin especificar diferencia de nivel de significancia. Dado que
+α=0.10 es el valor con el que se verificó K_N=2.7451 contra la tabla de
+referencia externa (N=30), se mantiene sin cambios.
+
+**Estado: CONFIRMADO** (pasa de IMPLEMENTADO — PROVISORIO a definitivo).
+Sin cambios de código — el valor implementado ya era el correcto.
