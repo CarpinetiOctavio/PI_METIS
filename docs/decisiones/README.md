@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision064.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision069.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -195,3 +195,4 @@ situ.
 | [066](decision066.md) | El dominio de análisis de METIS es la serie de máximos anuales — el "no" al camino B (analizar valores sub-anuales sin agregar) | 28/08/2026 | Decidida (decisión de alcance, sin implementación) |
 | [067](decision067.md) | Colisión de clave en la agregación: se conserva el máximo, no la última fila del archivo — `_acumular_maximo()` compartido | 28/08/2026 | Decidida y aplicada (backend) |
 | [068](decision068.md) | Corrección de fórmula IV-153 (Gen. Pareto, Mínimos Cuadrados) — la ecuación vieja era la condición de optimalidad de otro modelo (OLS libre), no la de la tesis | 04/09/2026 | Aplicada (backend) |
+| [069](decision069.md) | GenExp/Momentos-L: desfasaje de índice M̂0/M̂1/M̂2 (IV-83/84) — usaba la media donde iba M̂1 y nunca calculaba M̂2; corregido, `α̂ = M̂2/M̂1` directo, guard `λ ≤ 0 → NO_APLICABLE` | 09/09/2026 | Aplicada (backend) |
