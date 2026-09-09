@@ -167,3 +167,38 @@ sesión a 297, +24 tests nuevos, cero regresiones. `ruff check metis/` +
   `tests/unit/core/pipeline/test_pipeline_etapa2.py`
 - `docs/auditoria/hallazgos/restricciones-dominio-etapa2.md` — referenciado,
   no modificado por esta decisión (agrega su propia entrada fechada aparte)
+
+
+### Actualización - 21 de agosto de 2026
+
+Se agotó la vía textual: no existe ninguna cláusula de dominio en todo el
+capítulo IV para ninguna de las 5 distribuciones bajo
+`PENDING_ZEROS_CONFIRMATION`. La política de esta decisión (tolerar con
+aviso, salvo GenExp/MV) deja de ser provisoria — se confirma como
+definitiva, sin depender de respuesta de Facundo/Carlos.
+
+**Acción de código:** ninguna — solo actualización de estado en el documento.
+
+### Nota - 9 de septiembre de 2026 — referencia cruzada, sin cambio de estado
+
+Una de las 5 distribuciones de esta decisión, Generalizada Exponencial,
+está siendo corregida en paralelo por un motivo no relacionado: el método
+Momentos-L (IV-83/84) tenía un desfasaje de índice en el cálculo de los
+momentos de probabilidad pesada (β1/β2), ajeno a la tolerancia a ceros que
+resuelve esta decisión — ver DECISIÓN 069. Con la corrección aplicada, ese
+método queda NO_APLICABLE para toda entrada (no solo con ceros presentes),
+así que la tolerancia a ceros que define esta decisión nunca llega a
+ejecutarse para GenExp/ML — queda sin efecto práctico para ese método
+puntual. GenExp/Momentos y GenExp/MV no se ven afectados. Los dos temas
+siguen siendo independientes: esta decisión sigue vigente sin cambios.
+
+### Pendiente de limpieza documental (09/09/2026)
+
+`.claude/rules/core/formulas-etapa2.md` sigue rotulando `RESTRICCIÓN:
+comportamiento ante ceros PENDIENTE confirmación Facundo` en las 5
+secciones de este grupo (Exponencial x0-β, Generalizada Exponencial,
+Log-Normal 3p, Gamma 3p, Generalizada de Pareto). Con la actualización
+del 21/08 esa nota quedó obsoleta — la política es definitiva, no
+pendiente. No se corrige en la rama de DECISIÓN 069 (fuera de su
+alcance); queda anotado acá para que no se pierda: es fan-out de esta
+decisión (061), no de la 069.
