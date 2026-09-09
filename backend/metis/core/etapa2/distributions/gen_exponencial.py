@@ -62,6 +62,31 @@ _DENOM_GUARD = 1e-10
 _RESIDUAL_TOL = 1e-4
 
 
+def _momentos_l(serie: np.ndarray) -> tuple[float, float, float]:
+    """
+    Momentos de probabilidad pesada muestrales M̂(0), M̂(1), M̂(2)
+    (β0, β1, β2 en la convención de Hosking, E[X·F(X)^r]).
+
+    M̂(0) = (1/n)·Σ x_i                                            (media)
+    M̂(1) = 1/(n(n-1))·Σ_{i=1}^{n-1} x_(i)·(n-i)                   IV-87
+    M̂(2) = 1/(n(n-1)(n-2))·Σ_{i=1}^{n-2} x_(i)·(n-i)·(n-i-1)     IV-88
+    con la serie ordenada de mayor a menor (x_(1) = máximo).
+
+    TODO K-4.1 / DECISIÓN 022: consolidar con gve.py::_momentos_L —
+    idéntica término a término (allá IV-243/244, misma estructura).
+    """
+    n = len(serie)
+    xs = np.sort(serie)[::-1]
+    m0 = float(np.mean(xs))
+    j = np.arange(n - 1)
+    m1 = float(np.dot(xs[: n - 1], n - 1 - j) / (n * (n - 1)))
+    if n < 3:
+        return m0, m1, 0.0
+    k = np.arange(n - 2)
+    m2 = float(np.dot(xs[: n - 2], (n - 1 - k) * (n - 2 - k)) / (n * (n - 1) * (n - 2)))
+    return m0, m1, m2
+
+
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
     if np.any(serie < 0):
         return MetodoResult(
@@ -171,56 +196,54 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         )
 
     if metodo == "ml":
-        # β1 = M1 (IV-85) = x̄
-        # β2 = M2 (IV-86/87): [1/(n(n-1))]·Σ_{i=1}^{n-1}(n-i)·x_{(i)}  (descendente)
-        xs = np.sort(serie)[::-1]
-        beta1 = float(np.mean(xs))
-        weights = np.arange(n - 1, 0, -1, dtype=float)  # [n-1, n-2, …, 1]
-        beta2 = float(np.dot(xs[: n - 1], weights) / (n * (n - 1)))
-
-        if abs(beta1) < _DENOM_GUARD or beta2 <= 0:
+        # Momentos-L. IV-83 tal como la imprime la tesis (p.67):
+        #   α = β2/β1 = (ψ(2α+1) − ψ(α+1)) / (ψ(α+1) − ψ(1))
+        # con β1 = M̂(1) (IV-87) y β2 = M̂(2) (IV-88) — los PWM de primer y
+        # segundo orden, NO la media.
+        #
+        # DECISIÓN 069 — se corrige un desfasaje de índice de la implementación
+        # anterior: usaba (media, M̂(1)) en el lugar de (M̂(1), M̂(2)), nunca
+        # calculaba M̂(2), y resolvía la RHS ψ como ecuación. Verificado sobre
+        # las 9 estaciones de la tesis (docs/auditoria/regresion/):
+        #   · α̂ = M̂(2)/M̂(1) usado DIRECTO reproduce el α publicado con error
+        #     <0.5% en 9/9 — la tesis usa la LHS de IV-83 como estimador, no
+        #     resuelve la RHS.
+        #   · resolver la RHS ψ como ecuación da un α (0.14–0.32) sin relación
+        #     con la tesis (0.71–0.84) — se sospecha errata de transcripción en
+        #     la RHS de IV-83, escalado a Facundo, no bloqueante.
+        #   · λ̂ por IV-84 tal cual (ψ(1) = −γ) sobre el M̂(1) correcto
+        #     reproduce el signo negativo de la tesis en 9/9.
+        # Ver .claude/rules/core/formulas-etapa2.md §4.
+        if n < 3:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
 
-        ratio = beta2 / beta1
-
-        # IV-83: β2/β1 = (ψ(2α+1) - ψ(α+1)) / (ψ(α+1) - ψ(1))
-        psi_1 = float(digamma(1.0))
-
-        def _eq83(alpha: float) -> float:
-            if alpha <= 0:
-                return -ratio
-            psi_2a1 = float(digamma(2.0 * alpha + 1.0))
-            psi_a1 = float(digamma(alpha + 1.0))
-            den = psi_a1 - psi_1  # ψ(α+1) - ψ(1)
-            if abs(den) < _DENOM_GUARD:
-                return 1e10
-            return (psi_2a1 - psi_a1) / den - ratio
-
-        try:
-            alpha = float(brentq(_eq83, 1e-4, 1e4, xtol=CONVERGENCIA))
-        except Exception:
-            return MetodoResult(
-                metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
-            )
-
-        if alpha <= 0:
+        _, m1, m2 = _momentos_l(serie)
+        if m1 <= _DENOM_GUARD or m2 <= 0.0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
 
-        # IV-84: λ̂ = (ψ(α̂+1) + ψ(1)) / β1
-        # PENDIENTE Facundo: confirmar comportamiento con lambda < 0.
-        # La tesis produce lambda negativo en ML (est_02: lambda=-0.0033) — se permite por ahora.
-        # Lambda=0 sí es inválido (división por cero en cuantil IV-89).
-        psi_a1 = float(digamma(alpha + 1.0))
-        num_lam = psi_a1 + psi_1
-        lam = num_lam / beta1
-        if lam == 0:
+        alpha = m2 / m1  # IV-83, LHS como estimador directo
+
+        # IV-84: λ̂ = (ψ(α̂+1) + ψ(1)) / M̂(1)   [verbatim tesis; ψ(1) = −γ]
+        lam = (float(digamma(alpha + 1.0)) + float(digamma(1.0))) / m1
+
+        # DECISIÓN 069 — α̂ = M̂(2)/M̂(1) < 1 para toda muestra no degenerada
+        # (el peso de x_(i) en M̂(2) relativo a M̂(1) es (i−2)/(n−2) ≤ 1), así
+        # que el numerador de IV-84 es ψ(α̂+1) − γ ≤ ψ(2) − γ = −0.1544 < 0
+        # SIEMPRE. Con λ̂ ≤ 0, F(x) = (1 − e^(−λx))^α no es real para x>0 (base
+        # negativa) — distribución degenerada, sin cuantil válido. Criterio de
+        # diseño de METIS (mismo que DECISIÓN 060): no se devuelve un ajuste
+        # cuando la matemática de fondo no se sostiene. En la práctica el método
+        # queda NO_APLICABLE para toda serie hidrológica real — la tesis reporta
+        # λ<0 en sus 9 estaciones de referencia.
+        if lam <= 0.0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )
+
         return MetodoResult(
             metodo=metodo,
             parametros={"alpha": alpha, "lambda": lam},
