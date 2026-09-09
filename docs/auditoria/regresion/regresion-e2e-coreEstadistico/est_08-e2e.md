@@ -200,7 +200,7 @@ guard IV-249 aplicado correctamente).
 | Exponencial x0β | MV | x0,β,EEA | 36.4033/120.2593/23.0922 | 36.4/120.25/23.0883 | ~0% |
 | Gen. Exponencial | Momentos | α,λ | 4.2001/0.013575 | 2.26/0.0121 | +85.8%/+12.2% (ver hallazgo E) |
 | Gen. Exponencial | MV | α,λ,EEA | 4.1430/0.013520/11.3754 | 4.14/0.0135/11.367 | ~0% |
-| Gen. Exponencial | ML | α,λ | 0.4326/-0.003866 | 0.76/-0.0032 | -43.1%/+20.8% (pendiente IV-84, patrón conocido) |
+| Gen. Exponencial | ML | α=M̂2/M̂1, λ | **NO_APLICABLE** (DEC 069) · α̂ interno 0.7633 | 0.76 / -0.0032 | α̂ +0.43% — recupera el método (era desfasaje de índice M̂0/M̂1/M̂2, no bug de signo en IV-84); λ̂<0 ⇒ NO_APLICABLE. Ver README §DECISIÓN 069 y pendientes-facundo.md (ADDENDUM 09/09/2026) |
 | Normal | Mom/MV | µ,σ,EEA | 156.6626/88.1823/23.7603 | 156.66/88.1799/24.4824 | ~0%/-2.95% (Causa C) |
 | Normal | ML | σ,EEA | 87.0759/23.8953 | 87.0747/24.7527 | ~0%/-3.46% (Causa C) |
 | Log-Normal 2p | Mom/MV | µy,σy,EEA | 4.8972/0.579692/10.4100 | 4.9/0.58/11.4193 | ~0%/-8.84% (Causa C) |

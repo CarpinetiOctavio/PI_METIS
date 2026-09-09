@@ -300,12 +300,32 @@ MV: sistema iterativo IV-79 a IV-82
   Sistema IV-80 y IV-81 simultáneamente
   α̂(λ) = -n / sum(ln(1 - e^(-λ·xi)))    (IV-82)
 
-ML (Momentos L): IV-83 a IV-88
-  α̂ resuelto de: β2/β1 = (ψ(2·α+1) - ψ(α+1)) / (ψ(α+1) - ψ(1))    (IV-83)
-  Nota: todos los términos usan ψ (digamma), no ψ' (trigamma).
-  λ̂ = (ψ(α̂+1) + ψ(1)) / β1                                           (IV-84)
-  β1 = M1 (IV-85),  β2 = M2 (IV-86)
-  M1 por IV-87,  M2 por IV-88
+ML (Momentos L): IV-83 a IV-88 — ver DECISIÓN 069 (docs/decisiones/decision069.md)
+  β1 = M̂(1) (IV-85),  β2 = M̂(2) (IV-86)
+  M̂(1) = 1/(n(n-1))·Σ_{i=1}^{n-1} x_(i)·(n-i)               (IV-87)  [serie desc.]
+  M̂(2) = 1/(n(n-1)(n-2))·Σ_{i=1}^{n-2} x_(i)·(n-i)·(n-i-1)  (IV-88)  [serie desc.]
+  α̂ = β2/β1 = M̂(2)/M̂(1)                                    (IV-83, LHS como estimador directo)
+  λ̂ = (ψ(α̂+1) + ψ(1)) / β1                                  (IV-84, verbatim; ψ(1) = -γ)
+  Nota: la RHS de IV-83 (de referencia, no resuelta — ver DECISIÓN 069)
+  e IV-84 usan solo ψ (digamma), no ψ' (trigamma).
+
+  IV-83 — la RHS ψ NO se resuelve. La tesis la imprime como ecuación
+  ("α = β2/β1 = [ψ(2α+1)-ψ(α+1)]/[ψ(α+1)-ψ(1)]"), pero esa RHS evaluada
+  en el α publicado da ≈0.54, contra un M̂(2)/M̂(1) observado de 0.71 a
+  0.84 en las 9 estaciones; resuelta como ecuación da α de 0.14 a 0.32,
+  sin relación con la tesis. Se usa la LHS (cociente muestral directo),
+  que reproduce el α publicado con error <0.5% en 9/9. La RHS parece
+  errata de transcripción de la tesis — escalado a Facundo, no bloqueante.
+
+  IV-84 se implementa TAL CUAL la imprime la tesis (+ψ(1), ψ(1) = -γ),
+  sobre el M̂(1) correcto (no la media). Da λ̂ < 0 en las 9 estaciones,
+  igual que la tesis.
+
+  GUARD (DECISIÓN 069): α̂ = M̂(2)/M̂(1) < 1 para toda muestra no
+  degenerada ⇒ numerador de IV-84 = ψ(α̂+1) - γ ≤ ψ(2) - γ = -0.1544 < 0
+  SIEMPRE ⇒ λ̂ ≤ 0 ⇒ F(x) = (1-e^(-λx))^α no real para x>0 ⇒ NO_APLICABLE
+  (mismo eje que DECISIÓN 060). En la práctica el método nunca devuelve
+  un ajuste. Implementación: metis/core/etapa2/distributions/gen_exponencial.py::_momentos_l.
 
 Cuantil:
   xT = -ln[1 - F(x)^(1/α)] / λ    (IV-89)

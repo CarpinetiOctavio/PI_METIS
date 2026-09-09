@@ -124,7 +124,7 @@ que encontrar en absoluto, con o sin escaneo denso).
 | Exponencial x0β | MV | x0, β, EEA | -0.2465 / 44.7132 / 9.4018 | -0.24 / 44.70 / 9.4085 | ~0% (valores chicos, % sensible) |
 | Gen. Exponencial | Momentos | α, λ | 0.9347 / 0.021522 | 0.91 / 0.0301 | +2.71% / -28.5% |
 | Gen. Exponencial | MV | α, λ, EEA | 0.8796 / 0.020810 / 8.1182 | 0.89 / 0.0208 / 8.1179 | ~0% |
-| Gen. Exponencial | ML | α, λ | 0.2377 / -0.018431 | 0.82 / -0.0097 | -71.02% / +90.02% (pendiente IV-84) |
+| Gen. Exponencial | ML | α=M̂2/M̂1, λ | **NO_APLICABLE** (DEC 069) · α̂ interno 0.8210 | 0.82 / -0.0097 | α̂ +0.12% — recupera el método (era desfasaje de índice M̂0/M̂1/M̂2, no bug de signo en IV-84); λ̂<0 ⇒ NO_APLICABLE. Ver README §DECISIÓN 069 y pendientes-facundo.md (ADDENDUM 09/09/2026) |
 | Normal | Mom/MV | µ, σ, EEA | 44.467 / 45.821 / 20.2873 | 44.47 / 45.8217 / 20.5769 | ~0% / -1.41% |
 | Normal | ML | σ, EEA | 41.4356 / 20.4142 | 41.4363 / 20.9960 | ~0% / -2.77% |
 | Log-Normal 2p | Mom/MV | µy, σy, EEA | 3.1407 / 1.3799 / 27.1902 | 3.14 / 1.380 / **NO_APLICABLE** | ~0%; tesis no aplica (mismo patrón est_02/03/04) |

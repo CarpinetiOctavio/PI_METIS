@@ -261,7 +261,13 @@ A medida que avance Fase 2, el número de status=ok crecerá desde 0.
   PENDING_ZEROS_CONFIRMATION=True.
   NOTA IV-77: la ecuación como escrita tiene -1/α = x̄/S sin solución válida.
   Se implementa CV-matching con momentos teóricos de la GE. Pendiente confirmar con Facundo.
-  NOTA IV-84: la tesis escribe "+ψ(1)" — se implementa "-ψ(1)" (forma correcta). Pendiente Facundo.
+  ~~NOTA IV-84: la tesis escribe "+ψ(1)" — se implementa "-ψ(1)" (forma correcta). Pendiente Facundo.~~
+  **Corrección 09/09/2026 (DECISIÓN 069):** afirmación falsa en los dos sentidos —
+  el código implementa "+ψ(1)" (no "-ψ(1)"), y "+ψ(1)" (con ψ(1) = -γ) ES la forma
+  fiel a la tesis. El problema real de ML era otro: un desfasaje de índice en los
+  momentos de probabilidad pesada — el código usaba la media donde IV-83 pide M̂(1)
+  y M̂(1) donde pide M̂(2), y nunca calculaba M̂(2). Corregido; ML queda NO_APLICABLE
+  (λ̂<0 siempre). Ver `docs/decisiones/decision069.md` y `formulas-etapa2.md` §4.
 
 - Generalizada de Pareto — momentos, mv, mc, mpp — smoke test OK
   momentos: eps=0.553, mu=65.70, sigma=53.32, Q100=154.60, EEA=47.30
