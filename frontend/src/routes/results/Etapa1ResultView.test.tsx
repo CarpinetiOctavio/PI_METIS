@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { Etapa1ResultView } from "./Etapa1ResultView";
 import type { Etapa1Result, TestResultDetail } from "../../api/types";
 
@@ -62,10 +62,27 @@ describe("Etapa1ResultView — Bloque D (plan post-avance, DECISIÓN 064)", () =
     expect(screen.queryByText(/Anderson manda/)).not.toBeInTheDocument();
   });
 
-  it("modo paso a paso muestra la fórmula sustituida y su interpretación", () => {
-    render(<Etapa1ResultView result={makeResult()} modo="paso_a_paso" />);
+  it("modo paso a paso muestra la fórmula sustituida (KaTeX) y su interpretación", async () => {
+    const { container } = render(
+      <Etapa1ResultView result={makeResult()} modo="paso_a_paso" />,
+    );
 
-    expect(screen.getByText(/r₉ = 4\.378,38600 \/ 12\.254,30800/)).toBeInTheDocument();
+    // F3 (feedback Facundo 02/09) — las fórmulas se renderizan con KaTeX,
+    // cargado con import() diná­mico (chunk aparte). Hasta que llega se ve
+    // el fallback de texto plano; después, la notación real. El LaTeX crudo
+    // (términos ya sustituidos) queda en el <annotation> MathML de KaTeX.
+    await waitFor(() => {
+      expect(container.querySelectorAll(".katex").length).toBeGreaterThan(0);
+    });
+    const latexCrudo = Array.from(
+      container.querySelectorAll('.katex annotation[encoding="application/x-tex"]'),
+    )
+      .map((n) => n.textContent)
+      .join(" ");
+    expect(latexCrudo).toContain("4378{,}38600");
+    expect(latexCrudo).toContain("12254{,}30800");
+    expect(latexCrudo).toContain("r_{9} = 0{,}35734");
+
     expect(screen.getByText(/Ec\. III-1/)).toBeInTheDocument();
     expect(screen.getByText(/lags calculados caen fuera de las bandas/)).toBeInTheDocument();
   });

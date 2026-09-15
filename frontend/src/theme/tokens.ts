@@ -11,6 +11,13 @@ export interface ThemeTokenSet {
   accSoft: string;
   onAcc: string;
   acc2: string;
+  /* F4 (feedback Facundo 02/09) — color de resalte de un marcador puntual
+     en los gráficos (período de retorno seleccionado). Violeta: contrasta
+     por matiz contra --acc (curva) y --acc2 (marcadores normales) en los
+     dos temas, y no colisiona con --ok/--warn/--crit (que ya tienen
+     significado de estado). El tamaño mayor del punto es el segundo canal
+     — el color no es el único. */
+  accHi: string;
   glow: string;
   ok: string;
   warn: string;
@@ -33,6 +40,7 @@ export const instrumentoTokens: { light: ThemeTokenSet; dark: ThemeTokenSet } = 
     accSoft: "#D4EEF3",
     onAcc: "#FFFFFF",
     acc2: "#4D7C0F",
+    accHi: "#7C3AED",
     glow: "#7DD3E8",
     ok: "#0E6D3E",
     warn: "#825713",
@@ -51,6 +59,7 @@ export const instrumentoTokens: { light: ThemeTokenSet; dark: ThemeTokenSet } = 
     accSoft: "#0C2A33",
     onAcc: "#04252B",
     acc2: "#C6F84E",
+    accHi: "#A78BFA",
     glow: "#22D3EE",
     ok: "#35D07A",
     warn: "#F4B740",

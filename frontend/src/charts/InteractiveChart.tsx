@@ -35,6 +35,14 @@ export interface ChartSeries {
   // Línea de referencia (umbral, faja) — se dibuja punteada para que no se
   // confunda con una serie de datos. Solo aplica a kind === "line".
   dashed?: boolean;
+  // Radio base de los marcadores de esta serie (kind === "points"). Default
+  // 3.5 — el valor histórico, dejarlo sin setear preserva el render actual.
+  pointRadius?: number;
+  // F4 (feedback Facundo 02/09) — predicado de resalte por punto: el punto
+  // para el que devuelve true se dibuja más grande (radio × 1.9) y con
+  // --acc-hi en vez de su colorVar. Capacidad del gráfico, no un truco de
+  // una pantalla — sirve igual para el gráfico de ajuste y los de Etapa 1.
+  highlight?: (p: ChartPoint) => boolean;
 }
 
 interface InteractiveChartProps {
@@ -348,22 +356,37 @@ export function InteractiveChart({
                 />
               );
             }
+            const baseRadius = s.pointRadius ?? 3.5;
             return (
               <g key={s.id} data-series={s.id}>
-                {s.data.map((p, i) => (
-                  <circle
-                    key={`${s.id}-${i}`}
-                    cx={xScale(p.x)}
-                    cy={yScale(p.y)}
-                    r={
-                      focusedTarget?.series.id === s.id && focusedTarget.point === p
-                        ? 5
-                        : 3.5
-                    }
-                    className="interactive-chart__point"
-                    style={{ fill: `var(${s.colorVar})` }}
-                  />
-                ))}
+                {s.data.map((p, i) => {
+                  const isFocused =
+                    focusedTarget?.series.id === s.id && focusedTarget.point === p;
+                  const isHighlighted = s.highlight?.(p) ?? false;
+                  // El foco de teclado gana sobre el resalte si ambos caen
+                  // en el mismo punto — es una acción del usuario en curso.
+                  const radius = isFocused
+                    ? baseRadius + 1.5
+                    : isHighlighted
+                      ? baseRadius * 1.9
+                      : baseRadius;
+                  return (
+                    <circle
+                      key={`${s.id}-${i}`}
+                      cx={xScale(p.x)}
+                      cy={yScale(p.y)}
+                      r={radius}
+                      className="interactive-chart__point"
+                      data-highlighted={isHighlighted || undefined}
+                      style={{
+                        fill:
+                          isHighlighted && !isFocused
+                            ? "var(--acc-hi)"
+                            : `var(${s.colorVar})`,
+                      }}
+                    />
+                  );
+                })}
               </g>
             );
           })}

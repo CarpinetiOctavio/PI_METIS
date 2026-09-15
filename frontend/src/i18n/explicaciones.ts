@@ -1,5 +1,5 @@
 import type { TestResultDetail } from "../api/types";
-import { formatNum } from "./format";
+import { formatInt, formatNum } from "./format";
 
 /**
  * Bloque D del plan post-avance (DECISIÓN 064) — modo paso a paso deja de
@@ -11,8 +11,13 @@ import { formatNum } from "./format";
  * cosmética, para mostrar un número que `core/` ya usó para llegar a
  * `estadistico`, no para producir un resultado distinto.
  *
- * HTML plano, sin KaTeX (DECISIÓN 064) — alcanza para las 8 fórmulas de
- * Etapa 1, todas expresiones de una línea.
+ * Renderizado — F3 (feedback de Facundo, 02/09/2026), addendum a DECISIÓN
+ * 064: `formatearFormulaLatex()` devuelve la fórmula en tres pasos LaTeX
+ * (expresión simbólica → sustitución numérica → resultado) para renderizar
+ * con KaTeX en bloque. `formatearFormula()` (texto plano de una línea) se
+ * conserva sin cambios: es el `fallback` de cada paso si KaTeX no puede
+ * parsearlo. Ninguna de las dos deriva un estadístico nuevo — la única
+ * aritmética que hacen es cosmética (el denominador de t de Student).
  */
 
 const SUBSCRIPT_DIGITS = "₀₁₂₃₄₅₆₇₈₉";
@@ -89,10 +94,188 @@ const FORMULAS: Record<string, FormulaFn> = {
 };
 
 /** Líneas de la fórmula sustituida, o `null` si la prueba no tiene
- * `explicacion` (no_ejecutada — nada que sustituir) o no está mapeada. */
+ * `explicacion` (no_ejecutada — nada que sustituir) o no está mapeada.
+ * Texto plano de una línea — hoy solo se usa como `fallback` de cada paso
+ * LaTeX (ver `formatearFormulaLatex`), no se renderiza directo. */
 export function formatearFormula(tr: TestResultDetail): string[] | null {
   if (!tr.explicacion) return null;
   return FORMULAS[tr.prueba]?.(tr) ?? null;
+}
+
+/** Un paso de la fórmula: LaTeX para KaTeX + su equivalente en texto plano
+ * (fallback si KaTeX no puede renderizar el LaTeX). */
+export interface PasoFormula {
+  latex: string;
+  fallback: string;
+}
+
+// Número para LaTeX: sin separador de miles (roba legibilidad en notación
+// matemática), coma decimal es-AR escapada como `{,}` para que KaTeX no le
+// aplique el espaciado de lista. "—" si no hay valor.
+function ltx(v: number | null | undefined): string {
+  if (v === null || v === undefined || Number.isNaN(v)) return "\\text{—}";
+  return formatNum(v).replace(/\./g, "").replace(",", "{,}");
+}
+
+// Conteos (n, k, n1, n2, ...): enteros, sin `.00000`.
+function ltxInt(v: number | null | undefined): string {
+  if (v === null || v === undefined || Number.isNaN(v)) return "\\text{—}";
+  return formatInt(v).replace(/\./g, "");
+}
+
+type FormulaLatexFn = (tr: TestResultDetail) => PasoFormula[];
+
+const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
+  anderson: (tr) => {
+    const t = tr.explicacion!.terminos;
+    const k = ltxInt(t.k ?? 0);
+    return [
+      {
+        latex: `r_{k} = \\dfrac{\\sum_{i=1}^{n-k}(x_i-\\bar{x})(x_{i+k}-\\bar{x})}{\\sum_{i=1}^{n}(x_i-\\bar{x})^{2}}`,
+        fallback: "r_k = Σ(xi−x̄)(x_{i+k}−x̄) / Σ(xi−x̄)²",
+      },
+      {
+        latex: `r_{${k}} = \\dfrac{${ltx(t.numerador)}}{${ltx(t.denominador)}}`,
+        fallback: `r${subscript(t.k ?? 0)} = ${fmt(t.numerador)} / ${fmt(t.denominador)}`,
+      },
+      {
+        latex: `r_{${k}} = ${ltx(tr.estadistico)}`,
+        fallback: `r${subscript(t.k ?? 0)} = ${fmt(tr.estadistico)}`,
+      },
+    ];
+  },
+  wald_wolfowitz: (tr) => {
+    const t = tr.explicacion!.terminos;
+    return [
+      {
+        latex: `Z = \\dfrac{R - \\mu_R}{\\sigma_R}`,
+        fallback: "Z = (R − µ_R) / σ_R",
+      },
+      {
+        latex: `Z = \\dfrac{${ltxInt(t.r)} - ${ltx(t.mu_r)}}{${ltx(t.sigma_r)}}`,
+        fallback: `Z = (${fmt(t.r)} − ${fmt(t.mu_r)}) / ${fmt(t.sigma_r)}`,
+      },
+      { latex: `Z = ${ltx(tr.estadistico)}`, fallback: `Z = ${fmt(tr.estadistico)}` },
+    ];
+  },
+  helmert: (tr) => {
+    const t = tr.explicacion!.terminos;
+    return [
+      {
+        latex: `S - C \\quad \\text{contra} \\quad \\sqrt{n-1}`,
+        fallback: "S − C  contra  √(n−1)",
+      },
+      {
+        latex: `S - C = ${ltxInt(t.s)} - ${ltxInt(t.c)} \\qquad \\sqrt{n-1} = ${ltx(tr.valor_critico)}`,
+        fallback: `S − C = ${fmt(t.s)} − ${fmt(t.c)}   (límite √(n−1) = ${fmt(tr.valor_critico)})`,
+      },
+      {
+        latex: `S - C = ${ltx(tr.estadistico)}`,
+        fallback: `S − C = ${fmt(tr.estadistico)}`,
+      },
+    ];
+  },
+  t_student: (tr) => {
+    const t = tr.explicacion!.terminos;
+    const denom =
+      t.sp !== null && t.n1 !== null && t.n2 !== null
+        ? t.sp * Math.sqrt(1 / t.n1 + 1 / t.n2)
+        : null;
+    return [
+      {
+        latex: `t = \\dfrac{\\bar{x}_1 - \\bar{x}_2}{S_p\\sqrt{\\tfrac{1}{n_1}+\\tfrac{1}{n_2}}}`,
+        fallback: "t = (x̄₁ − x̄₂) / (Sp·√(1/n₁+1/n₂))",
+      },
+      {
+        // El denominador no viaja en `terminos` — se reconstruye acá para
+        // mostrarlo (misma aritmética cosmética que ya hacía la versión de
+        // texto, DECISIÓN 064). No es un estadístico nuevo.
+        latex: `t = \\dfrac{${ltx(t.x1_barra)} - ${ltx(t.x2_barra)}}{${ltx(denom)}}`,
+        fallback: `t = (${fmt(t.x1_barra)} − ${fmt(t.x2_barra)}) / ${fmt(denom)}`,
+      },
+      { latex: `t = ${ltx(tr.estadistico)}`, fallback: `t = ${fmt(tr.estadistico)}` },
+    ];
+  },
+  cramer: (tr) => {
+    const t = tr.explicacion!.terminos;
+    const signo1 = (t.t_w1 ?? 0) <= (t.vc_w1 ?? 0) ? "\\le" : ">";
+    const signo2 = (t.t_w2 ?? 0) <= (t.vc_w2 ?? 0) ? "\\le" : ">";
+    const asciiSigno1 = (t.t_w1 ?? 0) <= (t.vc_w1 ?? 0) ? "≤" : ">";
+    const asciiSigno2 = (t.t_w2 ?? 0) <= (t.vc_w2 ?? 0) ? "≤" : ">";
+    return [
+      {
+        latex: `t_w = \\sqrt{\\dfrac{n_w\\,(n-2)}{\\,n - n_w\\,(1+\\tau_w^{2})}}\\;\\lvert\\tau_w\\rvert`,
+        fallback: "t_w = √[ n_w·(n−2) / (n − n_w·(1+τ_w²)) ] · |τ_w|",
+      },
+      {
+        latex: `\\text{Bloque 60\\%}\\;(n_{w_1}=${ltxInt(t.n_w1)}):\\quad \\tau_{w_1} = ${ltx(t.tau_w1)},\\quad t_{w_1} = ${ltx(t.t_w1)} ${signo1} ${ltx(t.vc_w1)}`,
+        fallback: `Bloque 60% (n_w₁=${t.n_w1}): τ_w₁ = ${fmt(t.tau_w1)}, t_w₁ = ${fmt(t.t_w1)} ${asciiSigno1} ${fmt(t.vc_w1)}`,
+      },
+      {
+        latex: `\\text{Bloque 30\\%}\\;(n_{w_2}=${ltxInt(t.n_w2)}):\\quad \\tau_{w_2} = ${ltx(t.tau_w2)},\\quad t_{w_2} = ${ltx(t.t_w2)} ${signo2} ${ltx(t.vc_w2)}`,
+        fallback: `Bloque 30% (n_w₂=${t.n_w2}): τ_w₂ = ${fmt(t.tau_w2)}, t_w₂ = ${fmt(t.t_w2)} ${asciiSigno2} ${fmt(t.vc_w2)}`,
+      },
+    ];
+  },
+  mann_kendall: (tr) => {
+    const t = tr.explicacion!.terminos;
+    return [
+      {
+        latex: `S = \\sum_{i<j}\\operatorname{sgn}(x_j - x_i)`,
+        fallback: "S = Σ_{i<j} sgn(xj − xi)",
+      },
+      {
+        latex: `S = ${ltx(t.s)},\\qquad \\operatorname{Var}(S) = ${ltx(t.var_s)}`,
+        fallback: `S = ${fmt(t.s)}, Var(S) = ${fmt(t.var_s)}`,
+      },
+      {
+        // Sin fórmula inventada para la tipificación con corrección por
+        // empates (DECISIÓN 064) — se nombra en prosa, Z viene de `core/`.
+        latex: `Z = ${ltx(tr.estadistico)} \\quad \\text{(aprox. normal con corrección por empates, Kendall 1975)}`,
+        fallback: `Z (aproximación normal con corrección por empates, Kendall 1975) = ${fmt(tr.estadistico)}`,
+      },
+    ];
+  },
+  kolmogorov_smirnov: (tr) => {
+    const t = tr.explicacion!.terminos;
+    const suma = (t.n1 ?? 0) + (t.n2 ?? 0);
+    return [
+      {
+        latex: `Z = D\\sqrt{\\dfrac{n_1\\,n_2}{n_1 + n_2}}`,
+        fallback: "Z = D·√(n₁·n₂/(n₁+n₂))",
+      },
+      {
+        latex: `Z = ${ltx(t.d)}\\,\\sqrt{\\dfrac{${ltxInt(t.n1)}\\cdot ${ltxInt(t.n2)}}{${ltxInt(suma)}}}`,
+        fallback: `Z = ${fmt(t.d)}·√(${t.n1}·${t.n2}/(${suma}))`,
+      },
+      { latex: `Z = ${ltx(tr.estadistico)}`, fallback: `Z = ${fmt(tr.estadistico)}` },
+    ];
+  },
+  chow: (tr) => {
+    const t = tr.explicacion!.terminos;
+    return [
+      {
+        latex: `K_N = \\dfrac{n-1}{\\sqrt{n}}\\sqrt{\\dfrac{t^{2}}{\\,n-2+t^{2}}}`,
+        fallback: "K_N = (n−1)/√n · √(t²/(n−2+t²))",
+      },
+      {
+        latex: `t = t_{\\,n-2,\\;1-\\alpha/(2n)} = ${ltx(t.t_bonferroni)},\\qquad n = ${ltxInt(t.n)}`,
+        fallback: `t = t_{n−2,1−α/(2n)} = ${fmt(t.t_bonferroni)}, n=${t.n}`,
+      },
+      {
+        latex: `K_N = ${ltx(tr.valor_critico)}`,
+        fallback: `K_N = ${fmt(tr.valor_critico)}`,
+      },
+    ];
+  },
+};
+
+/** Fórmula sustituida en pasos LaTeX (simbólica → sustitución → resultado),
+ * o `null` si la prueba no tiene `explicacion` (no_ejecutada) o no está
+ * mapeada. Cada paso trae su `fallback` de texto plano. */
+export function formatearFormulaLatex(tr: TestResultDetail): PasoFormula[] | null {
+  if (!tr.explicacion) return null;
+  return FORMULAS_LATEX[tr.prueba]?.(tr) ?? null;
 }
 
 type InterpretadorFn = (tr: TestResultDetail) => string;

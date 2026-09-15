@@ -12,7 +12,16 @@ import type { EventoDiseno } from "../../api/types";
 export function Etapa2EventosChart({
   eventosDiseno,
   curvaAjuste,
-}: Readonly<{ eventosDiseno: EventoDiseno[]; curvaAjuste: EventoDiseno[] }>) {
+  periodoResaltado,
+}: Readonly<{
+  eventosDiseno: EventoDiseno[];
+  curvaAjuste: EventoDiseno[];
+  // F4 (feedback Facundo 02/09) — período de retorno seleccionado con los
+  // chips de Etapa2EventosView. Su marcador se dibuja más grande y con
+  // --acc-hi. El chip ya es la fuente de verdad (aria-pressed) — acá no hay
+  // estado nuevo.
+  periodoResaltado?: number | null;
+}>) {
   const curvaValida = curvaAjuste.filter(
     (e): e is { periodo_retorno: number; valor: number } => e.valor !== null,
   );
@@ -34,13 +43,22 @@ export function Etapa2EventosChart({
       label: "Períodos de retorno pedidos",
       colorVar: "--acc2",
       data: eventosValidos.map((e) => ({ x: e.periodo_retorno, y: e.valor })),
+      highlight:
+        periodoResaltado != null
+          ? (p) => p.x === periodoResaltado
+          : undefined,
     },
   ];
+
+  const ariaLabel =
+    periodoResaltado != null
+      ? `Gráfico de eventos de diseño: valor estimado contra período de retorno. Período de retorno resaltado: T = ${periodoResaltado} años`
+      : "Gráfico de eventos de diseño: valor estimado contra período de retorno";
 
   return (
     <InteractiveChart
       series={series}
-      ariaLabel="Gráfico de eventos de diseño: valor estimado contra período de retorno"
+      ariaLabel={ariaLabel}
       xLabel="Período de retorno T (años)"
       yLabel="Valor estimado (xT)"
       xTickFormat={(v) => formatAxis(v)}

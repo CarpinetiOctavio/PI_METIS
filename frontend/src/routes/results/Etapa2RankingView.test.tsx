@@ -44,6 +44,34 @@ describe("Etapa2RankingView", () => {
     expect(screen.queryByText(/distribuciones restantes/)).not.toBeInTheDocument();
   });
 
+  it("F1/F2 — la tabla de métodos va en un contenedor con scroll y el estado 'ok' es un punto con aria-label", async () => {
+    const user = userEvent.setup();
+    const dist: DistribucionResult = {
+      distribucion: "gumbel",
+      n_parametros: 2,
+      mejor_eea: 5,
+      mejor_metodo: "momentos",
+      metodos: [
+        { metodo: "momentos", parametros: { a: 1 }, eea: 5, status: "ok" },
+        { metodo: "mv", parametros: {}, eea: null, status: "no_converge" },
+      ],
+    };
+    const { container } = render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [dist], warnings: [], puntos_empiricos: [], seleccion: null }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Ver los 2 métodos/ }));
+
+    expect(container.querySelector(".etapa2-metodos-scroll")).not.toBeNull();
+    // status "ok" → punto de color, sin el texto redundante "ajustado"
+    expect(screen.getByRole("img", { name: "ajustado" })).toBeInTheDocument();
+    expect(screen.queryByText("ajustado")).not.toBeInTheDocument();
+    // status distinto de "ok" → sigue con el pill de texto completo
+    expect(screen.getByText("no converge")).toBeInTheDocument();
+  });
+
   it("F4 — 25 warnings del mismo código normal se agrupan en un solo banner con el conteo", () => {
     const warnings: WarningItem[] = Array.from({ length: 25 }, (_, i) => ({
       codigo: "DIST_HIGH_EEA",
