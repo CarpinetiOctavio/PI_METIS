@@ -715,6 +715,46 @@ vidrio, dropzone real + panel de muestra de columnas en `ConfigPage`
 
 ---
 
+### fix/frontend-feedback-facundo — PR abierto (#88, 15/09/2026), sin mergear
+
+Cinco de los seis hallazgos de
+`docs/frontend/plan-fixes-feedback-facundo-02-09-2026.md` (feedback de
+Facundo en uso real, 02/09/2026). Tres commits en la rama:
+
+- **F1+F2+F4** (`363db68`) — texto cortado en las tablas de métodos de
+  `Etapa2RankingView` (grilla más flexible + contenedor con `overflow-x`
+  propio) y resalte del período de retorno elegido en el gráfico de eventos
+  de diseño (marcador más grande, token `--acc-hi`, `aria-pressed`).
+- **F3** (`4390dd0`) — fórmulas de Etapa 1 en modo paso a paso con KaTeX en
+  vez de texto monoespaciado — revierte parcialmente la sección "HTML
+  plano, no KaTeX" de DECISIÓN 064 (`katex@0.16.22`, `BlockMath.tsx`,
+  `import()` dinámico — +1,58 kB gzip en el bundle inicial, addendum de
+  costo en `decision064.md`).
+- **F5(b)** (`2552748`) — la card de `ConfigPage` se alinea contra el
+  divisor del panel de columnas (`justify-self`) en vez de centrarse sola.
+
+**F5(a) — panel flotante, implementado y descartado, no se mergea.** Se
+construyó el pedido completo de Facundo (cuarto modo de `PanelDock`,
+arrastre por mouse/teclado, clamp contra el viewport, y una segunda vuelta
+con colisión contra la card para que no quedara forzado a vivir siempre
+debajo de ella) y se probó en uso real: la hitbox de colisión resultaba más
+grande que la forma visual de la card, sin sumar lo suficiente para
+justificar seguir puliéndolo. Revertido por completo a HEAD —
+`useColumnPanelDock.ts`, `ConfigPage.tsx`, `ColumnPreviewPanel.tsx/css`,
+`tokens.instrumento.css` — sin rastro de `"floating"` en código ni tests.
+**`decision063.md` no lleva addendum:** el flotante nunca llegó a
+commitearse, así que la decisión original ("panel acoplado, no ventana
+flotante") sigue siendo exactamente lo que el código hace. Cierre
+documentado en `plan-fixes-feedback-facundo-02-09-2026.md`, sección F5.
+
+Verificado: `npx tsc -b`, `npm run lint`, `npm test` (351 passed),
+`npm run build` — todos en verde, sin warning de chunk grande. **Pendiente
+antes de mergear:** correr el flujo completo en el navegador (Definition of
+Done del propio plan) — no verificado en esta sesión, checklist sin tildar
+en el PR.
+
+---
+
 ## Plan de implementación de Etapa 2 de punta a punta — EN CURSO
 
 Ver `docs/plan-etapa2-implementacion.md` (se borra cuando los siete PRs
