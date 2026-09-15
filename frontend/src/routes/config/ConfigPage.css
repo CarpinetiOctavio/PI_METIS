@@ -28,6 +28,22 @@
     min-width: 0;
   }
 
+  /* F5(b) (feedback Facundo 02/09) — con margin:0 auto la card se centra
+     dentro de la columna "main" (1fr), dejando un hueco entre ella y el
+     divisor/panel del lado opuesto. justify-self la pega contra el
+     divisor — el panel queda al lado de la card, no lejos. margin:0
+     (no solo omitir el auto) porque un margin-left/right:auto en un ítem
+     de grid gana sobre justify-self por spec. */
+  .config-shell--with-panel[data-dock="right"] .config-card {
+    margin: 0;
+    justify-self: end;
+  }
+
+  .config-shell--with-panel[data-dock="left"] .config-card {
+    margin: 0;
+    justify-self: start;
+  }
+
   .config-shell--with-panel .column-preview-panel {
     grid-area: panel;
     min-width: 0;

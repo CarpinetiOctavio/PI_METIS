@@ -324,6 +324,28 @@ seguir verdes sin editarlos (si hay que editarlos, el flotante está
 reemplazando al dock en vez de sumarse). Tests nuevos: persistencia de
 `floatingPos`, clamp contra viewport, y movimiento por teclado.
 
+**Cerrado 15/09/2026 — se descarta (a), se queda (b).** Se implementó el
+flotante completo (cuarto modo, arrastre con mouse y teclado, clamp contra
+el viewport, y una segunda vuelta que agregó colisión contra la card para
+que no quedara obligado a vivir siempre debajo de ella) y se probó en uso
+real. La hitbox de colisión contra la card resultó demasiado grande —se
+extendía más allá de su forma visual hacia abajo— y el resultado no sumaba
+lo suficiente como para justificar seguir puliéndolo. Exactamente el riesgo
+que anticipaba el punto 6 de arriba, aunque el motivo real terminó siendo
+otro: no la accesibilidad por teclado (esa sí quedó resuelta), sino la UX
+de la colisión en sí. Revertido por completo —
+`useColumnPanelDock.ts`, `ConfigPage.tsx`, `ColumnPreviewPanel.tsx/css` y
+`tokens.instrumento.css` vuelven a su estado previo a este plan, sin
+ningún rastro de `"floating"` en el código ni en los tests.
+
+**`decision063.md` no lleva addendum.** El flotante nunca llegó a
+commitearse, así que la decisión original ("Panel de columnas acoplado, no
+ventana flotante") sigue siendo exactamente lo que el código hace — no hay
+ninguna contradicción que explicarle al tribunal, el riesgo que la
+"Advertencia de alcance" del encabezado de este documento marcaba de
+entrada. Se mergea solo (b): la card se alinea contra el divisor
+(`justify-self`) en los docks derecha/izquierda.
+
 ---
 
 ## Verificación final
