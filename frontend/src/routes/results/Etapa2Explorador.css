@@ -1,0 +1,11 @@
+/* Bloque C3 (plan post-avance) — resultado de "explorar" una distribución
+   distinta de la elección registrada. Borde punteado a propósito: tiene que
+   leerse distinto de la tarjeta de "Elección registrada" / "Evento de diseño"
+   (borde sólido, card soft) — DECISIÓN 062, "explorar no es decidir". Vivía en
+   HistoryDetailPage.css; se movió acá cuando el componente pasó a compartirse
+   con ResultsPage. */
+.etapa2-exploracion {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  padding: 14px;
+}

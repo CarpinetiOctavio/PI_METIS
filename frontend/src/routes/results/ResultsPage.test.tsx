@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { renderPage } from "../../test/renderPage";
+import { makeEtapa2 } from "../../test/etapa2Fixtures";
+import { stubFetchRouted } from "../../test/fetchStubs";
 import { ResultsPage } from "./ResultsPage";
-import type { Etapa1Result, Etapa2Result, Modo, TestResultDetail } from "../../api/types";
+import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
 import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
 
 function testResult(overrides: Partial<TestResultDetail> = {}): TestResultDetail {
@@ -53,37 +56,22 @@ function makeResult(overrides: Partial<Etapa1Result> = {}): Etapa1Result {
   };
 }
 
-function makeEtapa2Result(): Etapa2Result {
-  return {
-    ranking: [
-      {
-        distribucion: "gumbel",
-        n_parametros: 2,
-        metodos: [
-          { metodo: "momentos", parametros: { mu: 100, alpha: 20 }, eea: 12.5, status: "ok" },
-          { metodo: "mv", parametros: null, eea: null, status: "no_converge" },
-        ],
-        mejor_eea: 12.5,
-        mejor_metodo: "momentos",
-      },
-    ],
-    warnings: [],
-    puntos_empiricos: [
-      { valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 },
-    ],
-    seleccion: null,
-  };
-}
+// `fetch` ruteado: /auth/me (sesión) y el recálculo de eventos de diseño que
+// dispara "Explorar este ajuste" (solo CU-01, con `analysisId`).
+const RECALCULO = {
+  eventos_diseno: [{ periodo_retorno: 2, valor: 108.4 }],
+  curva_ajuste: [{ periodo_retorno: 1.05, valor: 55.0 }],
+};
 
 function stubMe(ok: boolean, body: unknown = {}) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue({
-      ok,
-      status: ok ? 200 : 401,
-      json: () => Promise.resolve(body),
-    }),
-  );
+  return stubFetchRouted([
+    { match: (url) => url.includes("/auth/me"), status: ok ? 200 : 401, body },
+    {
+      match: (url, init) => init?.method === "POST" && url.includes("/design-events"),
+      status: 200,
+      body: RECALCULO,
+    },
+  ]);
 }
 
 function renderResultsPage(
@@ -94,6 +82,7 @@ function renderResultsPage(
     etapa2?: Etapa2RankingState;
     eventosDiseno?: Etapa2EventosState;
     mesInicioAnio?: number;
+    analysisId?: string | null;
   },
 ) {
   if (authed) {
@@ -201,9 +190,10 @@ describe("ResultsPage", () => {
     expect(screen.queryByText("Evento de diseño")).not.toBeInTheDocument();
   });
 
-  it("shows the Etapa 2 ranking (read-only, no 'Elegir') when the router state carries it", async () => {
-    renderResultsPage(true, makeResult(), "experto", {
-      etapa2: { session_id: "s1", ...makeEtapa2Result() },
+  it("CU-02 (sin analysisId) — muestra el ranking de solo lectura: ni 'Elegir' ni 'Explorar'", async () => {
+    renderResultsPage(false, makeResult(), "experto", {
+      etapa2: { session_id: "s1", ...makeEtapa2() },
+      analysisId: null,
     });
 
     expect(
@@ -211,6 +201,45 @@ describe("ResultsPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("gumbel")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Elegir" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Explorar este ajuste" })).not.toBeInTheDocument();
+  });
+
+  it("CU-01 (con analysisId) — el ranking se puede explorar, sin botón 'Elegir'", async () => {
+    renderResultsPage(true, makeResult(), "experto", {
+      etapa2: { session_id: "s1", ...makeEtapa2() },
+    });
+
+    expect(
+      await screen.findAllByRole("button", { name: "Explorar este ajuste" }),
+    ).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Elegir" })).not.toBeInTheDocument();
+  });
+
+  it("CU-01 — explorar otra distribución recalcula contra el análisis persistido y lo marca como exploración", async () => {
+    const user = userEvent.setup();
+    renderResultsPage(true, makeResult(), "experto", {
+      etapa2: { session_id: "s1", ...makeEtapa2() },
+      eventosDiseno: {
+        distribucion: "gumbel",
+        metodo: "momentos",
+        eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+        curva_ajuste: [{ periodo_retorno: 100, valor: 312.7 }],
+      },
+    });
+
+    // "gve" es la otra distribución del ranking, distinta de la elegida.
+    const botones = await screen.findAllByRole("button", { name: "Explorar este ajuste" });
+    await user.click(botones[1]);
+
+    expect(await screen.findByText(/No es la elección registrada/)).toBeInTheDocument();
+    const llamada = vi.mocked(globalThis.fetch).mock.calls.find(([, init]) => init?.method === "POST");
+    expect(String(llamada?.[0])).toContain("/analysis/an-1/design-events");
+    expect(JSON.parse(String(llamada?.[1]?.body))).toMatchObject({
+      distribucion: "gve",
+      metodo: "ml",
+    });
+    // La elección del stream sigue ahí: explorar no la cambia (DECISIÓN 062).
+    expect(screen.getByRole("heading", { name: "Evento de diseño" })).toBeInTheDocument();
   });
 
   // Bloque F5 del plan de Etapa 2 (DECISIÓN 057).
