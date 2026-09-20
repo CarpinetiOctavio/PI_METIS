@@ -121,72 +121,234 @@ function caso(
   });
 }
 
+// Los tests de formato son dirigidos por datos: cada fila declara, por línea o
+// paso de la salida, los textos que debe contener (`contiene`), los que debe
+// ser exactamente (`igual`) y los que ninguna pieza puede contener (`ausente`).
+// Tests consecutivos con la misma estructura (`const [x] = f(caso(..)); expect
+// (x).toContain(..)`) son "código duplicado" para SonarCloud aunque cambien los
+// literales — una tabla y un solo cuerpo de test lo evitan sin perder cobertura.
+interface CasoFormato {
+  nombre: string;
+  prueba: string;
+  overrides?: Partial<TestResultDetail>;
+  terminos?: Terminos;
+  contiene: string[][];
+  igual?: Record<number, string>;
+  ausente?: string[];
+}
+
+function verificar(piezas: string[], esperado: CasoFormato) {
+  expect(piezas).toHaveLength(esperado.contiene.length);
+  esperado.contiene.forEach((textos, i) => {
+    for (const texto of textos) expect(piezas[i]).toContain(texto);
+  });
+  for (const [i, texto] of Object.entries(esperado.igual ?? {})) {
+    expect(piezas[Number(i)]).toBe(texto);
+  }
+  for (const texto of esperado.ausente ?? []) {
+    for (const pieza of piezas) expect(pieza).not.toContain(texto);
+  }
+}
+
+// formatearFormula(): texto plano, una entrada por línea.
+const FORMULAS_PLANAS: CasoFormato[] = [
+  {
+    nombre: "anderson — reproduce el estadístico con numerador/denominador del lag reportado",
+    prueba: "anderson",
+    contiene: [["r₉", "0,35734"]],
+  },
+  {
+    nombre: "wald_wolfowitz — reproduce Z a partir de R, µ_R y σ_R",
+    prueba: "wald_wolfowitz",
+    contiene: [["Z = (R − µ_R) / σ_R", "22", "0,47555"]],
+  },
+  {
+    nombre: "helmert — muestra S − C junto con el límite (valor_critico)",
+    prueba: "helmert",
+    contiene: [["S − C = 18,00000 − 21,00000 = -3,00000", "6,24500"]],
+  },
+  {
+    // El denominador no viaja en terminos — se reconstruye acá para
+    // mostrarlo, coincide con sp*sqrt(1/n1+1/n2) ≈ 7.777.
+    nombre: "t_student — reconstruye el denominador Sp·√(1/n1+1/n2) para mostrarlo",
+    prueba: "t_student",
+    contiene: [["152,31000", "168,44000", "-1,14937"]],
+  },
+  {
+    // Sin "60%"/"30%": con partición personalizada (DECISIÓN 036) serían falsos.
+    nombre: "cramer — muestra los DOS bloques, no solo el binding",
+    prueba: "cramer",
+    contiene: [
+      ["Bloque 1", "n_w₁=24"],
+      ["Bloque 2", "n_w₂=12"],
+    ],
+    ausente: ["%"],
+  },
+  {
+    nombre:
+      "mann_kendall — muestra S, Var(S) y Z = (S − sgn(S))/√Var(S), sin atribuir a A.55 la corrección por empates",
+    prueba: "mann_kendall",
+    contiene: [["S = 91,00000", "Z = (S − sgn(S)) / √Var(S)", "0,75280"]],
+    ausente: ["Kendall 1975"],
+  },
+  {
+    nombre: "kolmogorov_smirnov — reproduce Z = D·√(n1·n2/(n1+n2))",
+    prueba: "kolmogorov_smirnov",
+    contiene: [["D·√(n₁·n₂/(n₁+n₂))", "0,63246"]],
+  },
+  {
+    // α = 0,10, no el 0,05 del resto de Etapa 1
+    nombre: "chow — muestra K_N, el t Bonferroni-corregido y α = 0,10",
+    prueba: "chow",
+    contiene: [["K_N", "2,74500", "t_{n−2,1−α/(2n)} = 3,50000", "α = 0,10"]],
+  },
+];
+
+// formatearFormulaLatex(): tres pasos (simbólica → sustitución → resultado).
+const FORMULAS_LATEX: CasoFormato[] = [
+  {
+    // coma decimal es-AR escapada como {,}, sin separador de miles
+    nombre: "anderson — sustituye numerador/denominador y reproduce el estadístico en LaTeX",
+    prueba: "anderson",
+    contiene: [["\\dfrac"], ["\\dfrac{4378{,}38600}{12254{,}30800}"], []],
+    igual: { 2: "r_{9} = 0{,}35734" },
+  },
+  {
+    nombre:
+      "anderson — el paso simbólico incluye las bandas de III-3 y la regla del 10%; la sustitución cita los lags fuera",
+    prueba: "anderson",
+    contiene: [
+      [
+        "r_{k}(95\\%) = \\dfrac{-1 \\pm 1{,}96\\sqrt{n-k-1}}{n-k}",
+        "no más del 10\\% de los",
+      ],
+      ["\\text{Lags fuera de las bandas: } 1 \\text{ de } 14", "\\text{tolerancia: } 2"],
+      [],
+    ],
+  },
+  {
+    nombre: "wald_wolfowitz — R entero, µ_R y σ_R con decimales, Z del estadístico",
+    prueba: "wald_wolfowitz",
+    contiene: [
+      ["\\dfrac{R - \\mu_R}{\\sigma_R}"],
+      ["\\dfrac{22 - 20{,}55000}{3{,}04939}"],
+      [],
+    ],
+    igual: { 2: "Z = 0{,}47555" },
+  },
+  {
+    nombre: "wald_wolfowitz — define µ_R y σ_R (III-5/III-6) y los sustituye con los valores de core",
+    prueba: "wald_wolfowitz",
+    contiene: [
+      [
+        "\\mu_R = \\dfrac{2\\,n_1 n_2}{n} + 1",
+        "\\sigma_R = \\sqrt{\\dfrac{(\\mu_R-1)(\\mu_R-2)}{n-1}}",
+      ],
+      ["\\mu_R = \\dfrac{2\\cdot 17\\cdot 23}{40} + 1 = 20{,}55000", "= 3{,}04939"],
+      [],
+    ],
+  },
+  {
+    nombre: "helmert — S − C contra √(n−1), con enteros en la sustitución",
+    prueba: "helmert",
+    contiene: [[], ["S - C = 18 - 21", "\\sqrt{n-1} = 6{,}24500"], []],
+    igual: { 2: "S - C = -3{,}00000" },
+  },
+  {
+    // 24.6 * sqrt(1/20 + 1/20) = 24.6 * sqrt(0.1) ≈ 7.77920
+    nombre: "t_student — reconstruye el denominador Sp·√(1/n1+1/n2) en el paso de sustitución",
+    prueba: "t_student",
+    contiene: [[], ["152{,}31000 - 168{,}44000", "7{,}77920"], []],
+    igual: { 2: "t = -1{,}14937" },
+  },
+  {
+    nombre: "t_student — define S_p² y aclara qué varianza usa",
+    prueba: "t_student",
+    contiene: [
+      [
+        "S_p^{2} = \\dfrac{n_1 s_1^{2} + n_2 s_2^{2}}{n_1+n_2-2}",
+        "varianza muestral (divisor }n_i-1",
+      ],
+      ["S_p = 24{,}60000"],
+      [],
+    ],
+  },
+  {
+    // Bloque 2 rechaza: t_w2 (3.0) > vc_w2 (2.02439) → signo ">". Rótulos por
+    // n_w, nunca por porcentaje (partición personalizada, DECISIÓN 036).
+    nombre: "cramer — tres pasos: fórmula genérica + los DOS bloques con su signo",
+    prueba: "cramer",
+    overrides: { estadistico: 3.0 },
+    terminos: { tau_w2: 0.5, t_w2: 3.0 },
+    contiene: [
+      [],
+      ["Bloque 1", "t_{w_1} = 0{,}23585 \\le 2{,}02439"],
+      ["Bloque 2", "t_{w_2} = 3{,}00000 > 2{,}02439"],
+    ],
+    ausente: ["\\%"],
+  },
+  {
+    nombre: "cramer — define τ_w y S_Q, y muestra la media y el desvío globales",
+    prueba: "cramer",
+    contiene: [
+      ["\\tau_w = \\dfrac{\\bar{Q}_w - \\bar{Q}}{S_Q}", "S_Q = \\sqrt{\\dfrac{1}{n-1}"],
+      ["\\bar{Q} = 150{,}25000", "S_Q = 31{,}50000"],
+      [],
+    ],
+  },
+  {
+    // Paso simbólico: Var(S) sin empates (A.55) y la tipificación con
+    // corrección de continuidad.
+    nombre:
+      "mann_kendall — muestra S, Var(S) y la tipificación Z, sin atribuir a A.55 la corrección por empates",
+    prueba: "mann_kendall",
+    contiene: [
+      [
+        "\\dfrac{n(n-1)(2n+5)}{18}",
+        "\\dfrac{S-\\operatorname{sgn}(S)}{\\sqrt{\\operatorname{Var}(S)}}",
+      ],
+      ["S = 91{,}00000", "\\operatorname{Var}(S) = 14291{,}66700"],
+      ["Z = 0{,}75280", "corrección de continuidad"],
+    ],
+    ausente: ["Kendall 1975"],
+  },
+  {
+    nombre: "kolmogorov_smirnov — Z = D·√(n1·n2/(n1+n2)) con la suma sustituida",
+    prueba: "kolmogorov_smirnov",
+    contiene: [["D\\sqrt"], ["\\dfrac{20\\cdot 20}{40}"], []],
+    igual: { 2: "Z = 0{,}63246" },
+  },
+  {
+    nombre: "kolmogorov_smirnov — define D (A.56)",
+    prueba: "kolmogorov_smirnov",
+    contiene: [["D = \\max_i", "\\dfrac{RS(i)}{n_1} - \\dfrac{RI(i)}{n_2}"], [], []],
+  },
+  {
+    nombre: "chow — K_N y el t Bonferroni-corregido, resultado = valor_critico",
+    prueba: "chow",
+    contiene: [
+      ["K_N = \\dfrac{n-1}{\\sqrt{n}}"],
+      ["t_{\\,n-2,\\;1-\\alpha/(2n)} = 3{,}50000", "n = 30"],
+      [],
+    ],
+    igual: { 2: "K_N = 2{,}74500" },
+  },
+  {
+    nombre: "chow — rotula α = 0,10 (no el 0,05 del resto de Etapa 1)",
+    prueba: "chow",
+    contiene: [[], ["\\alpha = 0{,}10", "0{,}05"], []],
+  },
+];
+
 describe("formatearFormula", () => {
   it("devuelve null sin explicacion (rama no_ejecutada)", () => {
     expect(formatearFormula(tr({ explicacion: null }))).toBeNull();
   });
 
-  it("anderson — reproduce el estadístico con numerador/denominador del lag reportado", () => {
-    const lineas = formatearFormula(caso("anderson"));
+  it.each(FORMULAS_PLANAS)("$nombre", (esperado) => {
+    const lineas = formatearFormula(caso(esperado.prueba, esperado.overrides, esperado.terminos));
     expect(lineas).not.toBeNull();
-    expect(lineas!.join(" ")).toContain("r₉");
-    expect(lineas!.join(" ")).toContain("0,35734");
-  });
-
-  it("wald_wolfowitz — reproduce Z a partir de R, µ_R y σ_R", () => {
-    const [linea] = formatearFormula(caso("wald_wolfowitz"))!;
-    expect(linea).toContain("Z = (R − µ_R) / σ_R");
-    expect(linea).toContain("22");
-    expect(linea).toContain("0,47555");
-  });
-
-  it("helmert — muestra S − C junto con el límite (valor_critico)", () => {
-    const [linea] = formatearFormula(caso("helmert"))!;
-    expect(linea).toContain("S − C = 18,00000 − 21,00000 = -3,00000");
-    expect(linea).toContain("6,24500");
-  });
-
-  it("t_student — reconstruye el denominador Sp·√(1/n1+1/n2) para mostrarlo", () => {
-    const [linea] = formatearFormula(caso("t_student"))!;
-    // El denominador no viaja en terminos — se reconstruye acá para
-    // mostrarlo, coincide con sp*sqrt(1/n1+1/n2) ≈ 7.777.
-    expect(linea).toContain("152,31000");
-    expect(linea).toContain("168,44000");
-    expect(linea).toContain("-1,14937");
-  });
-
-  it("cramer — muestra los DOS bloques, no solo el binding", () => {
-    const lineas = formatearFormula(caso("cramer"))!;
-    expect(lineas).toHaveLength(2);
-    // Sin "60%"/"30%": con partición personalizada (DECISIÓN 036) serían falsos.
-    expect(lineas[0]).toContain("Bloque 1");
-    expect(lineas[0]).toContain("n_w₁=24");
-    expect(lineas[1]).toContain("Bloque 2");
-    expect(lineas[1]).toContain("n_w₂=12");
-    expect(lineas.join(" ")).not.toContain("%");
-  });
-
-  it("mann_kendall — muestra S, Var(S) y Z = (S − sgn(S))/√Var(S), sin atribuir a A.55 la corrección por empates", () => {
-    const [linea] = formatearFormula(caso("mann_kendall"))!;
-    expect(linea).toContain("S = 91,00000");
-    expect(linea).toContain("Z = (S − sgn(S)) / √Var(S)");
-    expect(linea).toContain("0,75280");
-    expect(linea).not.toContain("Kendall 1975");
-  });
-
-  it("kolmogorov_smirnov — reproduce Z = D·√(n1·n2/(n1+n2))", () => {
-    const [linea] = formatearFormula(caso("kolmogorov_smirnov"))!;
-    expect(linea).toContain("D·√(n₁·n₂/(n₁+n₂))");
-    expect(linea).toContain("0,63246");
-  });
-
-  it("chow — muestra K_N y el t Bonferroni-corregido", () => {
-    const [linea] = formatearFormula(caso("chow"))!;
-    expect(linea).toContain("K_N");
-    expect(linea).toContain("2,74500");
-    expect(linea).toContain("t_{n−2,1−α/(2n)} = 3,50000");
-    // α = 0,10, no el 0,05 del resto de Etapa 1
-    expect(linea).toContain("α = 0,10");
+    verificar(lineas!, esperado);
   });
 });
 
@@ -206,123 +368,13 @@ describe("formatearFormulaLatex", () => {
     }
   });
 
-  it("anderson — sustituye numerador/denominador y reproduce el estadístico en LaTeX", () => {
-    const [simbolica, sustitucion, resultado] = formatearFormulaLatex(caso("anderson"))!;
-    expect(simbolica.latex).toContain("\\dfrac");
-    // coma decimal es-AR escapada como {,}, sin separador de miles
-    expect(sustitucion.latex).toContain("\\dfrac{4378{,}38600}{12254{,}30800}");
-    expect(resultado.latex).toBe("r_{9} = 0{,}35734");
-  });
-
-  it("anderson — el paso simbólico incluye las bandas de III-3 y la regla del 10%; la sustitución cita los lags fuera", () => {
-    const pasos = formatearFormulaLatex(caso("anderson"))!;
-    expect(pasos).toHaveLength(3);
-    expect(pasos[0].latex).toContain("r_{k}(95\\%) = \\dfrac{-1 \\pm 1{,}96\\sqrt{n-k-1}}{n-k}");
-    expect(pasos[0].latex).toContain("no más del 10\\% de los");
-    expect(pasos[1].latex).toContain("\\text{Lags fuera de las bandas: } 1 \\text{ de } 14");
-    expect(pasos[1].latex).toContain("\\text{tolerancia: } 2");
-  });
-
-  it("wald_wolfowitz — R entero, µ_R y σ_R con decimales, Z del estadístico", () => {
-    const pasos = formatearFormulaLatex(caso("wald_wolfowitz"))!;
-    expect(pasos[0].latex).toContain("\\dfrac{R - \\mu_R}{\\sigma_R}");
-    expect(pasos[1].latex).toContain("\\dfrac{22 - 20{,}55000}{3{,}04939}");
-    expect(pasos[2].latex).toBe("Z = 0{,}47555");
-  });
-
-  it("wald_wolfowitz — define µ_R y σ_R (III-5/III-6) y los sustituye con los valores de core", () => {
-    const pasos = formatearFormulaLatex(caso("wald_wolfowitz"))!;
-    expect(pasos).toHaveLength(3);
-    expect(pasos[0].latex).toContain("\\mu_R = \\dfrac{2\\,n_1 n_2}{n} + 1");
-    expect(pasos[0].latex).toContain("\\sigma_R = \\sqrt{\\dfrac{(\\mu_R-1)(\\mu_R-2)}{n-1}}");
-    expect(pasos[1].latex).toContain("\\mu_R = \\dfrac{2\\cdot 17\\cdot 23}{40} + 1 = 20{,}55000");
-    expect(pasos[1].latex).toContain("= 3{,}04939");
-  });
-
-  it("helmert — S − C contra √(n−1), con enteros en la sustitución", () => {
-    const pasos = formatearFormulaLatex(caso("helmert"))!;
-    expect(pasos[1].latex).toContain("S - C = 18 - 21");
-    expect(pasos[1].latex).toContain("\\sqrt{n-1} = 6{,}24500");
-    expect(pasos[2].latex).toBe("S - C = -3{,}00000");
-  });
-
-  it("t_student — reconstruye el denominador Sp·√(1/n1+1/n2) en el paso de sustitución", () => {
-    const pasos = formatearFormulaLatex(caso("t_student"))!;
-    // 24.6 * sqrt(1/20 + 1/20) = 24.6 * sqrt(0.1) ≈ 7.77920
-    expect(pasos[1].latex).toContain("152{,}31000 - 168{,}44000");
-    expect(pasos[1].latex).toContain("7{,}77920");
-    expect(pasos[2].latex).toBe("t = -1{,}14937");
-  });
-
-  it("t_student — define S_p² y aclara qué varianza usa", () => {
-    const pasos = formatearFormulaLatex(caso("t_student"))!;
-    expect(pasos).toHaveLength(3);
-    expect(pasos[0].latex).toContain("S_p^{2} = \\dfrac{n_1 s_1^{2} + n_2 s_2^{2}}{n_1+n_2-2}");
-    expect(pasos[0].latex).toContain("varianza muestral (divisor }n_i-1");
-    expect(pasos[1].latex).toContain("S_p = 24{,}60000");
-  });
-
-  it("cramer — tres pasos: fórmula genérica + los DOS bloques con su signo", () => {
-    // Bloque 2 rechaza: t_w2 (3.0) > vc_w2 (2.02439) → signo ">"
-    const pasos = formatearFormulaLatex(
-      caso("cramer", { estadistico: 3.0 }, { tau_w2: 0.5, t_w2: 3.0 }),
-    )!;
-    expect(pasos).toHaveLength(3);
-    expect(pasos[1].latex).toContain("Bloque 1");
-    expect(pasos[1].latex).toContain("t_{w_1} = 0{,}23585 \\le 2{,}02439");
-    expect(pasos[2].latex).toContain("Bloque 2");
-    // Rótulos por n_w, nunca por porcentaje (partición personalizada, DECISIÓN 036)
-    expect(pasos[1].latex).not.toContain("\\%");
-    expect(pasos[2].latex).not.toContain("\\%");
-    expect(pasos[2].latex).toContain("t_{w_2} = 3{,}00000 > 2{,}02439");
-  });
-
-  it("cramer — define τ_w y S_Q, y muestra la media y el desvío globales", () => {
-    const pasos = formatearFormulaLatex(caso("cramer"))!;
-    expect(pasos).toHaveLength(3);
-    expect(pasos[0].latex).toContain("\\tau_w = \\dfrac{\\bar{Q}_w - \\bar{Q}}{S_Q}");
-    expect(pasos[0].latex).toContain("S_Q = \\sqrt{\\dfrac{1}{n-1}");
-    expect(pasos[1].latex).toContain("\\bar{Q} = 150{,}25000");
-    expect(pasos[1].latex).toContain("S_Q = 31{,}50000");
-  });
-
-  it("mann_kendall — muestra S, Var(S) y la tipificación Z, sin atribuir a A.55 la corrección por empates", () => {
-    const pasos = formatearFormulaLatex(caso("mann_kendall"))!;
-    expect(pasos[1].latex).toContain("S = 91{,}00000");
-    expect(pasos[1].latex).toContain("\\operatorname{Var}(S) = 14291{,}66700");
-    expect(pasos[2].latex).toContain("Z = 0{,}75280");
-    // Paso simbólico: Var(S) sin empates (A.55) y la tipificación con corrección de continuidad
-    expect(pasos[0].latex).toContain("\\dfrac{n(n-1)(2n+5)}{18}");
-    expect(pasos[0].latex).toContain("\\dfrac{S-\\operatorname{sgn}(S)}{\\sqrt{\\operatorname{Var}(S)}}");
-    expect(pasos[2].latex).toContain("corrección de continuidad");
-    expect(pasos.map((p) => p.latex).join(" ")).not.toContain("Kendall 1975");
-  });
-
-  it("kolmogorov_smirnov — Z = D·√(n1·n2/(n1+n2)) con la suma sustituida", () => {
-    const pasos = formatearFormulaLatex(caso("kolmogorov_smirnov"))!;
-    expect(pasos[0].latex).toContain("D\\sqrt");
-    expect(pasos[1].latex).toContain("\\dfrac{20\\cdot 20}{40}");
-    expect(pasos[2].latex).toBe("Z = 0{,}63246");
-  });
-
-  it("kolmogorov_smirnov — define D (A.56)", () => {
-    const pasos = formatearFormulaLatex(caso("kolmogorov_smirnov"))!;
-    expect(pasos[0].latex).toContain("D = \\max_i");
-    expect(pasos[0].latex).toContain("\\dfrac{RS(i)}{n_1} - \\dfrac{RI(i)}{n_2}");
-  });
-
-  it("chow — K_N y el t Bonferroni-corregido, resultado = valor_critico", () => {
-    const pasos = formatearFormulaLatex(caso("chow"))!;
-    expect(pasos[0].latex).toContain("K_N = \\dfrac{n-1}{\\sqrt{n}}");
-    expect(pasos[1].latex).toContain("t_{\\,n-2,\\;1-\\alpha/(2n)} = 3{,}50000");
-    expect(pasos[1].latex).toContain("n = 30");
-    expect(pasos[2].latex).toBe("K_N = 2{,}74500");
-  });
-
-  it("chow — rotula α = 0,10 (no el 0,05 del resto de Etapa 1)", () => {
-    const pasos = formatearFormulaLatex(caso("chow"))!;
-    expect(pasos[1].latex).toContain("\\alpha = 0{,}10");
-    expect(pasos[1].latex).toContain("0{,}05");
+  it.each(FORMULAS_LATEX)("$nombre", (esperado) => {
+    const pasos = formatearFormulaLatex(caso(esperado.prueba, esperado.overrides, esperado.terminos));
+    expect(pasos).not.toBeNull();
+    verificar(
+      pasos!.map((p) => p.latex),
+      esperado,
+    );
   });
 
   it("todos los pasos de las 8 pruebas compilan con KaTeX real (sin error de sintaxis)", () => {
