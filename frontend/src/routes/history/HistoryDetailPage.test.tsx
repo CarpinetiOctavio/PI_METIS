@@ -4,7 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { renderPage } from "../../test/renderPage";
 import { HistoryDetailPage } from "./HistoryDetailPage";
-import type { AnalysisDetail, Etapa2Result } from "../../api/types";
+import { makeEtapa2 } from "../../test/etapa2Fixtures";
+import { stubFetchRouted } from "../../test/fetchStubs";
+import type { AnalysisDetail } from "../../api/types";
 
 function stubFetch(status: number, body: unknown) {
   vi.stubGlobal(
@@ -15,64 +17,6 @@ function stubFetch(status: number, body: unknown) {
       json: () => Promise.resolve(body),
     }),
   );
-}
-
-// Bloque C3 — a diferencia de stubFetch (una sola respuesta para todas las
-// llamadas), estos tests disparan un segundo fetch (POST design-events) al
-// explorar una distribución. Ruteado por URL/método en vez de posicional
-// (mockResolvedValueOnce encadenado) a propósito: bajo StrictMode
-// (renderPage envuelve todo en él) el efecto de carga de GET /history/{id}
-// corre dos veces al montar — un mock posicional consumiría un slot con la
-// llamada descartada y desalinearía el resto.
-function stubFetchRouted(
-  routes: Array<{
-    match: (url: string, init?: RequestInit) => boolean;
-    status: number;
-    body: unknown;
-  }>,
-) {
-  const fn = vi.fn((url: string, init?: RequestInit) => {
-    const route = routes.find((r) => r.match(String(url), init));
-    if (!route) {
-      throw new Error(`stubFetchRouted: sin ruta para ${init?.method ?? "GET"} ${url}`);
-    }
-    return Promise.resolve({
-      ok: route.status < 400,
-      status: route.status,
-      json: () => Promise.resolve(route.body),
-    });
-  });
-  vi.stubGlobal("fetch", fn);
-  return fn;
-}
-
-function makeEtapa2(overrides: Partial<Etapa2Result> = {}): Etapa2Result {
-  return {
-    ranking: [
-      {
-        distribucion: "gumbel",
-        n_parametros: 2,
-        metodos: [
-          { metodo: "momentos", parametros: { mu: 100, alpha: 20 }, eea: 12.5, status: "ok" },
-        ],
-        mejor_eea: 12.5,
-        mejor_metodo: "momentos",
-      },
-      {
-        distribucion: "gve",
-        n_parametros: 3,
-        metodos: [
-          { metodo: "ml", parametros: { nu: 90, alpha: 18, beta: 0.1 }, eea: 15.2, status: "ok" },
-        ],
-        mejor_eea: 15.2,
-        mejor_metodo: "ml",
-      },
-    ],
-    warnings: [],
-    puntos_empiricos: [{ valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 }],
-    seleccion: null,
-    ...overrides,
-  };
 }
 
 function makeDetail(overrides: Partial<AnalysisDetail> = {}): AnalysisDetail {
@@ -277,6 +221,11 @@ describe("HistoryDetailPage", () => {
       ([, init]) => init?.method === "POST",
     );
     expect(String(llamadaRecalculo?.[0])).toContain("/analysis/an-1/design-events");
+
+    // La elección registrada queda junto a la exploración para poder compararlas.
+    expect(
+      screen.getByText("Elección registrada").closest(".etapa2-comparacion--doble"),
+    ).toHaveTextContent("Exploración");
 
     // La elección registrada sigue mostrando gumbel/momentos — explorar no la cambió.
     expect(screen.getByText(/gumbel · momentos · períodos de retorno: 2, 10, 100/)).toBeInTheDocument();

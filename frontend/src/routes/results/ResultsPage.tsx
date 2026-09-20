@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
+import { postRecalcularDesignEvents } from "../../api/analysis";
 import { Etapa1ResultView } from "./Etapa1ResultView";
+import { Etapa2Explorador } from "./Etapa2Explorador";
 import { Etapa2RankingView } from "./Etapa2RankingView";
 import { Etapa2EventosView } from "./Etapa2EventosView";
 import type { Etapa1Result, Modo } from "../../api/types";
@@ -38,6 +40,37 @@ export function ResultsPage() {
 
   const etapa2 = locationState?.etapa2;
   const eventosDiseno = locationState?.eventosDiseno;
+  // Solo CU-01 persiste el análisis y devuelve un `analysis_id` — con él se
+  // puede explorar otra distribución contra la BD (`POST /analysis/{id}/
+  // design-events`, DECISIÓN 062). CU-02 (anónimo, sin id) sigue de solo
+  // lectura hasta que exista el endpoint de exploración sin id (plan de
+  // feedback de directores, ítem B, Tanda 2).
+  const analysisId = locationState?.analysisId ?? null;
+  // Lo que llega por el stream es el ranking en el momento de la pausa: todavía
+  // no hay elección registrada (`seleccion: null`).
+  const etapa2Resultado = etapa2
+    ? {
+        ranking: etapa2.ranking,
+        warnings: etapa2.warnings,
+        puntos_empiricos: etapa2.puntos_empiricos,
+        seleccion: null,
+      }
+    : null;
+  // Con `analysisId` el "Evento de diseño" (la elección del stream) se muestra
+  // junto a la exploración, dentro de Etapa2Explorador, para compararlas; sin
+  // él (CU-02) se muestra aparte, debajo del ranking de solo lectura.
+  const explorable = Boolean(etapa2Resultado && analysisId);
+  const eventoDiseno = eventosDiseno && (
+    <>
+      <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+        Evento de diseño
+      </h2>
+      <Etapa2EventosView
+        eventos={eventosDiseno}
+        puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
+      />
+    </>
+  );
 
   return (
     <div className="results-page">
@@ -48,37 +81,39 @@ export function ResultsPage() {
         mesInicioAnio={locationState?.mesInicioAnio}
       />
       {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la
-          pidió al configurar el análisis — acá se muestra de solo lectura,
-          sin botones "Elegir". Si no se pidió Etapa 2, no hay nada que
-          mostrar acá — ver DECISIÓN 052/054. */}
-      {etapa2 && (
+          pidió al configurar el análisis. Si no se pidió Etapa 2, no hay
+          nada que mostrar acá — ver DECISIÓN 052/054. Con `analysisId`
+          (CU-01) el ranking se puede explorar; sin él (CU-02) es de solo
+          lectura, sin botones "Elegir". */}
+      {etapa2Resultado && (
         <div style={{ marginTop: 20 }}>
           <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
             Ranking de distribuciones
           </h2>
-          <Etapa2RankingView
-            etapa2={{
-              ranking: etapa2.ranking,
-              warnings: etapa2.warnings,
-              puntos_empiricos: etapa2.puntos_empiricos,
-              seleccion: null,
-            }}
-            modo="lectura"
-            mediaSerie={result.descriptive?.media}
-          />
+          {explorable && analysisId ? (
+            <Etapa2Explorador
+              etapa2={etapa2Resultado}
+              explorar={(distribucion, metodo, periodosRetorno) =>
+                postRecalcularDesignEvents(analysisId, {
+                  distribucion,
+                  metodo,
+                  periodos_retorno: periodosRetorno,
+                })
+              }
+              mediaSerie={result.descriptive?.media}
+              seleccionRegistrada={eventosDiseno}
+              eleccion={eventoDiseno}
+            />
+          ) : (
+            <Etapa2RankingView
+              etapa2={etapa2Resultado}
+              modo="lectura"
+              mediaSerie={result.descriptive?.media}
+            />
+          )}
         </div>
       )}
-      {eventosDiseno && (
-        <div style={{ marginTop: 20 }}>
-          <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
-            Evento de diseño
-          </h2>
-          <Etapa2EventosView
-            eventos={eventosDiseno}
-            puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
-          />
-        </div>
-      )}
+      {!explorable && eventoDiseno && <div style={{ marginTop: 20 }}>{eventoDiseno}</div>}
     </div>
   );
 }

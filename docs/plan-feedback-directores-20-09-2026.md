@@ -18,7 +18,7 @@ estado actual cita el archivo donde se comprobó.
 | D2 | Correcciones de la auditoría que **no** tocan backend (frontend + doc) | Facundo | **No** | No | D |
 | E | Desglose paso a paso (los k lags de Anderson, etc.) | Kevin | Sí, aditivo en `core/` | Addendum a 064 | D |
 | F | Gráficos propios por prueba (correlograma, etc.) | Facundo | Sí, mismo cambio que E | Addendum a 064 | E |
-| B | Probar otras distribuciones desde la pantalla de resultados | Catalini | Sí, endpoint nuevo stateless | Nueva (extiende 062) | nada |
+| B | Probar otras distribuciones desde la pantalla de resultados | Catalini | Sí, endpoint nuevo stateless | Nueva (extiende 062) | nada — **Tanda 1 hecha 21/09/2026 (CU-01)**; falta CU-02 (Tanda 2) |
 | A | Excluir atípicos clickeando el gráfico + resultados "sin ellos" + descarga | Catalini | Sí, `core/` + endpoint nuevo | Nueva (071) | B (Fase 0 ya hecha) |
 | C | Tratamiento de valores negativos con tipo "Otro" | Catalini | Sí, `core/` | Nueva (073) | nada |
 
@@ -629,6 +629,13 @@ de consultarlo con Octavio.**
 > (recordá que el script no está en el repo, ver §2). Addendum en `decision064.md`.
 
 **Fase B (explorador de distribuciones):**
+> **Tanda 1 — HECHA (21/09/2026), sin tocar backend.** `Etapa2Explorador` extraído de
+> `HistoryDetailPage` y montado en `ResultsPage` **solo para CU-01**: ahí el evento `complete`
+> trae `analysis_id` y sirve el endpoint que ya existe (`POST /analysis/{id}/design-events`,
+> DECISIÓN 062). El componente recibe la función de exploración por prop (`explorar`), así que
+> CU-02 (anónimo, sin id, sin persistencia: hoy sigue de solo lectura) enchufa el endpoint
+> stateless en la Tanda 2 sin tocar el componente. Verificado contra el backend real: recálculo
+> 200 con curva de 60 puntos, elección registrada intacta, anónimo 401.
 > Tanda 1 (sin backend): componente compartido `Etapa2Explorador` extraído de `HistoryDetailPage`,
 > montado en `ResultsPage`, contra el contrato acordado y mockeado en los tests.
 > Tanda 2 (con backend, después de hablar con Octavio): leé §3. Endpoint stateless, contrato en
