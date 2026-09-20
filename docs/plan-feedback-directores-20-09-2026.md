@@ -496,6 +496,7 @@ otros. Reparto por fase, según la restricción de dejar el backend para el fina
 | Id | Cambio | Archivo |
 |----|--------|---------|
 | H-10 | Corregir Anderson en `formulas-etapa1.md` §2 (`ceil(n/3)`, `lags_fuera ≤ ceil(0.10·k_max)`) y el `n/3` de `statistical-pipeline.md` | `.claude/rules/core/` |
+| H-4 (parcial) | Anderson: mostrar la fórmula de las bandas (III-3) y la regla del 10% en el paso simbólico, y los lags fuera / tolerancia en la sustitución (`terminos` ya trae `k_max`, `lags_fuera`, `tolerancia`). **La tabla de bandas por lag y el correlograma siguen en E/F (Tanda 2)** | `explicaciones.ts` |
 | H-5 | Wald-Wolfowitz: mostrar μ_R (III-5) y σ_R (III-6) con sus fórmulas. `terminos` ya trae `n1`, `n2`, `n` | `explicaciones.ts` |
 | H-7 | Cramer: mostrar τ_w (III-13/14) y S_Q (III-10). `terminos` ya trae `media_global`, `s_global`, `tau_w*` | `explicaciones.ts` |
 | H-8 | Kolmogorov-Smirnov: definir D (A.56) | `explicaciones.ts` |

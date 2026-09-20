@@ -140,7 +140,7 @@ if tipo_variable == "caudal_precipitacion" and any(v < 0 for v in serie):
 ### Pruebas de independencia
 
 **Anderson (principal)**
-- Calcula coeficiente de autocorrelación serial para k = 1, 2, ..., n/3
+- Calcula coeficiente de autocorrelación serial para k = 1, 2, ..., ceil(n/3) (DECISIÓN 016)
 - Valor crítico: fórmula analítica de la tesis de Facundo (no tabla)
 - Si Anderson acepta → serie es independiente aunque Wald-Wolfowitz rechace
 - Produce correlograma como output gráfico
