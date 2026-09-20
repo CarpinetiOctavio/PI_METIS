@@ -106,7 +106,7 @@ Fuente: tesis Facundo - Sección III.3.1, Ecuaciones III-1 y III-3.
 ```
 r_k = Σ_{i=1}^{n-k} (x_i - x̄)(x_{i+k} - x̄)  /  Σ_{i=1}^{n} (x_i - x̄)²  # [Ec. III-1]
 ```
-k varía de 1 a k_max = n // 3
+k varía de 1 a k_max = ceil(n / 3)   # DECISIÓN 016 — la tesis escribe k = 1..n/3 sin redondear (III-1)
 
 ### Valor crítico por lag k (two-tailed, α=5%)
 ```
@@ -117,7 +117,8 @@ r_crit_lower(k) = (-1 - 1.96 · √(n-k-1)) / (n-k)                    # [Ec. II
 ### Veredicto
 ```
 lags_fuera = count( r_k > r_crit_upper(k) OR r_k < r_crit_lower(k) )
-aprobada   = (lags_fuera / k_max) ≤ 0.10
+tolerancia = ceil(0.10 · k_max)          # DECISIÓN 012
+aprobada   = lags_fuera ≤ tolerancia
 ```
 Nota: La prueba es global y permite una tolerancia del 10%. El veredicto NO falla si un solo lag aislado se desvía, sino únicamente si la cantidad de lags fuera de las bandas supera el 10% del total de lags calculados.
 
@@ -296,6 +297,15 @@ Fuente: Caamaño Nelli & Colladon — Apéndice A.5.1, Ec. A.51–A.55 (método 
         corrección por empates según Kendall (1975).
         Valor crítico: Z = 1.96 (normal estándar bilateral, α=0.05).
 
+DIVERGENCIA CON LA FUENTE (auditoría de fórmulas, 20/09/2026 —
+docs/auditoria/fases/auditoria-formulas-latex.md, H-2): la Tabla A.4 de Caamaño
+da V_crít = 1,64 para α = 0,05 (cuantil de UNA cola); METIS usa 1,96 (DOS colas),
+que es lo que decide pymannkendall. No es un error de cuenta, es otra convención
+de cola. Quien contraste con el libro va a ver 1,64. Se mantiene 1,96 hasta que
+Facundo/Carlos respondan la pregunta 7 de docs/plan-feedback-directores-20-09-2026.md.
+Además, la fórmula A.55 NO tiene corrección por empates (solo el I−1 de
+continuidad): la corrección de Var(S) ante valores repetidos la aplica la librería.
+
 ### Control de Umbrales de Serie
 Si n < 10  → no_ejecutada, TEST_NOT_EXECUTED_MIN_SAMPLES
 Si n ≥ 10 AND n ≤ 30 → ejecuta con warning TEST_WARNING_SMALL_SAMPLE
@@ -308,7 +318,10 @@ tamaño de la muestra.
 
 ### Para n ≥ 10 (fórmula analítica vía pymannkendall)
 S   = Σ_{i<j} sgn(xj - xi)                             # Estadístico S de Kendall (Ec. A.51–A.53)
-Z   = estadístico normalizado (aproximación normal con corrección por empates)  # Ec. A.55
+Var(S) = n(n−1)(2n+5)/18   (sin empates; con empates pymannkendall resta Σ tp(tp−1)(2tp+5)/18)
+Z   = (S − sgn(S)) / √Var(S)   # Ec. A.55 con I = S; el −sgn(S) es la corrección de
+                               # continuidad. Verificado numéricamente contra pymannkendall
+                               # (S>0, S<0, S=0 y con empates).
 valor_critico = 1.96                                    # Normal estándar bilateral, α=0.05
 aprobada = not resultado.h                              # h=True significa tendencia detectada
 

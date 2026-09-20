@@ -69,14 +69,14 @@ const FORMULAS: Record<string, FormulaFn> = {
     const signo1 = (t.t_w1 ?? 0) <= (t.vc_w1 ?? 0) ? "≤" : ">";
     const signo2 = (t.t_w2 ?? 0) <= (t.vc_w2 ?? 0) ? "≤" : ">";
     return [
-      `Bloque 60% (n_w₁=${t.n_w1}): τ_w₁ = ${fmt(t.tau_w1)}, t_w₁ = ${fmt(t.t_w1)} ${signo1} ${fmt(t.vc_w1)}`,
-      `Bloque 30% (n_w₂=${t.n_w2}): τ_w₂ = ${fmt(t.tau_w2)}, t_w₂ = ${fmt(t.t_w2)} ${signo2} ${fmt(t.vc_w2)}`,
+      `Bloque 1 (últimos n_w₁=${t.n_w1} datos): τ_w₁ = ${fmt(t.tau_w1)}, t_w₁ = ${fmt(t.t_w1)} ${signo1} ${fmt(t.vc_w1)}`,
+      `Bloque 2 (últimos n_w₂=${t.n_w2} datos): τ_w₂ = ${fmt(t.tau_w2)}, t_w₂ = ${fmt(t.t_w2)} ${signo2} ${fmt(t.vc_w2)}`,
     ];
   },
   mann_kendall: (tr) => {
     const t = tr.explicacion!.terminos;
     return [
-      `S = ${fmt(t.s)}, Var(S) = ${fmt(t.var_s)} → Z (aproximación normal con corrección por empates, Kendall 1975) = ${fmt(tr.estadistico)}`,
+      `S = ${fmt(t.s)}, Var(S) = ${fmt(t.var_s)} → Z = (S − sgn(S)) / √Var(S) = ${fmt(tr.estadistico)}`,
     ];
   },
   kolmogorov_smirnov: (tr) => {
@@ -88,7 +88,7 @@ const FORMULAS: Record<string, FormulaFn> = {
   chow: (tr) => {
     const t = tr.explicacion!.terminos;
     return [
-      `K_N = (n−1)/√n · √(t²/(n−2+t²)) = ${fmt(tr.valor_critico)}  (t = t_{n−2,1−α/(2n)} = ${fmt(t.t_bonferroni)}, n=${t.n})`,
+      `K_N = (n−1)/√n · √(t²/(n−2+t²)) = ${fmt(tr.valor_critico)}  (t = t_{n−2,1−α/(2n)} = ${fmt(t.t_bonferroni)}, n=${t.n}, α = 0,10)`,
     ];
   },
 };
@@ -125,18 +125,34 @@ function ltxInt(v: number | null | undefined): string {
 
 type FormulaLatexFn = (tr: TestResultDetail) => PasoFormula[];
 
+// Varias líneas de LaTeX dentro de un mismo paso (KaTeX, displayMode):
+// `aligned` con separación vertical. Permite definir en el paso simbólico los
+// términos que la fórmula usa (S_p, τ_w, D, μ_R, ...) sin agregar pasos — la
+// estructura simbólica → sustitución → resultado no cambia.
+function lineas(...ls: string[]): string {
+  return `\\begin{aligned}${ls.map((l) => `&${l}`).join("\\\\[0.7em]")}\\end{aligned}`;
+}
+
 const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
   anderson: (tr) => {
     const t = tr.explicacion!.terminos;
     const k = ltxInt(t.k ?? 0);
     return [
       {
-        latex: `r_{k} = \\dfrac{\\sum_{i=1}^{n-k}(x_i-\\bar{x})(x_{i+k}-\\bar{x})}{\\sum_{i=1}^{n}(x_i-\\bar{x})^{2}}`,
-        fallback: "r_k = Σ(xi−x̄)(x_{i+k}−x̄) / Σ(xi−x̄)²",
+        latex: lineas(
+          `r_{k} = \\dfrac{\\sum_{i=1}^{n-k}(x_i-\\bar{x})(x_{i+k}-\\bar{x})}{\\sum_{i=1}^{n}(x_i-\\bar{x})^{2}}`,
+          `r_{k}(95\\%) = \\dfrac{-1 \\pm 1{,}96\\sqrt{n-k-1}}{n-k}`,
+          `\\text{La serie es independiente si no más del 10\\% de los } r_k \\text{ salen de esas bandas}`,
+        ),
+        fallback:
+          "r_k = Σ(xi−x̄)(x_{i+k}−x̄) / Σ(xi−x̄)²; bandas al 95%: r_k = (−1 ± 1,96·√(n−k−1)) / (n−k); independiente si no más del 10% de los r_k salen de las bandas",
       },
       {
-        latex: `r_{${k}} = \\dfrac{${ltx(t.numerador)}}{${ltx(t.denominador)}}`,
-        fallback: `r${subscript(t.k ?? 0)} = ${fmt(t.numerador)} / ${fmt(t.denominador)}`,
+        latex: lineas(
+          `r_{${k}} = \\dfrac{${ltx(t.numerador)}}{${ltx(t.denominador)}}`,
+          `\\text{Lags fuera de las bandas: } ${ltxInt(t.lags_fuera)} \\text{ de } ${ltxInt(t.k_max)} \\;(\\text{tolerancia: } ${ltxInt(t.tolerancia)})`,
+        ),
+        fallback: `r${subscript(t.k ?? 0)} = ${fmt(t.numerador)} / ${fmt(t.denominador)}; lags fuera de las bandas: ${t.lags_fuera} de ${t.k_max} (tolerancia: ${t.tolerancia})`,
       },
       {
         latex: `r_{${k}} = ${ltx(tr.estadistico)}`,
@@ -148,12 +164,21 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
     const t = tr.explicacion!.terminos;
     return [
       {
-        latex: `Z = \\dfrac{R - \\mu_R}{\\sigma_R}`,
-        fallback: "Z = (R − µ_R) / σ_R",
+        latex: lineas(
+          `Z = \\dfrac{R - \\mu_R}{\\sigma_R}`,
+          `\\mu_R = \\dfrac{2\\,n_1 n_2}{n} + 1`,
+          `\\sigma_R = \\sqrt{\\dfrac{(\\mu_R-1)(\\mu_R-2)}{n-1}}`,
+        ),
+        fallback:
+          "Z = (R − µ_R) / σ_R; µ_R = 2·n₁·n₂/n + 1; σ_R = √[(µ_R−1)(µ_R−2)/(n−1)]",
       },
       {
-        latex: `Z = \\dfrac{${ltxInt(t.r)} - ${ltx(t.mu_r)}}{${ltx(t.sigma_r)}}`,
-        fallback: `Z = (${fmt(t.r)} − ${fmt(t.mu_r)}) / ${fmt(t.sigma_r)}`,
+        latex: lineas(
+          `\\mu_R = \\dfrac{2\\cdot ${ltxInt(t.n1)}\\cdot ${ltxInt(t.n2)}}{${ltxInt(t.n)}} + 1 = ${ltx(t.mu_r)}`,
+          `\\sigma_R = \\sqrt{\\dfrac{(${ltx(t.mu_r)}-1)(${ltx(t.mu_r)}-2)}{${ltxInt(t.n)}-1}} = ${ltx(t.sigma_r)}`,
+          `Z = \\dfrac{${ltxInt(t.r)} - ${ltx(t.mu_r)}}{${ltx(t.sigma_r)}}`,
+        ),
+        fallback: `Z = (${fmt(t.r)} − ${fmt(t.mu_r)}) / ${fmt(t.sigma_r)}  (µ_R = ${fmt(t.mu_r)}, σ_R = ${fmt(t.sigma_r)})`,
       },
       { latex: `Z = ${ltx(tr.estadistico)}`, fallback: `Z = ${fmt(tr.estadistico)}` },
     ];
@@ -183,15 +208,23 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
         : null;
     return [
       {
-        latex: `t = \\dfrac{\\bar{x}_1 - \\bar{x}_2}{S_p\\sqrt{\\tfrac{1}{n_1}+\\tfrac{1}{n_2}}}`,
-        fallback: "t = (x̄₁ − x̄₂) / (Sp·√(1/n₁+1/n₂))",
+        latex: lineas(
+          `t = \\dfrac{\\bar{x}_1 - \\bar{x}_2}{S_p\\sqrt{\\tfrac{1}{n_1}+\\tfrac{1}{n_2}}}`,
+          `S_p^{2} = \\dfrac{n_1 s_1^{2} + n_2 s_2^{2}}{n_1+n_2-2}\\quad\\text{con }s_i^{2}\\text{ la varianza muestral (divisor }n_i-1\\text{)}`,
+        ),
+        fallback:
+          "t = (x̄₁ − x̄₂) / (Sp·√(1/n₁+1/n₂)); Sp² = (n₁s₁² + n₂s₂²)/(n₁+n₂−2), con sᵢ² la varianza muestral (divisor nᵢ−1)",
       },
       {
         // El denominador no viaja en `terminos` — se reconstruye acá para
         // mostrarlo (misma aritmética cosmética que ya hacía la versión de
-        // texto, DECISIÓN 064). No es un estadístico nuevo.
-        latex: `t = \\dfrac{${ltx(t.x1_barra)} - ${ltx(t.x2_barra)}}{${ltx(denom)}}`,
-        fallback: `t = (${fmt(t.x1_barra)} − ${fmt(t.x2_barra)}) / ${fmt(denom)}`,
+        // texto, DECISIÓN 064). No es un estadístico nuevo. Pasa a `terminos`
+        // en la Tanda 2 del plan de feedback de directores (H-3).
+        latex: lineas(
+          `S_p = ${ltx(t.sp)}`,
+          `t = \\dfrac{${ltx(t.x1_barra)} - ${ltx(t.x2_barra)}}{${ltx(denom)}}`,
+        ),
+        fallback: `Sp = ${fmt(t.sp)}; t = (${fmt(t.x1_barra)} − ${fmt(t.x2_barra)}) / ${fmt(denom)}`,
       },
       { latex: `t = ${ltx(tr.estadistico)}`, fallback: `t = ${fmt(tr.estadistico)}` },
     ];
@@ -202,18 +235,30 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
     const signo2 = (t.t_w2 ?? 0) <= (t.vc_w2 ?? 0) ? "\\le" : ">";
     const asciiSigno1 = (t.t_w1 ?? 0) <= (t.vc_w1 ?? 0) ? "≤" : ">";
     const asciiSigno2 = (t.t_w2 ?? 0) <= (t.vc_w2 ?? 0) ? "≤" : ">";
+    // Los rótulos dicen "últimos n_w datos" y no "60%"/"30%": con una partición
+    // personalizada (DECISIÓN 036) los porcentajes son otros y `terminos` no
+    // los trae (interino, plan de feedback de directores H-1; el porcentaje
+    // vuelve en la Tanda 2 junto con `n1_pct`/`n2_pct`).
     return [
       {
-        latex: `t_w = \\sqrt{\\dfrac{n_w\\,(n-2)}{\\,n - n_w\\,(1+\\tau_w^{2})}}\\;\\lvert\\tau_w\\rvert`,
-        fallback: "t_w = √[ n_w·(n−2) / (n − n_w·(1+τ_w²)) ] · |τ_w|",
+        latex: lineas(
+          `t_w = \\sqrt{\\dfrac{n_w\\,(n-2)}{\\,n - n_w\\,(1+\\tau_w^{2})}}\\;\\lvert\\tau_w\\rvert`,
+          `\\tau_w = \\dfrac{\\bar{Q}_w - \\bar{Q}}{S_Q}\\qquad S_Q = \\sqrt{\\dfrac{1}{n-1}\\sum_{i=1}^{n}(Q_i-\\bar{Q})^{2}}`,
+          `\\bar{Q}_w \\text{ es la media de los últimos } n_w \\text{ datos del registro}`,
+        ),
+        fallback:
+          "t_w = √[ n_w·(n−2) / (n − n_w·(1+τ_w²)) ] · |τ_w|; τ_w = (Q̄_w − Q̄)/S_Q, con S_Q el desvío estándar de la serie; Q̄_w es la media de los últimos n_w datos",
       },
       {
-        latex: `\\text{Bloque 60\\%}\\;(n_{w_1}=${ltxInt(t.n_w1)}):\\quad \\tau_{w_1} = ${ltx(t.tau_w1)},\\quad t_{w_1} = ${ltx(t.t_w1)} ${signo1} ${ltx(t.vc_w1)}`,
-        fallback: `Bloque 60% (n_w₁=${t.n_w1}): τ_w₁ = ${fmt(t.tau_w1)}, t_w₁ = ${fmt(t.t_w1)} ${asciiSigno1} ${fmt(t.vc_w1)}`,
+        latex: lineas(
+          `\\bar{Q} = ${ltx(t.media_global)},\\quad S_Q = ${ltx(t.s_global)},\\quad n = ${ltxInt(t.n)}`,
+          `\\text{Bloque 1}\\;(\\text{últimos } n_{w_1}=${ltxInt(t.n_w1)}\\text{ datos}):\\quad \\tau_{w_1} = ${ltx(t.tau_w1)},\\quad t_{w_1} = ${ltx(t.t_w1)} ${signo1} ${ltx(t.vc_w1)}`,
+        ),
+        fallback: `Q̄ = ${fmt(t.media_global)}, S_Q = ${fmt(t.s_global)}, n = ${t.n}; Bloque 1 (últimos n_w₁=${t.n_w1} datos): τ_w₁ = ${fmt(t.tau_w1)}, t_w₁ = ${fmt(t.t_w1)} ${asciiSigno1} ${fmt(t.vc_w1)}`,
       },
       {
-        latex: `\\text{Bloque 30\\%}\\;(n_{w_2}=${ltxInt(t.n_w2)}):\\quad \\tau_{w_2} = ${ltx(t.tau_w2)},\\quad t_{w_2} = ${ltx(t.t_w2)} ${signo2} ${ltx(t.vc_w2)}`,
-        fallback: `Bloque 30% (n_w₂=${t.n_w2}): τ_w₂ = ${fmt(t.tau_w2)}, t_w₂ = ${fmt(t.t_w2)} ${asciiSigno2} ${fmt(t.vc_w2)}`,
+        latex: `\\text{Bloque 2}\\;(\\text{últimos } n_{w_2}=${ltxInt(t.n_w2)}\\text{ datos}):\\quad \\tau_{w_2} = ${ltx(t.tau_w2)},\\quad t_{w_2} = ${ltx(t.t_w2)} ${signo2} ${ltx(t.vc_w2)}`,
+        fallback: `Bloque 2 (últimos n_w₂=${t.n_w2} datos): τ_w₂ = ${fmt(t.tau_w2)}, t_w₂ = ${fmt(t.t_w2)} ${asciiSigno2} ${fmt(t.vc_w2)}`,
       },
     ];
   },
@@ -221,18 +266,24 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
     const t = tr.explicacion!.terminos;
     return [
       {
-        latex: `S = \\sum_{i<j}\\operatorname{sgn}(x_j - x_i)`,
-        fallback: "S = Σ_{i<j} sgn(xj − xi)",
+        latex: lineas(
+          `S = \\sum_{i<j}\\operatorname{sgn}(x_j - x_i)`,
+          `\\operatorname{Var}(S) = \\dfrac{n(n-1)(2n+5)}{18}\\quad\\text{(sin valores repetidos; con empates el cálculo la corrige)}`,
+          `Z = \\dfrac{S-\\operatorname{sgn}(S)}{\\sqrt{\\operatorname{Var}(S)}}`,
+        ),
+        fallback:
+          "S = Σ_{i<j} sgn(xj − xi); Var(S) = n(n−1)(2n+5)/18 (sin valores repetidos; con empates se corrige); Z = (S − sgn(S)) / √Var(S)",
       },
       {
         latex: `S = ${ltx(t.s)},\\qquad \\operatorname{Var}(S) = ${ltx(t.var_s)}`,
         fallback: `S = ${fmt(t.s)}, Var(S) = ${fmt(t.var_s)}`,
       },
       {
-        // Sin fórmula inventada para la tipificación con corrección por
-        // empates (DECISIÓN 064) — se nombra en prosa, Z viene de `core/`.
-        latex: `Z = ${ltx(tr.estadistico)} \\quad \\text{(aprox. normal con corrección por empates, Kendall 1975)}`,
-        fallback: `Z (aproximación normal con corrección por empates, Kendall 1975) = ${fmt(tr.estadistico)}`,
+        // El término −sgn(S) es la corrección de continuidad de A.55
+        // (`I − 1`); `Z` viene de `core/`, no se recalcula acá. La corrección
+        // por empates de Var(S) no es de A.55: la aplica pymannkendall.
+        latex: `Z = ${ltx(tr.estadistico)} \\quad \\text{(el término } -\\operatorname{sgn}(S) \\text{ es la corrección de continuidad)}`,
+        fallback: `Z = ${fmt(tr.estadistico)} (el término −sgn(S) es la corrección de continuidad)`,
       },
     ];
   },
@@ -241,8 +292,13 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
     const suma = (t.n1 ?? 0) + (t.n2 ?? 0);
     return [
       {
-        latex: `Z = D\\sqrt{\\dfrac{n_1\\,n_2}{n_1 + n_2}}`,
-        fallback: "Z = D·√(n₁·n₂/(n₁+n₂))",
+        latex: lineas(
+          `Z = D\\sqrt{\\dfrac{n_1\\,n_2}{n_1 + n_2}}`,
+          `D = \\max_i \\left\\lvert \\dfrac{RS(i)}{n_1} - \\dfrac{RI(i)}{n_2} \\right\\rvert`,
+          `RS(i),\\, RI(i)\\text{: datos} \\le x_{(i)} \\text{ de la primera y de la segunda mitad del registro}`,
+        ),
+        fallback:
+          "Z = D·√(n₁·n₂/(n₁+n₂)); D = máx |RS(i)/n₁ − RI(i)/n₂| (RS, RI: datos ≤ x(i) de la primera y de la segunda mitad)",
       },
       {
         latex: `Z = ${ltx(t.d)}\\,\\sqrt{\\dfrac{${ltxInt(t.n1)}\\cdot ${ltxInt(t.n2)}}{${ltxInt(suma)}}}`,
@@ -259,8 +315,15 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
         fallback: "K_N = (n−1)/√n · √(t²/(n−2+t²))",
       },
       {
-        latex: `t = t_{\\,n-2,\\;1-\\alpha/(2n)} = ${ltx(t.t_bonferroni)},\\qquad n = ${ltxInt(t.n)}`,
-        fallback: `t = t_{n−2,1−α/(2n)} = ${fmt(t.t_bonferroni)}, n=${t.n}`,
+        // α = 0,10 es la constante `ALPHA_CHOW` de `core/etapa1/outliers.py`
+        // (Bulletin 17B, Ap. 4): NO es el 0,05 del resto de Etapa 1. Sin
+        // rotularlo, el alumno no puede reproducir `t_Bonferroni`. Si esa
+        // constante cambia, cambiar también acá (no viaja en `terminos`).
+        latex: lineas(
+          `\\alpha = 0{,}10 \\quad\\text{(no el } 0{,}05 \\text{ del resto de Etapa 1)}`,
+          `t = t_{\\,n-2,\\;1-\\alpha/(2n)} = ${ltx(t.t_bonferroni)},\\qquad n = ${ltxInt(t.n)}`,
+        ),
+        fallback: `α = 0,10 (no el 0,05 del resto de Etapa 1); t = t_{n−2,1−α/(2n)} = ${fmt(t.t_bonferroni)}, n=${t.n}`,
       },
       {
         latex: `K_N = ${ltx(tr.valor_critico)}`,
@@ -303,7 +366,7 @@ const INTERPRETACIONES: Record<string, InterpretadorFn> = {
     const b1 = (t.t_w1 ?? 0) <= (t.vc_w1 ?? 0);
     const b2 = (t.t_w2 ?? 0) <= (t.vc_w2 ?? 0);
     if (b1 && b2) {
-      return `Los dos bloques (60% y 30%) aprueban — ninguno supera el valor crítico (${fmt(t.vc_w1)}) — sin evidencia de cambio de media en ningún tramo reciente del registro.`;
+      return `Los dos bloques aprueban — ninguno supera el valor crítico (${fmt(t.vc_w1)}) — sin evidencia de cambio de media en ningún tramo reciente del registro.`;
     }
     return `Al menos uno de los dos bloques supera el valor crítico (${fmt(t.vc_w1)}) — alcanza con que uno falle para que Cramer rechace homogeneidad, y Cramer manda sobre Helmert y t de Student.`;
   },
