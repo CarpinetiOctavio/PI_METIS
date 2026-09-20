@@ -81,6 +81,7 @@ export function HistoryDetailPage() {
             result={detail.etapa1}
             modo={(detail.modo as Modo | null) ?? "experto"}
             mesInicioAnio={detail.configuracion?.mes_inicio_anio}
+            nombreArchivo={detail.configuracion?.nombre_archivo}
           />
           {/* PR 5 del plan de cierre de pendientes no-test (DECISIÓN 058
               §4) — sin backfill, `timestamps` es null para cualquier

@@ -236,6 +236,7 @@ export function StreamPage() {
         etapa2: state.etapa2,
         eventosDiseno: state.eventosDiseno,
         mesInicioAnio: form?.mes_inicio_anio,
+        nombreArchivo: form?.archivo.name,
       },
     });
   }, [
@@ -246,6 +247,7 @@ export function StreamPage() {
     state.eventosDiseno,
     form?.modo,
     form?.mes_inicio_anio,
+    form?.archivo.name,
     navigate,
   ]);
 

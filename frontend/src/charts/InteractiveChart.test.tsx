@@ -2,27 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { InteractiveChart } from "./InteractiveChart";
 import type { ChartSeries } from "./InteractiveChart";
-
-// jsdom no calcula layout real — getBoundingClientRect() da todo 0 por
-// default (mismo obstáculo que Magnet.test.tsx). Acá sí importa el tamaño
-// real porque el componente convierte clientX a coordenadas del viewBox
-// (640×320) proporcionalmente al rect — se mockea 1:1 con VIEW_W/height
-// para poder calcular a mano el clientX de cada punto.
-function mockChartRect() {
-  vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
-    left: 0,
-    top: 0,
-    width: 640,
-    height: 320,
-    right: 640,
-    bottom: 320,
-    x: 0,
-    y: 0,
-    toJSON() {
-      return this;
-    },
-  } as DOMRect);
-}
+import { mockChartRect } from "../test/chartRect";
 
 const MARGIN_LEFT = 60;
 
@@ -358,5 +338,131 @@ describe("InteractiveChart", () => {
 
       expect(reset).toBeEnabled();
     });
+  });
+});
+
+// Ítem A (excluir atípicos): activar un marcador con clic o con el teclado, y
+// dibujar como huecos los marcados.
+describe("InteractiveChart — activar y marcar puntos", () => {
+  // El componente convierte clientX/clientY al viewBox con los márgenes reales
+  // (left 88, top 12 — InteractiveChart.tsx); el rect mockeado es 1:1.
+  const MARGEN = { left: 88, top: 12 };
+
+  beforeEach(() => {
+    mockChartRect();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function serieAnualConIds(): ChartSeries[] {
+    return [
+      {
+        id: "puntos",
+        kind: "points",
+        label: "Serie",
+        colorVar: "--acc",
+        data: [
+          { x: 2000, y: 10, id: 0 },
+          { x: 2005, y: 50, id: 1 },
+          { x: 2010, y: 20, id: 2 },
+        ],
+      },
+    ];
+  }
+
+  function montar(props: Partial<React.ComponentProps<typeof InteractiveChart>> = {}) {
+    const onPointActivate = vi.fn();
+    const { container } = render(
+      <InteractiveChart
+        series={serieAnualConIds()}
+        xScale="linear"
+        ariaLabel="Serie anual"
+        xLabel="Año"
+        yLabel="Valor"
+        onPointActivate={onPointActivate}
+        {...props}
+      />,
+    );
+    const capture = container.querySelector(".interactive-chart__capture") as Element;
+    const circulos = Array.from(container.querySelectorAll("circle.interactive-chart__point"));
+    // Posición en pantalla del marcador i-ésimo: su cx/cy (coordenadas del
+    // gráfico) más el margen del viewBox.
+    const posicion = (i: number) => ({
+      clientX: MARGEN.left + Number(circulos[i].getAttribute("cx")),
+      clientY: MARGEN.top + Number(circulos[i].getAttribute("cy")),
+    });
+    return { container, capture, circulos, posicion, onPointActivate };
+  }
+
+  it("un clic sobre un marcador llama a onPointActivate con ese punto (y su id) y su serie", () => {
+    const { capture, posicion, onPointActivate } = montar();
+
+    fireEvent.mouseDown(capture, posicion(1));
+    fireEvent.mouseUp(capture, posicion(1));
+
+    expect(onPointActivate).toHaveBeenCalledTimes(1);
+    const [punto, serie] = onPointActivate.mock.calls[0];
+    expect(punto).toEqual({ x: 2005, y: 50, id: 1 });
+    expect(serie.id).toBe("puntos");
+  });
+
+  it("un clic lejos de todo marcador no activa nada", () => {
+    const { capture, posicion, onPointActivate } = montar();
+    const { clientX, clientY } = posicion(1);
+
+    fireEvent.mouseDown(capture, { clientX, clientY: clientY + 90 });
+    fireEvent.mouseUp(capture, { clientX, clientY: clientY + 90 });
+
+    expect(onPointActivate).not.toHaveBeenCalled();
+  });
+
+  it("un arrastre para hacer zoom no cuenta como clic sobre el marcador", () => {
+    const { capture, posicion, onPointActivate } = montar();
+
+    fireEvent.mouseDown(capture, posicion(0));
+    fireEvent.mouseMove(capture, posicion(2));
+    fireEvent.mouseUp(capture, posicion(2));
+
+    expect(onPointActivate).not.toHaveBeenCalled();
+  });
+
+  it.each([["Enter"], [" "]])(
+    "con el marcador enfocado por teclado, %j lo activa; sin foco no hace nada",
+    (tecla) => {
+      const { onPointActivate } = montar();
+      const svg = screen.getByRole("img", { name: "Serie anual" });
+
+      fireEvent.keyDown(svg, { key: tecla });
+      expect(onPointActivate).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(svg, { key: "ArrowRight" });
+      fireEvent.keyDown(svg, { key: "ArrowRight" });
+      fireEvent.keyDown(svg, { key: tecla });
+      expect(onPointActivate).toHaveBeenCalledTimes(1);
+      expect(onPointActivate.mock.calls[0][0]).toMatchObject({ x: 2005, id: 1 });
+    },
+  );
+
+  it("sin onPointActivate el clic no rompe nada", () => {
+    const { capture, posicion } = montar({ onPointActivate: undefined });
+
+    expect(() => {
+      fireEvent.mouseDown(capture, posicion(0));
+      fireEvent.mouseUp(capture, posicion(0));
+    }).not.toThrow();
+  });
+
+  it("marked() dibuja hueco solo los puntos marcados, con el anillo del color de la serie", () => {
+    const serie = serieAnualConIds();
+    serie[0].marked = (p) => p.id === 1;
+    const { circulos } = montar({ series: serie });
+
+    expect(circulos.map((c) => c.hasAttribute("data-marked"))).toEqual([false, true, false]);
+    const hueco = circulos[1] as SVGCircleElement;
+    expect(hueco.style.fill).toBe("var(--surf2)");
+    expect(hueco.style.stroke).toBe("var(--acc)");
+    expect((circulos[0] as SVGCircleElement).style.fill).toBe("var(--acc)");
   });
 });

@@ -1,0 +1,44 @@
+/* Lista de años con checkbox: la versión operable con teclado y lector de
+   pantalla de la selección que se hace con clic en los gráficos. Con series de
+   decenas de años, scroll propio en vez de alargar la página. */
+.etapa1-exclusion__lista {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  max-height: 220px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 4px 12px;
+}
+
+.etapa1-exclusion__lista legend {
+  padding: 0 6px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--mut);
+  font-weight: 700;
+}
+
+.etapa1-exclusion__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.etapa1-exclusion__estado {
+  display: block; /* <output> es inline por defecto */
+  margin: 0 0 8px;
+  font-size: 12.5px;
+}
+
+.etapa1-exclusion__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
