@@ -238,8 +238,10 @@ describe("ResultsPage", () => {
       distribucion: "gve",
       metodo: "ml",
     });
-    // La elección del stream sigue ahí: explorar no la cambia (DECISIÓN 062).
-    expect(screen.getByRole("heading", { name: "Evento de diseño" })).toBeInTheDocument();
+    // La elección del stream sigue ahí: explorar no la cambia (DECISIÓN 062), y
+    // queda en el mismo contenedor que la exploración para poder compararlas.
+    const eleccion = screen.getByRole("heading", { name: "Evento de diseño" });
+    expect(eleccion.closest(".etapa2-comparacion--doble")).toHaveTextContent("Exploración");
   });
 
   // Bloque F5 del plan de Etapa 2 (DECISIÓN 057).

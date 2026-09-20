@@ -44,6 +44,31 @@ export function HistoryDetailPage() {
     return <p className="sub">Cargando análisis…</p>;
   }
 
+  // La elección registrada se muestra dentro del explorador, debajo del ranking
+  // y junto a la exploración (en escritorio, lado a lado) para poder compararlas.
+  const seleccion = detail.etapa2?.seleccion ?? null;
+  const eleccionRegistrada = seleccion && detail.etapa2 && (
+    <>
+      <h3 className="h" style={{ fontSize: 14, marginBottom: 4 }}>
+        Elección registrada
+      </h3>
+      <p className="sub" style={{ marginBottom: 8 }}>
+        {seleccion.distribucion} · {seleccion.metodo} · períodos de retorno:{" "}
+        {seleccion.periodos_retorno.join(", ")} ·{" "}
+        {new Date(detail.created_at).toLocaleString("es-AR")}
+      </p>
+      <Etapa2EventosView
+        eventos={{
+          distribucion: seleccion.distribucion,
+          metodo: seleccion.metodo,
+          eventos_diseno: seleccion.eventos_diseno,
+          curva_ajuste: seleccion.curva_ajuste,
+        }}
+        puntosEmpiricos={detail.etapa2.puntos_empiricos}
+      />
+    </>
+  );
+
   return (
     <div className="history-detail-page">
       <h1 className="h">Detalle del análisis</h1>
@@ -84,28 +109,7 @@ export function HistoryDetailPage() {
             Etapa 2 — análisis de frecuencia
           </h2>
 
-          {detail.etapa2.seleccion ? (
-            <div style={{ marginTop: 12 }}>
-              <h3 className="h" style={{ fontSize: 14, marginBottom: 4 }}>
-                Elección registrada
-              </h3>
-              <p className="sub" style={{ marginBottom: 8 }}>
-                {detail.etapa2.seleccion.distribucion} ·{" "}
-                {detail.etapa2.seleccion.metodo} · períodos de retorno:{" "}
-                {detail.etapa2.seleccion.periodos_retorno.join(", ")} ·{" "}
-                {new Date(detail.created_at).toLocaleString("es-AR")}
-              </p>
-              <Etapa2EventosView
-                eventos={{
-                  distribucion: detail.etapa2.seleccion.distribucion,
-                  metodo: detail.etapa2.seleccion.metodo,
-                  eventos_diseno: detail.etapa2.seleccion.eventos_diseno,
-                  curva_ajuste: detail.etapa2.seleccion.curva_ajuste,
-                }}
-                puntosEmpiricos={detail.etapa2.puntos_empiricos}
-              />
-            </div>
-          ) : (
+          {!seleccion && (
             <div className="banner warn" style={{ marginTop: 12 }}>
               <span className="ic">▲</span> Este análisis tiene Etapa 2
               ejecutada pero es anterior a esta versión de METIS — no quedó
@@ -128,7 +132,8 @@ export function HistoryDetailPage() {
               })
             }
             mediaSerie={detail.etapa1?.descriptive?.media}
-            seleccionRegistrada={detail.etapa2.seleccion}
+            seleccionRegistrada={seleccion}
+            eleccion={eleccionRegistrada}
           />
         </div>
       )}

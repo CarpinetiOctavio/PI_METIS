@@ -222,6 +222,11 @@ describe("HistoryDetailPage", () => {
     );
     expect(String(llamadaRecalculo?.[0])).toContain("/analysis/an-1/design-events");
 
+    // La elección registrada queda junto a la exploración para poder compararlas.
+    expect(
+      screen.getByText("Elección registrada").closest(".etapa2-comparacion--doble"),
+    ).toHaveTextContent("Exploración");
+
     // La elección registrada sigue mostrando gumbel/momentos — explorar no la cambió.
     expect(screen.getByText(/gumbel · momentos · períodos de retorno: 2, 10, 100/)).toBeInTheDocument();
   });

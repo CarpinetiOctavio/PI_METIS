@@ -56,6 +56,21 @@ export function ResultsPage() {
         seleccion: null,
       }
     : null;
+  // Con `analysisId` el "Evento de diseño" (la elección del stream) se muestra
+  // junto a la exploración, dentro de Etapa2Explorador, para compararlas; sin
+  // él (CU-02) se muestra aparte, debajo del ranking de solo lectura.
+  const explorable = Boolean(etapa2Resultado && analysisId);
+  const eventoDiseno = eventosDiseno && (
+    <>
+      <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+        Evento de diseño
+      </h2>
+      <Etapa2EventosView
+        eventos={eventosDiseno}
+        puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
+      />
+    </>
+  );
 
   return (
     <div className="results-page">
@@ -75,7 +90,7 @@ export function ResultsPage() {
           <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
             Ranking de distribuciones
           </h2>
-          {analysisId ? (
+          {explorable && analysisId ? (
             <Etapa2Explorador
               etapa2={etapa2Resultado}
               explorar={(distribucion, metodo, periodosRetorno) =>
@@ -87,6 +102,7 @@ export function ResultsPage() {
               }
               mediaSerie={result.descriptive?.media}
               seleccionRegistrada={eventosDiseno}
+              eleccion={eventoDiseno}
             />
           ) : (
             <Etapa2RankingView
@@ -97,17 +113,7 @@ export function ResultsPage() {
           )}
         </div>
       )}
-      {eventosDiseno && (
-        <div style={{ marginTop: 20 }}>
-          <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
-            Evento de diseño
-          </h2>
-          <Etapa2EventosView
-            eventos={eventosDiseno}
-            puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
-          />
-        </div>
-      )}
+      {!explorable && eventoDiseno && <div style={{ marginTop: 20 }}>{eventoDiseno}</div>}
     </div>
   );
 }

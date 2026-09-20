@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
 import type { Etapa2EventosState } from "../../api/sse";
@@ -41,17 +41,25 @@ interface ExploracionState {
  *
  * El título de la sección lo pone quien lo monta (cada página ya tiene el
  * suyo); acá va el texto que aclara qué hace explorar.
+ *
+ * `eleccion` es el bloque de la elección registrada (el "Evento de diseño" que
+ * el usuario eligió, o la "Elección registrada" del historial). Se renderiza
+ * acá, debajo del ranking y junto a la exploración, para poder compararlas:
+ * en escritorio (≥ 1100px) quedan lado a lado, en móvil apiladas (ver el CSS).
+ * Mientras no se explora nada, la elección se ve sola, como siempre.
  */
 export function Etapa2Explorador({
   etapa2,
   explorar,
   mediaSerie,
   seleccionRegistrada,
+  eleccion,
 }: Readonly<{
   etapa2: Etapa2Result;
   explorar: ExplorarEtapa2Fn;
   mediaSerie?: number | null;
   seleccionRegistrada?: { distribucion: string; metodo: string } | null;
+  eleccion?: ReactNode;
 }>) {
   const [exploracion, setExploracion] = useState<ExploracionState | null>(null);
   const [explorando, setExplorando] = useState(false);
@@ -105,16 +113,23 @@ export function Etapa2Explorador({
         </div>
       )}
 
-      {exploracion && (
-        <div className="etapa2-exploracion etapa2-ancho" style={{ marginTop: 16 }}>
-          <p className="sub">
-            <strong>Exploración</strong> — {exploracion.distribucion} ·{" "}
-            {exploracion.metodo}. No es la elección registrada del análisis.
-          </p>
-          <Etapa2EventosView
-            eventos={exploracion.eventos}
-            puntosEmpiricos={etapa2.puntos_empiricos}
-          />
+      {(eleccion || exploracion) && (
+        <div
+          className={`etapa2-comparacion${eleccion && exploracion ? " etapa2-comparacion--doble" : ""}`}
+        >
+          {eleccion && <div className="etapa2-comparacion__eleccion">{eleccion}</div>}
+          {exploracion && (
+            <div className="etapa2-exploracion">
+              <p className="sub">
+                <strong>Exploración</strong> — {exploracion.distribucion} ·{" "}
+                {exploracion.metodo}. No es la elección registrada del análisis.
+              </p>
+              <Etapa2EventosView
+                eventos={exploracion.eventos}
+                puntosEmpiricos={etapa2.puntos_empiricos}
+              />
+            </div>
+          )}
         </div>
       )}
     </>

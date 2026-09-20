@@ -19,10 +19,9 @@ const EVENTOS = {
 };
 
 function montar() {
-  const { container } = renderPage(
+  renderPage(
     <Etapa2EventosView eventos={EVENTOS} puntosEmpiricos={makeEtapa2().puntos_empiricos} />,
   );
-  return container;
 }
 
 describe("Etapa2EventosView", () => {
@@ -33,23 +32,5 @@ describe("Etapa2EventosView", () => {
     expect(screen.getByText(/T = 2 años/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "100" }));
     expect(screen.getByText(/T = 100 años/)).toBeInTheDocument();
-  });
-
-  // El apilado (móvil) o el lado a lado (escritorio, ≥ 1100px) lo decide el CSS
-  // con una media query, que jsdom no evalúa: acá se fija la estructura que ese
-  // CSS necesita — los dos gráficos hermanos dentro de UN mismo contenedor de
-  // grilla, y la card marcada como ensanchable en escritorio.
-  it("agrupa los dos gráficos en un solo contenedor de grilla, para que el CSS los ponga lado a lado en escritorio", () => {
-    const contenedor = montar().querySelector(".etapa2-eventos__graficos");
-
-    expect(contenedor).not.toBeNull();
-    const columnas = contenedor!.querySelectorAll(":scope > .etapa2-eventos__grafico");
-    expect(columnas).toHaveLength(2);
-    expect(columnas[0]).toHaveTextContent("Gráfico de ajuste");
-    expect(columnas[1]).toHaveTextContent("Gráfico de eventos de diseño");
-  });
-
-  it("la card se puede ensanchar en escritorio (clase etapa2-ancho)", () => {
-    expect(montar().querySelector(".etapa2-eventos")).toHaveClass("etapa2-ancho");
   });
 });
