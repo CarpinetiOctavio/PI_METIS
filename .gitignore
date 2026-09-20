@@ -56,3 +56,6 @@ commit_msg.txt
 # Subagent-driven-development progress ledger (scratch, not a deliverable)
 .superpowers/
 .scratch-local/
+
+# Bibliografia de referencia (PDFs pesados, no van al repo)
+Bibliografia/

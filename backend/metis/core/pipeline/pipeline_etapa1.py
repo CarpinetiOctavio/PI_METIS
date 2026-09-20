@@ -17,7 +17,7 @@ from metis.core.etapa1.trend import (
     determinar_warnings_tendencia,
 )
 from metis.core.types import ContractResult, Etapa1Result, WarningItem
-from metis.core.utils import filtrar_numericos
+from metis.core.utils import filtrar_numericos_alineados
 from metis.core.validacion.aggregation import (
     COBERTURA_MINIMA_INTERIOR,
     MOTIVO_HUECO_INTERIOR,
@@ -197,6 +197,9 @@ def ejecutar_etapa1(
     # de las 9 series de referencia de la Fase 4 tiene desorden
     # cronológico — este cambio no invalida ningún resultado ya auditado.
     if timestamps is not None and timestamps_desordenados(timestamps):
+        serie_efectiva, timestamps_efectivos = filtrar_numericos_alineados(
+            serie, timestamps
+        )
         return Etapa1Result(
             contract=ContractResult(
                 bloqueante=True,
@@ -212,8 +215,8 @@ def ejecutar_etapa1(
             nivel_homogeneidad=None,
             nivel_confianza="rechazado",
             warnings=[],
-            serie_efectiva=filtrar_numericos(serie),
-            timestamps_efectivos=timestamps,
+            serie_efectiva=serie_efectiva,
+            timestamps_efectivos=timestamps_efectivos,
             serie_original=serie_original,
             timestamps_originales=timestamps_originales,
             resolucion_original=resolucion_original,
@@ -251,6 +254,9 @@ def ejecutar_etapa1(
     )
 
     if contract.bloqueante:
+        serie_efectiva, timestamps_efectivos = filtrar_numericos_alineados(
+            serie, timestamps
+        )
         return Etapa1Result(
             contract=contract,
             descriptive=None,
@@ -262,15 +268,19 @@ def ejecutar_etapa1(
             nivel_homogeneidad=None,
             nivel_confianza="rechazado",
             warnings=warnings_agregacion + contract.warnings,
-            serie_efectiva=filtrar_numericos(serie),
-            timestamps_efectivos=timestamps,
+            serie_efectiva=serie_efectiva,
+            timestamps_efectivos=timestamps_efectivos,
             serie_original=serie_original,
             timestamps_originales=timestamps_originales,
             resolucion_original=resolucion_original,
         )
 
-    # Serie filtrada — solo valores numéricos para todas las pruebas
-    valores_numericos = filtrar_numericos(serie)
+    # Serie filtrada — solo valores numéricos para todas las pruebas. Los
+    # timestamps se filtran de a pares con la serie: serie_efectiva y
+    # timestamps_efectivos quedan alineados 1:1 aunque haya celdas vacías.
+    valores_numericos, timestamps_efectivos = filtrar_numericos_alineados(
+        serie, timestamps
+    )
     warnings: list[WarningItem] = warnings_agregacion + list(contract.warnings)
 
     # ── 2. Estadística descriptiva ────────────────────────────────────────────
@@ -336,7 +346,7 @@ def ejecutar_etapa1(
         nivel_confianza=nivel_confianza,
         warnings=warnings,
         serie_efectiva=valores_numericos,
-        timestamps_efectivos=timestamps,
+        timestamps_efectivos=timestamps_efectivos,
         serie_original=serie_original,
         timestamps_originales=timestamps_originales,
         resolucion_original=resolucion_original,

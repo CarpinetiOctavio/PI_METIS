@@ -26,6 +26,32 @@ que atribuye el desvío al faltante y no a otra cosa.
 
 ---
 
+## Resolución (20/09/2026)
+
+Corregido en `fix/timestamps-efectivos-alineados`: `core/utils.py::filtrar_numericos_alineados()`
+filtra timestamps y serie de a pares, y `ejecutar_etapa1()` la usa en sus tres puntos de salida
+(camino normal, bloqueo por contrato y bloqueo por orden cronológico, `pipeline_etapa1.py`).
+`serie_efectiva` y `timestamps_efectivos` quedan siempre del mismo largo.
+
+**Verificación de que no cambia ningún resultado** (volcado del payload real de
+`_serializar_etapa1` + `_serializar_etapa2` para las 9 estaciones, ×2 tipos de variable ×
+timestamps `None`/años, 36 corridas, antes y después, dentro del contenedor):
+
+- 30 de 36 volcados **idénticos byte a byte**.
+- Los 6 restantes (`est_01`, `est_08`, `est_09`, las tres con celdas `S/D` en la serie, solo en
+  la variante con timestamps) difieren **únicamente** en `datos.timestamps_efectivos` y su largo
+  (40 vs 42, 43 vs 46, 7 vs 11 antes). Estadísticos, valores críticos, veredictos, niveles,
+  warnings, descriptiva y Etapa 2 completa (13 distribuciones) no cambiaron.
+- Los años que quedan son exactamente los de los valores que sobreviven.
+- Smoke test HTTP real (CU-02: stream → atípico → `outlier-decision` `rechazar`): 13/13, faltan
+  2003 (celda vacía) y 2010 (atípico), los correctos.
+- Tests nuevos: 4 fallan contra el código anterior y pasan con el fix
+  (`test_pipeline_etapa1.py`, `test_stream_anual_celda_vacia.py`), más `test_utils.py`.
+
+**No hay backfill:** los análisis ya persistidos con este defecto conservan la desalineación en
+`analysis_results.etapa1.datos` (mismo criterio sin backfill que DECISIÓN 058 §4). En la BD local no
+había ninguno afectado (ver "¿Toca análisis ya persistidos?").
+
 ## Cómo se detectó
 
 Por lectura de código, no por un síntoma en pantalla:
@@ -1044,3 +1070,103 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+
+---
+
+## Apéndice C — herramienta de volcado de regresión (`extract_series.py`, `regres.py`, `diff.py`)
+
+Usada para la verificación de la sección "Resolución". Compara el payload REAL que serializa `services/`
+(`_serializar_etapa1` y `_serializar_etapa2`) para las 9 estaciones antes y después de un cambio en `core/`.
+Es la herramienta que `docs/revision-resolucion-diaria.md` cita como `/tmp/regres.py` y que no estaba en el repo.
+
+Uso (con el stack de Docker levantado):
+
+```bash
+export MSYS_NO_PATHCONV=1
+python extract_series.py series9.json        # desde la raíz del repo (host, solo stdlib)
+docker cp regres.py pi_metis-backend-1:/tmp/regres.py
+docker exec -i -w /app pi_metis-backend-1 env PYTHONPATH=/app python /tmp/regres.py < series9.json > base.json
+# ... aplicar el cambio (el contenedor recarga solo por el bind mount) ...
+docker exec -i -w /app pi_metis-backend-1 env PYTHONPATH=/app python /tmp/regres.py < series9.json > after.json
+python diff.py base.json after.json          # lista los CAMPOS que cambiaron, sin índices
+```
+
+Ojo: `series9.json` lo escribe `extract_series.py` con la codificación por defecto de Windows (cp1252);
+abrirlo con `encoding="cp1252"` desde el host. Dentro del contenedor las cadenas tipo `(S/D - Interrupción)` solo
+importan como "no numéricas".
+
+### `extract_series.py`
+
+```python
+import ast, glob, json, re, sys
+out = {}
+for f in sorted(glob.glob("docs/auditoria/regresion/regresion-pipeline/est_0*-pipeline.md")):
+    txt = open(f, encoding="utf-8").read()
+    m = re.search(r"^serie\s*=\s*\[(.*?)^\]", txt, re.S | re.M)
+    if not m:
+        print("SIN SERIE", f, file=sys.stderr); continue
+    body = "[" + m.group(1) + "]"
+    lst = ast.literal_eval(body)
+    key = re.search(r"(est_\d\d)", f).group(1)
+    out[key] = lst
+json.dump(out, open(sys.argv[1], "w"), ensure_ascii=False)
+for k, v in out.items():
+    nonnum = [i for i, x in enumerate(v) if not isinstance(x, (int, float))]
+    print(k, "n=", len(v), "no numéricos en idx:", nonnum)
+```
+
+### `regres.py`
+
+```python
+"""Volcado determinístico de las 9 series (Etapa 1 + Etapa 2) con el payload
+REAL que serializa services/. Lee series9.json por stdin. Sale JSON a stdout."""
+import json, sys
+import numpy as np
+from metis.core.pipeline.pipeline_etapa1 import ejecutar_etapa1
+from metis.core.pipeline.pipeline_etapa2 import ejecutar_etapa2
+from metis.core.utils import filtrar_numericos
+from metis.services.analysis_service import _serializar_etapa1, _serializar_etapa2
+
+series = json.load(sys.stdin)
+out = {}
+for est, serie in series.items():
+    # las cadenas tipo "(S/D - Interrupción)" son las celdas vacías de la tesis
+    for tipo in ("caudal_precipitacion", "otro"):
+        for variante in ("ts_none", "ts_anios"):
+            ts = None if variante == "ts_none" else [1938 + i for i in range(len(serie))]
+            r1 = ejecutar_etapa1(list(serie), tipo, "anual", ts)
+            entry = {"etapa1": _serializar_etapa1(r1, 7),
+                     "len_serie_efectiva": len(r1.serie_efectiva),
+                     "len_ts_efectivos": None if r1.timestamps_efectivos is None else len(r1.timestamps_efectivos)}
+            if r1.nivel_confianza != "rechazado":
+                v = np.asarray(filtrar_numericos(r1.serie_efectiva), dtype=float)
+                entry["etapa2"] = _serializar_etapa2(ejecutar_etapa2(v, tiene_ceros=bool(np.any(v == 0))))
+            out[f"{est}|{tipo}|{variante}"] = entry
+print(json.dumps(out, sort_keys=True, ensure_ascii=False, default=str))
+```
+
+### `diff.py`
+
+```python
+import json, sys
+a = json.load(open(sys.argv[1], encoding="utf-8")); b = json.load(open(sys.argv[2], encoding="utf-8"))
+assert a.keys() == b.keys()
+def walk(x, y, path, out):
+    if isinstance(x, dict) and isinstance(y, dict):
+        for k in sorted(set(x) | set(y)):
+            walk(x.get(k, "<falta>"), y.get(k, "<falta>"), path + [k], out)
+    elif isinstance(x, list) and isinstance(y, list) and len(x) == len(y):
+        for i, (p, q) in enumerate(zip(x, y)): walk(p, q, path + [str(i)], out)
+    elif x != y:
+        out.append("/".join(path))
+tot = {}
+for k in a:
+    out = []; walk(a[k], b[k], [], out)
+    # agrupar por campo sin índices
+    campos = sorted({"/".join(p for p in o.split("/") if not p.isdigit()) for o in out})
+    if campos: tot[k] = campos
+print("entradas con diferencias:", len(tot), "de", len(a))
+for k, c in tot.items(): print(" ", k, "->", c)
+```
+

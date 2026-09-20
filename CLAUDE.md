@@ -63,7 +63,7 @@ backend/metis/
 
 El stream **se pausa dos veces** (atípico de Chow; elección de distribución+método) esperando un `POST` aparte (`/outlier-decision`, `/distribution-decision`) que llega por otro request y desbloquea vía `services/session_store.py` (`SessionState` con `asyncio.Event` y TTL, en memoria del proceso). El mismo `Event` sirve para las dos pausas — se hace `.clear()` antes de la segunda espera.
 
-Tras rechazar un atípico o para alimentar Etapa 2, usar `Etapa1Result.serie_efectiva`/`timestamps_efectivos` (la serie realmente analizada, ya agregada), **nunca** `serie_original` (la cruda subida) — mapear el índice de Chow contra la serie cruda borra un dato equivocado. `core/pipeline/full_pipeline.py` no lo usa `services/` (DECISIÓN 055); existe para los tests de regresión. Detalle de eventos y payloads: `.claude/rules/core/statistical-pipeline.md`.
+Tras rechazar un atípico o para alimentar Etapa 2, usar `Etapa1Result.serie_efectiva`/`timestamps_efectivos` (la serie realmente analizada, ya agregada), **nunca** `serie_original` (la cruda subida) — mapear el índice de Chow contra la serie cruda borra un dato equivocado. Ambas listas se filtran de a pares (`core/utils.py::filtrar_numericos_alineados`) y quedan siempre del mismo largo, aun con celdas vacías en una carga anual — antes de eso el parser conservaba los `None` solo en los timestamps y las etiquetas de año se corrían (`docs/auditoria/hallazgos/hallazgo-timestamps-desalineados.md`). `core/pipeline/full_pipeline.py` no lo usa `services/` (DECISIÓN 055); existe para los tests de regresión. Detalle de eventos y payloads: `.claude/rules/core/statistical-pipeline.md`.
 
 ---
 
@@ -74,7 +74,8 @@ Backend — correr siempre con `backend/` como working directory. Los comandos d
 Python del host lo tiene**: si no hay un `venv` del proyecto activado, corren contra el sistema
 sin `sqlalchemy`/`aiosmtplib`/etc. instalados y fallan en el import. Verificado el 29/07/2026
 (pasada 3): en esa máquina, sin `venv`, la ruta que sí corre reproduciblemente es dentro del
-contenedor Docker — 131 passed, 1 skipped.
+contenedor Docker (`docker exec <backend> pytest ...`, ver abajo). El conteo de tests cambia
+con cada PR — no fiarse de un número escrito acá; el último registrado está en `sprint.md`.
 
 ```bash
 cd backend
@@ -277,7 +278,8 @@ Separadas en dos niveles: lo que se lee siempre al arrancar una sesión de traba
 - `.claude/rules/core/formulas-etapa1.md` — referencias bibliográficas de todas las fórmulas de Etapa 1 mapeadas a ecuaciones de la tesis de Facundo, y demás referencias bibliográficas. Ninguna fórmula se implementa sin referencia explícita en este archivo.
 - `.claude/rules/core/formulas-etapa2.md` — referencias bibliográficas de todas las fórmulas de Etapa 2 mapeadas a ecuaciones de la tesis de Facundo. Ninguna fórmula se implementa sin referencia explícita en este archivo.
 - `docs/decisiones/README.md` — índice de decisiones tomadas, descartadas o reemplazadas (una por archivo, `decisionNNN.md`), transversal a todo el proyecto (no solo fidelidad estadística). Consultar cuando algo en el código no coincida con los archivos de decisiones vigentes.
-- `docs/auditoria/` — fases de auditoría, regresión numérica contra el Excel de Facundo, y pendientes sin resolver. Consultar cuando el trabajo sea sobre fidelidad del core estadístico o el código no coincida con una decisión ya tomada. Ver `docs/README.md` para el detalle de qué contiene cada subcarpeta.
+- `docs/auditoria/` — fases de auditoría, regresión numérica contra el Excel de Facundo, y pendientes sin resolver. Consultar cuando el trabajo sea sobre fidelidad del core estadístico o el código no coincida con una decisión ya tomada. Ver `docs/README.md` para el detalle de qué contiene cada subcarpeta. `docs/auditoria/hallazgos/` reúne las verificaciones dirigidas a un tema puntual (restricciones de dominio de Etapa 2, timestamps desalineados), posteriores a las cuatro fases originales.
+- `docs/pendientes-tecnicos.md` — deuda técnica abierta y cerrada, con fecha y qué la cerró. Consultar antes de asumir que algo "no está hecho" o de abrir un arreglo que ya esté anotado.
 - `docs/historico/` — documentos superados por trabajo posterior, conservados por trazabilidad. Consultar solo si hace falta contexto de una decisión de implementación ya reemplazada.
 
 ## Documentación en Obsidian
