@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # METIS — Contexto del Proyecto
 
 ## Qué es METIS
@@ -40,9 +44,10 @@ backend/metis/
 ├── core/                 # Motor estadístico. SIN conocimiento de HTTP, BD, ni sesiones.
 │   ├── estadistica_descriptiva/   # descriptive.py
 │   ├── etapa1/            # independence.py, homogeneity.py, trend.py, outliers.py (Chow)
-│   ├── etapa2/            # eea.py, empirical.py, utils.py, types.py, distributions/ (13 archivos)
+│   ├── etapa2/            # eea.py, empirical.py, design_events.py, utils.py, types.py, distributions/ (13 archivos)
 │   ├── pipeline/          # pipeline_etapa1.py, pipeline_etapa2.py, full_pipeline.py, types.py
-│   ├── validacion/        # contract.py (validación de contrato de datos), parser.py
+│   ├── validacion/        # contract.py (validación de contrato de datos), parser.py,
+│   │                      # aggregation.py (mensual/diaria → máximos anuales — DECISIÓN 057/065)
 │   ├── types.py, utils.py
 ├── services/              # Orquestación: analysis_service.py (pipeline + SSE + persistencia), session_store.py
 ├── db/                    # models/ (user, analysis, result, api_client) + base.py, session.py
@@ -51,6 +56,14 @@ backend/metis/
 ```
 
 **Regla crítica:** `core/` no importa nada de `api/`, `services/`, `db/` ni `auth/`. El motor estadístico es una librería pura — recibe datos, devuelve resultados. Esto es lo que hace posible los tests de regresión matemática.
+
+### Flujo del stream SSE — lo que hay que leer en varios archivos para entender
+
+`POST /analysis/stream` (`api/v1/analysis.py`) valida parámetros en el borde (`etapas`, `mes_inicio_anio`, `variable_diaria`, `cramer_particion`, tope de 10 MB) y delega a `services/analysis_service.py::stream_analysis()`, un generador async que orquesta todo: parsea con `core/validacion/parser.py`, corre `ejecutar_etapa1()` (paso 0a orden cronológico → paso 0 agregación → contrato → pruebas → Chow) y, si `etapas=[1,2]` y el resultado no es `rechazado`, `ejecutar_etapa2()`.
+
+El stream **se pausa dos veces** (atípico de Chow; elección de distribución+método) esperando un `POST` aparte (`/outlier-decision`, `/distribution-decision`) que llega por otro request y desbloquea vía `services/session_store.py` (`SessionState` con `asyncio.Event` y TTL, en memoria del proceso). El mismo `Event` sirve para las dos pausas — se hace `.clear()` antes de la segunda espera.
+
+Tras rechazar un atípico o para alimentar Etapa 2, usar `Etapa1Result.serie_efectiva`/`timestamps_efectivos` (la serie realmente analizada, ya agregada), **nunca** `serie_original` (la cruda subida) — mapear el índice de Chow contra la serie cruda borra un dato equivocado. `core/pipeline/full_pipeline.py` no lo usa `services/` (DECISIÓN 055); existe para los tests de regresión. Detalle de eventos y payloads: `.claude/rules/core/statistical-pipeline.md`.
 
 ---
 
@@ -135,13 +148,44 @@ Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de pu
 Análisis Automático (App de GitHub de SonarCloud). Hoy el check no es *required* en el Ruleset, así
 que es consultivo, no bloqueante. Ver [decision044.md](docs/decisiones/decision044.md).
 
+### Reglas de flujo de trabajo que no se deducen del código
+
+- **Código de error nuevo** (emitido por `core/`/`services/`/`api/`, o inventado por el frontend): se agrega a `api-contracts.md` y a `frontend/src/i18n/errors.es.ts` **en el mismo commit** — si no, falla el job `error-catalog`.
+- **`docs/decisiones/decisionNNN.md` nuevo:** hacer `git fetch` y comparar el número más alto contra `origin/staging` antes de elegir NNN (hay ramas en paralelo). Hay números reservados sin archivo (035, 046, 049) — no reutilizarlos.
+- **PR que toca `frontend/`:** además de lint + test + build, correr el flujo en el navegador después del último commit y dejar evidencia (captura o pestaña Network). Los tests bajo `StrictMode` no reemplazan esto — ver `.claude/rules/testing.md`, "Capa 4".
+- **Ramas:** `feature/xxx` / `fix/xxx` salen de `staging` y vuelven a `staging` por PR; `main` solo recibe PRs desde `staging`. Push directo bloqueado por Ruleset.
+
+### Migraciones — `backend/alembic/`
+
+Generadas manualmente (no autogeneradas), una por archivo bajo `alembic/versions/`. `alembic upgrade head` no corre solo — ver "Correr las migraciones después de levantar `postgres`" arriba. Override de `DATABASE_URL` para correr Alembic desde el host (no dentro de Docker): ver `.claude/rules/architecture/architecture.md` — sección "DATABASE_URL — diferencia entre Docker y host".
+
+### Scripts de desarrollo — `scripts/`
+
+- `seed-dev-user.sh [email]` / `clean-dev-user.sh [email]` — crean/borran un usuario ya verificado directo en Postgres (bcrypt vía el Python del contenedor backend), evitando el flujo `register`→`verify` que requiere SMTP real (no disponible en desarrollo local, ver DECISIÓN 032/034 y `sprint.md`).
+- `check-error-catalog.sh` — corre en el job `error-catalog` de CI (ver arriba); verifica en tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y traducido en `frontend/src/i18n/errors.es.ts`, esté sincronizado. Excepciones legítimas van en `error-catalog-allowlist.txt` (DECISIÓN 038).
+
 ---
 
 ## Frontend — estado actual
 
-Vite + React + TypeScript + react-router-dom, 7 pantallas de CU-01/CU-02: `entry`, `config`, `stream`, `results`, `history` (lista y detalle), `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`). Las rutas `/ranking` y `/design-events` que existían en el scaffold original ya no están — desde el Bloque B del plan de Etapa 2 (09/08/2026) el ranking y los eventos de diseño se muestran inline dentro de `StreamPage` mientras el stream está pausado. Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`).
+Vite + React + TypeScript + react-router-dom, 7 pantallas de CU-01/CU-02: `entry`, `config`, `stream`, `results`, `history` (lista y detalle), `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`).
 
-**Ya no es scaffold** — Fases 1 a 5 del plan de integración están completas con integración real contra el backend (verificado contra Docker): auth end-to-end (`src/auth/`), stream de Etapa 1 vía SSE-sobre-fetch (`src/api/sse.ts`, hook `useAnalysisStream` — ver `docs/decisiones/decision040.md`), los tres modos de presentación de resultados de Etapa 1, historial con lista paginada y detalle. **Etapa 2 dejó de ser mock el 09/08/2026** (Bloque B del plan de implementación de Etapa 2, ver `sprint.md`): `PendingBadge` y `src/mocks/` (MSW) se borraron por completo, igual que las rutas `/ranking` y `/design-events` — el ranking real y los eventos de diseño se muestran inline dentro de `StreamPage` mientras el stream está pausado (`Etapa2RankingView`/`Etapa2EventosView` en `src/routes/results/`, reusados de solo lectura en `ResultsPage` e `HistoryDetailPage`). `docs/decisiones/decision042.md` documenta el mock original y su addendum de cierre. **Gráficos interactivos agregados el 11/08/2026** (Bloque C del plan de implementación de Etapa 2, DECISIÓN 056): `Etapa2AjusteChart` (puntos empíricos vs. curva ajustada) y `Etapa2EventosChart` (xT vs. T), ambos sobre un componente SVG propio (`src/charts/InteractiveChart.tsx`, `d3-scale`+`d3-shape`, sin librería de charting completa) con zoom, tooltip y navegación por teclado — montados dentro de `Etapa2EventosView`, sin el toggle calendario/hidrológico que la maqueta original ponía por tarjeta (retirado, no trasladado — el criterio de año es una regla de agregación de Etapa 1 que todavía no existe, ver `sprint.md`, Bloque F). Fase 6 (pulido y accesibilidad) quedó parcial. Verificación E2E contra backend real: login/logout/me, Config→stream con atípico real, los tres modos de Resultados e Historial cerrados; solo el tramo registro→verify de Auth sigue bloqueado por falta de SMTP real en desarrollo. Punto de entrada para retomar el estado exacto: [`docs/frontend/informe-implementacion-frontend-fase1-6.md`](docs/frontend/informe-implementacion-frontend-fase1-6.md) (resumen navegable) y [`docs/frontend/frontend-implementation-plan.md`](docs/frontend/frontend-implementation-plan.md) §10 (fuente de verdad decisión por decisión).
+```
+frontend/src/
+├── api/           # Cliente HTTP: client.ts (ApiError/requestJson), auth.ts, analysis.ts,
+│                  # history.ts, sse.ts (SSE-sobre-fetch, hook useAnalysisStream — DECISIÓN 040), types.ts
+├── auth/          # AuthProvider.tsx (sesión), guards.tsx (RequireAuth/RequireSession/RedirectIfAuthed)
+├── charts/        # InteractiveChart.tsx (SVG propio, d3-scale+d3-shape — DECISIÓN 056), BoxPlot.tsx, Sparkline.tsx
+├── components/    # RootLayout, TopBar, fondos animados Canvas 2D, BlockMath (KaTeX)
+├── i18n/          # errors.es.ts (traducción del catálogo de códigos), mesInicioAnio.ts
+├── routes/        # entry/, config/, stream/, results/, history/, auth-verify/ — una carpeta por pantalla
+├── theme/         # tokens.ts + tokens.instrumento.css (paridad verificada por tokenParity.test.ts)
+└── test/          # renderPage.tsx — helper que envuelve toda página en <StrictMode> (regla, no opcional)
+```
+
+Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`).
+
+**Ya no es scaffold** — Fases 1 a 5 del plan de integración están completas con integración real contra el backend (verificado contra Docker): auth end-to-end (`src/auth/`), stream de Etapa 1 vía SSE-sobre-fetch (`src/api/sse.ts`, hook `useAnalysisStream` — ver `docs/decisiones/decision040.md`), los tres modos de presentación de resultados de Etapa 1, historial con lista paginada y detalle. **Etapa 2 dejó de ser mock el 09/08/2026** (Bloque B del plan de implementación de Etapa 2, ver `sprint.md`): `PendingBadge` y `src/mocks/` (MSW) se borraron por completo, igual que las rutas `/ranking` y `/design-events` — el ranking real y los eventos de diseño se muestran inline dentro de `StreamPage` mientras el stream está pausado (`Etapa2RankingView`/`Etapa2EventosView` en `src/routes/results/`, reusados de solo lectura en `ResultsPage` e `HistoryDetailPage`). `docs/decisiones/decision042.md` documenta el mock original y su addendum de cierre. **Gráficos interactivos agregados el 11/08/2026** (Bloque C del plan de implementación de Etapa 2, DECISIÓN 056): `Etapa2AjusteChart` (puntos empíricos vs. curva ajustada) y `Etapa2EventosChart` (xT vs. T), ambos sobre un componente SVG propio (`src/charts/InteractiveChart.tsx`, `d3-scale`+`d3-shape`, sin librería de charting completa) con zoom, tooltip y navegación por teclado — montados dentro de `Etapa2EventosView`, sin el toggle calendario/hidrológico que la maqueta original ponía por tarjeta (retirado, no trasladado — el criterio de año es un parámetro de agregación de Etapa 1, `mes_inicio_anio`, DECISIÓN 057). Fase 6 (pulido y accesibilidad): el contraste WCAG AA del tema (DECISIÓN 043) se aplicó el 18/08/2026. Verificación E2E contra backend real: login/logout/me, Config→stream con atípico real, los tres modos de Resultados e Historial cerrados; solo el tramo registro→verify de Auth sigue bloqueado por falta de SMTP real en desarrollo. Punto de entrada para retomar el estado exacto: [`docs/frontend/informe-implementacion-frontend-fase1-6.md`](docs/frontend/informe-implementacion-frontend-fase1-6.md) (resumen navegable) y [`docs/frontend/frontend-implementation-plan.md`](docs/frontend/frontend-implementation-plan.md) §10 (fuente de verdad decisión por decisión).
 
 **Pasada 4 de mejora (31/07-01/08/2026):** tipografía real (JetBrains Mono cargada de verdad, no solo declarada en tokens), tokens de movimiento + regla universal de `prefers-reduced-motion`, estados de interacción (hover/active/focus-visible) en todo el design system, dos fondos animados en Canvas 2D (`DotFieldBackground`, `GridScanBackground` — DECISIÓN 045), `TopBar` reescrito dentro del design system, columnas de `ConfigPage` pobladas por dropdown real vía `POST /analysis/preview-columns` (DECISIÓN 047), archivado de historial por soft-delete (DECISIÓN 048) y texto de `PendingBadge` reformulado. Tres PRs apilados — ver [`docs/frontend/informe-resultados-pasada4.md`](docs/frontend/informe-resultados-pasada4.md) para el detalle completo y el estado exacto de verificación de cada bloque.
 
@@ -176,6 +220,7 @@ POST   /api/v1/analysis/stream            # SSE — CU-01 y CU-02
 POST   /api/v1/analysis/outlier-decision  # Decisión ante atípico Chow — CU-01 y CU-02
 POST   /api/v1/analysis/preview-columns   # Columnas + muestra para los dropdowns de ConfigPage (DECISIÓN 047)
 POST   /api/v1/analysis/distribution-decision  # Reemplaza design-events (DECISIÓN 052) — selección de distribución+método, desbloquea el stream — CU-01 y CU-02
+POST   /api/v1/analysis/{id}/design-events     # Recálculo stateless desde el historial (DECISIÓN 062) — JWT requerido, no toca session_store ni decisiones
 GET    /api/v1/analysis/{id}              # Consulta análisis persistido — CU-01
 GET    /api/v1/history/                   # ?archivados=true incluye archivados (DECISIÓN 048)
 GET    /api/v1/history/{id}
@@ -234,3 +279,6 @@ Separadas en dos niveles: lo que se lee siempre al arrancar una sesión de traba
 - `docs/decisiones/README.md` — índice de decisiones tomadas, descartadas o reemplazadas (una por archivo, `decisionNNN.md`), transversal a todo el proyecto (no solo fidelidad estadística). Consultar cuando algo en el código no coincida con los archivos de decisiones vigentes.
 - `docs/auditoria/` — fases de auditoría, regresión numérica contra el Excel de Facundo, y pendientes sin resolver. Consultar cuando el trabajo sea sobre fidelidad del core estadístico o el código no coincida con una decisión ya tomada. Ver `docs/README.md` para el detalle de qué contiene cada subcarpeta.
 - `docs/historico/` — documentos superados por trabajo posterior, conservados por trazabilidad. Consultar solo si hace falta contexto de una decisión de implementación ya reemplazada.
+
+## Documentación en Obsidian
+Cada vez que se ejecute /init en este repositorio, revisar también la documentación del proyecto en el vault de Obsidian ubicado en C:\Users\kevin\OneDrive\Documents\Kevin\Proyectos\PI_METIS\ y actualizarla si hay cambios relevantes en el código que no estén reflejados ahí.
