@@ -423,3 +423,69 @@ def test_carga_diaria_el_recorte_deja_n_menor_a_10_y_bloquea():
     assert resultado.nivel_confianza == "rechazado"
     # el recorte se reporta igual, aunque el pipeline se haya detenido
     assert "CONTRACT_PARTIAL_YEARS_TRIMMED" in [w.codigo for w in resultado.warnings]
+
+
+# ── serie_efectiva / timestamps_efectivos siempre alineados 1:1 ──────────────
+# docs/auditoria/hallazgos/hallazgo-timestamps-desalineados.md — el parser
+# conserva los None (validar_contrato() los cuenta), así que una carga anual
+# con una celda vacía dejaba serie_efectiva sin el faltante y
+# timestamps_efectivos con todas las fechas.
+
+
+def _serie_anual_con_celda_vacia() -> tuple[list, list[int]]:
+    serie: list = [60.0 + (i * 7) % 40 for i in range(15)]
+    serie[3] = None  # 2003 sin dato
+    serie[10] = 5000.0  # 2010, atípico obvio
+    return serie, list(range(2000, 2015))
+
+
+@pytest.mark.unit
+def test_celda_vacia_en_carga_anual_no_desalinea_serie_y_timestamps_efectivos():
+    serie, timestamps = _serie_anual_con_celda_vacia()
+
+    resultado = ejecutar_etapa1(serie, "otro", "anual", timestamps)
+
+    assert len(resultado.serie_efectiva) == len(resultado.timestamps_efectivos) == 14
+    assert 2003 not in resultado.timestamps_efectivos
+    # el atípico sigue apareado con SU año, no con el siguiente
+    pos = resultado.serie_efectiva.index(5000.0)
+    assert resultado.timestamps_efectivos[pos] == 2010
+
+
+@pytest.mark.unit
+def test_retorno_bloqueante_por_n_corto_tambien_deja_timestamps_alineados():
+    # 11 datos con 4 celdas vacías -> n=7 < 10 -> bloqueante. El retorno
+    # bloqueante arma serie_efectiva/timestamps_efectivos por su cuenta.
+    serie: list = [float(50 + i) for i in range(11)]
+    for i in (1, 2, 3, 4):
+        serie[i] = None
+    timestamps = list(range(1990, 2001))
+
+    resultado = ejecutar_etapa1(serie, "otro", "anual", timestamps)
+
+    assert resultado.contract.codigo_error == "CONTRACT_SERIES_TOO_SHORT"
+    assert len(resultado.serie_efectiva) == len(resultado.timestamps_efectivos) == 7
+    assert resultado.timestamps_efectivos == [1990, 1995, 1996, 1997, 1998, 1999, 2000]
+
+
+@pytest.mark.unit
+def test_retorno_bloqueante_por_orden_cronologico_tambien_deja_timestamps_alineados():
+    serie: list = [float(50 + i) for i in range(12)]
+    serie[2] = None
+    timestamps = [2000, 2001, 2002, 2003, 2005, 2004] + list(range(2006, 2012))
+
+    resultado = ejecutar_etapa1(serie, "otro", "anual", timestamps)
+
+    assert resultado.contract.codigo_error == "CONTRACT_WRONG_ORDER"
+    assert len(resultado.serie_efectiva) == len(resultado.timestamps_efectivos) == 11
+    assert 2002 not in resultado.timestamps_efectivos
+
+
+@pytest.mark.unit
+def test_sin_timestamps_timestamps_efectivos_sigue_siendo_none():
+    serie, _ = _serie_anual_con_celda_vacia()
+
+    resultado = ejecutar_etapa1(serie, "otro", "anual", None)
+
+    assert resultado.timestamps_efectivos is None
+    assert len(resultado.serie_efectiva) == 14
