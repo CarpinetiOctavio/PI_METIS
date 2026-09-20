@@ -19,7 +19,7 @@ estado actual cita el archivo donde se comprobó.
 | E | Desglose paso a paso (los k lags de Anderson, etc.) | Kevin | Sí, aditivo en `core/` | Addendum a 064 | D |
 | F | Gráficos propios por prueba (correlograma, etc.) | Facundo | Sí, mismo cambio que E | Addendum a 064 | E |
 | B | Probar otras distribuciones desde la pantalla de resultados | Catalini | Sí, endpoint nuevo stateless | Nueva (extiende 062) | nada — **Tanda 1 hecha 21/09/2026 (CU-01)**; falta CU-02 (Tanda 2) |
-| A | Excluir atípicos clickeando el gráfico + resultados "sin ellos" + descarga | Catalini | Sí, `core/` + endpoint nuevo | Nueva (071) | B (Fase 0 ya hecha) |
+| A | Excluir atípicos clickeando el gráfico + resultados "sin ellos" + descarga | Catalini | Sí, `core/` + endpoint nuevo | Nueva (071) | B (Fase 0 ya hecha) — **A1 (selección + descarga CSV) hecha 21/09/2026**; faltan A2 (recalcular + vista comparativa) y el backend |
 | C | Tratamiento de valores negativos con tipo "Otro" | Catalini | Sí, `core/` | Nueva (073) | nada |
 
 **Orden de ejecución: 0 → D → D2 → E → F → B → A → C.**
@@ -649,6 +649,19 @@ de consultarlo con Octavio.**
 
 **Fase A (what-if de atípicos):**
 > El bug de largos de §2.0 ya está corregido (Fase 0).
+> **A1 — HECHA (21/09/2026), sin tocar backend:** `onPointActivate` en `InteractiveChart` (clic y
+> Enter/Espacio) y `marked` para dibujar los excluidos huecos; los dos gráficos con eje de año
+> (serie temporal y Chow) y una lista de años con checkbox comparten una única selección
+> (`Etapa1GraficosView`, dueño del estado; `Etapa1ResultView` sigue presentacional); Chow queda
+> señalado como sugerido pero sin preseleccionar; descarga del CSV `periodo,valor` sin los
+> excluidos (`<archivo>_sin_atipicos.csv`) con el aviso de que con carga mensual/diaria lo
+> descargado son máximos anuales. Verificado contra el backend real: el CSV se vuelve a subir
+> tal cual (13 datos, sin atípico) y METIS avisa `CONTRACT_IRREGULAR_SPACING` por el hueco.
+> **A2 (pendiente, espera el contrato con Octavio):** botón "Recalcular" y vista comparativa
+> (veredictos originales vs simulados). Van por prop (`simular`), igual que `explorar` en B, y
+> el componente de comparación recibe dos `Etapa1Result`. El cuerpo de la respuesta propuesto
+> es el mismo payload del stream (`result_etapa1` + ranking de Etapa 2 si se pidió) más la lista
+> `excluidos`.
 > Tanda 1 (sin backend): `onPointActivate` en `InteractiveChart` (click y Enter/Espacio), lista de
 > años con checkbox como alternativa accesible, botón "Recalcular", vista comparativa y descarga CSV
 > (Blob generado a partir de la respuesta), todo contra el contrato acordado y mockeado.

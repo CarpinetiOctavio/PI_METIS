@@ -19,6 +19,8 @@ interface ResultsLocationState {
   // Bloque F5 (DECISIÓN 057) — solo viaja en la sesión interactiva, ver la
   // nota de Etapa1ResultView sobre por qué no llega desde el historial.
   mesInicioAnio?: number;
+  // Nombre del archivo subido — nombra el CSV de la serie sin los puntos excluidos.
+  nombreArchivo?: string;
 }
 
 export function ResultsPage() {
@@ -79,6 +81,7 @@ export function ResultsPage() {
         result={result}
         modo={modoEfectivo}
         mesInicioAnio={locationState?.mesInicioAnio}
+        nombreArchivo={locationState?.nombreArchivo}
       />
       {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la
           pidió al configurar el análisis. Si no se pidió Etapa 2, no hay

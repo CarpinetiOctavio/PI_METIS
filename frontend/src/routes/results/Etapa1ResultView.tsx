@@ -5,9 +5,7 @@ import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/expl
 import { errorText } from "../../i18n/errors.es";
 import { BlockMath } from "../../components/BlockMath";
 import { CountUp } from "../../components/CountUp";
-import { Etapa1SerieTemporalChart } from "./Etapa1SerieTemporalChart";
-import { Etapa1ChowChart } from "./Etapa1ChowChart";
-import { Etapa1BoxplotMensualChart } from "./Etapa1BoxplotMensualChart";
+import { Etapa1GraficosView } from "./Etapa1GraficosView";
 import "./Etapa1ResultView.css";
 
 interface Group {
@@ -184,7 +182,13 @@ export function Etapa1ResultView({
   result,
   modo,
   mesInicioAnio,
-}: Readonly<{ result: Etapa1Result; modo: Modo; mesInicioAnio?: number }>) {
+  nombreArchivo,
+}: Readonly<{
+  result: Etapa1Result;
+  modo: Modo;
+  mesInicioAnio?: number;
+  nombreArchivo?: string | null;
+}>) {
   const pasoAPaso = modo === "paso_a_paso";
 
   const groups: Group[] = [
@@ -280,15 +284,12 @@ export function Etapa1ResultView({
           responsabilidad de HistoryDetailPage (PR 5), no de este
           componente presentacional puro. */}
       {result.datos && (
-        <div className="stack" style={{ marginTop: 14 }}>
-          <Etapa1SerieTemporalChart datos={result.datos} />
-          <Etapa1ChowChart
-            datos={result.datos}
-            chow={result.atipicos.find((t) => t.prueba === "chow")}
-            mesInicioAnio={mesInicioAnio}
-          />
-          <Etapa1BoxplotMensualChart datos={result.datos} mesInicioAnio={mesInicioAnio} />
-        </div>
+        <Etapa1GraficosView
+          datos={result.datos}
+          chow={result.atipicos.find((t) => t.prueba === "chow")}
+          mesInicioAnio={mesInicioAnio}
+          nombreArchivo={nombreArchivo}
+        />
       )}
 
       {result.warnings.length > 0 && (

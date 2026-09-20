@@ -3,6 +3,8 @@ import type { ChartSeries } from "../../charts/InteractiveChart";
 import { formatAxis } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import type { Etapa1Datos, TestResultDetail } from "../../api/types";
+import { interaccionDeSeleccion } from "./exclusiones";
+import type { SeleccionPuntos } from "./exclusiones";
 
 /**
  * Gráfico de Chow — la serie analizada (serie_efectiva) con el atípico
@@ -33,18 +35,24 @@ export function Etapa1ChowChart({
   datos,
   chow,
   mesInicioAnio,
+  seleccion,
 }: Readonly<{
   datos: Etapa1Datos;
   chow?: TestResultDetail;
   mesInicioAnio?: number;
+  seleccion?: SeleccionPuntos;
 }>) {
   if (!datos.timestamps_efectivos) return null;
   const timestamps = datos.timestamps_efectivos;
 
+  // `id` = posición en serie_efectiva, el espacio de índices de la selección
+  // (y de `indice_atipico`).
   const todosLosPuntos = datos.serie_efectiva.map((v, i) => ({
     x: timestamps[i]?.anio ?? 0,
     y: v,
+    id: i,
   }));
+  const { marked, onPointActivate } = interaccionDeSeleccion(seleccion);
   const puntosSinAtipico = todosLosPuntos.filter(
     (_, i) => i !== datos.indice_atipico,
   );
@@ -101,6 +109,7 @@ export function Etapa1ChowChart({
     label: "Datos",
     colorVar: "--acc",
     data: puntosSinAtipico,
+    marked,
   });
   if (puntoAtipico) {
     series.push({
@@ -112,6 +121,7 @@ export function Etapa1ChowChart({
       // destaca en ambos temas y es el token semántico de "anomalía".
       colorVar: "--crit",
       data: [puntoAtipico],
+      marked,
     });
   }
 
@@ -124,6 +134,7 @@ export function Etapa1ChowChart({
       <InteractiveChart
         series={series}
         xScale="linear"
+        onPointActivate={onPointActivate}
         ariaLabel="Gráfico de Chow: serie analizada, fajas de máximos y mínimos, y el atípico marcado"
         xLabel="Año"
         yLabel="Valor"

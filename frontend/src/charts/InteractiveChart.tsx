@@ -24,6 +24,10 @@ import "./InteractiveChart.css";
 export interface ChartPoint {
   x: number;
   y: number;
+  // Identificador opcional del punto para quien lo dibuja (ej. su posición en
+  // la serie original). Lo devuelve `onPointActivate` tal cual: sin él habría
+  // que volver a buscar el punto por (x, y), ambiguo si dos comparten valores.
+  id?: number;
 }
 
 export interface ChartSeries {
@@ -43,6 +47,11 @@ export interface ChartSeries {
   // --acc-hi en vez de su colorVar. Capacidad del gráfico, no un truco de
   // una pantalla — sirve igual para el gráfico de ajuste y los de Etapa 1.
   highlight?: (p: ChartPoint) => boolean;
+  // Ítem A (excluir atípicos): predicado de punto "marcado" — se dibuja hueco
+  // (anillo del color de la serie, relleno de fondo). Distinto de `highlight`,
+  // que agranda: marcado quiere decir "quitado de la serie", resaltado quiere
+  // decir "mirá este".
+  marked?: (p: ChartPoint) => boolean;
 }
 
 interface InteractiveChartProps {
@@ -54,6 +63,10 @@ interface InteractiveChartProps {
   yTickFormat?: (v: number) => string;
   height?: number;
   xScale?: "log" | "linear";
+  // Se dispara con un clic sobre un marcador (serie `kind: "points"`) o con
+  // Enter/Espacio sobre el marcador enfocado con el teclado — la misma acción
+  // por las dos vías. Un arrastre para hacer zoom no cuenta como clic.
+  onPointActivate?: (point: ChartPoint, series: ChartSeries) => void;
 }
 
 const VIEW_W = 640;
@@ -67,6 +80,9 @@ const MIN_SPAN_RATIO = 1.05; // no permite zoom infinito — escala log (ratio)
 const MIN_SPAN_FRACTION_LINEAR = 0.01; // análogo para escala lineal (fracción del dominio completo)
 const WHEEL_ZOOM_IN = 0.8;
 const WHEEL_ZOOM_OUT = 1.25;
+// Distancia máxima (en unidades del viewBox) entre el clic y el centro de un
+// marcador para que cuente como clic sobre él.
+const HIT_RADIUS = 14;
 
 function defaultTickFormat(v: number): string {
   return Number.isInteger(v) ? String(v) : v.toFixed(1);
@@ -81,6 +97,7 @@ export function InteractiveChart({
   yTickFormat = defaultTickFormat,
   height = 320,
   xScale: xScaleType = "log",
+  onPointActivate,
 }: Readonly<InteractiveChartProps>) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [xOverride, setXOverride] = useState<[number, number] | null>(null);
@@ -235,12 +252,39 @@ export function InteractiveChart({
     setHover(nearest);
   }
 
-  function handleMouseUp() {
+  // Marcador más cercano al punto (clientX, clientY), si hay uno a menos de
+  // HIT_RADIUS. Solo entre los marcadores visibles (mismo criterio que el teclado).
+  function activarEn(clientX: number, clientY: number) {
+    if (!onPointActivate) return;
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return;
+    const plotX = clientXToPlotX(clientX, rect);
+    const plotY = ((clientY - rect.top) / rect.height) * height - MARGIN.top;
+    let mejor: (typeof navigablePoints)[number] | null = null;
+    let mejorDist = HIT_RADIUS;
+    for (const candidato of navigablePoints) {
+      const d = Math.hypot(
+        xScale(candidato.point.x) - plotX,
+        yScale(candidato.point.y) - plotY,
+      );
+      if (d <= mejorDist) {
+        mejor = candidato;
+        mejorDist = d;
+      }
+    }
+    if (mejor) onPointActivate(mejor.point, mejor.series);
+  }
+
+  function handleMouseUp(event: ReactMouseEvent<SVGRectElement>) {
     if (!drag) return;
     const x1 = Math.min(drag.startPlotX, drag.currentPlotX);
     const x2 = Math.max(drag.startPlotX, drag.currentPlotX);
     setDrag(null);
-    if (x2 - x1 < 8) return; // umbral mínimo — un click no dispara zoom
+    if (x2 - x1 < 8) {
+      // umbral mínimo — un click no dispara zoom; sí activa el marcador que tenga debajo
+      activarEn(event.clientX, event.clientY);
+      return;
+    }
     const domLo = xScale.invert(Math.min(Math.max(x1, 0), plotWidth));
     const domHi = xScale.invert(Math.min(Math.max(x2, 0), plotWidth));
     if (spanTooSmall(domLo, domHi)) return;
@@ -260,6 +304,12 @@ export function InteractiveChart({
 
   function handleKeyDown(event: ReactKeyboardEvent<SVGSVGElement>) {
     if (navigablePoints.length === 0) return;
+    const enfocado = focusedIndex !== null ? navigablePoints[focusedIndex] : undefined;
+    if ((event.key === "Enter" || event.key === " ") && enfocado && onPointActivate) {
+      event.preventDefault();
+      onPointActivate(enfocado.point, enfocado.series);
+      return;
+    }
     let next: number | null = focusedIndex;
     if (event.key === "ArrowRight") {
       next = focusedIndex === null ? 0 : Math.min(focusedIndex + 1, navigablePoints.length - 1);
@@ -363,6 +413,7 @@ export function InteractiveChart({
                   const isFocused =
                     focusedTarget?.series.id === s.id && focusedTarget.point === p;
                   const isHighlighted = s.highlight?.(p) ?? false;
+                  const isMarked = s.marked?.(p) ?? false;
                   // El foco de teclado gana sobre el resalte si ambos caen
                   // en el mismo punto — es una acción del usuario en curso.
                   const radius = isFocused
@@ -378,11 +429,11 @@ export function InteractiveChart({
                       r={radius}
                       className="interactive-chart__point"
                       data-highlighted={isHighlighted || undefined}
+                      data-marked={isMarked || undefined}
                       style={{
-                        fill:
-                          isHighlighted && !isFocused
-                            ? "var(--acc-hi)"
-                            : `var(${s.colorVar})`,
+                        fill: rellenoDelPunto(s.colorVar, isMarked, isHighlighted && !isFocused),
+                        stroke: isMarked ? `var(${s.colorVar})` : undefined,
+                        strokeWidth: isMarked ? 2 : undefined,
                       }}
                     />
                   );
@@ -453,6 +504,13 @@ export function InteractiveChart({
       </svg>
     </div>
   );
+}
+
+// Relleno de un marcador: hueco si está marcado (excluido), --acc-hi si está
+// resaltado, y el color de su serie en cualquier otro caso.
+function rellenoDelPunto(colorVar: string, marcado: boolean, resaltado: boolean): string {
+  if (marcado) return "var(--surf2)";
+  return resaltado ? "var(--acc-hi)" : `var(${colorVar})`;
 }
 
 function allPointsWithSeries(

@@ -335,6 +335,10 @@ export interface HistoryItem {
 export interface AnalysisConfiguracion {
   cramer_particion: string;
   mes_inicio_anio: number;
+  // Nombre del archivo subido (F7, plan de fixes pre-reunión); null/ausente en
+  // análisis anteriores a ese cambio. Lo usa la descarga de la serie sin
+  // atípicos para nombrar el CSV.
+  nombre_archivo?: string | null;
   // DECISIÓN 065 (PR 2.5) — presente en análisis persistidos desde esa
   // fecha; opcional para no romper la lectura de análisis anteriores.
   variable_diaria?: "pico" | "media";

@@ -3,6 +3,8 @@ import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartSeries } from "../../charts/InteractiveChart";
 import { formatAxis } from "../../i18n/format";
 import type { Etapa1Datos } from "../../api/types";
+import { interaccionDeSeleccion } from "./exclusiones";
+import type { SeleccionPuntos } from "./exclusiones";
 
 /**
  * Serie temporal — máximos anuales (serie_efectiva) contra el año. PR 4
@@ -20,7 +22,8 @@ import type { Etapa1Datos } from "../../api/types";
  */
 export function Etapa1SerieTemporalChart({
   datos,
-}: Readonly<{ datos: Etapa1Datos }>) {
+  seleccion,
+}: Readonly<{ datos: Etapa1Datos; seleccion?: SeleccionPuntos }>) {
   const [vista, setVista] = useState<"configurada" | "calendario">("configurada");
   const cargaConAgregacion =
     datos.resolucion_original === "mensual" ||
@@ -37,10 +40,16 @@ export function Etapa1SerieTemporalChart({
     ? datos.serie_calendario!.timestamps
     : datos.timestamps_efectivos;
 
-  const puntos = valores.map((v, i) => ({ x: timestamps[i]?.anio ?? 0, y: v }));
+  // `id` = posición en la serie que se dibuja. Los índices de la selección son
+  // de `serie_efectiva`: en la vista calendario (otra agregación, otros puntos)
+  // no se puede seleccionar, sus posiciones no corresponden.
+  const puntos = valores.map((v, i) => ({ x: timestamps[i]?.anio ?? 0, y: v, id: i }));
+  const { marked, onPointActivate } = interaccionDeSeleccion(
+    usandoCalendario ? undefined : seleccion,
+  );
   const series: ChartSeries[] = [
     { id: "linea", kind: "line", label: "Máximos anuales", colorVar: "--acc", data: puntos },
-    { id: "puntos", kind: "points", label: "Máximos anuales", colorVar: "--acc", data: puntos },
+    { id: "puntos", kind: "points", label: "Máximos anuales", colorVar: "--acc", data: puntos, marked },
   ];
 
   return (
@@ -80,9 +89,13 @@ export function Etapa1SerieTemporalChart({
           pantalla corresponde a esta agregación.
         </p>
       )}
+      {usandoCalendario && seleccion && (
+        <p className="fn">La selección de puntos solo está disponible en la vista configurada.</p>
+      )}
       <InteractiveChart
         series={series}
         xScale="linear"
+        onPointActivate={onPointActivate}
         ariaLabel="Serie temporal de máximos anuales por año"
         xLabel="Año"
         yLabel="Valor"
