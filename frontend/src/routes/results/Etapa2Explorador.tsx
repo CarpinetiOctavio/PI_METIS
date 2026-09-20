@@ -106,7 +106,7 @@ export function Etapa2Explorador({
       )}
 
       {exploracion && (
-        <div className="etapa2-exploracion" style={{ marginTop: 16 }}>
+        <div className="etapa2-exploracion etapa2-ancho" style={{ marginTop: 16 }}>
           <p className="sub">
             <strong>Exploración</strong> — {exploracion.distribucion} ·{" "}
             {exploracion.metodo}. No es la elección registrada del análisis.

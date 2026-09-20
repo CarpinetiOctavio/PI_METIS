@@ -29,7 +29,7 @@ export function Etapa2EventosView({
   );
 
   return (
-    <div className="etapa2-eventos card soft" style={{ textAlign: "center", padding: 22 }}>
+    <div className="etapa2-eventos etapa2-ancho card soft" style={{ textAlign: "center", padding: 22 }}>
       <p className="sub" style={{ marginBottom: 12 }}>
         {eventos.distribucion} · {eventos.metodo}
       </p>
@@ -61,27 +61,30 @@ export function Etapa2EventosView({
         </p>
       )}
 
-      <div style={{ marginTop: 24, textAlign: "left" }}>
-        <h3 className="h" style={{ fontSize: 13, marginBottom: 8 }}>
-          Gráfico de ajuste
-        </h3>
-        <Etapa2AjusteChart
-          puntosEmpiricos={puntosEmpiricos}
-          curvaAjuste={eventos.curva_ajuste}
-          distribucion={eventos.distribucion}
-          metodo={eventos.metodo}
-        />
-      </div>
+      {/* Apilados en móvil, lado a lado en escritorio — ver el CSS. */}
+      <div className="etapa2-eventos__graficos">
+        <div className="etapa2-eventos__grafico">
+          <h3 className="h" style={{ fontSize: 13, marginBottom: 8 }}>
+            Gráfico de ajuste
+          </h3>
+          <Etapa2AjusteChart
+            puntosEmpiricos={puntosEmpiricos}
+            curvaAjuste={eventos.curva_ajuste}
+            distribucion={eventos.distribucion}
+            metodo={eventos.metodo}
+          />
+        </div>
 
-      <div style={{ marginTop: 24, textAlign: "left" }}>
-        <h3 className="h" style={{ fontSize: 13, marginBottom: 8 }}>
-          Gráfico de eventos de diseño
-        </h3>
-        <Etapa2EventosChart
-          eventosDiseno={eventos.eventos_diseno}
-          curvaAjuste={eventos.curva_ajuste}
-          periodoResaltado={seleccionado}
-        />
+        <div className="etapa2-eventos__grafico">
+          <h3 className="h" style={{ fontSize: 13, marginBottom: 8 }}>
+            Gráfico de eventos de diseño
+          </h3>
+          <Etapa2EventosChart
+            eventosDiseno={eventos.eventos_diseno}
+            curvaAjuste={eventos.curva_ajuste}
+            periodoResaltado={seleccionado}
+          />
+        </div>
       </div>
     </div>
   );
