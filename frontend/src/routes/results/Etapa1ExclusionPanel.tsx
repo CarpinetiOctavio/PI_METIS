@@ -73,11 +73,13 @@ export function Etapa1ExclusionPanel({
         ))}
       </fieldset>
 
-      <p role="status" className="etapa1-exclusion__estado">
+      {/* <output> tiene rol "status" implícito (región viva educada): el lector de
+          pantalla anuncia el conteo cada vez que cambia la selección. */}
+      <output className="etapa1-exclusion__estado">
         {cantidad === 0
           ? "Ningún punto excluido."
           : `${formatInt(cantidad)} de ${formatInt(puntos.length)} puntos excluidos.`}
-      </p>
+      </output>
 
       {hayExcluidoInterior(excluidos, puntos.length) && (
         <p className="fn">

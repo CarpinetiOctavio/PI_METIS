@@ -57,7 +57,8 @@ describe("Etapa1GraficosView — exclusión de puntos", () => {
 
     await user.click(casillas()[3]);
 
-    expect(screen.getByText("1 de 12 puntos excluidos.")).toBeInTheDocument();
+    // el conteo vive en una región `status` (<output>): el lector de pantalla lo anuncia
+    expect(screen.getByRole("status")).toHaveTextContent("1 de 12 puntos excluidos.");
     expect(huecos()).toBe(2); // serie temporal + gráfico de Chow
     expect(screen.getByRole("button", { name: /Descargar serie sin los puntos/ })).toBeEnabled();
 
