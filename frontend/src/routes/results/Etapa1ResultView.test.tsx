@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { Etapa1ResultView } from "./Etapa1ResultView";
 import type { Etapa1Result, TestResultDetail } from "../../api/types";
+import { makeAndersonConDesglose, makeChowConDesglose } from "../../test/etapa1Fixtures";
 
 function testResult(overrides: Partial<TestResultDetail> = {}): TestResultDetail {
   return {
@@ -121,5 +122,26 @@ describe("Etapa1ResultView — Bloque D (plan post-avance, DECISIÓN 064)", () =
       screen.getByText(/La prueba no se ejecutó: no se cumple una condición previa\./),
     ).toBeInTheDocument();
     expect(screen.queryByText(/TEST_NOT_EXECUTED_CONDITION/)).not.toBeInTheDocument();
+  });
+});
+
+describe("Etapa1ResultView — desglose paso a paso (ítems E/F, plan de feedback de directores)", () => {
+  const conDesglose = makeResult({ independencia: [makeAndersonConDesglose()], atipicos: [makeChowConDesglose()] });
+
+  it("modo paso a paso ofrece el desglose de Anderson y de Chow", () => {
+    render(<Etapa1ResultView result={conDesglose} modo="paso_a_paso" />);
+    expect(screen.getByText(/Ver los k pasos/)).toBeInTheDocument();
+    expect(screen.getByText(/Ver el cálculo por observación/)).toBeInTheDocument();
+  });
+
+  it("modo experto no lo muestra: son resultados directos, sin explicaciones", () => {
+    render(<Etapa1ResultView result={conDesglose} modo="experto" />);
+    expect(screen.queryByText(/Ver los k pasos/)).not.toBeInTheDocument();
+  });
+
+  it("sin desglose en el payload (backend viejo o historial) la vista queda como antes", () => {
+    render(<Etapa1ResultView result={makeResult()} modo="paso_a_paso" />);
+    expect(screen.queryByText(/Ver los k pasos/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Ec\. III-1/)).toBeInTheDocument();
   });
 });

@@ -48,6 +48,11 @@
   transition: d var(--t-mid) var(--ease-out);
 }
 
+.interactive-chart__stem {
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
 .interactive-chart__point {
   transition:
     r var(--t-fast) var(--ease-out),
