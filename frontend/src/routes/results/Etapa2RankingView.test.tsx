@@ -72,6 +72,33 @@ describe("Etapa2RankingView", () => {
     expect(screen.getByText("no converge")).toBeInTheDocument();
   });
 
+  // Ítem C: cada estado que no es "ok" se explica con su propio texto, para que
+  // "no aplica por negativos" no se confunda con un fallo numérico.
+  it.each([
+    ["no_converge", "no converge"],
+    ["no_aplicable", "no aplicable"],
+    ["disabled_zeros", "deshabilitada por ceros"],
+    ["disabled_negatives", "no aplica: la serie tiene valores negativos"],
+  ] as const)("el estado %s se muestra como «%s»", async (status, texto) => {
+    const user = userEvent.setup();
+    const dist: DistribucionResult = {
+      distribucion: "lognormal2p",
+      n_parametros: 2,
+      mejor_eea: null,
+      mejor_metodo: null,
+      metodos: [{ metodo: "momentos", parametros: {}, eea: null, status }],
+    };
+    render(
+      <Etapa2RankingView
+        etapa2={{ ranking: [dist], warnings: [], puntos_empiricos: [], seleccion: null }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Ver los 1 métodos/ }));
+
+    expect(screen.getByText(texto)).toBeInTheDocument();
+  });
+
   it("F4 — 25 warnings del mismo código normal se agrupan en un solo banner con el conteo", () => {
     const warnings: WarningItem[] = Array.from({ length: 25 }, (_, i) => ({
       codigo: "DIST_HIGH_EEA",

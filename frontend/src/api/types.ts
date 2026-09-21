@@ -369,7 +369,16 @@ export interface AnalysisDetail {
 // docente, no un error a esconder (constraints.md, "METIS no sugiere
 // distribución ganadora").
 
-export type MetodoStatus = "ok" | "no_converge" | "no_aplicable" | "disabled_zeros";
+// `disabled_negatives` (ítem C del plan de feedback de directores): la distribución
+// no admite valores negativos y la serie los tiene. El backend todavía no lo emite
+// (hoy esas combinaciones vuelven como `no_aplicable`, indistinguibles de un fallo
+// numérico); el frontend ya lo sabe mostrar.
+export type MetodoStatus =
+  | "ok"
+  | "no_converge"
+  | "no_aplicable"
+  | "disabled_zeros"
+  | "disabled_negatives";
 
 export interface MetodoResultDetail {
   metodo: string;
