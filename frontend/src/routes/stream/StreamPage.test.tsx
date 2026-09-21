@@ -298,6 +298,11 @@ describe("StreamPage", () => {
     expect(screen.getByTestId("results-state")).toHaveTextContent(
       makeForm().modo,
     );
+    // Y la configuración con la que se corrió, para poder repetir el análisis
+    // sin los puntos excluidos (ítem A, what-if).
+    expect(screen.getByTestId("results-state")).toHaveTextContent(
+      `"tipoVariable":"${makeForm().tipo_variable}"`,
+    );
   });
 
   // Segundo punto de pausa del stream (DECISIÓN 052) — hermano del test del

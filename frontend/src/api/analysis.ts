@@ -7,6 +7,8 @@ import type {
   OutlierDecisionRequest,
   OutlierDecisionResponse,
   PreviewColumnsResponse,
+  SimulateExclusionRequest,
+  SimulateExclusionResponse,
 } from "./types";
 
 export function postOutlierDecision(
@@ -43,6 +45,21 @@ export function postRecalcularDesignEvents(
     `/api/v1/analysis/${analysisId}/design-events`,
     body,
   );
+}
+
+// Ítem A del plan de feedback de directores — what-if de atípicos. El endpoint
+// todavía no existe en el backend (Tanda 2): mientras tanto la interfaz que lo
+// usa queda apagada salvo que se habilite `VITE_SIMULATE_EXCLUSION=1` (para
+// probar contra un backend que ya lo tenga o un stub). Cuando el backend lo
+// publique se borra el flag y la interfaz queda siempre encendida.
+export function simulacionExclusionDisponible(): boolean {
+  return import.meta.env.VITE_SIMULATE_EXCLUSION === "1";
+}
+
+export function postSimularExclusion(
+  body: SimulateExclusionRequest,
+): Promise<SimulateExclusionResponse> {
+  return postJson<SimulateExclusionResponse>("/api/v1/analysis/simulate-exclusion", body);
 }
 
 // DECISIÓN 047 — multipart, no JSON, así que no usa postJson (fija
