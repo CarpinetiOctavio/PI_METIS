@@ -585,6 +585,20 @@ describe("ConfigPage", () => {
     expect(screen.getByText(/trata los ceros de forma distinta en la prueba de Chow/)).toBeInTheDocument();
   });
 
+  // Ítem C del plan de feedback de directores: la nota no puede prometer que un
+  // negativo "es un dato válido" sin decir qué queda fuera de Etapa 2 y de Chow.
+  it("C — avisa que con 'Otro' y valores negativos varias distribuciones y Chow quedan fuera", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+
+    const nota = screen.getByText(/un valor negativo es un dato válido/).closest("p")!;
+    expect(nota).toHaveTextContent(/Log-Normal de 2 parámetros/);
+    expect(nota).toHaveTextContent(/Log-Pearson III/);
+    expect(nota).toHaveTextContent(/quedan fuera del ranking/);
+    expect(nota).toHaveTextContent(/Chow.*no se ejecuta/);
+  });
+
   // Bloque H1 (plan post-avance, DECISIÓN 036) — partición de Cramer personalizada.
 
   async function llenarCamposMinimos() {
