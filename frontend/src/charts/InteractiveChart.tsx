@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 import { scaleLinear, scaleLog } from "d3-scale";
 import { curveMonotoneX, line as d3line } from "d3-shape";
@@ -52,6 +52,11 @@ export interface ChartSeries {
   // que agranda: marcado quiere decir "quitado de la serie", resaltado quiere
   // decir "mirá este".
   marked?: (p: ChartPoint) => boolean;
+  // Plan de feedback de directores, ítem F (correlograma): cada marcador se
+  // dibuja con un tallo vertical desde este valor de Y hasta el punto (barras
+  // finas de r_k contra el cero). Solo aplica a kind === "points"; el valor
+  // también entra al dominio de Y para que el tallo nunca quede recortado.
+  stemFrom?: number;
 }
 
 interface InteractiveChartProps {
@@ -63,6 +68,11 @@ interface InteractiveChartProps {
   yTickFormat?: (v: number) => string;
   height?: number;
   xScale?: "log" | "linear";
+  // Nombres de las magnitudes en el tooltip. Los defaults ("T", "valor") son
+  // los de los gráficos de Etapa 2; un gráfico cuyo eje X no es un período de
+  // retorno (ej. el lag k del correlograma) los pisa.
+  xName?: string;
+  yName?: string;
   // Se dispara con un clic sobre un marcador (serie `kind: "points"`) o con
   // Enter/Espacio sobre el marcador enfocado con el teclado — la misma acción
   // por las dos vías. Un arrastre para hacer zoom no cuenta como clic.
@@ -97,6 +107,8 @@ export function InteractiveChart({
   yTickFormat = defaultTickFormat,
   height = 320,
   xScale: xScaleType = "log",
+  xName = "T",
+  yName = "valor",
   onPointActivate,
 }: Readonly<InteractiveChartProps>) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -133,11 +145,14 @@ export function InteractiveChart({
   const yDomain = useMemo((): [number, number] => {
     const ys = allPoints.map((p) => p.y);
     if (ys.length === 0) return [0, 1];
+    for (const s of series) {
+      if (s.stemFrom !== undefined) ys.push(s.stemFrom);
+    }
     const lo = Math.min(...ys);
     const hi = Math.max(...ys);
     const pad = (hi - lo) * 0.1 || Math.abs(hi) * 0.1 || 1;
     return [lo - pad, hi + pad];
-  }, [allPoints]);
+  }, [allPoints, series]);
 
   const xDomain = xOverride ?? fullXDomain;
 
@@ -422,20 +437,31 @@ export function InteractiveChart({
                       ? baseRadius * 1.9
                       : baseRadius;
                   return (
-                    <circle
-                      key={`${s.id}-${i}`}
-                      cx={xScale(p.x)}
-                      cy={yScale(p.y)}
-                      r={radius}
-                      className="interactive-chart__point"
-                      data-highlighted={isHighlighted || undefined}
-                      data-marked={isMarked || undefined}
-                      style={{
-                        fill: rellenoDelPunto(s.colorVar, isMarked, isHighlighted && !isFocused),
-                        stroke: isMarked ? `var(${s.colorVar})` : undefined,
-                        strokeWidth: isMarked ? 2 : undefined,
-                      }}
-                    />
+                    <Fragment key={`${s.id}-${i}`}>
+                      {s.stemFrom !== undefined && (
+                        <line
+                          x1={xScale(p.x)}
+                          x2={xScale(p.x)}
+                          y1={yScale(s.stemFrom)}
+                          y2={yScale(p.y)}
+                          className="interactive-chart__stem"
+                          style={{ stroke: `var(${s.colorVar})` }}
+                        />
+                      )}
+                      <circle
+                        cx={xScale(p.x)}
+                        cy={yScale(p.y)}
+                        r={radius}
+                        className="interactive-chart__point"
+                        data-highlighted={isHighlighted || undefined}
+                        data-marked={isMarked || undefined}
+                        style={{
+                          fill: rellenoDelPunto(s.colorVar, isMarked, isHighlighted && !isFocused),
+                          stroke: isMarked ? `var(${s.colorVar})` : undefined,
+                          strokeWidth: isMarked ? 2 : undefined,
+                        }}
+                      />
+                    </Fragment>
                   );
                 })}
               </g>
@@ -462,8 +488,12 @@ export function InteractiveChart({
               <circle r={5} style={{ fill: `var(${tooltip.series.colorVar})` }} />
               <foreignObject x={10} y={-28} width={150} height={44}>
                 <div className="interactive-chart__tooltip-box">
-                  <div>T = {xTickFormat(tooltip.point.x)}</div>
-                  <div>valor = {yTickFormat(tooltip.point.y)}</div>
+                  <div>
+                    {xName} = {xTickFormat(tooltip.point.x)}
+                  </div>
+                  <div>
+                    {yName} = {yTickFormat(tooltip.point.y)}
+                  </div>
                 </div>
               </foreignObject>
             </g>

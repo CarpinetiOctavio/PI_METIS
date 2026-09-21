@@ -1,0 +1,53 @@
+/* Desglose paso a paso (ítems E/F del plan de feedback de directores): un
+   <details> anidado dentro de cada prueba, debajo de su fórmula. */
+.results-desglose {
+  margin: 8px 0;
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+
+.results-desglose > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--acc);
+}
+
+.results-desglose__nota {
+  margin: 6px 0 10px;
+}
+
+/* Con decenas de renglones, scroll propio en vez de alargar la página. */
+.results-desglose__tabla {
+  max-height: 260px;
+  overflow: auto;
+  margin-bottom: 10px;
+}
+
+.results-desglose__tabla tr[data-activa] {
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+}
+
+/* El número de lag es el control que elige el renglón: botón sin cromo, con
+   foco visible, para que sea operable con teclado. */
+.results-desglose__lag {
+  font: inherit;
+  color: var(--acc);
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.results-desglose__lag[aria-pressed="true"] {
+  font-weight: 700;
+}
+
+.results-desglose__lag:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.results-desglose__formula {
+  overflow-x: auto;
+}

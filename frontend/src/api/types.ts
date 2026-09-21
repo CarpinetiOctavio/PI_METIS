@@ -110,7 +110,20 @@ export interface WarningItem {
 export interface Explicacion {
   ecuacion: string;
   terminos: Record<string, number | null>;
+  // Plan de feedback de directores, ítem E — un renglón por paso de la prueba
+  // (Anderson: uno por lag k; Chow: uno por observación). Es el detalle que
+  // `core/` ya calcula y hoy descarta; el frontend solo lo renderiza (DECISIÓN
+  // 064). AUSENTE hasta que el backend lo emita (Tanda 2, con Octavio: el
+  // contrato está en docs/plan-backend-feedback-directores-20-09-2026.md §3) y
+  // en cualquier análisis persistido antes de eso — sin backfill, mismo
+  // criterio que DECISIÓN 058 §4. Quien lo consume degrada a la vista sin
+  // desglose si falta.
+  desglose?: DesgloseFila[] | null;
 }
+
+/** Un renglón del desglose. Las claves dependen de la prueba (ver
+ * `routes/results/Etapa1Desglose.tsx`), igual que `terminos`. */
+export type DesgloseFila = Record<string, number | boolean | null>;
 
 export interface TestResultDetail {
   prueba: string;
@@ -369,7 +382,16 @@ export interface AnalysisDetail {
 // docente, no un error a esconder (constraints.md, "METIS no sugiere
 // distribución ganadora").
 
-export type MetodoStatus = "ok" | "no_converge" | "no_aplicable" | "disabled_zeros";
+// `disabled_negatives` (ítem C del plan de feedback de directores): la distribución
+// no admite valores negativos y la serie los tiene. El backend todavía no lo emite
+// (hoy esas combinaciones vuelven como `no_aplicable`, indistinguibles de un fallo
+// numérico); el frontend ya lo sabe mostrar.
+export type MetodoStatus =
+  | "ok"
+  | "no_converge"
+  | "no_aplicable"
+  | "disabled_zeros"
+  | "disabled_negatives";
 
 export interface MetodoResultDetail {
   metodo: string;
@@ -447,4 +469,39 @@ export interface DesignEventsRecalcResponse {
 export interface DistributionDecisionResponse {
   ok: boolean;
   pipeline_continua: boolean;
+}
+
+// Ítem A del plan de feedback de directores (20/09/2026) — what-if de
+// atípicos: POST /analysis/simulate-exclusion. AÚN NO EXISTE en el backend
+// (Tanda 2, con Octavio); el contrato es el propuesto en
+// docs/plan-backend-feedback-directores-20-09-2026.md §4. Sin sesión, sin BD:
+// "explorar no es decidir" (DECISIÓN 062), no persiste nada.
+export interface SimulateExclusionRequest {
+  // = datos.serie_efectiva y los años de datos.timestamps_efectivos: la serie
+  // YA agregada, y los índices son posiciones en ella (no en la serie cruda).
+  serie: number[];
+  anios: number[];
+  tipo_variable: TipoVariable;
+  // "default" o el objeto {n1_pct, n2_pct} serializado como JSON — igual que en
+  // POST /analysis/stream.
+  cramer_particion: string;
+  indices_excluidos: number[];
+  etapas: (1 | 2)[];
+  tratamiento?: "eliminar";
+}
+
+export interface ExcluidoSimulado {
+  indice: number;
+  periodo: number;
+  valor_original: number;
+}
+
+export interface SimulateExclusionResponse {
+  // Mismo payload que `result_etapa1` del stream.
+  etapa1: Etapa1Result;
+  etapa2: Etapa2Result | null;
+  excluidos: ExcluidoSimulado[];
+  // La serie resultante, tal como la devolvió `core/`.
+  serie: number[];
+  anios: number[];
 }

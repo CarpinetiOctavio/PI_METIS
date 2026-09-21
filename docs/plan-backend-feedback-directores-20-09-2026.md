@@ -246,7 +246,7 @@ un atípico de Chow, señalado con el mismo warning (`CONTRACT_IRREGULAR_SPACING
 la media evaluado y postergado con sus tres contras; efecto sobre las pruebas de orden; por qué el
 parámetro `tratamiento` está previsto; por qué no se persiste.
 
-**Frontend que se engancha después (A2):** botón "Recalcular sin los puntos seleccionados" y una vista
+**Frontend de A2 (hecho contra un mock de este contrato):** hoy está apagado detrás de `VITE_SIMULATE_EXCLUSION=1` (`api/analysis.ts::simulacionExclusionDisponible`); cuando el endpoint exista se borra el flag y la interfaz queda siempre encendida. Sin id de análisis ni sesión: el frontend manda `serie`/`anios` de `datos.serie_efectiva`/`timestamps_efectivos` y la configuración con la que corrió el análisis (`tipo_variable`, `cramer_particion` como texto, `etapas`). Botón "Recalcular sin los puntos seleccionados" y una vista
 comparativa (veredictos originales vs simulados, con el `n` de cada lado y los cambios resaltados). El
 componente de comparación recibe **dos `Etapa1Result`**, así que la forma de `etapa1` de arriba (el
 mismo payload del stream) es lo que lo hace barato.

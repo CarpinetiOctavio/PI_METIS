@@ -11,6 +11,7 @@ const STATUS_LABEL: Record<MetodoStatus, string> = {
   no_converge: "no converge",
   no_aplicable: "no aplicable",
   disabled_zeros: "deshabilitada por ceros",
+  disabled_negatives: "no aplica: la serie tiene valores negativos",
 };
 
 // F3 (fix pre-reunión) — 13 cards ocupaban toda la pantalla. El backend ya
@@ -164,7 +165,7 @@ function DistribucionCard({
               </tr>
             </thead>
             <tbody>
-              {/* Métodos que fallaron (no_converge/no_aplicable/disabled_zeros)
+              {/* Métodos que fallaron (no_converge/no_aplicable/disabled_zeros/disabled_negatives)
                   se listan siempre, nunca ocultos — son la mitad de lo que un
                   alumno tiene que ver (la tesis misma reporta combinaciones
                   que no convergen). */}

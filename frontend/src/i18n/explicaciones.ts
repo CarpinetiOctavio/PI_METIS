@@ -333,6 +333,35 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
   },
 };
 
+/** Anderson para UN lag k del desglose (plan de feedback de directores, ítem
+ * E): la Ec. III-1 sustituida con el numerador de ese lag y la III-3 con sus
+ * bandas. Todos los números vienen de `core/` (`fila`, `terminos`); acá solo se
+ * arma el LaTeX. `terminos` aporta lo que es común a todos los lags (n y el
+ * denominador). */
+export function formatearFormulaAndersonLag(
+  terminos: Record<string, number | null>,
+  fila: Record<string, number | boolean | null>,
+): PasoFormula[] {
+  const k = typeof fila.k === "number" ? fila.k : null;
+  const num = typeof fila.numerador === "number" ? fila.numerador : null;
+  const r = typeof fila.r_k === "number" ? fila.r_k : null;
+  const inf = typeof fila.banda_inf === "number" ? fila.banda_inf : null;
+  const sup = typeof fila.banda_sup === "number" ? fila.banda_sup : null;
+  const kTxt = ltxInt(k);
+  const dentro = fila.fuera === false;
+  const estado = dentro ? "\\text{ dentro de las bandas}" : "\\text{ fuera de las bandas}";
+  return [
+    {
+      latex: lineas(
+        `r_{${kTxt}} = \\dfrac{${ltx(num)}}{${ltx(terminos.denominador)}} = ${ltx(r)}`,
+        `\\text{Bandas (95\\%): } \\dfrac{-1 \\pm 1{,}96\\sqrt{${ltxInt(terminos.n)}-${kTxt}-1}}{${ltxInt(terminos.n)}-${kTxt}} \\;\\Rightarrow\\; [${ltx(inf)};\\, ${ltx(sup)}]`,
+        `r_{${kTxt}} = ${ltx(r)}${estado}`,
+      ),
+      fallback: `r${subscript(k ?? 0)} = ${fmt(num)} / ${fmt(terminos.denominador)} = ${fmt(r)}; bandas (95%): [${fmt(inf)}; ${fmt(sup)}] — ${dentro ? "dentro" : "fuera"} de las bandas`,
+    },
+  ];
+}
+
 /** Fórmula sustituida en pasos LaTeX (simbólica → sustitución → resultado),
  * o `null` si la prueba no tiene `explicacion` (no_ejecutada) o no está
  * mapeada. Cada paso trae su `fallback` de texto plano. */

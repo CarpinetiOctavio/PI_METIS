@@ -143,7 +143,7 @@ docker exec <backend> alembic upgrade head
 
 Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de puertos en desarrollo" para por qué `backend` y `postgres` mapean puertos al host, y "DATABASE_URL — diferencia entre Docker y host" para el override de Alembic/psql desde la terminal local.
 
-**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"`, exit code 5 tolerado — no hay tests de integración todavía), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test + build). No mergear sin que los cuatro pasen.
+**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"`, exit code 5 tolerado — `tests/integration/` ya tiene tests reales, así que la tolerancia sobra y queda por sacar en un PR propio; `tests/e2e/` y `tests/regression/` siguen vacíos), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test + build). No mergear sin que los cuatro pasen.
 
 **SonarCloud** analiza cada PR además de estos jobs — no vía un paso propio de `ci.yml`, sino por
 Análisis Automático (App de GitHub de SonarCloud). Hoy el check no es *required* en el Ruleset, así
@@ -184,6 +184,8 @@ frontend/src/
 └── test/          # renderPage.tsx — helper que envuelve toda página en <StrictMode> (regla, no opcional)
 ```
 
+**Plan de feedback de directores (20/09/2026, `docs/plan-feedback-directores-20-09-2026.md`), ya en `staging`:** `Etapa2Explorador` (`src/routes/results/`) — ranking explorable compartido por `ResultsPage` e `HistoryDetailPage`, recalcula con `POST /analysis/{id}/design-events` y "explorar no es decidir" (DECISIÓN 062: nunca toca la elección registrada); y exclusión interactiva de puntos con clic en el gráfico + descarga de CSV (`Etapa1ExclusionPanel`, `exclusiones.ts` — lógica pura de UI, el recálculo sin esos puntos sería trabajo de `core/`). Lo que toca `backend/` de ese plan (endpoint de exploración sin id para CU-02, `simulate-exclusion`, `disabled_negatives`, `desglose` por prueba) está agrupado para Octavio en `docs/plan-backend-feedback-directores-20-09-2026.md` — no tocar `backend/` por ese plan sin que Octavio lo haya visto.
+
 Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) en `frontend/src/theme/` — `tokens.ts` y `tokens.instrumento.css` deben mantenerse en paridad (verificado por `tokenParity.test.ts`).
 
 **Ya no es scaffold** — Fases 1 a 5 del plan de integración están completas con integración real contra el backend (verificado contra Docker): auth end-to-end (`src/auth/`), stream de Etapa 1 vía SSE-sobre-fetch (`src/api/sse.ts`, hook `useAnalysisStream` — ver `docs/decisiones/decision040.md`), los tres modos de presentación de resultados de Etapa 1, historial con lista paginada y detalle. **Etapa 2 dejó de ser mock el 09/08/2026** (Bloque B del plan de implementación de Etapa 2, ver `sprint.md`): `PendingBadge` y `src/mocks/` (MSW) se borraron por completo, igual que las rutas `/ranking` y `/design-events` — el ranking real y los eventos de diseño se muestran inline dentro de `StreamPage` mientras el stream está pausado (`Etapa2RankingView`/`Etapa2EventosView` en `src/routes/results/`, reusados de solo lectura en `ResultsPage` e `HistoryDetailPage`). `docs/decisiones/decision042.md` documenta el mock original y su addendum de cierre. **Gráficos interactivos agregados el 11/08/2026** (Bloque C del plan de implementación de Etapa 2, DECISIÓN 056): `Etapa2AjusteChart` (puntos empíricos vs. curva ajustada) y `Etapa2EventosChart` (xT vs. T), ambos sobre un componente SVG propio (`src/charts/InteractiveChart.tsx`, `d3-scale`+`d3-shape`, sin librería de charting completa) con zoom, tooltip y navegación por teclado — montados dentro de `Etapa2EventosView`, sin el toggle calendario/hidrológico que la maqueta original ponía por tarjeta (retirado, no trasladado — el criterio de año es un parámetro de agregación de Etapa 1, `mes_inicio_anio`, DECISIÓN 057). Fase 6 (pulido y accesibilidad): el contraste WCAG AA del tema (DECISIÓN 043) se aplicó el 18/08/2026. Verificación E2E contra backend real: login/logout/me, Config→stream con atípico real, los tres modos de Resultados e Historial cerrados; solo el tramo registro→verify de Auth sigue bloqueado por falta de SMTP real en desarrollo. Punto de entrada para retomar el estado exacto: [`docs/frontend/informe-implementacion-frontend-fase1-6.md`](docs/frontend/informe-implementacion-frontend-fase1-6.md) (resumen navegable) y [`docs/frontend/frontend-implementation-plan.md`](docs/frontend/frontend-implementation-plan.md) §10 (fuente de verdad decisión por decisión).
@@ -212,6 +214,10 @@ Tema visual fijo "Instrumento" (claro/oscuro, no seleccionable por el usuario) e
 ---
 
 ## Endpoints — estructura definitiva
+
+**Verificado contra `main.py` y los routers (21/09/2026): solo hay tres routers montados — auth, analysis, history.** `GET /export/{id}` y `POST /validate/` (CU-03, con `X-API-Key`) están en el contrato pero **no existen todavía**; tampoco la gestión de API Keys — `db/models/api_client.py` está modelado y nada lo importa. No asumir que responden.
+
+```
 POST   /api/v1/auth/register
 POST   /api/v1/auth/verify
 POST   /api/v1/auth/login
@@ -227,8 +233,9 @@ GET    /api/v1/history/                   # ?archivados=true incluye archivados 
 GET    /api/v1/history/{id}
 POST   /api/v1/history/{id}/archive       # soft-delete — DECISIÓN 048
 POST   /api/v1/history/{id}/unarchive
-GET    /api/v1/export/{id}                # PDF on-demand
-POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1
+GET    /api/v1/export/{id}                # PDF on-demand — SIN IMPLEMENTAR
+POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1 — SIN IMPLEMENTAR
+```
 
 ---
 
@@ -267,7 +274,7 @@ Separadas en dos niveles: lo que se lee siempre al arrancar una sesión de traba
 - `.claude/rules/architecture/api-contracts.md` — contratos detallados de cada endpoint y catálogo de errores
 - `.claude/rules/core/statistical-pipeline.md` — lógica completa Etapa 1 y Etapa 2
 - `.claude/rules/testing.md` — estrategia de testing y fixtures de referencia
-- `.claude/rules/sprint.md` — estado actual del sprint, qué está en curso y qué está fuera de alcance
+- `.claude/rules/sprint.md` — estado actual del sprint, qué está en curso y qué está fuera de alcance. **Pesa ~97 KB / ~1600 líneas** y es un registro cronológico, no un resumen: ubicar la sección que importa con `Grep '^## '` y leer solo esa; las entradas de estado puntuales (p. ej. "PR #88 abierto") pueden estar atrasadas respecto de `git log`/`gh pr list`, que mandan.
 
 `testing.md` y `sprint.md` no tienen subcarpeta propia dentro de `.claude/rules/` — a diferencia de `core/` y `architecture/`, que agrupan múltiples archivos de un mismo dominio, cada uno de estos dos es documento único de su tema, no partición de un tema mayor.
 

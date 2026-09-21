@@ -557,7 +557,12 @@ export function ConfigPage() {
               (no existen físicamente) y trata los ceros de forma distinta en
               la prueba de Chow, que trabaja sobre logaritmos. Con{" "}
               <b>Otro</b>, un valor negativo es un dato válido (ej. una
-              temperatura bajo cero).
+              temperatura bajo cero), pero no todo el análisis puede
+              usarlo: en Etapa 2 las distribuciones Log-Normal de 2
+              parámetros, Log-Pearson III, Gamma de 2 parámetros, Exponencial
+              (β) y Generalizada Exponencial no se pueden ajustar con
+              negativos y quedan fuera del ranking, y la prueba de Chow (que
+              trabaja sobre logaritmos) no se ejecuta.
             </p>
           </fieldset>
           <fieldset className="field">

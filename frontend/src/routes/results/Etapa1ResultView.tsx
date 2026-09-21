@@ -5,7 +5,9 @@ import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/expl
 import { errorText } from "../../i18n/errors.es";
 import { BlockMath } from "../../components/BlockMath";
 import { CountUp } from "../../components/CountUp";
+import { Etapa1Desglose } from "./Etapa1Desglose";
 import { Etapa1GraficosView } from "./Etapa1GraficosView";
+import type { SimularFn } from "./useSimulacionExclusion";
 import "./Etapa1ResultView.css";
 
 interface Group {
@@ -154,6 +156,7 @@ function GroupExplicacion({ items }: Readonly<{ items: TestResultDetail[] }>) {
               </p>
             )}
             {interpretacion && <p className="results-test__interpretacion">{interpretacion}</p>}
+            <Etapa1Desglose test={t} />
           </div>
         );
       })}
@@ -183,11 +186,15 @@ export function Etapa1ResultView({
   modo,
   mesInicioAnio,
   nombreArchivo,
+  simular,
 }: Readonly<{
   result: Etapa1Result;
   modo: Modo;
   mesInicioAnio?: number;
   nombreArchivo?: string | null;
+  // Ítem A (A2): cómo recalcular sin los puntos excluidos. Opcional — solo la
+  // sesión interactiva de ResultsPage lo provee.
+  simular?: SimularFn;
 }>) {
   const pasoAPaso = modo === "paso_a_paso";
 
@@ -289,6 +296,8 @@ export function Etapa1ResultView({
           chow={result.atipicos.find((t) => t.prueba === "chow")}
           mesInicioAnio={mesInicioAnio}
           nombreArchivo={nombreArchivo}
+          resultado={result}
+          simular={simular}
         />
       )}
 

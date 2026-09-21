@@ -19,7 +19,7 @@ estado actual cita el archivo donde se comprobó.
 | E | Desglose paso a paso (los k lags de Anderson, etc.) | Kevin | Sí, aditivo en `core/` | Addendum a 064 | D |
 | F | Gráficos propios por prueba (correlograma, etc.) | Facundo | Sí, mismo cambio que E | Addendum a 064 | E |
 | B | Probar otras distribuciones desde la pantalla de resultados | Catalini | Sí, endpoint nuevo stateless | Nueva (extiende 062) | nada — **Tanda 1 hecha 21/09/2026 (CU-01)**; falta CU-02 (Tanda 2) |
-| A | Excluir atípicos clickeando el gráfico + resultados "sin ellos" + descarga | Catalini | Sí, `core/` + endpoint nuevo | Nueva (071) | B (Fase 0 ya hecha) — **A1 (selección + descarga CSV) hecha 21/09/2026**; faltan A2 (recalcular + vista comparativa) y el backend |
+| A | Excluir atípicos clickeando el gráfico + resultados "sin ellos" + descarga | Catalini | Sí, `core/` + endpoint nuevo | Nueva (071) | B (Fase 0 ya hecha) — **A1 (selección + descarga CSV) y A2 (recalcular + vista comparativa, contra un mock del contrato, apagado por `VITE_SIMULATE_EXCLUSION`) hechas 21/09/2026**; falta el backend |
 | C | Tratamiento de valores negativos con tipo "Otro" | Catalini | Sí, `core/` | Nueva (073) | nada |
 
 **Orden de ejecución: 0 → D → D2 → E → F → B → A → C.**

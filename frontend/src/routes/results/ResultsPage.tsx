@@ -1,12 +1,17 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
-import { postRecalcularDesignEvents } from "../../api/analysis";
+import {
+  postRecalcularDesignEvents,
+  postSimularExclusion,
+  simulacionExclusionDisponible,
+} from "../../api/analysis";
 import { Etapa1ResultView } from "./Etapa1ResultView";
 import { Etapa2Explorador } from "./Etapa2Explorador";
 import { Etapa2RankingView } from "./Etapa2RankingView";
 import { Etapa2EventosView } from "./Etapa2EventosView";
-import type { Etapa1Result, Modo } from "../../api/types";
+import type { CramerParticion, Etapa1Result, Modo, TipoVariable } from "../../api/types";
+import type { SimularFn } from "./useSimulacionExclusion";
 import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
 import "./ResultsPage.css";
 
@@ -21,6 +26,18 @@ interface ResultsLocationState {
   mesInicioAnio?: number;
   // Nombre del archivo subido — nombra el CSV de la serie sin los puntos excluidos.
   nombreArchivo?: string;
+  // Configuración con la que se corrió el análisis — la necesita el what-if de
+  // atípicos para repetirlo sobre la serie sin los puntos excluidos.
+  tipoVariable?: TipoVariable;
+  cramerParticion?: CramerParticion;
+  etapas?: "1" | "1,2";
+}
+
+// El backend recibe la partición de Cramer como texto: "default" o el objeto en
+// JSON, igual que en POST /analysis/stream (api/sse.ts::buildFormData).
+function cramerParticionComoTexto(particion: CramerParticion | undefined): string {
+  if (particion === undefined) return "default";
+  return typeof particion === "string" ? particion : JSON.stringify(particion);
 }
 
 export function ResultsPage() {
@@ -74,6 +91,23 @@ export function ResultsPage() {
     </>
   );
 
+  // What-if de atípicos (ítem A): solo con la configuración a mano y con el
+  // endpoint disponible en el backend (todavía no lo está, ver api/analysis.ts).
+  const datos = result.datos;
+  const tipoVariable = locationState?.tipoVariable;
+  const simular: SimularFn | undefined =
+    simulacionExclusionDisponible() && datos?.timestamps_efectivos && tipoVariable
+      ? (indicesExcluidos) =>
+          postSimularExclusion({
+            serie: datos.serie_efectiva,
+            anios: datos.timestamps_efectivos!.map((t) => t.anio),
+            tipo_variable: tipoVariable,
+            cramer_particion: cramerParticionComoTexto(locationState?.cramerParticion),
+            indices_excluidos: indicesExcluidos,
+            etapas: locationState?.etapas === "1,2" ? [1, 2] : [1],
+          })
+      : undefined;
+
   return (
     <div className="results-page">
       <h1 className="h">Resultados de Etapa 1</h1>
@@ -82,6 +116,7 @@ export function ResultsPage() {
         modo={modoEfectivo}
         mesInicioAnio={locationState?.mesInicioAnio}
         nombreArchivo={locationState?.nombreArchivo}
+        simular={simular}
       />
       {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la
           pidió al configurar el análisis. Si no se pidió Etapa 2, no hay
