@@ -448,3 +448,38 @@ export interface DistributionDecisionResponse {
   ok: boolean;
   pipeline_continua: boolean;
 }
+
+// Ítem A del plan de feedback de directores (20/09/2026) — what-if de
+// atípicos: POST /analysis/simulate-exclusion. AÚN NO EXISTE en el backend
+// (Tanda 2, con Octavio); el contrato es el propuesto en
+// docs/plan-backend-feedback-directores-20-09-2026.md §4. Sin sesión, sin BD:
+// "explorar no es decidir" (DECISIÓN 062), no persiste nada.
+export interface SimulateExclusionRequest {
+  // = datos.serie_efectiva y los años de datos.timestamps_efectivos: la serie
+  // YA agregada, y los índices son posiciones en ella (no en la serie cruda).
+  serie: number[];
+  anios: number[];
+  tipo_variable: TipoVariable;
+  // "default" o el objeto {n1_pct, n2_pct} serializado como JSON — igual que en
+  // POST /analysis/stream.
+  cramer_particion: string;
+  indices_excluidos: number[];
+  etapas: (1 | 2)[];
+  tratamiento?: "eliminar";
+}
+
+export interface ExcluidoSimulado {
+  indice: number;
+  periodo: number;
+  valor_original: number;
+}
+
+export interface SimulateExclusionResponse {
+  // Mismo payload que `result_etapa1` del stream.
+  etapa1: Etapa1Result;
+  etapa2: Etapa2Result | null;
+  excluidos: ExcluidoSimulado[];
+  // La serie resultante, tal como la devolvió `core/`.
+  serie: number[];
+  anios: number[];
+}

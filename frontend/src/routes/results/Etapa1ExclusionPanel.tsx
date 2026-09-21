@@ -32,6 +32,9 @@ export function Etapa1ExclusionPanel({
   sugerido,
   resolucionOriginal,
   nombreArchivo,
+  onRecalcular,
+  calculando = false,
+  errorSimulacion = null,
 }: Readonly<{
   puntos: PuntoSerie[];
   excluidos: ReadonlySet<number>;
@@ -40,6 +43,11 @@ export function Etapa1ExclusionPanel({
   sugerido: number | null;
   resolucionOriginal: Etapa1Datos["resolucion_original"];
   nombreArchivo?: string | null;
+  // A2 — recalcular Etapa 1 (y 2) sin los puntos seleccionados. Sin este prop
+  // (la página no sabe simular) el panel es el de A1: seleccionar y descargar.
+  onRecalcular?: () => void;
+  calculando?: boolean;
+  errorSimulacion?: string | null;
 }>) {
   const cantidad = excluidos.size;
   const restantes = puntos.length - cantidad;
@@ -103,11 +111,32 @@ export function Etapa1ExclusionPanel({
         </p>
       )}
 
+      {errorSimulacion && (
+        <div className="banner crit" role="alert">
+          <span className="ic">✕</span> {errorSimulacion}
+        </div>
+      )}
+
       <div className="etapa1-exclusion__acciones">
         <button type="button" className="b b-sec" onClick={onLimpiar} disabled={cantidad === 0}>
           Limpiar selección
         </button>
-        <button type="button" className="b b-pri" onClick={descargar} disabled={cantidad === 0}>
+        {onRecalcular && (
+          <button
+            type="button"
+            className="b b-pri"
+            onClick={onRecalcular}
+            disabled={cantidad === 0 || restantes < MIN_DATOS || calculando}
+          >
+            {calculando ? "Calculando…" : "Recalcular sin los puntos seleccionados"}
+          </button>
+        )}
+        <button
+          type="button"
+          className={onRecalcular ? "b b-sec" : "b b-pri"}
+          onClick={descargar}
+          disabled={cantidad === 0}
+        >
           Descargar serie sin los puntos seleccionados (CSV)
         </button>
       </div>

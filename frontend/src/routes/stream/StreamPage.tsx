@@ -237,6 +237,11 @@ export function StreamPage() {
         eventosDiseno: state.eventosDiseno,
         mesInicioAnio: form?.mes_inicio_anio,
         nombreArchivo: form?.archivo.name,
+        // Configuración del análisis, para poder repetirlo sin los puntos
+        // excluidos (ítem A, what-if).
+        tipoVariable: form?.tipo_variable,
+        cramerParticion: form?.cramer_particion,
+        etapas: form?.etapas,
       },
     });
   }, [
@@ -248,6 +253,9 @@ export function StreamPage() {
     form?.modo,
     form?.mes_inicio_anio,
     form?.archivo.name,
+    form?.tipo_variable,
+    form?.cramer_particion,
+    form?.etapas,
     navigate,
   ]);
 
