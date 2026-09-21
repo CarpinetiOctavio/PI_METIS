@@ -5,6 +5,7 @@ import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/expl
 import { errorText } from "../../i18n/errors.es";
 import { BlockMath } from "../../components/BlockMath";
 import { CountUp } from "../../components/CountUp";
+import { Etapa1Desglose } from "./Etapa1Desglose";
 import { Etapa1GraficosView } from "./Etapa1GraficosView";
 import "./Etapa1ResultView.css";
 
@@ -154,6 +155,7 @@ function GroupExplicacion({ items }: Readonly<{ items: TestResultDetail[] }>) {
               </p>
             )}
             {interpretacion && <p className="results-test__interpretacion">{interpretacion}</p>}
+            <Etapa1Desglose test={t} />
           </div>
         );
       })}

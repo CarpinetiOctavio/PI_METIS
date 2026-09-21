@@ -128,6 +128,65 @@ describe("InteractiveChart", () => {
     expect(punteada.style.strokeDasharray).not.toBe("");
   });
 
+  it("stemFrom dibuja un tallo por marcador y mete su base en el dominio de Y", () => {
+    const { container } = render(
+      <InteractiveChart
+        series={[
+          {
+            id: "barras",
+            kind: "points",
+            label: "r_k",
+            colorVar: "--acc",
+            stemFrom: 0,
+            data: [
+              { x: 1, y: 0.4 },
+              { x: 2, y: 0.6 },
+            ],
+          },
+        ]}
+        xScale="linear"
+        ariaLabel="Gráfico de prueba"
+        xLabel="k"
+        yLabel="r"
+      />,
+    );
+
+    const tallos = container.querySelectorAll("line.interactive-chart__stem");
+    expect(tallos).toHaveLength(2);
+    // Todos los valores son positivos, pero la base (0) tiene que entrar al
+    // dominio: el tallo no puede quedar recortado por arriba del eje.
+    const baseY = Number(tallos[0].getAttribute("y1"));
+    const topeY = Number(tallos[1].getAttribute("y2"));
+    expect(baseY).toBeGreaterThan(topeY);
+    expect(baseY).toBeLessThanOrEqual(320 - 12 - 40); // alto del área de trazado
+  });
+
+  it("sin stemFrom no dibuja tallos", () => {
+    const { container } = render(
+      <InteractiveChart series={series()} ariaLabel="Gráfico de prueba" xLabel="T" yLabel="Valor" />,
+    );
+    expect(container.querySelectorAll("line.interactive-chart__stem")).toHaveLength(0);
+  });
+
+  it("xName/yName rotulan el tooltip; sin ellos siguen siendo T y valor", () => {
+    const { container, rerender } = render(
+      <InteractiveChart
+        series={series()}
+        ariaLabel="Gráfico de prueba"
+        xLabel="T"
+        yLabel="Valor"
+        xName="lag k"
+        yName="r_k"
+      />,
+    );
+    const svg = screen.getByRole("img", { name: "Gráfico de prueba" });
+    fireEvent.keyDown(svg, { key: "ArrowRight" });
+    expect(container.querySelector(".interactive-chart__tooltip-box")).toHaveTextContent(/lag k = .*r_k = /);
+
+    rerender(<InteractiveChart series={series()} ariaLabel="Gráfico de prueba" xLabel="T" yLabel="Valor" />);
+    expect(container.querySelector(".interactive-chart__tooltip-box")).toHaveTextContent(/T = .*valor = /);
+  });
+
   it("shows a tooltip with the exact (x, y) of the nearest point on hover", () => {
     const { container } = render(
       <InteractiveChart
