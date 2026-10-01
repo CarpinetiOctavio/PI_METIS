@@ -223,4 +223,4 @@ registro de cuándo se estableció o modificó.
   archivaron en vez de borrarse porque varias decisiones los citan como
   justificación. Antes de mover cada uno se verificó que todo pendiente
   abierto figurara en un documento vivo. Bloque L del
-  `plan-fixes-post-verificacion-01-10-2026.md`.
+  `historico/planes/plan-fixes-post-verificacion-01-10-2026.md`.
