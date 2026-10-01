@@ -74,7 +74,8 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
 
 ### Bloques a implementar (cada uno: código + tests + verificación de las 9 estaciones idénticas)
 
-- [ ] **C — `disabled_negatives`** (chico, independiente). Decisión 073.
+- [x] **C — `disabled_negatives`** (chico, independiente). Decisión 073. *Hecho 01/10/2026 por Kevin y Claude
+      (Octavio sin tiempo; PR 3 del plan de fixes post-verificación), con `TEST_NOT_EXECUTED_NEGATIVES` para Chow.*
 - [ ] **B — endpoint de exploración sin id** (CU-02). Decisión 072.
 - [ ] **E — `Explicacion.desglose`** + `n1_pct`/`n2_pct` en Cramer + denominador en t de Student. Addendum a la 064.
 - [ ] **A — `aplicar_exclusiones()` + `simulate-exclusion`** (el más grande). Decisión 071.
@@ -84,7 +85,8 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
 
 ### Qué hay que hacer en el frontend cuando cada bloque aterrice
 
-- [ ] **C:** nada obligatorio (`disabled_negatives` ya se muestra). Si hay código nuevo de Chow, agregarlo a `errors.es.ts`.
+- [x] **C:** nada obligatorio (`disabled_negatives` ya se muestra). Si hay código nuevo de Chow, agregarlo a `errors.es.ts`.
+      *Hecho 01/10/2026: `TEST_NOT_EXECUTED_NEGATIVES` entró en el mismo commit que el backend.*
 - [ ] **B:** pasarle la función `explorar` a `Etapa2Explorador` en `ResultsPage` para CU-02, y en la comparación
       del what-if para explorar el ranking simulado. Hoy el CU-02 queda de solo lectura.
 - [ ] **E:** confirmar que las claves del `desglose` coinciden con las que el frontend espera
@@ -165,6 +167,11 @@ Cada sección puede tener un addendum de cierre: revisar antes de mandar.
       temperaturas, anomalías)? Kevin ya eligió la opción 3 (estado propio `disabled_negatives`); confirmar que le sirve.
 - [ ] **Chow sin logaritmos para "Otro"** (opción 2 del plan §4, Grubbs 1969): sigue pendiente; exige referencia bibliográfica
       nueva en `formulas-etapa1.md` y su aval.
+- [ ] **`DIST_HIGH_EEA` con "Otro"** (para Catalini y Facundo, 01/10/2026): el umbral es el 5 % de la media (DECISIÓN 070). En
+      una variable referida a un cero arbitrario la media puede estar cerca de cero y el porcentaje deja de significar algo: con
+      `serie_con_negativos_otro.csv` (media ≈ 0,99) las 19 combinaciones ajustadas lo disparan, incluida la de menor EEA. ¿Se
+      mide contra otra cosa para "Otro" (el desvío, el rango)? Sin cambiar el umbral hasta tener respuesta;
+      detalle en `docs/pendientes-tecnicos.md`.
 - [ ] **Alcance de "Otro":** METIS sigue agregando a **máximos** anuales. Si piensa en variables donde el extremo es el mínimo
       (estiajes, temperaturas mínimas), es otra funcionalidad.
 - [ ] **Explorar otras distribuciones desde resultados (ítem B):** ya funciona en CU-01; en CU-02 espera el endpoint (§2).

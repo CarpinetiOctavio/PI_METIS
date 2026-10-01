@@ -11,6 +11,10 @@ STATUS_OK = "ok"
 STATUS_NO_CONVERGE = "no_converge"
 STATUS_NO_APLICABLE = "no_aplicable"
 STATUS_DISABLED_ZEROS = "disabled_zeros"
+# DECISIÓN 073 — la serie tiene valores negativos y la distribución no está
+# definida para ellos. Mismo papel que disabled_zeros: no cambia ningún número,
+# solo dice el motivo real en vez del no_aplicable genérico.
+STATUS_DISABLED_NEGATIVES = "disabled_negatives"
 
 
 @dataclass

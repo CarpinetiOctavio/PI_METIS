@@ -688,6 +688,7 @@ async def stream_analysis(
             valores_numericos = filtrar_numericos(serie_final)
             serie_np = np.asarray(valores_numericos, dtype=float)
             tiene_ceros = bool(np.any(serie_np == 0))
+            tiene_negativos = bool(np.any(serie_np < 0))  # DECISIÓN 073
 
             yield _sse(
                 "progress",
@@ -699,7 +700,9 @@ async def stream_analysis(
                 },
             )
 
-            etapa2_result = ejecutar_etapa2(serie_np, tiene_ceros=tiene_ceros)
+            etapa2_result = ejecutar_etapa2(
+                serie_np, tiene_ceros=tiene_ceros, tiene_negativos=tiene_negativos
+            )
 
             # Guardar en la sesión antes de pausar — distribution-decision
             # necesita estos parámetros ya ajustados, no reajustar las 13
@@ -708,6 +711,7 @@ async def stream_analysis(
             if estado_sesion is not None:
                 estado_sesion.serie = valores_numericos
                 estado_sesion.tiene_ceros = tiene_ceros
+                estado_sesion.tiene_negativos = tiene_negativos
                 estado_sesion.etapa2 = etapa2_result
                 # El mismo asyncio.Event pudo haberse usado ya para la
                 # pausa de Chow arriba — un Event no se "des-setea" solo,

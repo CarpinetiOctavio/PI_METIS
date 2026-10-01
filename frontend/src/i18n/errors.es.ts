@@ -74,6 +74,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "Chow no se ejecutó: hay ceros en la serie de caudal/precipitación.",
   TEST_NOT_EXECUTED_CONDITION:
     "La prueba no se ejecutó: no se cumple una condición previa.",
+  TEST_NOT_EXECUTED_NEGATIVES:
+    "Chow no se ejecutó: la serie tiene valores negativos y la prueba trabaja sobre logaritmos.",
   TEST_NOT_EXECUTED_MIN_SAMPLES:
     "Mann-Kendall no se ejecutó: la serie tiene menos de 10 datos.",
 
@@ -88,6 +90,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "El error estándar de ajuste supera el 5% de la media — el ajuste es de baja calidad.",
   DIST_DISABLED_ZEROS:
     "Esta distribución está deshabilitada porque la serie tiene ceros.",
+  DIST_DISABLED_NEGATIVES:
+    "Esta distribución no se puede ajustar porque la serie tiene valores negativos.",
   DIST_ZEROS_TOLERATED:
     "La serie tiene ceros y este ajuste se calculó igual — el comportamiento ante ceros está pendiente de confirmación con Facundo.",
   DIST_METHOD_NOT_FITTED:

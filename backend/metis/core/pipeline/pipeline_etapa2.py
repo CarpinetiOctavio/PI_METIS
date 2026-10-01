@@ -12,6 +12,7 @@ detienen el pipeline — se registran y se continúa.
 import numpy as np
 
 from metis.core.etapa2.distributions import (
+    DISABLED_WITH_NEGATIVES,
     DISABLED_WITH_ZEROS,
     PENDIENTES_VALIDACION,
     TOLERA_CEROS_CON_ADVERTENCIA,
@@ -34,6 +35,7 @@ from metis.core.etapa2.distributions import (
 from metis.core.etapa2.eea import calcular_eea, es_high_eea
 from metis.core.etapa2.empirical import probabilidades_weibull
 from metis.core.etapa2.types import (
+    STATUS_DISABLED_NEGATIVES,
     STATUS_DISABLED_ZEROS,
     STATUS_OK,
     DistResult,
@@ -60,12 +62,18 @@ _DISTRIBUCIONES = [
 ]
 
 
-def ejecutar_etapa2(serie: np.ndarray, tiene_ceros: bool = False) -> Etapa2Result:
+def ejecutar_etapa2(
+    serie: np.ndarray, tiene_ceros: bool = False, tiene_negativos: bool = False
+) -> Etapa2Result:
     """
     Ajusta todas las distribuciones sobre la serie y retorna el ranking por EEA.
 
-    serie:       array de valores positivos ya validados por Etapa 1
-    tiene_ceros: True si algún xi == 0 — deshabilita las distribuciones marcadas
+    serie:           array de valores ya validados por Etapa 1
+    tiene_ceros:     True si algún xi == 0 — deshabilita las distribuciones marcadas
+    tiene_negativos: True si algún xi < 0 — marca DISABLED_WITH_NEGATIVES con
+                     disabled_negatives (DECISIÓN 073). Con negativos y ceros a la
+                     vez gana disabled_negatives: es el motivo más fuerte. Default
+                     False para no romper a quien no lo pase.
     """
     serie_arr = np.asarray(serie, dtype=float)
     media = float(np.mean(serie_arr))
@@ -81,19 +89,23 @@ def ejecutar_etapa2(serie: np.ndarray, tiene_ceros: bool = False) -> Etapa2Resul
     warnings: list[WarningItem] = []
 
     for nombre, modulo in _DISTRIBUCIONES:
-        # Determinar si la distribución está deshabilitada por ceros
-        deshabilitada = tiene_ceros and nombre in DISABLED_WITH_ZEROS
+        # Deshabilitada por negativos (precedencia) o por ceros.
+        estado_deshabilitada: str | None = None
+        if tiene_negativos and nombre in DISABLED_WITH_NEGATIVES:
+            estado_deshabilitada = STATUS_DISABLED_NEGATIVES
+        elif tiene_ceros and nombre in DISABLED_WITH_ZEROS:
+            estado_deshabilitada = STATUS_DISABLED_ZEROS
 
         metodos_resultado: list[MetodoResult] = []
 
         for metodo in modulo.METODOS_APLICABLES:
-            if deshabilitada:
+            if estado_deshabilitada:
                 metodos_resultado.append(
                     MetodoResult(
                         metodo=metodo,
                         parametros=None,
                         eea=None,
-                        status=STATUS_DISABLED_ZEROS,
+                        status=estado_deshabilitada,
                     )
                 )
                 continue

@@ -16,7 +16,7 @@ class SessionState:
     el payload completo de distribution-decision. Un solo mecanismo para
     las dos pausas del stream.
 
-    `serie`, `tiene_ceros` y `etapa2` se guardan antes de pausar en
+    `serie`, `tiene_ceros`, `tiene_negativos` y `etapa2` se guardan antes de pausar en
     result_etapa2_ranking, para que distribution-decision no tenga que
     reajustar las 13 distribuciones de nuevo.
     """
@@ -25,6 +25,7 @@ class SessionState:
     decision: dict | None = None
     serie: list[float] | None = None
     tiene_ceros: bool = False
+    tiene_negativos: bool = False  # DECISIÓN 073
     etapa2: Etapa2Result | None = None
     created_at: float = field(default_factory=time.monotonic)
 

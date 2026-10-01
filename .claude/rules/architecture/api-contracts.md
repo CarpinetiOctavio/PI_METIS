@@ -758,6 +758,8 @@ TEST_OUTLIER_ACCEPTED_BY_USER    Usuario aceptó el dato como parte de la poblac
 TEST_NOT_EXECUTED_ZEROS          Chow no ejecutado por ceros en caudal_precipitacion
 TEST_NOT_EXECUTED_CONDITION      Prueba con condición no cumplida
 TEST_NOT_EXECUTED_MIN_SAMPLES    Mann-Kendall no ejecutado — serie con n < 10
+TEST_NOT_EXECUTED_NEGATIVES      Chow no ejecutado por valores negativos en la serie, con cualquier tipo de variable
+                                  (DECISIÓN 073) — antes caía en TEST_NOT_EXECUTED_CONDITION
 ```
 
 (*) `core/etapa1/independence.py::determinar_warnings_independencia` promueve el
@@ -773,6 +775,10 @@ DIST_NOT_APPLICABLE              Combinación sin sentido matemático para esos 
 DIST_NOT_CONVERGED               Método iterativo sin solución estable
 DIST_HIGH_EEA                    EEA supera el 5% de la media
 DIST_DISABLED_ZEROS              Distribución deshabilitada por ceros en caudal_precipitacion
+DIST_DISABLED_NEGATIVES          Distribución no definida para valores negativos (DECISIÓN 073): lognormal2p,
+                                  logpearson3, gamma2p, exponencial_beta y gen_exponencial. Viaja como
+                                  status="disabled_negatives" en cada método; con negativos y ceros a la vez gana
+                                  este. Depende de los datos, no de tipo_variable
 DIST_ZEROS_TOLERATED             Serie con ceros, ajuste calculado igual — pendiente confirmación
                                   de dominio con Facundo (DECISIÓN 061). Solo exponencial_x0_beta,
                                   gen_pareto y gen_exponencial/momentos+ml — ver
