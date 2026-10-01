@@ -278,7 +278,7 @@ def aplicar_exclusiones(
   `analysis_service.py`) y un endpoint sin estado no los tiene. `indices_excluidos` es relativo a
   `serie_efectiva`, y así debe quedar en el contrato.
 - **Herramienta de volcado:** el script que usan estas regresiones (`regres.py`, citado en
-  `docs/revision-resolucion-diaria.md`) **no está en el repo**. La Fase 0 lo reconstruyó (extrae las
+  `docs/historico/planes/revision-resolucion-diaria.md`) **no está en el repo**. La Fase 0 lo reconstruyó (extrae las
   9 series de `docs/auditoria/regresion/regresion-pipeline/*.md` y vuelca el payload real de
   `_serializar_etapa1`/`_serializar_etapa2`). Los tres scripts (`extract_series.py`, `regres.py`,
   `diff.py`) y el modo de uso están en el **Apéndice C** de
@@ -566,7 +566,7 @@ reconstruir los demás sin recalcular estadística, cosa que DECISIÓN 064 proh�
 
 - Regresión: las 9 series deben dar veredictos, estadísticos y valores críticos **idénticos**; solo
   cambia la presencia del campo nuevo. Reusar el script de volcado de
-  `docs/revision-resolucion-diaria.md`, comparando todo salvo `desglose`.
+  `docs/historico/planes/revision-resolucion-diaria.md`, comparando todo salvo `desglose`.
 - Unit: la fila de `desglose` del lag reportado coincide con `numerador`/`estadistico` actuales;
   `sum(fuera) == lags_fuera`.
 

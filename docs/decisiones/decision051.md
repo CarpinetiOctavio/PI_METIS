@@ -14,7 +14,7 @@ documentada", justificada porque el chunk se cargaba únicamente en `/` vía
 momento: +128.37 KB gzip en un chunk aparte, +0.52 KB en el bundle
 principal).
 
-`docs/frontend/plan-mejora-frontend-pasada5.md` (Bloque B) encontró P4: la
+`docs/historico/planes/frontend/plan-mejora-frontend-pasada5.md` (Bloque B) encontró P4: la
 pantalla `/config` no tiene strands, solo el dot field — la segunda pantalla
 del flujo debía mantener los hilos además del campo de puntos. Montar
 `ThreadsBackground` tal como estaba en más de una ruta invierte la premisa

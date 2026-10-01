@@ -47,7 +47,16 @@ Documentos que quedaron superados por trabajo posterior. Nunca se
 borran — se mueven acá con una nota en `historico/README.md` explicando
 qué eran, cuándo se superaron, y qué los reemplaza. Mismo criterio de
 trazabilidad que rige el resto del proyecto: preservar el camino
-recorrido, no solo el estado final.
+recorrido, no solo el estado final. Los planes de implementación ya
+cerrados viven en `historico/planes/` (con su subcarpeta `frontend/`); el
+resumen de todos está en [`planes-implementados.md`](planes-implementados.md).
+
+### `planes-implementados.md`
+Índice cronológico de los planes de implementación ejecutados: qué pedía
+cada uno, qué se hizo de verdad, qué decisiones dejó, qué quedó abierto y
+dónde vive ahora. Es lo que se lee; los planes originales están en
+`historico/planes/`. Los planes todavía activos siguen en la raíz de
+`docs/` y se archivan cuando cierran, con su entrada en el índice.
 
 ### `frontend/`
 Documentación de la implementación real del frontend — no encaja en
@@ -58,30 +67,11 @@ cerrada de una vez):
   fuente de verdad decisión por decisión (§10).
 - `frontend-integration.md` — contrato real backend↔frontend observado
   (shapes de eventos SSE, discrepancias con `api-contracts.md`).
-- `informe-implementacion-frontend-fase1-6.md` — informe consolidado de
-  Fases 1-6, punto único de retoma.
-- `plan-mejora-frontend-pasada2.md` — plan de la segunda pasada de revisión
-  sobre ese trabajo (29/07/2026).
-- `informe-pasada2-resultados.md` — resultado de esa pasada, ítem por ítem
-  (29/07/2026).
-- `plan-mejora-frontend-pasada3.md` — plan de cierre: verificación
-  independiente de la pasada 2, gaps encontrados, y merge a `staging`
-  (29/07/2026).
-- `informe-pasada3-resultados.md` — resultado de esa pasada. El merge a
-  `staging` quedó diferido — ver el documento para el estado real
-  (29/07/2026).
-- `informe-diagnostico-ui-rota.md` — diagnóstico de doce defectos (F1-F12)
-  encontrados al probar la app en uso real pese a dos PRs mergeados con CI
-  verde (31/07/2026).
-- `plan-arreglo-ui-rota.md` — plan de arreglo priorizado en 4 bloques sobre
-  ese diagnóstico, con estrategia de testing anti-regresión (31/07/2026).
-- `informe-resultados-arreglo-ui-rota.md` — resultado ítem por ítem de los
-  Bloques 0-3 de ese plan. La rama (`fix/frontend-ui-integracion`) quedó sin
-  pushear — ver el documento para el estado real (31/07/2026).
-- `feedback-ux-pendiente-analisis.md` — relevamiento de feedback de UX/diseño
-  recibido al probar esa rama en vivo. Explícitamente no es un plan ni una
-  decisión — para analizar antes de decidir qué hacer con cada ítem
-  (31/07/2026).
+
+Los planes e informes de cada pasada de trabajo sobre el frontend (Fases 1-6,
+pasadas 2 a 5, SonarCloud, UI rota, feedback de UX, pre-reunión, feedback de
+Facundo) se archivaron el 01/10/2026 en `historico/planes/frontend/`. Qué hizo
+cada uno, en una página: [`planes-implementados.md`](planes-implementados.md).
 
 ### `pendientes-tecnicos.md`
 Registro vivo de deuda técnica conocida y sin dueño — lo que no es ni una
@@ -91,7 +81,7 @@ cerrarse. Cada entrada dice qué falta, qué bloquea y quién la cierra; las
 que se cierran se tachan con la fecha, no se borran.
 
 Contenido nuevo que no encaje claramente en `auditoria/`, `decisiones/`,
-`historico/`, `frontend/` o `pendientes-tecnicos.md` se discute antes de
+`historico/`, `frontend/`, `planes-implementados.md` o `pendientes-tecnicos.md` se discute antes de
 crear una carpeta nueva o forzarlo en la que más se le parezca.
 
 ## Trazabilidad de requerimientos (`RF-XXX`)
@@ -223,4 +213,14 @@ registro de cuándo se estableció o modificó.
   dentro del archivo, no con carpetas por mes) y la segunda hubiera
   implicado que esta auditoría es el siguiente paso de la metodología
   original de 4 fases, cuando en realidad es una pasada dirigida e
-  independiente sobre un tema puntual. Decisión de Octavio.
+  independiente sobre un tema puntual. Decisión de Octavio.- **01/10/2026** — `planes-implementados.md` creado y los planes cerrados
+  movidos con `git mv` a `historico/planes/` (con su subcarpeta `frontend/`,
+  para que los links entre plan e informe del mismo frente sigan
+  funcionando): las pasadas 2 a 5 del frontend, SonarCloud, UI rota,
+  feedback de UX, Fases 1-6, roadmap post-pasada 4, Etapa 2 de punta a
+  punta, relevamiento post-avance, resolución diaria, feedback de Facundo y
+  los fixes pre-reunión (este último nunca se había commiteado). Se
+  archivaron en vez de borrarse porque varias decisiones los citan como
+  justificación. Antes de mover cada uno se verificó que todo pendiente
+  abierto figurara en un documento vivo. Bloque L del
+  `plan-fixes-post-verificacion-01-10-2026.md`.

@@ -78,7 +78,7 @@ def _calcular_serie_calendario(
     """
     if result.resolucion_original not in ("mensual", "diaria") or mes_inicio_anio == 1:
         return None
-    # R3.4 (docs/plan-resolucion-diaria.md) — `resolucion=` es OBLIGATORIO.
+    # R3.4 (docs/historico/planes/plan-resolucion-diaria.md) — `resolucion=` es OBLIGATORIO.
     # Sin él, con los defaults de agregar_a_maximos_anuales() esta segunda
     # agregación correría en modo "mensual" sobre datos diarios: la clave de
     # agrupación sería (año, mes), la asignación sobreescribe, y
@@ -149,7 +149,7 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
     # otro filtrado de por medio). No hace falta un mapeo adicional acá.
     indice_atipico = _extraer_indice_atipico(result)
 
-    # R3.3 opción 2 (docs/plan-resolucion-diaria.md) — qué serie cruda viaja
+    # R3.3 opción 2 (docs/historico/planes/plan-resolucion-diaria.md) — qué serie cruda viaja
     # en el payload y a qué resolución. Con carga diaria NO se serializa la
     # serie diaria cruda (~14.600 ítems, ~637 KB — contradice el
     # dimensionamiento de DECISIÓN 058): se serializa la agregación a

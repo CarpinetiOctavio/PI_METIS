@@ -2,7 +2,7 @@
 
 **Fecha:** 28 de Agosto de 2026
 **Estado:** Decidida y aplicada (backend #77/#78, frontend #79 — plan
-[`docs/plan-resolucion-diaria.md`](../plan-resolucion-diaria.md), bloques R1–R4)
+[`docs/historico/planes/plan-resolucion-diaria.md`](../historico/planes/plan-resolucion-diaria.md), bloques R1–R4)
 
 ### Contexto
 
@@ -16,7 +16,7 @@ máximo anual. La solución fue agregar a máximos anuales en el paso 0 de
 para una serie diaria (moda de deltas = 1 día), y `validar_contrato()`
 trata `resolucion_temporal is None` como bloqueante —
 `CONTRACT_NO_TEMPORAL_RESOLUTION`. El
-[informe de viabilidad](../informe-viabilidad-resoluciones-temporales.md)
+[informe de viabilidad](../historico/planes/informe-viabilidad-resoluciones-temporales.md)
 (28/08/2026) confirmó que **aceptar diaria por el mismo camino que mensual
 (camino A) es barato, aditivo y sin riesgo de regresión**: la batería
 estadística sigue corriendo sobre `serie_efectiva`, una serie anual de
@@ -75,7 +75,7 @@ empieza o termina ahí. En el interior, un hueco del 2 % es una falla de
 instrumentación sobre un año que sí se midió entero.
 
 **Precisión agregada el 28/08/2026** (hallazgo F4 de
-[`docs/revision-resolucion-diaria.md`](../revision-resolucion-diaria.md); se
+[`docs/historico/planes/revision-resolucion-diaria.md`](../historico/planes/revision-resolucion-diaria.md); se
 agrega, no reemplaza al párrafo de arriba). El argumento tal como estaba
 escrito es de **frecuencia** — "en un extremo la parcialidad es la regla" —
 y por sí solo no distingue los dos casos: el sesgo a la baja del máximo de

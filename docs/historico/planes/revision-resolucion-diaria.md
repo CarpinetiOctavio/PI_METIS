@@ -8,7 +8,7 @@
 plan original. Se encontró **un hallazgo real de severidad media** (F1) y tres menores. Los tres
 puntos del DoD que `sprint.md` daba por pendientes se verificaron en esta revisión y **pasan**.
 
-> **Estado al 28/08/2026 — cerrado.** F1 y F3 resueltos ([DECISIÓN 067](decisiones/decision067.md)
+> **Estado al 28/08/2026 — cerrado.** F1 y F3 resueltos ([DECISIÓN 067](../../decisiones/decision067.md)
 > y test nuevo), F4 corregido en DECISIÓN 065, F2 con vencimiento fijado en `pendientes-facundo.md`.
 > Solo queda F5, que es un comando de housekeeping. Ver §6.
 
@@ -137,7 +137,7 @@ distintas sin que nada lo diga.
 
 ### F1 — MEDIA: colisión de clave, dos funciones del mismo archivo con semántica opuesta
 
-> **RESUELTO 28/08/2026 — [DECISIÓN 067](decisiones/decision067.md).** `_acumular_maximo()`
+> **RESUELTO 28/08/2026 — [DECISIÓN 067](../../decisiones/decision067.md).** `_acumular_maximo()`
 > compartido por las dos funciones; tres tests nuevos, verificados en rojo contra el código
 > anterior; las 9 estaciones siguen dando idéntico. El resto de esta entrada se conserva sin
 > tocar como registro de cómo se encontró.
@@ -312,7 +312,7 @@ python -c "... ejecutar_etapa1(...) ; _serializar_etapa1(...)"
 
 | Hallazgo | Severidad | Estado |
 |---|---|---|
-| F1 — colisión de clave: se conservaba el último, no el máximo | Media | **Resuelto** — [DECISIÓN 067](decisiones/decision067.md), `_acumular_maximo()` compartido + 3 tests |
+| F1 — colisión de clave: se conservaba el último, no el máximo | Media | **Resuelto** — [DECISIÓN 067](../../decisiones/decision067.md), `_acumular_maximo()` compartido + 3 tests |
 | F2 — ~40 líneas inalcanzables con los umbrales en `1.0` | Baja | **Atendido** — vencimiento explícito en `pendientes-facundo.md` R0.1; el cierre depende de Facundo |
 | F3 — faltaba el test de `n < 10` con carga diaria | Baja | **Resuelto** — `test_carga_diaria_el_recorte_deja_n_menor_a_10_y_bloquea` |
 | F4 — justificación de la asimetría más débil que el diseño | Info | **Resuelto** — precisión agregada a DECISIÓN 065 (epistémica, no de frecuencia) |

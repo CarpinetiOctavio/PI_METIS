@@ -33,7 +33,7 @@ Ninguno omitido.
 |---|---|---|
 | N1 | Hecho | `StreamPage.tsx`, pasos del timeline: `<div role="button" tabIndex={0} onClick onKeyDown>` → `<button type="button" disabled={!expandable}>` real, eliminando el manejo manual de teclado. CSS `.step` reajustado a reset de botón nativo. |
 | N2 | Hecho | `role="status"` explícito → `<output>` (rol implícito) en `AuthVerifyPage.tsx` y `guards.tsx`. Verificado que ambos contenedores ya tenían `display:flex` explícito — sin cambio visual. `getByRole("status")` en los tests sigue resolviendo. |
-| N3 | **Rechazado — Won't Fix, documentado** | Sonar pide `<dialog>` nativo para el modal de atípico. Rechazado: `dialog.showModal()` cierra con Escape por defecto, sin forma limpia de desactivarlo, y eso revertiría en silencio la decisión de producto de M3 (pasada 3) de que Escape no puede cerrar el modal ni resolver una decisión — el backend queda bloqueado hasta 300s esperando una de dos decisiones auditadas. Razonamiento completo en [DECISIÓN 044](../decisiones/decision044.md). |
+| N3 | **Rechazado — Won't Fix, documentado** | Sonar pide `<dialog>` nativo para el modal de atípico. Rechazado: `dialog.showModal()` cierra con Escape por defecto, sin forma limpia de desactivarlo, y eso revertiría en silencio la decisión de producto de M3 (pasada 3) de que Escape no puede cerrar el modal ni resolver una decisión — el backend queda bloqueado hasta 300s esperando una de dos decisiones auditadas. Razonamiento completo en [DECISIÓN 044](../../../decisiones/decision044.md). |
 
 ### Bloque R — Smells mecánicos
 
@@ -78,7 +78,7 @@ Bloque T (Sonar no los señaló) y no se tocaron.
 
 | # | Estado | Resultado |
 |---|---|---|
-| D1 | Hecho | [`decision044.md`](../decisiones/decision044.md) — 044 reservado en el índice antes de escribir contenido. Documenta qué es SonarCloud, las 2 condiciones que bloquearon el gate (de los 61 issues, solo 6 lo bloqueaban), el rechazo de `<dialog>` (N3), la decisión de mergear el PR #17 en rojo (X2, con los 10 archivos solapados), y la pregunta de gobernanza abierta (D3) como PENDIENTE DE DECISIÓN. |
+| D1 | Hecho | [`decision044.md`](../../../decisiones/decision044.md) — 044 reservado en el índice antes de escribir contenido. Documenta qué es SonarCloud, las 2 condiciones que bloquearon el gate (de los 61 issues, solo 6 lo bloqueaban), el rechazo de `<dialog>` (N3), la decisión de mergear el PR #17 en rojo (X2, con los 10 archivos solapados), y la pregunta de gobernanza abierta (D3) como PENDIENTE DE DECISIÓN. |
 | D2 | Hecho | SonarCloud agregado a `.claude/rules/testing.md` (sección "Análisis estático"), `.claude/rules/architecture/constraints.md` (sección "GitHub Flow — branching") y `CLAUDE.md` (junto a la descripción de CI). Los tres enlaces a `decision044.md` verificados programáticamente antes de commitear. |
 | D3 | Hecho | Verificado contra el PR #17 real (`gh pr view 17 --json mergeStateStatus,reviewDecision,statusCheckRollup`): `mergeStateStatus: UNSTABLE` (no `BLOCKED`) con SonarCloud en `FAILURE` — confirma que el check no es required; `reviewDecision` vacío pese a revisión pendiente — tampoco la revisión es required. `sprint.md` corregido: ya no afirma sin matiz que el Ruleset "exige... CI". No se pudo confirmar el estado de los tres checks de `ci.yml` como *required* vía API (404/lista vacía sin permiso admin) — dejado como hueco explícito, no asumido en ninguna dirección. |
 
@@ -116,7 +116,7 @@ Bloque T (Sonar no los señaló) y no se tocaron.
    commits después del respaldo de X3.1 — que los hay: 20 commits nuevos) y abrir el PR B.
 
 Las cuatro condiciones que hacen válido mergear el PR #17 en rojo (ver
-[DECISIÓN 044](../decisiones/decision044.md), X2) están cumplidas hasta donde depende de esta
+[DECISIÓN 044](../../../decisiones/decision044.md), X2) están cumplidas hasta donde depende de esta
 sesión: el PR B está verde localmente (ver §3) y listo para abrirse inmediatamente después.
 **Esperar una segunda ronda de Sonar sobre el PR B** — trae ~6.000 líneas que Sonar nunca analizó
 (pasadas 2 y 3 completas, más esta limpieza), es esperable que aparezcan hallazgos nuevos sobre
@@ -201,4 +201,4 @@ nothing to commit, working tree clean (salvo INSTRUCCIONES-PR-frontend.md, sin t
   `etapas`/`AnalysisRequest`) siguen exactamente igual — fuera de alcance de esta pasada también.
 - **Marcar N3 como *Won't fix* en la interfaz de SonarCloud** — esta sesión no tiene acceso a la
   organización de SonarCloud; queda para quien lo tenga, con el motivo ya escrito en
-  [DECISIÓN 044](../decisiones/decision044.md).
+  [DECISIÓN 044](../../../decisiones/decision044.md).

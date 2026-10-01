@@ -1,7 +1,7 @@
 // Cubre F1 — el ciclo de vida REAL de StreamPage con el hook REAL, bajo
 // StrictMode. Es la franja que StreamPage.test.tsx (que mockea el hook) y
 // sse.test.ts (que testea el hook sin componente) dejan sin cubrir entre
-// los dos. Ver docs/frontend/informe-diagnostico-ui-rota.md §5.1.
+// los dos. Ver docs/historico/planes/frontend/informe-diagnostico-ui-rota.md §5.1.
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { StrictMode } from "react";
 import { render } from "@testing-library/react";

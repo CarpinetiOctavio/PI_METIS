@@ -9,7 +9,7 @@ histórico, sin reescribir.
 
 ### Addendum (05/08/2026) — Bloque D, Pasada 5: el 500 queda cerrado, no la funcionalidad
 
-`docs/plan-post-pasada4-roadmap.md` (H4) encontró que este `TypeError` no
+`docs/historico/planes/plan-post-pasada4-roadmap.md` (H4) encontró que este `TypeError` no
 manejado ya no es solo una limitación conocida del frontend (el botón
 "Personalizada" deshabilitado) — es alcanzable por **cualquier cliente HTTP**
 que le pegue directo a `POST /api/v1/analysis/stream` con `cramer_particion`

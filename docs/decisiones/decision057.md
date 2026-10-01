@@ -1,6 +1,6 @@
 # DECISIÓN 057 — Agregación temporal por año hidrológico configurable
 **Fecha:** 12 de Agosto de 2026
-**Estado:** Decidida — implementación en curso (Bloque F del [plan de implementación de Etapa 2](../plan-etapa2-implementacion.md))
+**Estado:** Decidida — implementación en curso (Bloque F del [plan de implementación de Etapa 2](../historico/planes/plan-etapa2-implementacion.md))
 
 ### Contexto
 
@@ -18,7 +18,7 @@ Etapa 2 se encontraron dos huecos reales del contrato de datos:
    devuelve un resultado con la forma correcta y sin sentido hidrológico —
    peor, la estacionalidad rompe independencia/homogeneidad por construcción,
    así que el usuario ve warnings críticos que son un artefacto del bug, no
-   una propiedad real de sus datos (`docs/plan-etapa2-implementacion.md`,
+   una propiedad real de sus datos (`docs/historico/planes/plan-etapa2-implementacion.md`,
    F2.1).
 2. **"1 julio → 30 junio" es el valor de una región, no una regla universal.**
    Es el año hidrológico de la región centro de Argentina, donde están las 9

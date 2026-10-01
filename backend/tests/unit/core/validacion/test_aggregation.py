@@ -31,7 +31,7 @@ def _fechas_diarias(inicio: str, fin: str) -> list[str]:
 
 
 # ─────────────────────────── mensual (no-regresión) ──────────────────────────
-# Estos tests son la prueba de no-regresión de R2 (docs/plan-resolucion-diaria.md
+# Estos tests son la prueba de no-regresión de R2 (docs/historico/planes/plan-resolucion-diaria.md
 # §R5): la firma nueva con defaults (resolucion="mensual",
 # cobertura_minima_interior=1.0) tiene que devolver EXACTAMENTE lo mismo que
 # antes. El único cambio mecánico es el rename de PeriodoDescartado

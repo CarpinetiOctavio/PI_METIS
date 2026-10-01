@@ -24,7 +24,7 @@ beforeEach(() => {
   delete document.documentElement.dataset.motion;
 });
 
-// B6 (docs/frontend/plan-mejora-frontend-pasada4.md §4): jsdom no implementa
+// B6 (docs/historico/planes/frontend/plan-mejora-frontend-pasada4.md §4): jsdom no implementa
 // canvas — HTMLCanvasElement.prototype.getContext devuelve null y emite un
 // "Not implemented" al stderr. DotFieldBackground/GridScanBackground se
 // montan globalmente (RootLayout/EntryPage), así que sin este stub TODOS los

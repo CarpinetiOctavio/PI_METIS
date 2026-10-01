@@ -1,7 +1,7 @@
 # DECISIÓN 067 — Colisión de clave en la agregación: se conserva el máximo, no el último
 **Fecha:** 28 de Agosto de 2026
 **Estado:** Decidida y aplicada (backend)
-**Origen:** hallazgo F1 de [`docs/revision-resolucion-diaria.md`](../revision-resolucion-diaria.md),
+**Origen:** hallazgo F1 de [`docs/historico/planes/revision-resolucion-diaria.md`](../historico/planes/revision-resolucion-diaria.md),
 revisión de código independiente del plan de resolución diaria.
 
 ### Contexto
@@ -112,4 +112,4 @@ máximo, y ahora ya no la necesita.
 
 **Ver también:** [DECISIÓN 057](decision057.md) (origen de la asignación directa),
 [DECISIÓN 065](decision065.md) (donde quedaron las dos funciones con semántica opuesta),
-`docs/revision-resolucion-diaria.md` §3 F1 (el hallazgo y su reproducción).
+`docs/historico/planes/revision-resolucion-diaria.md` §3 F1 (el hallazgo y su reproducción).

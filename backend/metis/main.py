@@ -11,7 +11,7 @@ app = FastAPI(title="METIS", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    # F10 (docs/frontend/informe-diagnostico-ui-rota.md): el default hardcodeado
+    # F10 (docs/historico/planes/frontend/informe-diagnostico-ui-rota.md): el default hardcodeado
     # apuntaba a :3000, un puerto que ningún escenario real usa (dev sirve en
     # :5173, nginx en :80) — invisible mientras el proxy de Vite mantenga todo
     # same-origin, pero rompería CORS por completo el día que se corra sin él.

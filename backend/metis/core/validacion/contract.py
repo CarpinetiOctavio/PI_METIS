@@ -136,7 +136,7 @@ def validar_contrato(
 def _espaciado_regular(
     timestamps: list, resolucion_temporal: str | None = None
 ) -> bool:
-    # F2.2 (Bloque F, docs/plan-etapa2-implementacion.md §7). Dos casos reales
+    # F2.2 (Bloque F, docs/historico/planes/plan-etapa2-implementacion.md §7). Dos casos reales
     # distintos según de dónde vengan los timestamps:
     #
     # - CSV: parser.py::_leer_dataframe no pasa parse_dates a pd.read_csv, así

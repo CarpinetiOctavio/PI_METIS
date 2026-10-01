@@ -1,4 +1,4 @@
-// Capa 2 de testing (docs/frontend/plan-arreglo-ui-rota.md §4.2-b): el grafo
+// Capa 2 de testing (docs/historico/planes/frontend/plan-arreglo-ui-rota.md §4.2-b): el grafo
 // de navegación REAL — `routes` tal cual lo consume App.tsx, no un
 // MemoryRouter con destinos de mentira armados por cada test aislado. Con el
 // patrón anterior (cada archivo de página con su propio <Routes> falso),

@@ -7,7 +7,7 @@ hidrológico no es una constante del sistema — es un parámetro,
 `mes_inicio_anio ∈ [1..12]`, con el año calendario como el caso particular
 `mes_inicio_anio = 1`.
 
-docs/plan-resolucion-diaria.md (R2) — generalización a resolución diaria.
+docs/historico/planes/plan-resolucion-diaria.md (R2) — generalización a resolución diaria.
 `agregar_a_maximos_anuales()` gana dos parámetros con default que reproduce
 exactamente el comportamiento mensual ya auditado:
   - `resolucion`: "mensual" | "diaria" — decide la granularidad de la
@@ -290,7 +290,7 @@ def agregar_a_maximos_mensuales(
     serie: list, timestamps: list
 ) -> tuple[list[float], list[str]]:
     """Diaria → máximos MENSUALES. Solo para la vista descriptiva del
-    payload (R3.3 opción 2, docs/plan-resolucion-diaria.md): con carga
+    payload (R3.3 opción 2, docs/historico/planes/plan-resolucion-diaria.md): con carga
     diaria el bloque `datos` de result_etapa1 no lleva la serie diaria
     cruda (~14.600 ítems, ~637 KB — contradice el dimensionamiento de
     DECISIÓN 058), lleva esta agregación (~480 ítems para 40 años).

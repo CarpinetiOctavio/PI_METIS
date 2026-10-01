@@ -3,7 +3,7 @@
 **Estado:** Decidida — implementación en curso (Bloque E, pasada 4)
 
 ### Contexto
-`docs/frontend/plan-mejora-frontend-pasada4.md` (punto 5a del feedback de UX)
+`docs/historico/planes/frontend/plan-mejora-frontend-pasada4.md` (punto 5a del feedback de UX)
 pide poder sacar un análisis de la vista principal del historial. La pregunta
 de arquitectura es si eso significa un `DELETE` físico o algo reversible.
 

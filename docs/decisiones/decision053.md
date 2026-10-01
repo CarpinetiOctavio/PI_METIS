@@ -1,6 +1,6 @@
 # DECISIÓN 053 — `session_store` pasa a un estado con TTL, no dos diccionarios sueltos
 **Fecha:** 09 de Agosto de 2026
-**Estado:** Decidida — implementación en curso (Bloque A del [plan de implementación de Etapa 2](../plan-etapa2-implementacion.md))
+**Estado:** Decidida — implementación en curso (Bloque A del [plan de implementación de Etapa 2](../historico/planes/plan-etapa2-implementacion.md))
 
 ### Contexto
 

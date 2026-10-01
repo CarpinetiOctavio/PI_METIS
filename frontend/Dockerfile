@@ -1,4 +1,4 @@
-# F9 (docs/frontend/informe-diagnostico-ui-rota.md): docker-compose.yml
+# F9 (docs/historico/planes/frontend/informe-diagnostico-ui-rota.md): docker-compose.yml
 # declaraba `frontend: build: ./frontend` desde el principio, pero este
 # archivo nunca existió — `docker-compose up --build` fallaba directo.
 # Multi-stage: node para build, nginx para servir el estático — el

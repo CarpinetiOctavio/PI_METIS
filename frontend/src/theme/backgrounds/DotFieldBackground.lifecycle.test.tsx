@@ -1,6 +1,6 @@
 // Escrito ANTES del componente (plan pasada4 §4 B5) — el fondo animado es el
 // lugar más probable de reintroducir una fuga de efecto tipo F1
-// (docs/frontend/informe-diagnostico-ui-rota.md), y esta vez sería silenciosa:
+// (docs/historico/planes/frontend/informe-diagnostico-ui-rota.md), y esta vez sería silenciosa:
 // la app seguiría funcionando, solo con el doble de loops de rAF corriendo
 // para siempre. Mismo patrón que StreamPage.lifecycle.test.tsx.
 import { describe, expect, it, vi, beforeEach } from "vitest";

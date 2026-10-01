@@ -13,7 +13,7 @@ DECISIÓN 065) y construye la serie de máximos anuales con una regla
 explícita, auditable y configurable. **Lo que METIS no hace, y no va a
 hacer en V1.0, es correr Etapa 1 o Etapa 2 sobre los valores mensuales o
 diarios sin agregar** — el "camino B" del
-[informe de viabilidad](../informe-viabilidad-resoluciones-temporales.md).
+[informe de viabilidad](../historico/planes/informe-viabilidad-resoluciones-temporales.md).
 
 Esta decisión no depende de que DECISIÓN 065 (aceptar diaria) se
 implemente: vale por sí sola. Es la que se defiende ante el tribunal.
@@ -137,5 +137,5 @@ propio código de METIS y desde la tesis.
 **Ver también:** [DECISIÓN 065](decision065.md) (el "sí" al camino A para
 diaria), [DECISIÓN 057](decision057.md) (camino A para mensual, y el bug
 F2.1 que este camino B reabriría),
-`docs/informe-viabilidad-resoluciones-temporales.md` §4-§5 (el detalle
+`docs/historico/planes/informe-viabilidad-resoluciones-temporales.md` §4-§5 (el detalle
 prueba por prueba y el análisis de riesgo académico).

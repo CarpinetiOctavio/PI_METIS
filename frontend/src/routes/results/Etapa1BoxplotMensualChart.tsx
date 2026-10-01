@@ -32,7 +32,7 @@ function ordenDeMeses(mesInicio: number): number[] {
  * meses que agrupar.
  *
  * Qué representa cada caja depende de la resolución del ARCHIVO
- * (`resolucion_original`, docs/plan-resolucion-diaria.md R3.3b):
+ * (`resolucion_original`, docs/historico/planes/plan-resolucion-diaria.md R3.3b):
  *  - archivo mensual → la distribución de los valores mensuales del registro;
  *  - archivo diario → la distribución de los MÁXIMOS mensuales agregados
  *    desde los datos diarios (el backend serializa esa agregación, no la

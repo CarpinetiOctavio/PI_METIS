@@ -1,11 +1,11 @@
 # DECISIÓN 050 — Límite de tamaño de subida: valor, dónde se aplica, código de error
 
 **Fecha:** 5 de Agosto de 2026
-**Estado:** Decidida — implementación en curso (Bloque A, Pasada 5, `docs/plan-post-pasada4-roadmap.md`)
+**Estado:** Decidida — implementación en curso (Bloque A, Pasada 5, `docs/historico/planes/plan-post-pasada4-roadmap.md`)
 
 ### Contexto
 
-`docs/plan-post-pasada4-roadmap.md` (H2, H3) encontró dos problemas reales de
+`docs/historico/planes/plan-post-pasada4-roadmap.md` (H2, H3) encontró dos problemas reales de
 subida de archivos, ninguno ejercitado nunca en un smoke test porque
 `npm run dev` pega directo a `:8000` sin pasar por nginx:
 

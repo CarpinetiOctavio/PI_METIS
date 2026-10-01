@@ -3,7 +3,7 @@
 **Estado:** Decidida — implementación en curso (Bloque D, pasada 4)
 
 ### Contexto
-`docs/frontend/plan-mejora-frontend-pasada4.md` (punto 2 del feedback de UX)
+`docs/historico/planes/frontend/plan-mejora-frontend-pasada4.md` (punto 2 del feedback de UX)
 pide que `ConfigPage` deje de pedir "Columna X"/"Columna Y" como texto libre
 y ofrezca un dropdown con las columnas reales del archivo subido.
 
@@ -82,7 +82,7 @@ del catálogo de errores en las tres direcciones.
 
 ### Addendum (05/08/2026) — la desviación de `nrows` ya tiene un techo duro
 
-`docs/plan-post-pasada4-roadmap.md` (H2.2, debilidad de proceso) señaló que
+`docs/historico/planes/plan-post-pasada4-roadmap.md` (H2.2, debilidad de proceso) señaló que
 la desviación de la letra del plan original (leer `_leer_dataframe(content)`
 completo en vez de solo las primeras filas con `nrows`, porque la respuesta
 necesita `filas=len(df)`) no tenía consecuencia de memoria acotada en ningún
