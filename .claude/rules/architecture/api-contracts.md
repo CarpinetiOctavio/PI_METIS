@@ -461,7 +461,10 @@ devolver un 400 legible en vez de un 500). Cualquier violación → 400
 **Errores:** 404 `SESSION_NOT_FOUND` (la sesión no existe o ya expiró — a
 diferencia de `outlier-decision`, que no valida existencia de sesión, este
 endpoint sí lo hace explícitamente por mandato de DECISIÓN 052), 400
-`DIST_SELECTION_INVALID`.
+`DIST_SELECTION_INVALID`, 400 `DIST_PENDING_VALIDATION` (la distribución está
+en `PENDIENTES_VALIDACION` de `core/etapa2/distributions/__init__.py` — hoy
+`gen_pareto` — y no se puede elegir en esta versión, DECISIÓN 074; evaluado en
+el borde después de la forma del request y antes de tocar `session_store`).
 
 **Estado de implementación (09/08/2026, cierre del Bloque A1-A6 del plan de
 Etapa 2):** cableado de punta a punta y verificado. El stream pausa de
@@ -544,6 +547,9 @@ stream.
   partir. Distinto de `DIST_SELECTION_INVALID`: ese código es sobre la
   forma del request, este es sobre si la combinación bien formada tiene
   algo que recalcular.
+- 400 `DIST_PENDING_VALIDATION` — la distribución está pendiente de
+  validación (DECISIÓN 074, hoy `gen_pareto`): tampoco se puede explorar desde
+  el historial. Evaluado en el borde, antes de tocar la base.
 
 **No toca `session_store`, no persiste nada, no altera
 `analysis_results.decisiones`** — DECISIÓN 062, "explorar no es decidir".
@@ -775,8 +781,10 @@ DIST_SELECTION_INVALID           distribucion/metodo vacíos o periodos_retorno 
                                   compartido entre distribution-decision y POST /analysis/{id}/design-events
 DIST_METHOD_NOT_FITTED           La combinación distribución+método pedida en POST /analysis/{id}/design-events
                                   no aparece en el ranking persistido, o su status != "ok" (DECISIÓN 062)
+DIST_PENDING_VALIDATION          La distribución pedida está pendiente de validación y no se puede elegir ni explorar
+                                  (DECISIÓN 074, hoy gen_pareto) — distribution-decision y POST /analysis/{id}/design-events
 ```
-`DIST_SELECTION_INVALID` y `DIST_METHOD_NOT_FITTED` no son estados de
+`DIST_SELECTION_INVALID`, `DIST_METHOD_NOT_FITTED` y `DIST_PENDING_VALIDATION` no son estados de
 ajuste de una distribución como los otros cinco — son validaciones de
 request (respuesta HTTP 400, no un campo de `DistResult`). Se agrupan acá
 por prefijo/dominio, igual que `CONTRACT_ETAPAS_INVALID` se agrupa con los

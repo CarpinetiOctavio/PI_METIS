@@ -119,3 +119,12 @@ No se agrega como pregunta al documento de escalamiento formal (Parte A, Sí/No)
 plantear "¿qué modelo de mínimos cuadrados usaste?" como pregunta cerrada, y la fórmula en sí ya
 está confirmada por Carlos. Se comunica como nota informativa aparte, no bloqueante, por fuera del
 documento numerado.
+
+### Addendum — 01/10/2026: la ecuación de la tesis, bien transcrita, no recupera el parámetro
+
+Lo que esta decisión corrigió fue la **transcripción** de IV-153 contra la tesis, y eso sigue valiendo. Lo que se
+agrega: esa ecuación tiene una sola raíz, cerca de ε = 1, sea cual sea la serie (simulación de 400 muestras por
+valor de ε real, y una muestra con k = 0,1 donde la raíz da 0,975 y un ajuste de mínimos cuadrados común da 0,18).
+Además IV-155 no es dimensionalmente consistente. Mínimos Cuadrados queda dentro de la mitigación de la
+DECISIÓN 074 y su corrección espera la respuesta de Facundo. Ver
+`docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md` §5.

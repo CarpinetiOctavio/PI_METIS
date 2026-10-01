@@ -28,6 +28,9 @@ class DistResult:
     metodos: list[MetodoResult] = field(default_factory=list)
     mejor_eea: float | None = None  # EEA del mejor método; None si todos fallaron
     mejor_metodo: str | None = None
+    # DECISIÓN 074 — se calcula y se muestra, pero no se puede elegir y va al
+    # final del ranking (ver PENDIENTES_VALIDACION en distributions/__init__.py).
+    pendiente_validacion: bool = False
 
 
 @dataclass

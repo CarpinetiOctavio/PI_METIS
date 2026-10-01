@@ -425,6 +425,10 @@ una imagen ambigua?
   mal condicionado (épsilon físicamente implausible en las 9 estaciones donde se corrió) —
   pendiente de código bloqueado por falta de fuente (ver Q6), no resoluble sin la fórmula
   de Facundo.
+  > **Nota 01/10/2026:** el "estimador mal condicionado" de Pareto MPP ya tiene causa: IV-167 tiene
+  > el signo del segundo término del numerador cambiado (con "+" da ε ≈ 4 en cualquier serie). Ver
+  > `docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md` §4 y DECISIÓN 074. Gamma 3p MPP sigue
+  > igual.
 - Contraverificación de la Q11 (contaminación est_01/est_02) — verificada hasta ahora solo
   con el PDF de la tesis en la sesión de Chat; no reconfirmada de forma independiente por
   Code. Cerrar esa brecha de procedencia cuando se revise el material completo.

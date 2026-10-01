@@ -21,17 +21,17 @@ def test_ranking_incluye_las_13_distribuciones(serie_facundo):
 def test_ranking_ordenado_ascendente_por_mejor_eea(serie_facundo):
     arr = np.array(serie_facundo)
     resultado = ejecutar_etapa2(arr, tiene_ceros=False)
+    # Las pendientes de validación van al final de todo, fuera de este orden
+    # (DECISIÓN 074, ver test_pendientes_validacion.py).
+    ranking = [d for d in resultado.ranking if not d.pendiente_validacion]
+    assert all(d.pendiente_validacion for d in resultado.ranking[len(ranking) :])
 
-    con_eea = [d.mejor_eea for d in resultado.ranking if d.mejor_eea is not None]
+    con_eea = [d.mejor_eea for d in ranking if d.mejor_eea is not None]
     assert con_eea == sorted(con_eea)
 
     # Las distribuciones sin ajuste válido (mejor_eea=None) van al final.
-    posiciones_none = [
-        i for i, d in enumerate(resultado.ranking) if d.mejor_eea is None
-    ]
-    posiciones_con_eea = [
-        i for i, d in enumerate(resultado.ranking) if d.mejor_eea is not None
-    ]
+    posiciones_none = [i for i, d in enumerate(ranking) if d.mejor_eea is None]
+    posiciones_con_eea = [i for i, d in enumerate(ranking) if d.mejor_eea is not None]
     if posiciones_none and posiciones_con_eea:
         assert min(posiciones_none) > max(posiciones_con_eea)
 

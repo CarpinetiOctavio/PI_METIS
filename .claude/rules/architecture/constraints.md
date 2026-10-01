@@ -25,6 +25,9 @@
 - CU-03 expone solo Etapa 1 — nunca Etapa 2
 - CU-03 es completamente stateless — ningún estado entre llamadas
 - CU-03 no tiene endpoint outlier-decision ni design-events
+- Toda selección automática por menor EEA (`statistical-pipeline.md` menciona una para CU-03, en contradicción
+  con la primera línea de esta lista — sin resolver, CU-03 no está implementado) tiene que saltear las
+  distribuciones de `PENDIENTES_VALIDACION` (DECISIÓN 074, hoy `gen_pareto`): no se pueden elegir.
 
 ---
 

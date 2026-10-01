@@ -406,6 +406,10 @@ export interface DistribucionResult {
   metodos: MetodoResultDetail[];
   mejor_eea: number | null;
   mejor_metodo: string | null;
+  // DECISIÓN 074 — se calcula y se muestra, pero no se puede elegir y va al
+  // final del ranking. Opcional: los análisis persistidos antes de esa decisión
+  // no lo traen (sin backfill); Etapa2RankingView usa un respaldo local.
+  pendiente_validacion?: boolean;
 }
 
 // Bloque C2a (plan post-avance) — la elección de distribución+método hecha

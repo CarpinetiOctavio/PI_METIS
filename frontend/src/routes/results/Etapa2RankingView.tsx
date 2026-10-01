@@ -14,6 +14,18 @@ const STATUS_LABEL: Record<MetodoStatus, string> = {
   disabled_negatives: "no aplica: la serie tiene valores negativos",
 };
 
+// DECISIÓN 074 — respaldo SOLO para análisis persistidos antes de esa decisión,
+// que no traen `pendiente_validacion` (sin backfill, DECISIÓN 058 §4). La fuente
+// de verdad es `PENDIENTES_VALIDACION` en core/etapa2/distributions/__init__.py;
+// esta copia existe para que un análisis viejo de una serie como est_02 no siga
+// mostrando Generalizada de Pareto con "menor EEA". Se borra cuando ya no quede
+// ningún análisis anterior a la DECISIÓN 074 que la necesite.
+const PENDIENTES_VALIDACION_V1 = new Set(["gen_pareto"]);
+
+function esPendiente(item: DistribucionResult): boolean {
+  return item.pendiente_validacion ?? PENDIENTES_VALIDACION_V1.has(item.distribucion);
+}
+
 // F3 (fix pre-reunión) — 13 cards ocupaban toda la pantalla. El backend ya
 // ordena ascendente por mejor_eea (nulls al final); acá solo se corta la
 // vista, nunca se reordena.
@@ -91,19 +103,24 @@ function motivoSinAjuste(item: DistribucionResult): string | null {
   return "sin ajuste posible con esta serie";
 }
 
-/** Cuántas distribuciones del final del ranking no tienen ningún ajuste. El
- * frontend no reordena: solo separa el bloque que ya viene al final (el backend
- * ordena con `mejor_eea` nulo al final). Una sin ajuste en el medio, si algún día
- * llegara, se queda en su lugar y solo cambia de estilo. */
-function sinAjusteAlFinal(ranking: readonly DistribucionResult[]): number {
+/** Cuántas distribuciones del final del ranking cumplen `cond`. El frontend no
+ * reordena: solo separa los bloques que ya vienen al final (el backend manda las
+ * sin ajuste y, después, las pendientes de validación al final). Una que cumpla
+ * `cond` en el medio, si algún día llegara, se queda en su lugar y solo cambia de
+ * estilo. */
+function cuantasAlFinal(
+  ranking: readonly DistribucionResult[],
+  cond: (d: DistribucionResult) => boolean,
+): number {
   let n = 0;
-  while (n < ranking.length && ranking[ranking.length - 1 - n].mejor_metodo === null) n += 1;
+  while (n < ranking.length && cond(ranking[ranking.length - 1 - n])) n += 1;
   return n;
 }
 
 function DistribucionCard({
   item,
   esMejor,
+  pendiente,
   metodoElegido,
   onElegir,
   textoAccion,
@@ -112,6 +129,9 @@ function DistribucionCard({
 }: Readonly<{
   item: DistribucionResult;
   esMejor: boolean;
+  // DECISIÓN 074 — se ve, con su tabla de métodos, pero sin ningún botón para
+  // elegirla ni explorarla.
+  pendiente: boolean;
   // Bloque C3 — método de la elección registrada del análisis, si esta
   // card es la distribución elegida (undefined si no aplica o si estamos
   // en modo "lectura"/"stream", donde no hay ninguna elección todavía).
@@ -129,9 +149,10 @@ function DistribucionCard({
   const clases = ["etapa2-card"];
   if (esMejor) clases.push("top");
   if (motivo) clases.push("etapa2-card--sin-ajuste");
+  if (pendiente) clases.push("etapa2-card--pendiente");
 
   return (
-    <SpotlightCard className={clases.join(" ")} glow={!motivo}>
+    <SpotlightCard className={clases.join(" ")} glow={!motivo && !pendiente}>
       <div className="row" style={{ alignItems: "center" }}>
         <h3 className="h" style={{ fontSize: 15, margin: 0 }}>
           {item.distribucion}
@@ -144,6 +165,7 @@ function DistribucionCard({
             información docente (Bloque C3, DECISIÓN 062), no se ocultan. */}
         {esMejor && <span className="pill ok">menor EEA</span>}
         {esElegida && <span className="pill acc">elegida en el análisis</span>}
+        {pendiente && <span className="pill warn">pendiente de validación</span>}
       </div>
       <p className="fn" style={{ margin: "4px 0 8px" }}>
         {formatInt(item.n_parametros)} parámetro{item.n_parametros === 1 ? "" : "s"}
@@ -156,6 +178,12 @@ function DistribucionCard({
         <p className="fn">
           Mejor ajuste: {item.mejor_metodo} · EEA{" "}
           <span className="num">{formatEeaConPct(item.mejor_eea, mediaSerie)}</span>
+        </p>
+      )}
+      {pendiente && (
+        <p className="fn etapa2-card__pendiente">
+          No se puede elegir en esta versión: sus fórmulas de referencia tienen una
+          inconsistencia que está en revisión con el autor de la tesis.
         </p>
       )}
       {/* F5 (fix pre-reunión) — el botón "Elegir" existía pero vivía detrás
@@ -294,11 +322,18 @@ function textoBotonExpandir(
   conAjuste: number,
   ocultas: number,
   sinAjuste: number,
+  pendientes: number,
 ): string {
   if (verTodas) return `Ver solo las ${Math.min(TOP_VISIBLE, conAjuste)} mejores`;
-  if (sinAjuste === 0) return `Ver las ${ocultas} distribuciones restantes`;
-  if (ocultas === 0) return `Ver las ${sinAjuste} sin ajuste posible`;
-  return `Ver las ${ocultas} restantes · ${sinAjuste} sin ajuste`;
+  const extras: string[] = [];
+  if (sinAjuste > 0) extras.push(`${sinAjuste} sin ajuste`);
+  if (pendientes > 0) {
+    extras.push(`${pendientes} pendiente${pendientes === 1 ? "" : "s"} de validación`);
+  }
+  if (extras.length === 0) return `Ver las ${ocultas} distribuciones restantes`;
+  if (ocultas === 0 && pendientes === 0) return `Ver las ${sinAjuste} sin ajuste posible`;
+  const partes = ocultas > 0 ? [`las ${ocultas} restantes`, ...extras] : extras;
+  return `Ver ${partes.join(" · ")}`;
 }
 
 export type Etapa2RankingViewModo = "stream" | "lectura" | "exploracion";
@@ -357,10 +392,14 @@ export function Etapa2RankingView({
   const indiceElegida = seleccionRegistrada
     ? etapa2.ranking.findIndex((d) => d.distribucion === seleccionRegistrada.distribucion)
     : -1;
-  // F3 — las sin ajuste del final van aparte, bajo su propio subtítulo.
-  const nSinAjuste = sinAjusteAlFinal(etapa2.ranking);
-  const principal = etapa2.ranking.slice(0, etapa2.ranking.length - nSinAjuste);
-  const sinAjuste = etapa2.ranking.slice(principal.length);
+  // F3 y DECISIÓN 074 — los dos bloques del final van aparte, cada uno bajo su
+  // subtítulo: primero las sin ajuste, al último las pendientes de validación.
+  const nPendientes = cuantasAlFinal(etapa2.ranking, esPendiente);
+  const antesDePendientes = etapa2.ranking.slice(0, etapa2.ranking.length - nPendientes);
+  const nSinAjuste = cuantasAlFinal(antesDePendientes, (d) => d.mejor_metodo === null);
+  const principal = antesDePendientes.slice(0, antesDePendientes.length - nSinAjuste);
+  const sinAjuste = antesDePendientes.slice(principal.length);
+  const pendientes = etapa2.ranking.slice(antesDePendientes.length);
   const [verTodas, setVerTodas] = useState(
     indiceElegida >= Math.min(TOP_VISIBLE, principal.length),
   );
@@ -368,9 +407,11 @@ export function Etapa2RankingView({
   const [periodosError, setPeriodosError] = useState<string | null>(null);
 
   // El backend ya ordena ascendente por mejor_eea (nulls al final) — el
-  // frontend no reordena ni recalcula el ranking.
-  const primero = etapa2.ranking[0];
-  const hayMejor = Boolean(primero && primero.mejor_eea !== null);
+  // frontend no reordena ni recalcula el ranking. "menor EEA" es la primera que
+  // no esté pendiente de validación y tenga EEA (DECISIÓN 074): en un análisis
+  // nuevo da lo mismo que la primera; en uno viejo, sin el campo y con Pareto
+  // arriba, evita la etiqueta engañosa.
+  const conMenorEea = etapa2.ranking.find((d) => !esPendiente(d) && d.mejor_eea !== null);
 
   // Si ninguna ajusta, no hay nada que mostrar arriba: las sin ajuste van a la
   // vista directamente, sin botón de por medio.
@@ -390,18 +431,20 @@ export function Etapa2RankingView({
     onElegir!(distribucion, metodo, parsed.valores);
   }
 
-  function renderCard(item: DistribucionResult, esMejor: boolean) {
+  function renderCard(item: DistribucionResult) {
+    const pendiente = esPendiente(item);
     return (
       <DistribucionCard
         key={item.distribucion}
         item={item}
-        esMejor={esMejor}
+        esMejor={item === conMenorEea}
+        pendiente={pendiente}
         metodoElegido={
           seleccionRegistrada?.distribucion === item.distribucion
             ? seleccionRegistrada.metodo
             : undefined
         }
-        onElegir={onElegir ? handleElegir : undefined}
+        onElegir={onElegir && !pendiente ? handleElegir : undefined}
         textoAccion={textoAccion}
         resolving={resolving}
         mediaSerie={mediaSerie}
@@ -475,24 +518,38 @@ export function Etapa2RankingView({
         </div>
       )}
       <div className="etapa2-grid">
-        {visibles.map((item, index) => renderCard(item, hayMejor && index === 0))}
+        {visibles.map(renderCard)}
       </div>
       {mostrarTodas && sinAjuste.length > 0 && (
         <>
           <p className="ct etapa2-subtitulo">
             Sin ajuste posible con esta serie ({formatInt(sinAjuste.length)})
           </p>
-          <div className="etapa2-grid">{sinAjuste.map((item) => renderCard(item, false))}</div>
+          <div className="etapa2-grid">{sinAjuste.map(renderCard)}</div>
         </>
       )}
-      {principal.length > 0 && ocultas + sinAjuste.length > 0 && (
+      {mostrarTodas && pendientes.length > 0 && (
+        <>
+          <p className="ct etapa2-subtitulo">
+            Pendiente de validación ({formatInt(pendientes.length)})
+          </p>
+          <div className="etapa2-grid">{pendientes.map(renderCard)}</div>
+        </>
+      )}
+      {principal.length > 0 && ocultas + sinAjuste.length + pendientes.length > 0 && (
         <button
           type="button"
           className="b b-sec"
           style={{ marginTop: 12 }}
           onClick={() => setVerTodas((v) => !v)}
         >
-          {textoBotonExpandir(verTodas, principal.length, ocultas, sinAjuste.length)}
+          {textoBotonExpandir(
+            verTodas,
+            principal.length,
+            ocultas,
+            sinAjuste.length,
+            pendientes.length,
+          )}
         </button>
       )}
     </div>

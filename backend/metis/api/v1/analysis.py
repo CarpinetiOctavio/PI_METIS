@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.api.deps import get_current_user, get_db, get_optional_user
+from metis.core.etapa2.distributions import PENDIENTES_VALIDACION
 from metis.core.validacion.parser import leer_columnas_preview
 from metis.db.models.user import User
 from metis.schemas.analysis import (
@@ -273,6 +274,19 @@ _DIST_SELECTION_INVALIDA = HTTPException(
     },
 )
 
+# DECISIÓN 074 — distribución que se muestra pero no se puede elegir en esta
+# versión (fórmulas de referencia con una inconsistencia en revisión).
+_DIST_PENDIENTE_VALIDACION = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "DIST_PENDING_VALIDATION",
+            "mensaje": "Esa distribución no se puede elegir en esta versión: sus fórmulas"
+            " de referencia tienen una inconsistencia que está en revisión.",
+        }
+    },
+)
+
 _SESSION_NOT_FOUND = HTTPException(
     status_code=404,
     detail={
@@ -301,6 +315,11 @@ def _validar_seleccion_distribucion(
         or any(t <= 1 for t in periodos_retorno)
     ):
         raise _DIST_SELECTION_INVALIDA
+    # DECISIÓN 074 — la lista vive en core/ (fuente de verdad), el borde solo
+    # la consulta. Va después de la validación de forma: un pedido mal formado
+    # sigue respondiendo DIST_SELECTION_INVALID.
+    if distribucion in PENDIENTES_VALIDACION:
+        raise _DIST_PENDIENTE_VALIDACION
 
 
 @router.post("/distribution-decision", response_model=DistributionDecisionResponse)
