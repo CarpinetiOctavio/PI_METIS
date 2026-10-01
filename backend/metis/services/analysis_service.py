@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from metis.core.etapa2.design_events import calcular_eventos_diseno
 from metis.core.etapa2.types import Etapa2Result, EventoDiseno
 from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
+from metis.core.pipeline.exclusiones import aplicar_exclusiones
 from metis.core.pipeline.pipeline_etapa1 import CODIGOS_WARNING_AGREGACION
 from metis.core.pipeline.pipeline_etapa2 import _DISTRIBUCIONES
 from metis.core.types import Etapa1Result
@@ -1141,3 +1142,67 @@ async def unarchive_analysis(
     analysis.archivado_at = None
     await db.commit()
     return True
+
+
+def simular_exclusion(
+    serie: list[float],
+    anios: list[int],
+    tipo_variable: str,
+    cramer_particion: dict | str,
+    indices_excluidos: list[int],
+    etapas: list[int],
+    tratamiento: str = "eliminar",
+) -> dict:
+    """POST /analysis/simulate-exclusion — DECISIÓN 071, ítem A del feedback de
+    directores. Recalcula Etapa 1 (y Etapa 2 si se pidió) sobre `serie` sin los
+    puntos de `indices_excluidos`.
+
+    Mismo patrón que `recalcular_eventos_diseno()`: sin session_store, sin BD, no
+    persiste nada ni toca `decisiones` (DECISIÓN 062, "explorar no es decidir").
+
+    Corre la batería como la segunda pasada del rechazo de Chow: sobre una serie
+    que ya está agregada (`resolucion_temporal="anual"`, no se vuelve a agregar), y
+    con Chow sin pausa — un atípico nuevo se informa en `etapa1.atipicos`, no
+    detiene nada. El flujo de Chow del stream no se toca: que los dos den lo mismo
+    lo prueba un test de integración, no un refactor compartido.
+
+    Levanta `ExclusionInvalidaError` (core/pipeline/exclusiones.py) si el pedido no
+    aplica a la serie — el borde lo traduce a 400 CONTRACT_EXCLUSION_INVALID.
+    """
+    recortada = aplicar_exclusiones(serie, anios, indices_excluidos, tratamiento)
+
+    result = ejecutar_etapa1(
+        serie=recortada.serie,
+        tipo_variable=tipo_variable,
+        resolucion_temporal="anual",
+        timestamps=recortada.anios,
+        cramer_particion=cramer_particion,
+    )
+
+    etapa2 = None
+    if 2 in etapas and result.nivel_confianza != "rechazado":
+        valores = np.asarray(filtrar_numericos(result.serie_efectiva), dtype=float)
+        etapa2 = _serializar_etapa2(
+            ejecutar_etapa2(
+                valores,
+                tiene_ceros=bool(np.any(valores == 0)),
+                tiene_negativos=bool(np.any(valores < 0)),
+            )
+        )
+
+    return {
+        # mes_inicio_anio no cambia nada con una serie ya anual: solo decide la
+        # versión calendario, que se arma con carga mensual o diaria.
+        "etapa1": _serializar_etapa1(result, mes_inicio_anio=7),
+        "etapa2": etapa2,
+        "excluidos": [
+            {
+                "indice": e.indice,
+                "periodo": e.periodo,
+                "valor_original": e.valor_original,
+            }
+            for e in recortada.excluidos
+        ],
+        "serie": recortada.serie,
+        "anios": recortada.anios,
+    }

@@ -4,7 +4,6 @@ import { useAuth } from "../../auth/AuthProvider";
 import {
   postRecalcularDesignEvents,
   postSimularExclusion,
-  simulacionExclusionDisponible,
 } from "../../api/analysis";
 import { Etapa1ResultView } from "./Etapa1ResultView";
 import { Etapa2Explorador } from "./Etapa2Explorador";
@@ -91,12 +90,12 @@ export function ResultsPage() {
     </>
   );
 
-  // What-if de atípicos (ítem A): solo con la configuración a mano y con el
-  // endpoint disponible en el backend (todavía no lo está, ver api/analysis.ts).
+  // What-if de atípicos (ítem A, DECISIÓN 071): solo con la configuración del
+  // análisis a mano, que viaja en el router state desde ConfigPage.
   const datos = result.datos;
   const tipoVariable = locationState?.tipoVariable;
   const simular: SimularFn | undefined =
-    simulacionExclusionDisponible() && datos?.timestamps_efectivos && tipoVariable
+    datos?.timestamps_efectivos && tipoVariable
       ? (indicesExcluidos) =>
           postSimularExclusion({
             serie: datos.serie_efectiva,

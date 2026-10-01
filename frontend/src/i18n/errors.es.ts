@@ -36,6 +36,10 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_MES_INICIO_INVALID: "El mes de inicio del año debe estar entre 1 y 12.",
   CONTRACT_VARIABLE_DIARIA_INVALID:
     "El tipo de dato de la serie diaria no es válido — debe ser pico o media diaria.",
+  CONTRACT_SERIES_INVALID:
+    "La serie que se mandó a recalcular no es válida: tiene que tener entre 1 y 500 valores numéricos.",
+  CONTRACT_EXCLUSION_INVALID:
+    "La selección de puntos a excluir no corresponde a la serie: hay años repetidos o fuera de la serie.",
 
   // Contrato — warnings
   CONTRACT_LENGTH_WARNING:

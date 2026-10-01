@@ -564,6 +564,63 @@ este router.
 
 ---
 
+### POST /api/v1/analysis/simulate-exclusion (DECISIÓN 071)
+
+**Agregado 01/10/2026** (PR 5 del plan de fixes post-verificación, ítem A del feedback de
+directores) — what-if de atípicos: recalcula Etapa 1 (y Etapa 2 si se pide) **sin** los puntos
+excluidos, para compararlo con el análisis original. **Política:** un punto excluido se elimina
+junto con su año, en cualquier posición (la misma operación que el rechazo de Chow); el reemplazo
+por la media quedó postergado (`tratamiento` es el punto de extensión).
+
+**Request (JSON):**
+```json
+{
+  "serie": [94.71, 89.83, 105.13],
+  "anios": [1980, 1981, 1982],
+  "tipo_variable": "caudal_precipitacion",
+  "cramer_particion": "default",
+  "indices_excluidos": [1],
+  "etapas": [1, 2],
+  "tratamiento": "eliminar"
+}
+```
+`serie`/`anios` son `datos.serie_efectiva` y los años de `datos.timestamps_efectivos`: la serie
+**ya agregada**; los índices son posiciones en ella, no en la serie cruda subida.
+`cramer_particion` llega como texto, igual que en `/analysis/stream`. `tratamiento` es opcional.
+
+**Auth:** ninguna dependencia de usuario — responde igual con o sin cookie, como
+`preview-columns`. **Completamente sin estado:** no genera sesión, no toca `session_store`, no
+lee ni escribe la BD, no altera `decisiones` (DECISIÓN 062, "explorar no es decidir").
+
+**Cómo calcula:** `core/pipeline/exclusiones.py::aplicar_exclusiones()` y después
+`ejecutar_etapa1(..., resolucion_temporal="anual")` sobre la serie resultante, como la segunda
+pasada del rechazo de Chow (no se vuelve a agregar). **Chow se evalúa sin pausa:** un atípico
+nuevo se informa en `etapa1.atipicos`, no detiene nada. Con `etapas == [1, 2]` y
+`nivel_confianza != "rechazado"`, corre `ejecutar_etapa2` (con `tiene_ceros`/`tiene_negativos`
+calculados sobre la serie resultante). Si quedan menos de 10 datos, responde el bloqueante de
+siempre dentro de `etapa1.contract` (`CONTRACT_SERIES_TOO_SHORT`), con 200: no hay un error nuevo.
+
+**Response 200:**
+```json
+{
+  "etapa1": { "...": "mismo payload que result_etapa1 (statistical-pipeline.md)" },
+  "etapa2": { "ranking": ["..."], "warnings": ["..."], "puntos_empiricos": ["..."], "seleccion": null },
+  "excluidos": [{ "indice": 1, "periodo": 1981, "valor_original": 89.83 }],
+  "serie": [94.71, 105.13],
+  "anios": [1980, 1982]
+}
+```
+`etapa2` es `null` con `etapas == [1]` o si Etapa 1 quedó `rechazado`. `serie`/`anios` son la
+serie resultante, para que el frontend arme el CSV desde lo que devolvió `core/`.
+
+**Errores:** 400 `CONTRACT_SERIES_INVALID` (serie vacía, con más de 500 valores o con valores no
+finitos), 400 `CONTRACT_EXCLUSION_INVALID` (índices fuera de rango o repetidos, `anios` de otro
+largo que `serie`, `tratamiento` inexistente), 400 `CONTRACT_ETAPAS_INVALID` (`etapas` distinto
+de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 422 validación Pydantic (por
+ejemplo, `tipo_variable` fuera de las dos opciones).
+
+---
+
 ### POST /api/v1/validate/ (CU-03)
 
 **Request (multipart/form-data):**
@@ -733,6 +790,10 @@ CONTRACT_CRAMER_PARTICION_INVALID      cramer_particion mal formado, fuera de ra
 CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
 CONTRACT_MES_INICIO_INVALID            mes_inicio_anio fuera de [1..12] (DECISIÓN 057)
 CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media"} (DECISIÓN 065, PR 2.5 / R0.2)
+CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusion vacía, con más de 500 valores o con
+                                        valores no finitos (DECISIÓN 071)
+CONTRACT_EXCLUSION_INVALID             indices_excluidos fuera de rango o repetidos, anios de otro largo que serie, o
+                                        tratamiento inexistente, en POST /analysis/simulate-exclusion (DECISIÓN 071)
 ```
 A diferencia de los dos grupos de arriba (series de datos), estos códigos validan
 un parámetro del request en `POST /analysis/stream` antes de tocar el archivo

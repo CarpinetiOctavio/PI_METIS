@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { formatAxis, formatInt } from "../../i18n/format";
 import type { Etapa1Datos } from "../../api/types";
 import {
+  csvDeSerie,
   csvSinExcluidos,
   descargarCsv,
   hayExcluidoInterior,
@@ -75,6 +76,7 @@ export function Etapa1ExclusionPanel({
   onRecalcular,
   calculando = false,
   errorSimulacion = null,
+  serieResultante,
 }: Readonly<{
   puntos: PuntoSerie[];
   excluidos: ReadonlySet<number>;
@@ -88,6 +90,10 @@ export function Etapa1ExclusionPanel({
   onRecalcular?: () => void;
   calculando?: boolean;
   errorSimulacion?: string | null;
+  // DECISIÓN 071 — la serie que devolvió el backend al recalcular, si
+  // corresponde a la selección actual. Con ella el CSV sale de lo que calculó
+  // core/, no de un recorte hecho acá.
+  serieResultante?: { serie: number[]; anios: number[] };
 }>) {
   const cantidad = excluidos.size;
   const restantes = puntos.length - cantidad;
@@ -121,7 +127,10 @@ export function Etapa1ExclusionPanel({
   }
 
   function descargar() {
-    descargarCsv(nombreCsvSinAtipicos(nombreArchivo), csvSinExcluidos(puntos, excluidos));
+    const csv = serieResultante
+      ? csvDeSerie(serieResultante.anios, serieResultante.serie)
+      : csvSinExcluidos(puntos, excluidos);
+    descargarCsv(nombreCsvSinAtipicos(nombreArchivo), csv);
   }
 
   function celda(p: PuntoSerie) {

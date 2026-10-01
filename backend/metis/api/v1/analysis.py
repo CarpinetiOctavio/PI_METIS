@@ -1,13 +1,16 @@
 import json
+import math
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.api.deps import get_current_user, get_db, get_optional_user
 from metis.core.etapa2.distributions import PENDIENTES_VALIDACION
+from metis.core.pipeline.exclusiones import ExclusionInvalidaError
 from metis.core.validacion.parser import leer_columnas_preview
 from metis.db.models.user import User
 from metis.schemas.analysis import (
@@ -19,6 +22,7 @@ from metis.schemas.analysis import (
     OutlierDecisionRequest,
     OutlierDecisionResponse,
     PreviewColumnsResponse,
+    SimulateExclusionRequest,
 )
 from metis.services.analysis_service import (
     MetodoNoAjustadoError,
@@ -26,6 +30,7 @@ from metis.services.analysis_service import (
     recalcular_eventos_diseno,
     registrar_distribution_decision,
     registrar_outlier_decision,
+    simular_exclusion,
 )
 
 # Alias — el módulo de servicios ahora se llama igual que la ruta de abajo
@@ -409,3 +414,60 @@ async def recalcular_design_events(
     if result is None:
         raise _ANALYSIS_NOT_FOUND
     return DesignEventsRecalcResponse(**result)
+
+
+# DECISIÓN 071 — tope de valores de la serie que se manda a simular. Un análisis
+# anual real no pasa de ~150 años; 500 deja margen sin abrir la puerta a pedidos
+# enormes contra un endpoint sin estado y sin autenticación obligatoria.
+_MAX_VALORES_SIMULACION = 500
+
+_SERIE_INVALIDA = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "CONTRACT_SERIES_INVALID",
+            "mensaje": f"serie tiene que tener entre 1 y {_MAX_VALORES_SIMULACION} valores"
+            " numéricos finitos.",
+        }
+    },
+)
+
+
+def _exclusion_invalida(mensaje: str) -> HTTPException:
+    return HTTPException(
+        status_code=400,
+        detail={"error": {"codigo": "CONTRACT_EXCLUSION_INVALID", "mensaje": mensaje}},
+    )
+
+
+@router.post("/simulate-exclusion")
+async def simulate_exclusion(body: SimulateExclusionRequest):
+    """DECISIÓN 071 — recalcula Etapa 1 (y 2) sin los puntos excluidos.
+
+    Completamente sin estado, como preview-columns: no genera sesión, no lee ni
+    escribe la BD, no depende de quién llama (responde igual con o sin cookie).
+    Validación en el borde; la exclusión en sí la hace core/ y la orquestación
+    services/. El cálculo (~40 ms con Etapa 2) corre en el threadpool para no
+    frenar los streams SSE que estén abiertos.
+    """
+    if not (1 <= len(body.serie) <= _MAX_VALORES_SIMULACION) or not all(
+        math.isfinite(v) for v in body.serie
+    ):
+        raise _SERIE_INVALIDA
+    if body.etapas not in ([1], [1, 2]):
+        raise _ETAPAS_INVALIDAS
+    cramer_particion = _parsear_cramer_particion(body.cramer_particion)
+
+    try:
+        return await run_in_threadpool(
+            simular_exclusion,
+            serie=body.serie,
+            anios=body.anios,
+            tipo_variable=body.tipo_variable,
+            cramer_particion=cramer_particion,
+            indices_excluidos=body.indices_excluidos,
+            etapas=body.etapas,
+            tratamiento=body.tratamiento,
+        )
+    except ExclusionInvalidaError as error:
+        raise _exclusion_invalida(str(error)) from None

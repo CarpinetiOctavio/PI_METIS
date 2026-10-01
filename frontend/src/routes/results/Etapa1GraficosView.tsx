@@ -54,6 +54,10 @@ export function Etapa1GraficosView({
   }, [reiniciar]);
 
   const seleccion = { excluidos, onToggle: alternar };
+  const simulacionVigente =
+    simulacion.fase === "lista" && mismaSeleccion(simulacion.indices, excluidos)
+      ? simulacion.respuesta
+      : null;
 
   return (
     <div className="stack" style={{ marginTop: 14 }}>
@@ -76,6 +80,7 @@ export function Etapa1GraficosView({
           onRecalcular={simular && resultado ? () => calcular(excluidos) : undefined}
           calculando={simulacion.fase === "calculando"}
           errorSimulacion={simulacion.fase === "error" ? simulacion.mensaje : null}
+          serieResultante={simulacionVigente ?? undefined}
         />
       )}
       {resultado && simulacion.fase === "lista" && (

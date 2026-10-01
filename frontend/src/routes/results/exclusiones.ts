@@ -59,9 +59,18 @@ export function csvSinExcluidos(
   puntos: readonly PuntoSerie[],
   excluidos: ReadonlySet<number>,
 ): string {
-  const filas = puntos
-    .filter((p) => !excluidos.has(p.indice))
-    .map((p) => `${p.anio},${p.valor}`);
+  const quedan = puntos.filter((p) => !excluidos.has(p.indice));
+  return csvDeSerie(
+    quedan.map((p) => p.anio),
+    quedan.map((p) => p.valor),
+  );
+}
+
+/** El mismo CSV, armado desde una serie ya calculada: la que devolvió `core/`
+ * en POST /analysis/simulate-exclusion (DECISIÓN 071), cuando la simulación
+ * corresponde a la selección actual. */
+export function csvDeSerie(anios: readonly number[], serie: readonly number[]): string {
+  const filas = serie.map((valor, i) => `${anios[i]},${valor}`);
   return ["periodo,valor", ...filas].join("\n") + "\n";
 }
 
