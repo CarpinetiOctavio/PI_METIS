@@ -79,6 +79,28 @@ function formatEeaConPct(eea: number | null, mediaSerie: number | null | undefin
   return `${base} (${pctFormatter.format(pct)} %)`;
 }
 
+// F3 (plan de fixes post-verificación, 01/10/2026) — una distribución sin
+// ningún método "ok" no tiene "mejor ajuste" que mostrar: en vez de la línea
+// vacía, una píldora con el motivo, sacado de los status de sus métodos.
+function motivoSinAjuste(item: DistribucionResult): string | null {
+  if (item.mejor_metodo !== null) return null;
+  const todos = (status: MetodoStatus) =>
+    item.metodos.length > 0 && item.metodos.every((m) => m.status === status);
+  if (todos("disabled_negatives")) return STATUS_LABEL.disabled_negatives;
+  if (todos("disabled_zeros")) return STATUS_LABEL.disabled_zeros;
+  return "sin ajuste posible con esta serie";
+}
+
+/** Cuántas distribuciones del final del ranking no tienen ningún ajuste. El
+ * frontend no reordena: solo separa el bloque que ya viene al final (el backend
+ * ordena con `mejor_eea` nulo al final). Una sin ajuste en el medio, si algún día
+ * llegara, se queda en su lugar y solo cambia de estilo. */
+function sinAjusteAlFinal(ranking: readonly DistribucionResult[]): number {
+  let n = 0;
+  while (n < ranking.length && ranking[ranking.length - 1 - n].mejor_metodo === null) n += 1;
+  return n;
+}
+
 function DistribucionCard({
   item,
   esMejor,
@@ -102,9 +124,14 @@ function DistribucionCard({
   const esElegida = metodoElegido !== undefined;
   const [expandido, setExpandido] = useState(esElegida);
   const puedeElegirMejor = Boolean(onElegir) && item.mejor_metodo !== null;
+  const motivo = motivoSinAjuste(item);
+
+  const clases = ["etapa2-card"];
+  if (esMejor) clases.push("top");
+  if (motivo) clases.push("etapa2-card--sin-ajuste");
 
   return (
-    <SpotlightCard className={`etapa2-card${esMejor ? " top" : ""}`}>
+    <SpotlightCard className={clases.join(" ")} glow={!motivo}>
       <div className="row" style={{ alignItems: "center" }}>
         <h3 className="h" style={{ fontSize: 15, margin: 0 }}>
           {item.distribucion}
@@ -121,10 +148,16 @@ function DistribucionCard({
       <p className="fn" style={{ margin: "4px 0 8px" }}>
         {formatInt(item.n_parametros)} parámetro{item.n_parametros === 1 ? "" : "s"}
       </p>
-      <p className="fn">
-        Mejor ajuste: {item.mejor_metodo ?? "—"} · EEA{" "}
-        <span className="num">{formatEeaConPct(item.mejor_eea, mediaSerie)}</span>
-      </p>
+      {motivo ? (
+        <p className="etapa2-card__motivo">
+          <span className="pill wait">{motivo}</span>
+        </p>
+      ) : (
+        <p className="fn">
+          Mejor ajuste: {item.mejor_metodo} · EEA{" "}
+          <span className="num">{formatEeaConPct(item.mejor_eea, mediaSerie)}</span>
+        </p>
+      )}
       {/* F5 (fix pre-reunión) — el botón "Elegir" existía pero vivía detrás
           de "Ver los N métodos", así que nadie lo encontraba. Este botón es
           la acción directa sobre el mejor método; los botones por método
@@ -253,6 +286,21 @@ function agruparWarnings(warnings: WarningItem[]): WarningGroup[] {
 // pero el callback pega al endpoint de recálculo stateless, no decide nada
 // — HistoryDetailPage. El texto del botón cambia según el modo para que
 // "explorar" nunca se lea como "decidir".
+/** Texto del botón de expandir: cuenta por separado las restantes con ajuste y
+ * las sin ajuste posible (F3), para que no parezca que hay más candidatas de
+ * las que hay. */
+function textoBotonExpandir(
+  verTodas: boolean,
+  conAjuste: number,
+  ocultas: number,
+  sinAjuste: number,
+): string {
+  if (verTodas) return `Ver solo las ${Math.min(TOP_VISIBLE, conAjuste)} mejores`;
+  if (sinAjuste === 0) return `Ver las ${ocultas} distribuciones restantes`;
+  if (ocultas === 0) return `Ver las ${sinAjuste} sin ajuste posible`;
+  return `Ver las ${ocultas} restantes · ${sinAjuste} sin ajuste`;
+}
+
 export type Etapa2RankingViewModo = "stream" | "lectura" | "exploracion";
 
 const TEXTO_ACCION: Record<Etapa2RankingViewModo, { principal: string; porMetodo: string }> = {
@@ -309,7 +357,13 @@ export function Etapa2RankingView({
   const indiceElegida = seleccionRegistrada
     ? etapa2.ranking.findIndex((d) => d.distribucion === seleccionRegistrada.distribucion)
     : -1;
-  const [verTodas, setVerTodas] = useState(indiceElegida >= TOP_VISIBLE);
+  // F3 — las sin ajuste del final van aparte, bajo su propio subtítulo.
+  const nSinAjuste = sinAjusteAlFinal(etapa2.ranking);
+  const principal = etapa2.ranking.slice(0, etapa2.ranking.length - nSinAjuste);
+  const sinAjuste = etapa2.ranking.slice(principal.length);
+  const [verTodas, setVerTodas] = useState(
+    indiceElegida >= Math.min(TOP_VISIBLE, principal.length),
+  );
   const [periodosInput, setPeriodosInput] = useState(PERIODOS_RETORNO_DEFAULT.join(", "));
   const [periodosError, setPeriodosError] = useState<string | null>(null);
 
@@ -318,8 +372,11 @@ export function Etapa2RankingView({
   const primero = etapa2.ranking[0];
   const hayMejor = Boolean(primero && primero.mejor_eea !== null);
 
-  const visibles = verTodas ? etapa2.ranking : etapa2.ranking.slice(0, TOP_VISIBLE);
-  const ocultas = etapa2.ranking.length - TOP_VISIBLE;
+  // Si ninguna ajusta, no hay nada que mostrar arriba: las sin ajuste van a la
+  // vista directamente, sin botón de por medio.
+  const mostrarTodas = verTodas || principal.length === 0;
+  const visibles = mostrarTodas ? principal : principal.slice(0, TOP_VISIBLE);
+  const ocultas = Math.max(0, principal.length - TOP_VISIBLE);
 
   const grupos = agruparWarnings(etapa2.warnings);
 
@@ -331,6 +388,25 @@ export function Etapa2RankingView({
     }
     setPeriodosError(null);
     onElegir!(distribucion, metodo, parsed.valores);
+  }
+
+  function renderCard(item: DistribucionResult, esMejor: boolean) {
+    return (
+      <DistribucionCard
+        key={item.distribucion}
+        item={item}
+        esMejor={esMejor}
+        metodoElegido={
+          seleccionRegistrada?.distribucion === item.distribucion
+            ? seleccionRegistrada.metodo
+            : undefined
+        }
+        onElegir={onElegir ? handleElegir : undefined}
+        textoAccion={textoAccion}
+        resolving={resolving}
+        mediaSerie={mediaSerie}
+      />
+    );
   }
 
   return (
@@ -399,33 +475,24 @@ export function Etapa2RankingView({
         </div>
       )}
       <div className="etapa2-grid">
-        {visibles.map((item, index) => (
-          <DistribucionCard
-            key={item.distribucion}
-            item={item}
-            esMejor={hayMejor && index === 0}
-            metodoElegido={
-              seleccionRegistrada?.distribucion === item.distribucion
-                ? seleccionRegistrada.metodo
-                : undefined
-            }
-            onElegir={onElegir ? handleElegir : undefined}
-            textoAccion={textoAccion}
-            resolving={resolving}
-            mediaSerie={mediaSerie}
-          />
-        ))}
+        {visibles.map((item, index) => renderCard(item, hayMejor && index === 0))}
       </div>
-      {ocultas > 0 && (
+      {mostrarTodas && sinAjuste.length > 0 && (
+        <>
+          <p className="ct etapa2-subtitulo">
+            Sin ajuste posible con esta serie ({formatInt(sinAjuste.length)})
+          </p>
+          <div className="etapa2-grid">{sinAjuste.map((item) => renderCard(item, false))}</div>
+        </>
+      )}
+      {principal.length > 0 && ocultas + sinAjuste.length > 0 && (
         <button
           type="button"
           className="b b-sec"
           style={{ marginTop: 12 }}
           onClick={() => setVerTodas((v) => !v)}
         >
-          {verTodas
-            ? `Ver solo las ${TOP_VISIBLE} mejores`
-            : `Ver las ${ocultas} distribuciones restantes`}
+          {textoBotonExpandir(verTodas, principal.length, ocultas, sinAjuste.length)}
         </button>
       )}
     </div>

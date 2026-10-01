@@ -89,3 +89,26 @@
   font-size: 12px;
   margin: 4px 0 0;
 }
+
+/* F3 (plan de fixes post-verificación, 01/10/2026) — una distribución sin
+   ningún ajuste posible no se oculta (los métodos que fallan son la mitad de
+   lo que un alumno tiene que ver), pero no puede verse igual que una que sí
+   ajusta: atenuada, sin brillo, y con el motivo en vez de "Mejor ajuste". */
+.etapa2-card--sin-ajuste {
+  opacity: 0.62;
+  filter: saturate(0.4);
+  transition: opacity var(--t-fast) var(--ease-out);
+}
+
+.etapa2-card--sin-ajuste:hover,
+.etapa2-card--sin-ajuste:focus-within {
+  opacity: 0.9;
+}
+
+.etapa2-card__motivo {
+  margin: 0;
+}
+
+.etapa2-subtitulo {
+  margin: 20px 0 0;
+}

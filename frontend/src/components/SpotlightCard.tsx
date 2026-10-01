@@ -30,7 +30,15 @@ import "./SpotlightCard.css";
 export function SpotlightCard({
   children,
   className,
-}: Readonly<{ children: ReactNode; className?: string }>) {
+  glow = true,
+}: Readonly<{
+  children: ReactNode;
+  className?: string;
+  // F3 (plan de fixes post-verificación) — una card atenuada (distribución sin
+  // ningún ajuste posible) no lleva brillo: invita a interactuar con algo que
+  // no tiene acción.
+  glow?: boolean;
+}>) {
   const ref = useRef<HTMLDivElement>(null);
   // A2 (plan post-avance) — a diferencia de Magnet/SpecularHighlight, este
   // componente SÍ renderiza el <div class="card"> real (ver el comentario
@@ -38,7 +46,7 @@ export function SpotlightCard({
   // sigue al mouse, no sin el div. La estructura/clase se conserva siempre;
   // solo se omiten el listener y el <div> del brillo en media/off.
   const { effectiveLevel } = useMotion();
-  const spotlightEnabled = effectiveLevel === "alta";
+  const spotlightEnabled = glow && effectiveLevel === "alta";
 
   function handleMouseMove(event: MouseEvent<HTMLDivElement>) {
     const el = ref.current;

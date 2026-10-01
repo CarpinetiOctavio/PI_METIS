@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Etapa2RankingView } from "./Etapa2RankingView";
-import type { DistribucionResult, WarningItem } from "../../api/types";
+import type { DistribucionResult, MetodoStatus, WarningItem } from "../../api/types";
 
 function distribucion(nombre: string, eea: number): DistribucionResult {
   return {
@@ -15,6 +15,80 @@ function distribucion(nombre: string, eea: number): DistribucionResult {
 }
 
 const RANKING_13 = Array.from({ length: 13 }, (_, i) => distribucion(`dist-${i}`, 10 + i));
+
+// Una distribución sin ningún método "ok": todos con el mismo status, o
+// mezclados ("mixto"). Como las devuelve el backend: mejor_metodo/mejor_eea null.
+function sinAjuste(nombre: string, status: MetodoStatus | "mixto"): DistribucionResult {
+  const estados: MetodoStatus[] = status === "mixto" ? ["no_converge", "no_aplicable"] : [status, status];
+  return {
+    distribucion: nombre,
+    n_parametros: 2,
+    mejor_eea: null,
+    mejor_metodo: null,
+    metodos: estados.map((s, i) => ({ metodo: `m${i}`, parametros: {}, eea: null, status: s })),
+  };
+}
+
+function etapa2Con(ranking: DistribucionResult[]) {
+  return { ranking, warnings: [], puntos_empiricos: [], seleccion: null };
+}
+
+describe("Etapa2RankingView — distribuciones sin ningún ajuste posible (F3)", () => {
+  // 8 con ajuste + 5 sin ajuste al final, como con una serie con negativos.
+  const RANKING_NEGATIVOS = [
+    ...RANKING_13.slice(0, 8),
+    ...["ln2p", "lp3", "gamma2p", "expb", "genexp"].map((n) => sinAjuste(n, "disabled_negatives")),
+  ];
+
+  it.each([
+    ["todos disabled_negatives", "disabled_negatives" as const, "no aplica: la serie tiene valores negativos"],
+    ["todos disabled_zeros", "disabled_zeros" as const, "deshabilitada por ceros"],
+    ["status mezclados", "mixto" as const, "sin ajuste posible con esta serie"],
+  ])("%s: card atenuada, sin 'Mejor ajuste' y con la píldora del motivo", (_caso, status, motivo) => {
+    const { container } = render(<Etapa2RankingView etapa2={etapa2Con([sinAjuste("lp3", status)])} />);
+
+    expect(container.querySelector(".etapa2-card--sin-ajuste")).toBeInTheDocument();
+    expect(screen.queryByText(/Mejor ajuste/)).not.toBeInTheDocument();
+    expect(container.querySelector(".etapa2-card__motivo .pill")).toHaveTextContent(motivo);
+    // sin ninguna ajustada, se ven directo bajo su subtítulo, sin botón de por medio
+    expect(screen.getByText("Sin ajuste posible con esta serie (1)")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Ver (las|solo)/ })).not.toBeInTheDocument();
+  });
+
+  it("una distribución con al menos un método ok no se atenúa", () => {
+    const { container } = render(<Etapa2RankingView etapa2={etapa2Con([distribucion("gumbel", 5)])} />);
+
+    expect(container.querySelector(".etapa2-card--sin-ajuste")).not.toBeInTheDocument();
+    expect(screen.getByText(/Mejor ajuste: momentos/)).toBeInTheDocument();
+  });
+
+  it("el botón cuenta por separado las restantes y las sin ajuste, que van bajo su propio subtítulo", async () => {
+    const user = userEvent.setup();
+    render(<Etapa2RankingView etapa2={etapa2Con(RANKING_NEGATIVOS)} />);
+
+    expect(screen.queryByText("ln2p")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver las 4 restantes · 5 sin ajuste" }));
+
+    expect(screen.getByText("Sin ajuste posible con esta serie (5)")).toBeInTheDocument();
+    expect(screen.getByText("ln2p")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver solo las 4 mejores" })).toBeInTheDocument();
+  });
+
+  it("con 4 o menos ajustadas, el botón solo ofrece las sin ajuste", () => {
+    render(<Etapa2RankingView etapa2={etapa2Con([...RANKING_13.slice(0, 3), sinAjuste("lp3", "disabled_zeros")])} />);
+
+    expect(screen.getByRole("button", { name: "Ver las 1 sin ajuste posible" })).toBeInTheDocument();
+  });
+
+  it("no reordena: una sin ajuste en el medio queda en su lugar, solo atenuada", () => {
+    const ranking = [distribucion("a", 1), sinAjuste("medio", "no_aplicable"), distribucion("b", 2)];
+    const { container } = render(<Etapa2RankingView etapa2={etapa2Con(ranking)} />);
+
+    const nombres = [...container.querySelectorAll(".etapa2-card h3")].map((h) => h.textContent);
+    expect(nombres).toEqual(["a", "medio", "b"]);
+    expect(screen.queryByText(/Sin ajuste posible con esta serie \(/)).not.toBeInTheDocument();
+  });
+});
 
 describe("Etapa2RankingView", () => {
   it("F3 — muestra solo las primeras 4 distribuciones y un botón para ver el resto", async () => {
@@ -96,7 +170,9 @@ describe("Etapa2RankingView", () => {
 
     await user.click(screen.getByRole("button", { name: /Ver los 1 métodos/ }));
 
-    expect(screen.getByText(texto)).toBeInTheDocument();
+    // dentro de la tabla: el mismo rótulo puede estar también en la píldora de
+    // la card (F3, motivo de una distribución sin ajuste)
+    expect(within(screen.getByRole("table")).getByText(texto)).toBeInTheDocument();
   });
 
   it("F4 — 25 warnings del mismo código normal se agrupan en un solo banner con el conteo", () => {
