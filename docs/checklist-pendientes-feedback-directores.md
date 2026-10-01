@@ -81,8 +81,10 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
       *Parcial 01/10/2026 (Kevin y Claude, PR 4 del plan de fixes post-verificación): `desglose` de Anderson y Chow hecho,
       con addendum a la 064. Siguen abiertos `n1_pct`/`n2_pct` de Cramer, el denominador de la t de Student y el desglose de
       Wald, Helmert, Cramer y Mann-Kendall.*
-- [ ] **A — `aplicar_exclusiones()` + `simulate-exclusion`** (el más grande). Decisión 071.
-- [ ] Cada código de error nuevo (`CONTRACT_EXCLUSION_INVALID`, `CONTRACT_SERIES_INVALID`, y `TEST_NOT_EXECUTED_NEGATIVES`
+- [x] **A — `aplicar_exclusiones()` + `simulate-exclusion`** (el más grande). Decisión 071. *Hecho 01/10/2026 por Kevin
+      y Claude (PR 5 del plan de fixes post-verificación): eliminación en cualquier posición, `etapa2` en la misma
+      respuesta, tope de 500, `anios` enteros.*
+- [x] Cada código de error nuevo (`CONTRACT_EXCLUSION_INVALID`, `CONTRACT_SERIES_INVALID`, y `TEST_NOT_EXECUTED_NEGATIVES`
       si se hace) va a `api-contracts.md` **y** a `frontend/src/i18n/errors.es.ts` **en el mismo commit**
       (si no, falla el job `error-catalog`).
 
@@ -98,14 +100,17 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
       "por n_w" y denominador de t de Student) y mostrar el porcentaje real. Sumar Wald-Wolfowitz/Helmert si se incluyen.
       *Claves confirmadas 01/10/2026: coinciden exactamente (test de backend sobre el conjunto de claves). Lo de Cramer y la t
       de Student sigue abierto, porque el backend todavía no manda esos campos.*
-- [ ] **A:** borrar el flag `VITE_SIMULATE_EXCLUSION` (`api/analysis.ts::simulacionExclusionDisponible`), armar el CSV
+- [x] **A:** borrar el flag `VITE_SIMULATE_EXCLUSION` (`api/analysis.ts::simulacionExclusionDisponible`), armar el CSV
       con `serie`/`anios` de la respuesta en vez de en el cliente, y evaluar el botón en el historial.
+      *Hecho 01/10/2026: flag fuera y CSV desde la respuesta. El botón en `HistoryDetailPage` queda pendiente (DECISIÓN 071,
+      "Fuera de alcance").*
 
 ### Decisiones y documentación que le tocan
 
 - [ ] Escribir `decision071.md` (exclusión por eliminación), `decision072.md` (exploración sin estado),
       `decision073.md` (negativos con "Otro") y el addendum a `decision064.md`. Antes de elegir número:
       `git fetch` y comparar con `origin/staging` (hoy el máximo es 070).
+      *01/10/2026: 071, 073 y el addendum a la 064 escritos; solo falta 072 (bloque B, no entra en el plan del 01/10).*
 - [ ] **`variable_diaria` (PR 2.5) no tiene decisión numerada ni addendum a la 065** — cerrarlo antes de la defensa.
 - [ ] Actualizar `statistical-pipeline.md` (payload) y `api-contracts.md` (endpoints nuevos).
 
@@ -167,7 +172,8 @@ Cada sección puede tener un addendum de cierre: revisar antes de mandar.
       interiores se tapan con la media: hoy se **eliminan**. Las tres razones para no arrancar con la media, para llevarle:
       es el único lugar del producto que completaría datos; reduce la varianza y acerca las autocorrelaciones a cero (favorece
       que la serie apruebe independencia); y en Etapa 2 un valor medio entraría como si fuera un máximo anual observado.
-      *Nota:* recién se puede mostrar completo cuando esté el backend (§2, bloque A); hoy solo se ve la selección y la descarga.
+      *Nota:* ~~recién se puede mostrar completo cuando esté el backend~~ — desde el 01/10/2026 (PR 5, DECISIÓN 071) se ve
+      completo: recálculo, comparación con el original y ranking simulado.
 - [ ] **Valores negativos con "Otro" (ítem C).** ¿Qué variables tiene en mente (niveles referidos a un cero de escala,
       temperaturas, anomalías)? Kevin ya eligió la opción 3 (estado propio `disabled_negatives`); confirmar que le sirve.
 - [ ] **Chow sin logaritmos para "Otro"** (opción 2 del plan §4, Grubbs 1969): sigue pendiente; exige referencia bibliográfica
