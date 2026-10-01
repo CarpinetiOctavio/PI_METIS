@@ -25,9 +25,8 @@ convención de planes en `docs/`; su historia está en `.claude/rules/sprint.md`
 | Plan | Qué es |
 |---|---|
 | [`plan-feedback-directores-20-09-2026.md`](plan-feedback-directores-20-09-2026.md) | Feedback de Catalini y Facundo del 20/09: ítems A a F. Frontend hecho (PRs #91 a #95). |
-| [`plan-backend-feedback-directores-20-09-2026.md`](plan-backend-feedback-directores-20-09-2026.md) | Los contratos de backend de ese feedback. Lo ejecuta el plan de abajo. |
+| [`plan-backend-feedback-directores-20-09-2026.md`](plan-backend-feedback-directores-20-09-2026.md) | Los contratos de backend de ese feedback. C, E y A los ejecutó el frente 16; falta el bloque B. |
 | [`checklist-pendientes-feedback-directores.md`](checklist-pendientes-feedback-directores.md) | Pendientes por persona (Octavio, Facundo, Catalini, IT, Kevin). |
-| [`plan-fixes-post-verificacion-01-10-2026.md`](plan-fixes-post-verificacion-01-10-2026.md) | Fixes de UI de la verificación del PR #95, Generalizada de Pareto y la Tanda 2 de backend. |
 
 Se archivan acá cuando cierren, con su entrada en esta tabla.
 
@@ -52,6 +51,7 @@ Se archivan acá cuando cierren, con su entrada en esta tabla.
 | 13 | [Plan post-avance](#13-plan-post-avance) | 14–19/08 | #61 a #75 | 030, 036, 043, 059–064 |
 | 14 | [Resolución diaria](#14-resolución-diaria) | 28–29/08 | #77 a #82 | 065, 066, 067 |
 | 15 | [Feedback de Facundo del 02/09](#15-feedback-de-facundo-del-0209) | 02–15/09 | #88 | addendum 064 |
+| 16 | [Fixes post-verificación y Tanda 2 de backend](#16-fixes-post-verificación-y-tanda-2-de-backend) | 01/10 | #96 a #101 | 071, 073, 074, addendum 064 |
 
 Entre los frentes 7 y 9 hubo además fixes visuales y experimentos sueltos sin plan propio (PRs #29 a #36: fondos
 animados invisibles, blur del modal, Pill Nav, Magnet, Spotlight, Threads con three.js). Threads con three.js lo
@@ -245,3 +245,31 @@ revirtió la pasada 5 (DECISIÓN 051).
 - **Decisiones:** addendum a 064 (KaTeX, con su costo de bundle).
 - **Quedó abierto:** nada vigente.
 - **Archivo:** [`plan-fixes-feedback-facundo-02-09-2026.md`](historico/planes/frontend/plan-fixes-feedback-facundo-02-09-2026.md).
+
+## 16. Fixes post-verificación y Tanda 2 de backend
+
+- **Fechas y PRs:** 01/10; seis PRs desde `staging`, **#96** a **#101**, mergeados el mismo día.
+- **Qué pedía:** corregir lo que mostró la verificación en el navegador del PR #95 (texto engañoso de "Otro", panel de
+  exclusión, distribuciones sin ajuste), contener el riesgo de Generalizada de Pareto y hacer el backend de la Tanda 2
+  del feedback de directores. Octavio no tenía tiempo, así que desde este plan ese backend lo hacen Kevin y Claude,
+  con Octavio como reviewer sin bloquear.
+- **Qué se hizo:**
+  - **#96:** este índice y el archivo de los planes cerrados (Bloque L).
+  - **#97:** grilla por década en el panel de exclusión, nota de tipo de variable según la opción elegida y
+    distribuciones sin ajuste atenuadas al fondo.
+  - **#98:** Generalizada de Pareto "pendiente de validación": se calcula y se muestra, pero no se puede elegir ni
+    explorar.
+  - **#99:** `disabled_negatives` en Etapa 2 y `TEST_NOT_EXECUTED_NEGATIVES` en Chow.
+  - **#100:** `explicacion.desglose` de Anderson y Chow.
+  - **#101:** `POST /analysis/simulate-exclusion` (what-if de atípicos), sin el flag `VITE_SIMULATE_EXCLUSION`.
+
+  Ningún estadístico ni veredicto cambió. Las 9 series de regresión dan la misma salida (Pareto solo cambia de
+  posición en pantalla). La equivalencia "excluir = rechazar en Chow" la cubre un test de integración, y Kevin la
+  verificó en el navegador.
+- **Decisiones:** 071 (exclusión por eliminación; el reemplazo por la media quedó postergado), 073 (negativos), 074
+  (Pareto pendiente de validación) y el addendum del 01/10 a 064 (desglose). 072 queda reservada para el bloque B.
+- **Quedó abierto:**
+  - **En el checklist:** el bloque B (exploración sin id para CU-02), `n1_pct`/`n2_pct` de Cramer y el denominador de
+    la t de Student en el desglose, y el botón de simulación en `HistoryDetailPage`.
+  - **En `pendientes-tecnicos.md`:** el umbral de `DIST_HIGH_EEA` con "Otro" y la corrección de Pareto para la V2.
+- **Archivo:** [`plan-fixes-post-verificacion-01-10-2026.md`](historico/planes/plan-fixes-post-verificacion-01-10-2026.md).

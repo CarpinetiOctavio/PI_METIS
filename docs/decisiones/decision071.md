@@ -3,7 +3,7 @@
 **Fecha:** 1 de octubre de 2026
 **Estado:** Decidida y aplicada (backend + frontend)
 **Decide:** Kevin (política elegida el 20/09/2026; implementada en el PR 5 del plan de fixes post-verificación,
-[`plan-fixes-post-verificacion-01-10-2026.md`](../plan-fixes-post-verificacion-01-10-2026.md) §3.A).
+[`plan-fixes-post-verificacion-01-10-2026.md`](../historico/planes/plan-fixes-post-verificacion-01-10-2026.md) §3.A).
 **Origen:** pedido de Catalini en el feedback de directores (ítem A,
 [`plan-backend-feedback-directores-20-09-2026.md`](../plan-backend-feedback-directores-20-09-2026.md) §4):
 desactivar puntos desde la pantalla de resultados, ver los resultados como si no hubieran estado y, si sirve,

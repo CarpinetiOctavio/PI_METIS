@@ -1367,14 +1367,14 @@ abiertas en Etapa 2.
 
 ---
 
-## Plan de fixes post-verificación — 01/10/2026
+## Plan de fixes post-verificación — 01/10/2026, CERRADO
 
-`docs/plan-fixes-post-verificacion-01-10-2026.md`. Seis PRs desde `staging`; desde este plan el backend del feedback
+`docs/historico/planes/plan-fixes-post-verificacion-01-10-2026.md` (archivado; resumen en `docs/planes-implementados.md` §16). Seis PRs desde `staging`; desde este plan el backend del feedback
 de directores lo hacen Kevin y Claude (Octavio sin tiempo, sigue como reviewer). Estado: PR 0 (#96, limpieza de
 planes), PR 1 (#97, UI: grilla por década, nota de tipo de variable, cards sin ajuste), PR 2 (#98, Pareto pendiente de
 validación, DECISIÓN 074), PR 3 (#99, `disabled_negatives`, DECISIÓN 073) y PR 4 (#100, `desglose` de Anderson y Chow,
-addendum a la 064) mergeados. PR 5 (`feature/simulate-exclusion`, `POST /analysis/simulate-exclusion`, DECISIÓN 071,
-sin el flag `VITE_SIMULATE_EXCLUSION`) en curso. Queda fuera: bloque B (DECISIÓN 072 reservada), el reemplazo por la
+addendum a la 064) mergeados. PR 5 (#101, `POST /analysis/simulate-exclusion`, DECISIÓN 071, sin el flag
+`VITE_SIMULATE_EXCLUSION`) mergeado el 01/10, con verificación en el navegador de Kevin. Queda fuera: bloque B (DECISIÓN 072 reservada), el reemplazo por la
 media y el botón de simulación en `HistoryDetailPage`. Pendientes por persona en
 `docs/checklist-pendientes-feedback-directores.md`.
 
