@@ -94,14 +94,17 @@
    ningún ajuste posible no se oculta (los métodos que fallan son la mitad de
    lo que un alumno tiene que ver), pero no puede verse igual que una que sí
    ajusta: atenuada, sin brillo, y con el motivo en vez de "Mejor ajuste". */
-.etapa2-card--sin-ajuste {
+.etapa2-card--sin-ajuste,
+.etapa2-card--pendiente {
   opacity: 0.62;
   filter: saturate(0.4);
   transition: opacity var(--t-fast) var(--ease-out);
 }
 
 .etapa2-card--sin-ajuste:hover,
-.etapa2-card--sin-ajuste:focus-within {
+.etapa2-card--sin-ajuste:focus-within,
+.etapa2-card--pendiente:hover,
+.etapa2-card--pendiente:focus-within {
   opacity: 0.9;
 }
 
@@ -111,4 +114,11 @@
 
 .etapa2-subtitulo {
   margin: 20px 0 0;
+}
+
+/* DECISIÓN 074 — distribución pendiente de validación (hoy Generalizada de
+   Pareto): el mismo atenuado de arriba, con su propia píldora y sin ningún
+   botón para elegirla o explorarla. */
+.etapa2-card__pendiente {
+  margin: 0 0 4px;
 }

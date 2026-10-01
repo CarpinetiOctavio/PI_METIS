@@ -90,6 +90,65 @@ describe("Etapa2RankingView — distribuciones sin ningún ajuste posible (F3)",
   });
 });
 
+describe("Etapa2RankingView — distribución pendiente de validación (DECISIÓN 074)", () => {
+  function pareto(eea: number, conCampo = true): DistribucionResult {
+    return {
+      ...distribucion("gen_pareto", eea),
+      metodos: [
+        { metodo: "momentos", parametros: { a: 1 }, eea, status: "ok" },
+        { metodo: "mc", parametros: { a: 1 }, eea: eea + 1, status: "ok" },
+      ],
+      ...(conCampo ? { pendiente_validacion: true } : {}),
+    };
+  }
+
+  it("la card se ve, con su tabla, pero sin ningún botón para elegir ni explorar", async () => {
+    const user = userEvent.setup();
+    const onElegir = vi.fn();
+    const { container } = render(
+      <Etapa2RankingView etapa2={etapa2Con([distribucion("gumbel", 5), pareto(9)])} modo="exploracion" onElegir={onElegir} />,
+    );
+
+    // al final del ranking queda tras el botón de expandir, bajo su subtítulo
+    await user.click(screen.getByRole("button", { name: "Ver 1 pendiente de validación" }));
+    const card = container.querySelector(".etapa2-card--pendiente") as HTMLElement;
+    expect(within(card).getByText("pendiente de validación")).toHaveClass("pill");
+    expect(within(card).getByText(/No se puede elegir en esta versión/)).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: /Explorar/ })).not.toBeInTheDocument();
+
+    await user.click(within(card).getByRole("button", { name: /Ver los 2 métodos/ }));
+    expect(within(card).getByRole("table")).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: /^Explorar$|^Elegir$/ })).not.toBeInTheDocument();
+  });
+
+  it("análisis viejo sin el campo y con Pareto primera: queda en su lugar, atenuada, y 'menor EEA' va a la segunda", () => {
+    const viejo = [pareto(3, false), distribucion("gumbel", 5), distribucion("normal", 6)];
+    const { container } = render(<Etapa2RankingView etapa2={etapa2Con(viejo)} />);
+
+    const cards = [...container.querySelectorAll(".etapa2-card")] as HTMLElement[];
+    expect(cards.map((c) => c.querySelector("h3")?.textContent)).toEqual(["gen_pareto", "gumbel", "normal"]);
+    expect(cards[0]).toHaveClass("etapa2-card--pendiente");
+    expect(within(cards[0]).queryByText("menor EEA")).not.toBeInTheDocument();
+    expect(within(cards[1]).getByText("menor EEA")).toBeInTheDocument();
+  });
+
+  it("al final va bajo su subtítulo, después de las sin ajuste, y el botón la cuenta aparte", async () => {
+    const user = userEvent.setup();
+    const ranking = [...RANKING_13.slice(0, 6), sinAjuste("lp3", "disabled_negatives"), pareto(30)];
+    render(<Etapa2RankingView etapa2={etapa2Con(ranking)} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Ver las 2 restantes · 1 sin ajuste · 1 pendiente de validación" }),
+    );
+
+    const subtitulos = screen.getAllByText(/^(Sin ajuste posible con esta serie|Pendiente de validación) \(/);
+    expect(subtitulos.map((s) => s.textContent)).toEqual([
+      "Sin ajuste posible con esta serie (1)",
+      "Pendiente de validación (1)",
+    ]);
+  });
+});
+
 describe("Etapa2RankingView", () => {
   it("F3 — muestra solo las primeras 4 distribuciones y un botón para ver el resto", async () => {
     const user = userEvent.setup();
