@@ -35,7 +35,7 @@ Ninguno omitido.
 
 | # | Estado | Resultado |
 |---|---|---|
-| M1 | Hecho | Auditoría de contraste WCAG (metodología, 2 hallazgos, tabla de propuesta calculada) movida de `sprint.md` a [`decision043.md`](../decisiones/decision043.md) — DECISIÓN 043, número reservado antes de escribir contenido. Estado explícito **PENDIENTE DE DECISIÓN — Kevin/Octavio**. `tokens.instrumento.css` sin tocar. `sprint.md` reducido a una referencia de una línea. |
+| M1 | Hecho | Auditoría de contraste WCAG (metodología, 2 hallazgos, tabla de propuesta calculada) movida de `sprint.md` a [`decision043.md`](../../../decisiones/decision043.md) — DECISIÓN 043, número reservado antes de escribir contenido. Estado explícito **PENDIENTE DE DECISIÓN — Kevin/Octavio**. `tokens.instrumento.css` sin tocar. `sprint.md` reducido a una referencia de una línea. |
 | M2 | Hecho | `scripts/check-error-catalog.sh` (ejecutable, no solo un snippet documentado) + `scripts/error-catalog-allowlist.txt` (excepciones conocidas, comentadas, versionadas). Job nuevo `error-catalog` en `.github/workflows/ci.yml`, independiente de `lint`. Verificado **en las dos direcciones posibles antes de wirearlo a CI**: corre limpio contra el repo real, y fallar con exit 1 cuando se inyecta a propósito un código no catalogado (probado con una inyección real y revertida, no un supuesto). Documentado como addendum en `decision038.md`. |
 | M3 | Hecho | Modal de atípico (`StreamPage.tsx`): auto-foco al contenedor del diálogo al abrir, Escape que ni cierra ni decide (ver §3), restauración de foco al cerrar. Tres tests de regresión nuevos. `sprint.md` actualizado: Fase 6 completa salvo DECISIÓN 043 (que es una decisión de diseño pendiente, no una implementación faltante). |
 

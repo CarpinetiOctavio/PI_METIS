@@ -501,7 +501,7 @@ Fase 0 (`docs/historico/2026-07-22-frontend-fase0-scaffold.md`, ya
 mergeado — movido desde `docs/superpowers/plans/` el 09/08/2026, ver
 `docs/historico/README.md`). Plan completo y decisión por decisión en
 `docs/frontend/frontend-implementation-plan.md` §10; resumen navegable en
-`docs/frontend/informe-implementacion-frontend-fase1-6.md`.
+`docs/historico/planes/frontend/informe-implementacion-frontend-fase1-6.md`.
 
 **Nota de nomenclatura:** este proyecto ya usaba "Fase 1...Fase 6" para el
 desarrollo de Core Etapa 2 (ver más arriba, `feature/core-etapa2`). El frontend
@@ -558,8 +558,8 @@ ranking no tiene endpoint REST real (solo evento SSE nunca emitido) y
 navegador de dev (única fase que no depende de backend real, por diseño).
 
 #### Fase 6 — Pulido y accesibilidad — COMPLETA salvo D11
-Bloque D (`docs/frontend/plan-mejora-frontend-pasada2.md`) y M3
-(`docs/frontend/plan-mejora-frontend-pasada3.md`) cerraron las correcciones
+Bloque D (`docs/historico/planes/frontend/plan-mejora-frontend-pasada2.md`) y M3
+(`docs/historico/planes/frontend/plan-mejora-frontend-pasada3.md`) cerraron las correcciones
 puntuales de código y accesibilidad. Con `inert` ya aplicado al contenedor
 de fondo (D10), el foco no podía escaparse del diálogo — el grueso del
 focus trap ya estaba resuelto de hecho. M3 cerró lo que faltaba en
@@ -596,7 +596,7 @@ queda dato de prueba en la BD.
 de UI rota):** el párrafo de arriba tachado quedó invalidado el mismo día que
 se escribió — el commit `c27d6ac` (más abajo, "Bugs corregidos como parte de
 esta rama") cambió el ciclo de vida de `StreamPage` horas después de esta
-verificación, e introdujo F1 (`docs/frontend/informe-diagnostico-ui-rota.md`):
+verificación, e introdujo F1 (`docs/historico/planes/frontend/informe-diagnostico-ui-rota.md`):
 bajo `<StrictMode>` (el modo real de desarrollo), el stream se abortaba a sí
 mismo al montar y nunca avanzaba. Dos PRs se mergearon a `staging` con CI
 verde y 98 tests en verde sin que nadie volviera a abrir el navegador después
@@ -604,7 +604,7 @@ de ese commit. La verificación "Config→stream... verificado punta a punta"
 citada arriba corresponde a un estado del código anterior a `c27d6ac`, no al
 que terminó mergeado. F1 fue diagnosticado y corregido en
 `fix/frontend-ui-integracion` — ver ese informe y
-`docs/frontend/plan-arreglo-ui-rota.md` para el detalle completo y el resto de
+`docs/historico/planes/frontend/plan-arreglo-ui-rota.md` para el detalle completo y el resto de
 los once defectos encontrados en la misma pasada (F2-F12).
 
 #### Bugs corregidos como parte de esta rama
@@ -635,8 +635,8 @@ patrón único de test), DECISIÓN 042 (alcance de mocks de Etapa 2). El resto
 Rama de arreglo abierta tras el hallazgo de que la app estaba rota en uso
 real pese a dos PRs mergeados con CI verde (ver la corrección de 31/07/2026
 más arriba). Punto de entrada completo:
-`docs/frontend/informe-diagnostico-ui-rota.md` (diagnóstico, doce defectos
-F1-F12) y `docs/frontend/plan-arreglo-ui-rota.md` (plan priorizado en 4
+`docs/historico/planes/frontend/informe-diagnostico-ui-rota.md` (diagnóstico, doce defectos
+F1-F12) y `docs/historico/planes/frontend/plan-arreglo-ui-rota.md` (plan priorizado en 4
 bloques). Sale de `staging` (no de `fix/frontend-pasada2`, que ya estaba
 mergeado a `staging` vía PR #18 al momento de abrir esta rama).
 
@@ -703,8 +703,8 @@ corrección).
 
 Cuarta pasada de mejora del frontend, sobre la identidad visual "Instrumento"
 cerrada en la pasada 4. Plan completo en
-`docs/frontend/plan-mejora-frontend-pasada5.md`, cierre en
-[`docs/frontend/informe-resultados-pasada5.md`](../../docs/frontend/informe-resultados-pasada5.md)
+`docs/historico/planes/frontend/plan-mejora-frontend-pasada5.md`, cierre en
+[`docs/historico/planes/frontend/informe-resultados-pasada5.md`](../../docs/historico/planes/frontend/informe-resultados-pasada5.md)
 — punto de entrada para retomar el estado exacto de verificación bloque por
 bloque. Cuatro PRs apilados (Bloque A+B #37, Bloque C+D #38, Bloque E #39,
 Bloque F #40), los cuatro mergeados a `staging`: paridad del tema claro
@@ -718,7 +718,7 @@ vidrio, dropzone real + panel de muestra de columnas en `ConfigPage`
 ### fix/frontend-feedback-facundo — PR abierto (#88, 15/09/2026), sin mergear
 
 Cinco de los seis hallazgos de
-`docs/frontend/plan-fixes-feedback-facundo-02-09-2026.md` (feedback de
+`docs/historico/planes/frontend/plan-fixes-feedback-facundo-02-09-2026.md` (feedback de
 Facundo en uso real, 02/09/2026). Tres commits en la rama:
 
 - **F1+F2+F4** (`363db68`) — texto cortado en las tablas de métodos de
@@ -757,7 +757,7 @@ en el PR.
 
 ## Plan de implementación de Etapa 2 de punta a punta — EN CURSO
 
-Ver `docs/plan-etapa2-implementacion.md` (se borra cuando los siete PRs
+Ver `docs/historico/planes/plan-etapa2-implementacion.md` (se borra cuando los siete PRs
 cierren) para el detalle completo. Progreso real, PR por PR:
 
 - **PR 1 — Bloque 0 (higiene de documentación).** Mergeado (#42, 09/08/2026).
@@ -926,7 +926,7 @@ cierren) para el detalle completo. Progreso real, PR por PR:
   `mes_inicio_anio = 1`. Se agrega la regla de recorte de años parciales en
   los extremos (se descartan, nunca se completan ni interpolan —
   `constraints.md` ya lo prohibía) y el tratamiento del hueco interior. Ver
-  `docs/plan-etapa2-implementacion.md` §7 (F3-F6) para el detalle completo —
+  `docs/historico/planes/plan-etapa2-implementacion.md` §7 (F3-F6) para el detalle completo —
   DECISIÓN 057 lo va a formalizar cuando el Bloque F3-F4 esté escrito.
 
 - **PR 7 — Bloque F2 (los tres bugs de contrato temporal).** Mergeado (#48, 12/08/2026).
@@ -1188,10 +1188,10 @@ borrado en el mismo commit que esta sección.
 
 ## Plan de resolución diaria — EN CURSO (desde 28/08/2026)
 
-`docs/plan-resolucion-diaria.md` (revisión 2) — acepta
+`docs/historico/planes/plan-resolucion-diaria.md` (revisión 2) — acepta
 `resolucion_temporal == "diaria"` como formato de entrada y lo agrega a
 máximos anuales por el **camino A**, igual que mensual (DECISIÓN 057). Sale
-del [informe de viabilidad](../../docs/informe-viabilidad-resoluciones-temporales.md),
+del [informe de viabilidad](../../docs/historico/planes/informe-viabilidad-resoluciones-temporales.md),
 que descartó el camino B (analizar valores sub-anuales sin agregar) por
 riesgo académico. Bloques `R1`–`R6`. Decisiones:
 [065](../../docs/decisiones/decision065.md) (el "sí" al camino A para
@@ -1243,7 +1243,7 @@ instantáneo — **bloquea la exposición en la UI**, no la implementación),
   de `n < 10` con carga diaria) y F4 (precisión epistémica de la asimetría de cobertura, addendum
   a DECISIÓN 065).
 
-**DoD cerrado (28/08/2026, verificado en `docs/revision-resolucion-diaria.md`):**
+**DoD cerrado (28/08/2026, verificado en `docs/historico/planes/revision-resolucion-diaria.md`):**
 
 - **Las 9 series de regresión dan salida byte a byte idéntica** al baseline — comparado con
   `git worktree` sobre volcado de Etapa 1 completa + Etapa 2 con todas las combinaciones
@@ -1256,7 +1256,7 @@ instantáneo — **bloquea la exposición en la UI**, no la implementación),
   637 KB de la serie diaria cruda, y por debajo del peor caso mensual que DECISIÓN 058
   dimensionó en ~59 KB. La opción 2 de R3.3 funcionó como se proyectó.
 
-**Revisión de código independiente:** `docs/revision-resolucion-diaria.md` — cinco hallazgos,
+**Revisión de código independiente:** `docs/historico/planes/revision-resolucion-diaria.md` — cinco hallazgos,
 cuatro cerrados, uno de housekeeping (`git worktree prune` desde Windows). Registra además que
 R1.2 del plan partía de una premisa equivocada, y que la implementación hizo bien en no seguirla
 (ver `docs/pendientes-tecnicos.md`, `_espaciado_regular()` inerte para toda serie agregada).

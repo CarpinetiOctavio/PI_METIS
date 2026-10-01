@@ -163,7 +163,7 @@ export interface SerieCalendario {
 // para el detalle completo de cada campo.
 export interface Etapa1Datos {
   resolucion_original: "anual" | "mensual" | "diaria" | null;
-  // R3.3 opción 2 (docs/plan-resolucion-diaria.md) — a qué resolución está
+  // R3.3 opción 2 (docs/historico/planes/plan-resolucion-diaria.md) — a qué resolución está
   // `serie_original` en ESTE payload, distinto de `resolucion_original` (la
   // del archivo subido): con carga diaria el backend serializa la agregación
   // MENSUAL (~480 ítems), no la serie diaria cruda (~14.600). "anual" (o

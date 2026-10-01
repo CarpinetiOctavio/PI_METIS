@@ -4,7 +4,7 @@
 
 ### Contexto
 
-`docs/plan-etapa2-implementacion.md`, Bloque C, pide dos gráficos interactivos
+`docs/historico/planes/plan-etapa2-implementacion.md`, Bloque C, pide dos gráficos interactivos
 sobre los resultados de Etapa 2 — gráfico de ajuste (puntos empíricos contra
 la curva de la distribución elegida) y eventos de diseño (xT contra T, eje x
 logarítmico) — con zoom, tooltip con el valor exacto de cada punto, tematizado
@@ -69,7 +69,7 @@ usado por `Etapa2RankingView`/`Etapa2EventosView` entre `StreamPage`,
 
 El toggle calendario/hidrológico que la maqueta original ponía dentro de cada
 tarjeta del ranking **no se traslada a estos gráficos** — ver
-`docs/plan-etapa2-implementacion.md` §5 (C3): el criterio de año decide qué
+`docs/historico/planes/plan-etapa2-implementacion.md` §5 (C3): el criterio de año decide qué
 valor cae en qué año, es una regla de agregación aguas arriba de Etapa 1
 (Bloque F, todavía sin implementar), no una opción de dibujo aguas abajo de
 Etapa 2. Ninguna opción de este documento lo reintroduce.

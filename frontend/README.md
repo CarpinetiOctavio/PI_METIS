@@ -12,7 +12,7 @@ mientras el stream está pausado — no hay rutas `/ranking` ni
 `/design-events` (retiradas, ver `docs/decisiones/decision042.md` para el
 mock original y su addendum de cierre). Detalle completo en
 `docs/frontend/frontend-implementation-plan.md` §10 y
-`docs/frontend/informe-implementacion-frontend-fase1-6.md`.
+`docs/historico/planes/frontend/informe-implementacion-frontend-fase1-6.md`.
 
 ## Estructura de `src/`
 

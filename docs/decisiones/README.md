@@ -48,7 +48,7 @@ dirección del chequeo de códigos de error).
 ## Historial de esta migración
 
 **29/07/2026 (reserva de números, previa a `decision036.md`-`decision042.md`)** —
-[`docs/frontend/plan-mejora-frontend-pasada2.md`](../frontend/plan-mejora-frontend-pasada2.md) (Bloque B0)
+[`docs/historico/planes/frontend/plan-mejora-frontend-pasada2.md`](../historico/planes/frontend/plan-mejora-frontend-pasada2.md) (Bloque B0)
 reserva 035-042 en el índice antes de escribir ningún contenido, para que ningún
 trabajo paralelo pise un número. `035` ya estaba comprometido desde `sprint.md`
 (protección de ramas, 20/07/2026) sin archivo propio todavía — no se toca en esta
@@ -114,7 +114,7 @@ Referencias a `docs/historico/oauth-descartado.md` sumadas donde faltaban
 
 **09/08/2026 (A0 del plan de implementación de Etapa 2)** —
 `decision052.md`-`decision055.md` agregadas: las cuatro decisiones que el
-Bloque A del [plan de implementación de Etapa 2](../plan-etapa2-implementacion.md)
+Bloque A del [plan de implementación de Etapa 2](../historico/planes/plan-etapa2-implementacion.md)
 exige escribir antes de tocar código (contrato SSE con pausa,
 `session_store` con TTL, `etapas` de punta a punta, y por qué
 `full_pipeline.py` no se usa desde `services/`). `DECISIÓN 037` marcada como
@@ -172,10 +172,10 @@ situ.
 | [043](decision043.md) | Contraste WCAG AA del tema Instrumento: hallazgos y propuesta, no aplicada | 29/07/2026 | PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [044](decision044.md) | SonarCloud: quality gate, limpieza del PR #17/B, rechazo de `<dialog>` nativo, merge del PR #17 en rojo | 30/07/2026 | Aplicada — gate de gobernanza PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [045](decision045.md) | Fondos animados en Canvas 2D sin dependencias, WebGL descartado — addendum 05/08/2026: excepción acotada para Threads (three.js) en la puerta de entrada, vía code-splitting | 31/07/2026 | Decidida — implementación en curso |
-| 046 | *(reservado — E2E con Playwright, revisa la exclusión de `constraints.md`)* | — | Pendiente — ver `docs/plan-post-pasada4-roadmap.md` §3, Bloque C1b |
+| 046 | *(reservado — E2E con Playwright, revisa la exclusión de `constraints.md`)* | — | Pendiente — ver `docs/historico/planes/plan-post-pasada4-roadmap.md` §3, Bloque C1b |
 | [047](decision047.md) | Endpoint `preview-columns`: parseo de cabeceras del lado del servidor, no del cliente | 31/07/2026 | Decidida — implementación en curso |
 | [048](decision048.md) | Archivado de análisis por soft-delete, no borrado físico | 31/07/2026 | Decidida — implementación en curso |
-| 049 | *(reservado — escotilla SMTP de desarrollo en `auth/email.py`. Corrección 05/08/2026: el plan de arreglo de UI y su informe de resultados citaban 045 para esto, pero 045 quedó asignada a "Fondos animados en Canvas 2D" antes de que la escotilla SMTP se escribiera — ver `docs/plan-post-pasada4-roadmap.md`, H1)* | — | Pendiente — ver `sprint.md`, "Pendiente de esta rama" |
+| 049 | *(reservado — escotilla SMTP de desarrollo en `auth/email.py`. Corrección 05/08/2026: el plan de arreglo de UI y su informe de resultados citaban 045 para esto, pero 045 quedó asignada a "Fondos animados en Canvas 2D" antes de que la escotilla SMTP se escribiera — ver `docs/historico/planes/plan-post-pasada4-roadmap.md`, H1)* | — | Pendiente — ver `sprint.md`, "Pendiente de esta rama" |
 | [050](decision050.md) | Límite de tamaño de subida: valor (10 MB), nginx + backend, código de error nuevo | 05/08/2026 | Decidida — implementación en curso |
 | [051](decision051.md) | ThreadsBackground pasa de Three.js a Canvas 2D; Three.js sale del proyecto — supera el addendum de la excepción de DECISIÓN 045 | 06/08/2026 | Implementada |
 | [052](decision052.md) | Transporte de Etapa 2 por SSE con pausa; `distribution-decision` reemplaza `design-events` | 09/08/2026 | Decidida — implementación en curso |

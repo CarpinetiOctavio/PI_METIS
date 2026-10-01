@@ -138,7 +138,7 @@ def test_columna_de_anio_y_mes_como_fecha_sigue_siendo_mensual():
 
 @pytest.mark.unit
 def test_columna_de_fechas_diarias_infiere_resolucion_diaria():
-    # R1.1 (docs/plan-resolucion-diaria.md) — moda de deltas == 1 día -> "diaria".
+    # R1.1 (docs/historico/planes/plan-resolucion-diaria.md) — moda de deltas == 1 día -> "diaria".
     fechas = pd.date_range("1980-01-01", periods=60, freq="D")
     filas_csv = "\n".join(f"{fecha.date()},{100 + i}" for i, fecha in enumerate(fechas))
     csv = f"fecha,caudal\n{filas_csv}\n".encode()

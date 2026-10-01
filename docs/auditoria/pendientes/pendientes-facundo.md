@@ -936,7 +936,7 @@ criterio estricto da 39 años completos + 2019 recortado, sin necesidad de
 relajar nada.*
 
 **Qué hacer con el código según la respuesta (agregado 28/08/2026, hallazgo
-F2 de `docs/revision-resolucion-diaria.md`).** Con `COBERTURA_MINIMA_INTERIOR`
+F2 de `docs/historico/planes/revision-resolucion-diaria.md`).** Con `COBERTURA_MINIMA_INTERIOR`
 en `1.0` para las dos resoluciones, hoy **nunca se ejecutan** en producción:
 `PeriodoAceptadoConHueco`, `AgregacionResult.periodos_incompletos_aceptados`,
 la rama de `agregar_a_maximos_anuales()` que la puebla, el warning

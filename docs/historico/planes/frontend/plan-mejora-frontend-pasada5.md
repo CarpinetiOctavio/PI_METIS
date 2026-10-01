@@ -107,7 +107,7 @@ exactamente para lo que existe.
 Cambio mínimo, solo para que `--surf` (blanco puro) tenga contra qué
 recortarse. No se toca ningún token de texto ni de estado (`--ink`, `--mut`,
 `--ok`, `--warn`, `--crit` quedan igual — cualquier cambio ahí reabre
-[DECISIÓN 043](../decisiones/decision043.md), que sigue pendiente de decisión
+[DECISIÓN 043](../../../decisiones/decision043.md), que sigue pendiente de decisión
 de Kevin/Octavio y **está fuera del alcance de esta pasada**).
 
 | Token | Antes (light) | Después (light) | Motivo |
@@ -153,7 +153,7 @@ Resuelve P4 (la segunda pantalla debe mantener strands además del dot field).
 
 `ThreadsBackground` hoy usa Three.js, y ese import es la razón de que esté
 acotado a `/` vía `React.lazy` — el addendum de
-[DECISIÓN 045](../decisiones/decision045.md) lo admite explícitamente como
+[DECISIÓN 045](../../../decisiones/decision045.md) lo admite explícitamente como
 "la excepción documentada", justificada porque **ninguna pantalla autenticada
 paga el costo del chunk**. Montarlo en `/config` invalida esa justificación:
 todas las pantallas pasarían a cargar Three.js para dibujar 18 polilíneas
@@ -596,7 +596,7 @@ Además de los criterios de hecho de cada bloque:
   frontend: `POST /analysis/design-events` está documentado y no implementado,
   el ranking no tiene endpoint REST (solo un evento SSE que el backend nunca
   emite), y `POST /analysis/stream` recibe `etapas` y lo descarta
-  (DECISIÓN 037). Ver [DECISIÓN 042](../decisiones/decision042.md).
+  (DECISIÓN 037). Ver [DECISIÓN 042](../../../decisiones/decision042.md).
 - **Partición de Cramer personalizada** — DECISIÓN 036, sin decidir entre las
   tres opciones evaluadas. El botón sigue `disabled`.
 - **E2E con Playwright** — DECISIÓN 046, sin escribir; `constraints.md` los

@@ -1078,7 +1078,7 @@ if __name__ == "__main__":
 
 Usada para la verificación de la sección "Resolución". Compara el payload REAL que serializa `services/`
 (`_serializar_etapa1` y `_serializar_etapa2`) para las 9 estaciones antes y después de un cambio en `core/`.
-Es la herramienta que `docs/revision-resolucion-diaria.md` cita como `/tmp/regres.py` y que no estaba en el repo.
+Es la herramienta que `docs/historico/planes/revision-resolucion-diaria.md` cita como `/tmp/regres.py` y que no estaba en el repo.
 
 Uso (con el stack de Docker levantado):
 

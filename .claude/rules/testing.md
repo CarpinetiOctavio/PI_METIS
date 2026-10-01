@@ -20,7 +20,7 @@ de lo que ya existe.
 **Corrección 12/08/2026 (Kevin, rediseño del Bloque F del plan de
 implementación de Etapa 2):** `tests/regression/` ya no forma parte de este
 plan — los tests de regresión matemática contra la tesis los lleva Octavio
-por su lado. Sigue vacío en el repo, pero no está huérfano: `docs/plan-etapa2-implementacion.md`
+por su lado. Sigue vacío en el repo, pero no está huérfano: `docs/historico/planes/plan-etapa2-implementacion.md`
 §6 queda como insumo para ese trabajo, no como una tarea pendiente de este
 frente. `tests/integration/` sumó dos archivos más en el Bloque F3-F4
 (agregación temporal, DECISIÓN 057) — el segundo con nombre expresamente
@@ -108,13 +108,13 @@ def test_regresion_etapa1(estacion):
 Estrategia separada de los cuatro niveles de arriba — esos son el compromiso
 del anteproyecto para el motor estadístico del backend. El frontend tiene su
 propia estrategia en capas, escrita como consecuencia directa de
-`docs/frontend/informe-diagnostico-ui-rota.md`: dos PRs de frontend se
+`docs/historico/planes/frontend/informe-diagnostico-ui-rota.md`: dos PRs de frontend se
 mergearon a `staging` con CI verde y 98 tests en verde, y la aplicación
 estaba rota en uso real (F1 — el stream se abortaba a sí mismo bajo
 `StrictMode`, el único modo en que la app corre de verdad en desarrollo, y
 ningún test lo ejercitaba). El plan completo de arreglo, con la
 justificación detallada de cada capa, vive en
-`docs/frontend/plan-arreglo-ui-rota.md` §4.
+`docs/historico/planes/frontend/plan-arreglo-ui-rota.md` §4.
 
 ### Capa 1 — unitarios, bajo StrictMode por regla
 

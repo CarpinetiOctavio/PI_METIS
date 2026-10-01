@@ -172,7 +172,7 @@ por `explicacion.ecuacion`.
 ## Addendum — 02/09/2026: KaTeX entra para el render de las fórmulas de Etapa 1
 
 **Origen.** `mejoras metis.docx` — feedback de Facundo sobre la UI en
-funcionamiento (`docs/frontend/plan-fixes-feedback-facundo-02-09-2026.md`,
+funcionamiento (`docs/historico/planes/frontend/plan-fixes-feedback-facundo-02-09-2026.md`,
 hallazgo F3). Con la captura de pantalla: en modo paso a paso la fórmula
 sustituida sale como una sola línea de texto monoespaciado —
 `r₄ = -36.662,73878 / 159.773,26103 = -0,22947` — donde la división es

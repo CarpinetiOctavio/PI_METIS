@@ -200,7 +200,7 @@ no genera un `FAIL` falso ni verdadero) — hay que acordarse de sumar el
 prefijo a mano cada vez, el chequeo no se autodetecta a sí mismo.
 
 **Automatización — ver M2 del plan de pasada 3
-(`docs/frontend/plan-mejora-frontend-pasada3.md`).** Esta verificación deja
+(`docs/historico/planes/frontend/plan-mejora-frontend-pasada3.md`).** Esta verificación deja
 de depender de que alguien la corra a mano: se agrega como step de CI en
 `.github/workflows/ci.yml`, con las excepciones conocidas (`DIST_*`) en un
 allowlist versionado y comentado, no hardcodeadas sin explicación en el YAML.

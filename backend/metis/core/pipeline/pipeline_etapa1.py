@@ -46,7 +46,7 @@ CODIGOS_WARNING_AGREGACION = frozenset(
 def _warnings_de_agregacion(
     agregacion: AgregacionResult, resolucion: str, variable_diaria: str = "pico"
 ) -> list[WarningItem]:
-    # R3.2 (docs/plan-resolucion-diaria.md) — la unidad de completitud
+    # R3.2 (docs/historico/planes/plan-resolucion-diaria.md) — la unidad de completitud
     # depende de la resolución de entrada. Los códigos de error NO cambian:
     # CONTRACT_PARTIAL_YEARS_TRIMMED / CONTRACT_INCOMPLETE_YEARS_DISCARDED
     # tienen nombres neutros a la resolución y significan lo mismo.

@@ -15,7 +15,7 @@ import type { SeleccionPuntos } from "./exclusiones";
  * Toggle configurada/calendario solo si la carga fue mensual o diaria y el
  * backend mandó serie_calendario — con carga anual el criterio de año ya lo
  * fijó el usuario al armar el archivo, no hay una segunda agregación posible
- * para comparar (DECISIÓN 058 §1/§2; diaria por docs/plan-resolucion-diaria.md
+ * para comparar (DECISIÓN 058 §1/§2; diaria por docs/historico/planes/plan-resolucion-diaria.md
  * R3.4). serie_calendario trae sus PROPIOS timestamps (corrección del PR 4
  * sobre la decisión original) porque puede tener más o menos puntos que
  * serie_efectiva.

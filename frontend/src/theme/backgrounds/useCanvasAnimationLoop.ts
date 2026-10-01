@@ -137,7 +137,7 @@ export function useCanvasAnimationLoop(
       // ese orden no importa cuál primero — ninguno depende de otro). Bajo
       // StrictMode (que monta dos veces) sin esto quedan loops/listeners
       // duplicados corriendo para siempre — misma clase de bug que F1
-      // (docs/frontend/informe-diagnostico-ui-rota.md).
+      // (docs/historico/planes/frontend/informe-diagnostico-ui-rota.md).
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
       document.removeEventListener("visibilitychange", handleVisibilityChange);

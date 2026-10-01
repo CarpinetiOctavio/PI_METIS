@@ -43,7 +43,7 @@ Tres cosas que vale la pena registrar, ninguna grave:
 
 Tres issues abiertos sobre el PR #19. **Corresponden a ese PR, no a la pasada 4** — arreglarlos ahí, antes de mergear, es lo correcto: son el trabajo de la pasada anterior y arrastrarlos a una rama nueva los convierte en deuda heredada sin dueño. Se documentan acá porque este plan es el punto de retoma vigente, y porque uno de los tres es un falso positivo que conviene dejar explicado antes de que alguien lo "arregle" mal.
 
-Aplica el criterio de la [DECISIÓN 044](../decisiones/decision044.md): SonarCloud es consultivo, no todo lo que marca se acata — el precedente es el rechazo del `<dialog>` nativo. Acá, dos se arreglan y uno se corrige en la causa, no en el síntoma.
+Aplica el criterio de la [DECISIÓN 044](../../../decisiones/decision044.md): SonarCloud es consultivo, no todo lo que marca se acata — el precedente es el rechazo del `<dialog>` nativo. Acá, dos se arreglan y uno se corrige en la causa, no en el síntoma.
 
 #### S1 — `frontend/Dockerfile` L13: nginx corre como root (Vulnerability, Minor)
 
@@ -215,7 +215,7 @@ En `components.css`, para cada clase interactiva. El vocabulario es el de Instru
 
 Todas con `transition: <propiedades> var(--t-fast) var(--ease-out)`. **Nunca transicionar `all`** — enumerar las propiedades.
 
-**Restricción no negociable:** `:hover` no puede ser el único portador de información, y `:focus-visible` tiene que ser visible en ambos modos. Esto se cruza con la [DECISIÓN 043](../decisiones/decision043.md) (contraste WCAG del tema, PENDIENTE DE DECISIÓN): **este plan no la resuelve ni la contradice** — se limita a no empeorarla. Al agregar cada estado, verificar contraste del texto resultante contra su fondo; si un estado nuevo cae por debajo de 4.5:1, no se aplica y se anota en la decisión 043.
+**Restricción no negociable:** `:hover` no puede ser el único portador de información, y `:focus-visible` tiene que ser visible en ambos modos. Esto se cruza con la [DECISIÓN 043](../../../decisiones/decision043.md) (contraste WCAG del tema, PENDIENTE DE DECISIÓN): **este plan no la resuelve ni la contradice** — se limita a no empeorarla. Al agregar cada estado, verificar contraste del texto resultante contra su fondo; si un estado nuevo cae por debajo de 4.5:1, no se aplica y se anota en la decisión 043.
 
 ### A5 — Micro-interacciones que comunican estado
 
@@ -391,7 +391,7 @@ Hoy dice "pendiente · datos de ejemplo", con nota "Etapa 2 no expuesta por API 
 
 Redacción propuesta, a confirmar: **"Vista previa · datos de demostración"**, con nota expandida *"Esta pantalla muestra un ejemplo de cómo se presentarán los resultados. El análisis de frecuencia todavía no se calcula sobre tus datos."*
 
-Dice lo mismo, en el idioma del usuario, sin mentir sobre el estado. No cambia el comportamiento ni contradice la [DECISIÓN 042](../decisiones/decision042.md) — solo su presentación. Actualizar los tests que asserten el texto actual.
+Dice lo mismo, en el idioma del usuario, sin mentir sobre el estado. No cambia el comportamiento ni contradice la [DECISIÓN 042](../../../decisiones/decision042.md) — solo su presentación. Actualizar los tests que asserten el texto actual.
 
 ---
 

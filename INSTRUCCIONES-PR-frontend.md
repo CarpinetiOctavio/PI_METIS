@@ -251,7 +251,7 @@ desarrollo.
 
 ## Lectura recomendada para revisar
 
-- `docs/frontend/informe-implementacion-frontend-fase1-6.md` — resumen navegable.
+- `docs/historico/planes/frontend/informe-implementacion-frontend-fase1-6.md` — resumen navegable.
 - `docs/frontend/frontend-implementation-plan.md` §10 — detalle decisión por decisión.
 
 ## Nota
@@ -266,7 +266,7 @@ para pasar por PR y CI, en vez de sincronizar `staging` a la fuerza.
 ## Qué trae
 
 Dos rondas de revisión sobre el trabajo del PR anterior, cada una ejecutada contra un plan
-escrito (`docs/frontend/plan-mejora-frontend-pasada2.md` y `-pasada3.md`) con su informe de
+escrito (`docs/historico/planes/frontend/plan-mejora-frontend-pasada2.md` y `-pasada3.md`) con su informe de
 resultados verificable.
 
 ### Reintegración documental

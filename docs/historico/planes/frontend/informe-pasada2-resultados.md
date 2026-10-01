@@ -23,16 +23,16 @@ informe no.
 
 | # | Estado | Resultado |
 |---|---|---|
-| A1 | Hecho | [DECISIÓN 036](../decisiones/decision036.md) — partición de Cramer personalizada inalcanzable (`Form(str)` vs. indexado `dict`). Documentado, no implementado (fuera de alcance de esta pasada). `ConfigPage.tsx`, `sprint.md`, `api-contracts.md` actualizados. |
-| A2 | Hecho | [DECISIÓN 037](../decisiones/decision037.md) — `etapas` se recibe y se descarta, `AnalysisRequest` es código muerto. Documentado, prioridad marcada para M2/M3. |
-| A3 | Hecho | [DECISIÓN 038](../decisiones/decision038.md) — catálogo de errores como fuente única. 3 códigos backend→catálogo agregados (`TEST_NOT_EXECUTED_MIN_SAMPLES`, `PARSE_ERROR`, `SESSION_TIMEOUT`, sección nueva "Stream / sesión"), 4 catálogo→`errors.es.ts` agregados. Gap real encontrado *durante* la verificación reproducible (no solo asumido): `TEST_NOT_EXECUTED_MIN_SAMPLES` se había agregado al catálogo pero no a `errors.es.ts` en el primer paso — corregido antes de cerrar la decisión. Asimetría real documentada (no corregida — `core/` fuera de alcance): `trend.py` no promueve `TEST_WARNING_SMALL_SAMPLE` de Mann-Kendall a `result.warnings` como sí hace `independence.py` con Wald. |
+| A1 | Hecho | [DECISIÓN 036](../../../decisiones/decision036.md) — partición de Cramer personalizada inalcanzable (`Form(str)` vs. indexado `dict`). Documentado, no implementado (fuera de alcance de esta pasada). `ConfigPage.tsx`, `sprint.md`, `api-contracts.md` actualizados. |
+| A2 | Hecho | [DECISIÓN 037](../../../decisiones/decision037.md) — `etapas` se recibe y se descarta, `AnalysisRequest` es código muerto. Documentado, prioridad marcada para M2/M3. |
+| A3 | Hecho | [DECISIÓN 038](../../../decisiones/decision038.md) — catálogo de errores como fuente única. 3 códigos backend→catálogo agregados (`TEST_NOT_EXECUTED_MIN_SAMPLES`, `PARSE_ERROR`, `SESSION_TIMEOUT`, sección nueva "Stream / sesión"), 4 catálogo→`errors.es.ts` agregados. Gap real encontrado *durante* la verificación reproducible (no solo asumido): `TEST_NOT_EXECUTED_MIN_SAMPLES` se había agregado al catálogo pero no a `errors.es.ts` en el primer paso — corregido antes de cerrar la decisión. Asimetría real documentada (no corregida — `core/` fuera de alcance): `trend.py` no promueve `TEST_WARNING_SMALL_SAMPLE` de Mann-Kendall a `result.warnings` como sí hace `independence.py` con Wald. |
 
 ### Bloque B — Reintegración de las decisiones de frontend
 
 | # | Estado | Resultado |
 |---|---|---|
 | B0 | Hecho | 035-042 reservados en el índice antes de escribir contenido. 035 permanece reservado (GitHub Ruleset, sprint.md 20/07), sin tocar. |
-| B1 | Hecho | [DECISIÓN 039](../decisiones/decision039.md) — criterio de promoción + tabla de equivalencia D1..D20 completa. D1→040, D4+D5+D20→041, D3+D19→042. La promesa incumplida de D4 (TanStack Query "en Fase 4") cerrada formalmente en 041, diferida con criterio explícito de habilitación (mismo patrón que 033), no descartada por decreto. |
+| B1 | Hecho | [DECISIÓN 039](../../../decisiones/decision039.md) — criterio de promoción + tabla de equivalencia D1..D20 completa. D1→040, D4+D5+D20→041, D3+D19→042. La promesa incumplida de D4 (TanStack Query "en Fase 4") cerrada formalmente en 041, diferida con criterio explícito de habilitación (mismo patrón que 033), no descartada por decreto. |
 | B2 | Hecho | Prefijos `DECISIÓN NNN` / `FE-NN` / `UX-A..D` aplicados. 5 referencias de código actualizadas (`sse.ts`, `ConfigPage.tsx`, `EntryPage.tsx`, `Etapa1ResultView.tsx`, `ResultsPage.tsx`) + todas las referencias cruzadas de `frontend-implementation-plan.md` §10. `metis-wireframes-fase1-decisiones.md` (la fuente de "Decisión de arquitectura A-D") **no se tocó** — es el documento autoral, `UX-A..D` es la forma abreviada que usan los demás documentos al citarlo, no un renombre del original. |
 | B3 | Hecho | `frontend/frontend-design/` commiteado completo, incluido `versiones/` (9 archivos históricos) — decisión de Kevin, opción 1 del plan. |
 

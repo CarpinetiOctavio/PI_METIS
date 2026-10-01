@@ -1,4 +1,4 @@
-// Capa 2 de testing (docs/frontend/plan-arreglo-ui-rota.md §4.2-a): StreamPage
+// Capa 2 de testing (docs/historico/planes/frontend/plan-arreglo-ui-rota.md §4.2-a): StreamPage
 // REAL + useAnalysisStream REAL, con la red interceptada en el único borde
 // real — fetchEventSource — igual que StreamPage.lifecycle.test.tsx (Bloque 0)
 // y api/sse.test.ts. El plan original proponía MSW devolviendo un

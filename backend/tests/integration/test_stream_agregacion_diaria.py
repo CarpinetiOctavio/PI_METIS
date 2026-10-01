@@ -1,5 +1,5 @@
 """
-docs/plan-resolucion-diaria.md (R2-R3) — integración de punta a punta:
+docs/historico/planes/plan-resolucion-diaria.md (R2-R3) — integración de punta a punta:
 una serie DIARIA subida vía stream_analysis() se agrega a máximos anuales
 antes de correr Etapa 1 (espejo de test_stream_agregacion_mensual.py).
 

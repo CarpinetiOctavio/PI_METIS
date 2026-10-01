@@ -129,7 +129,7 @@ export function StreamPage() {
   // análisis si cambia la referencia. StreamPage lo consume una sola vez.
   const formRef = useRef(form);
 
-  // F1 (docs/frontend/informe-diagnostico-ui-rota.md): un solo efecto, con
+  // F1 (docs/historico/planes/frontend/informe-diagnostico-ui-rota.md): un solo efecto, con
   // la limpieza en el MISMO efecto que arranca. En el doble montaje de
   // StrictMode se aborta el primer stream y la segunda pasada arranca uno
   // nuevo — eso es lo correcto. La versión anterior separaba "arrancar" de

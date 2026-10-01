@@ -125,7 +125,7 @@ describe("StreamPage", () => {
     expect(screen.getByText("config screen")).toBeInTheDocument();
   });
 
-  // F1 (docs/frontend/informe-diagnostico-ui-rota.md): esta página se
+  // F1 (docs/historico/planes/frontend/informe-diagnostico-ui-rota.md): esta página se
   // renderiza bajo StrictMode (renderPage, capa 1 del plan de arreglo)
   // porque es exactamente el modo en que la app corre en desarrollo. Bajo
   // el doble montaje de StrictMode, start() puede llamarse dos veces —

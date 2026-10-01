@@ -87,7 +87,7 @@ _VARIABLE_DIARIA_INVALIDA = HTTPException(
 
 
 def _validar_variable_diaria(variable_diaria: str) -> str:
-    """PR 2.5 (docs/plan-resolucion-diaria.md, R0.2) — declara qué contiene
+    """PR 2.5 (docs/historico/planes/plan-resolucion-diaria.md, R0.2) — declara qué contiene
     la columna de una serie diaria: 'pico' (picos o máximos diarios) o
     'media' (medias diarias). Solo tiene efecto cuando la resolución
     inferida es 'diaria'; para el resto se acepta y se ignora, mismo

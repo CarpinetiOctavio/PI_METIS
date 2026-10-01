@@ -8,7 +8,7 @@ ver abajo. La decisión original (Canvas 2D sin dependencias para
 
 ### Addendum (05/08/2026, segundo) — excepción acotada: Threads (three.js) en la puerta de entrada
 
-Verificación manual de Bloque C (`docs/plan-post-pasada4-roadmap.md` §3)
+Verificación manual de Bloque C (`docs/historico/planes/plan-post-pasada4-roadmap.md` §3)
 pidió explorar fondos más elaborados con three.js (referencias reactbits.dev
 "Threads"/"Beams"), comparando fidelidad real, no una aproximación — ver
 `frontend/src/experimental/README.md` (exploración descartable, no
@@ -59,7 +59,7 @@ en una sola ruta, con el costo medido y aislado por diseño.
 
 ### Addendum (05/08/2026, primero) — presupuesto de CPU (B7) sin medir
 
-`docs/plan-post-pasada4-roadmap.md` (§1.2, "debilidades reales del proceso")
+`docs/historico/planes/plan-post-pasada4-roadmap.md` (§1.2, "debilidades reales del proceso")
 registra que la verificación final del Bloque G quedó a mitad: **5 de 14
 puntos sin evidencia directa**, por límites de la herramienta de navegador de
 esa sesión — entre ellos, el **ítem 14 de la tabla G2**
@@ -72,11 +72,11 @@ medido" de más abajo (+1.37 KB gzip, muy por debajo de los 8 KB de
 presupuesto). **El criterio de CPU en reposo (~2% en un equipo de escritorio
 normal, medido con el Performance monitor de DevTools) no se midió** — se
 declaró pendiente en su momento, no se ocultó, pero sigue siendo deuda real
-hasta que el Bloque C de la Pasada 5 (`docs/plan-post-pasada4-roadmap.md`
+hasta que el Bloque C de la Pasada 5 (`docs/historico/planes/plan-post-pasada4-roadmap.md`
 §3) lo cierre con evidencia (vía C1a manual o C1b Playwright).
 
 ### Contexto
-`docs/frontend/plan-mejora-frontend-pasada4.md` (G3) encontró que la identidad
+`docs/historico/planes/frontend/plan-mejora-frontend-pasada4.md` (G3) encontró que la identidad
 visual "Instrumento" (`docs/frontend-design/metis-identidad-fase2.md`,
 Dirección 4) especifica una "línea de escaneo con glow" y una retícula técnica
 reactiva que nunca se implementaron — la retícula de fondo existe
@@ -140,14 +140,14 @@ externa, confirmando la premisa de esta decisión.
   `GridScanBackground.tsx` no importan `three` ni ninguna librería de
   partículas/WebGL.
 
-**Ver también:** `docs/frontend/plan-mejora-frontend-pasada4.md` §4 (Bloque B
+**Ver también:** `docs/historico/planes/frontend/plan-mejora-frontend-pasada4.md` §4 (Bloque B
 completo, guardas B4, presupuesto de rendimiento B7).
 
 ### Nota de superación (06/08/2026)
 
 El addendum de arriba ("excepción acotada: Threads (three.js) en la puerta
 de entrada") queda **superado por [DECISIÓN 051](decision051.md)**.
-`docs/frontend/plan-mejora-frontend-pasada5.md` (Bloque B) necesitó strands
+`docs/historico/planes/frontend/plan-mejora-frontend-pasada5.md` (Bloque B) necesitó strands
 también en `/config` — montar la versión Three.js en más de una pantalla
 invalidaba la premisa que sostenía esta excepción ("ninguna pantalla
 autenticada paga el costo del chunk"), así que `ThreadsBackground` se

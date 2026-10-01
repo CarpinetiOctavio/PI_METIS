@@ -398,7 +398,7 @@ def test_recorte_mensual_que_deja_n_menor_a_10_es_bloqueante():
 
 @pytest.mark.unit
 def test_carga_diaria_el_recorte_deja_n_menor_a_10_y_bloquea():
-    # R5 (docs/plan-resolucion-diaria.md) — espejo diario del test mensual de
+    # R5 (docs/historico/planes/plan-resolucion-diaria.md) — espejo diario del test mensual de
     # recorte: el conteo de la regla de n opera sobre la serie YA agregada,
     # así que un registro que pierde años por recorte de extremos puede
     # quedar bajo el piso y bloquear como cualquier serie corta. No es una

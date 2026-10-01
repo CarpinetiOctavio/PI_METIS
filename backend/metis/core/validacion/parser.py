@@ -79,7 +79,7 @@ def _resolver_columna(df: pd.DataFrame, columna: str) -> str | None:
 
 
 def _inferir_resolucion(timestamps: list) -> str | None:
-    # F2.3 (Bloque F, docs/plan-etapa2-implementacion.md §7) — antes usaba el
+    # F2.3 (Bloque F, docs/historico/planes/plan-etapa2-implementacion.md §7) — antes usaba el
     # PROMEDIO de los deltas entre timestamps consecutivos: (ts[-1]-ts[0])/(n-1).
     # Un solo hueco largo en una serie mayormente mensual (un sensor caído
     # varios meses, un año sin registro) arrastra el promedio hacia arriba y
@@ -88,7 +88,7 @@ def _inferir_resolucion(timestamps: list) -> str | None:
     # arrastrar por un outlier — refleja el espaciado que la serie realmente
     # tiene la mayor parte del tiempo.
     #
-    # R1.1 (docs/plan-resolucion-diaria.md) — `moda_dias == 1` es "diaria", y
+    # R1.1 (docs/historico/planes/plan-resolucion-diaria.md) — `moda_dias == 1` es "diaria", y
     # es `== 1` a propósito, no `<= 24`:
     #   - una moda de 7 días es un registro semanal; una de 15, quincenal.
     #     Ninguno tiene regla de agregación en METIS; devolver "diaria" para
