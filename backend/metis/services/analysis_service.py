@@ -132,6 +132,8 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
                 {
                     "ecuacion": tr.explicacion.ecuacion,
                     "terminos": tr.explicacion.terminos,
+                    # Addendum 01/10/2026 a la DECISIÓN 064 — Anderson y Chow.
+                    "desglose": tr.explicacion.desglose,
                 }
                 if tr.explicacion
                 else None

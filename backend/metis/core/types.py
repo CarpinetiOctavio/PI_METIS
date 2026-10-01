@@ -22,6 +22,11 @@ class Explicacion:
 
     ecuacion: str
     terminos: dict[str, float | int | None]
+    # Addendum 01/10/2026 a la DECISIÓN 064 — un renglón por paso de la prueba
+    # (Anderson: uno por lag k; Chow: uno por observación). Son los valores
+    # intermedios que la prueba ya calcula para decidir; antes se descartaban.
+    # None en las pruebas que todavía no lo exponen.
+    desglose: list[dict[str, float | int | bool | None]] | None = None
 
 
 @dataclass

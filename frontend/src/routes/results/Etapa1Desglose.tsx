@@ -14,14 +14,15 @@ import "./Etapa1Desglose.css";
  * Anderson, uno por observación en Chow) y, para Anderson, el correlograma.
  *
  * Solo renderiza: cada número viene de `Explicacion.desglose` (DECISIÓN 064,
- * "core expone, frontend renderiza"). El desglose todavía lo emite nadie —
- * llega con la Tanda 2 del plan (backend, con Octavio) — así que hasta
- * entonces `desglose` viene ausente y este componente no renderiza nada:
- * `null`, sin nota de reemplazo, y la pantalla queda igual que antes. Lo
- * mismo pasa con cualquier análisis persistido sin desglose (DECISIÓN 058 §4).
+ * "core expone, frontend renderiza"). El backend lo emite desde el 01/10/2026
+ * para Anderson y Chow (addendum a la DECISIÓN 064); en las demás pruebas, y en
+ * cualquier análisis persistido antes de esa fecha (sin backfill, DECISIÓN 058
+ * §4), `desglose` viene ausente o null y este componente no renderiza nada: la
+ * pantalla queda igual que antes.
  *
- * Los nombres de las claves de cada renglón son los del contrato propuesto en
- * `docs/plan-backend-feedback-directores-20-09-2026.md` §3; si el backend los
+ * Los nombres de las claves de cada renglón son los de
+ * `core/etapa1/independence.py` y `outliers.py` (contrato de
+ * `docs/plan-backend-feedback-directores-20-09-2026.md` §3); si el backend los
  * cambia, es este archivo (y el fixture de sus tests) lo único que se toca.
  */
 

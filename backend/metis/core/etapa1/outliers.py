@@ -81,6 +81,18 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
             "nu": nu,
             "t_bonferroni": float(t_val),
         },
+        # Addendum 01/10/2026 a la DECISIÓN 064 — una fila por observación, con
+        # los z que ya se calcularon para el estadístico (max(z_i)). `i` es la
+        # posición 1..n en la serie analizada.
+        desglose=[
+            {
+                "i": i + 1,
+                "x_i": float(arr[i]),
+                "ln_x_i": float(log_serie[i]),
+                "z_i": float(z_scores[i]),
+            }
+            for i in range(n)
+        ],
     )
 
     return TestResult(
