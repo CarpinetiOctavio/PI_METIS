@@ -208,6 +208,8 @@ DISABLED_WITH_ZEROS = [
 # Pendiente confirmar con Facundo: gamma_3p, exponencial_x0_beta,
 # generalizada_pareto, log_normal_3p, generalizada_exponencial
 ```
+Con valores negativos (cualquier tipo de variable), ver `disabled_negatives` más abajo
+(DECISIÓN 073).
 
 ### Niveles de warning
 
@@ -537,7 +539,15 @@ El ajuste es **automático y exhaustivo** — sin intervención del usuario.
 "no_aplicable"   # combinación sin sentido matemático para esos datos → registrar, continuar
 "high_eea"       # EEA > 5% de la media → warning DIST_HIGH_EEA
 "disabled_zeros" # distribución deshabilitada por ceros → registrar, continuar
+"disabled_negatives" # no definida para negativos (DECISIÓN 073) → registrar, continuar
 ```
+
+**`disabled_negatives` (DECISIÓN 073, 01/10/2026).** `ejecutar_etapa2(..., tiene_negativos=...)`
+marca con este estado, en todos sus métodos, a las cinco de `DISABLED_WITH_NEGATIVES`
+(`lognormal2p`, `logpearson3`, `gamma2p`, `exponencial_beta`, `gen_exponencial`). Con negativos
+y ceros a la vez gana `disabled_negatives`. Las de 3 parámetros deciden por su cuenta (chequeo
+`x0 >= min(serie)`). Depende de los datos, no de `tipo_variable`. En Etapa 1, Chow responde
+`TEST_NOT_EXECUTED_NEGATIVES` ante cualquier negativo, antes que el chequeo de ceros.
 
 **Ningún caso especial detiene el pipeline de Etapa 2.**
 
