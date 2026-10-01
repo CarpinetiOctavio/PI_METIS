@@ -142,3 +142,23 @@ def test_datos_indice_atipico_coincide_con_test_result_dict():
     # el de la prueba porque valores_numericos ES serie_efectiva dentro de
     # ejecutar_etapa1() (DECISIÓN 058 §5), sin mapeo adicional.
     assert payload["datos"]["indice_atipico"] == 20
+
+
+@pytest.mark.unit
+def test_desglose_se_serializa_en_anderson_y_chow_y_null_en_el_resto():
+    # Addendum 01/10/2026 a la DECISIÓN 064 — viaja dentro de `explicacion`.
+    serie, timestamps = _serie_anual()
+    payload = _serializar_etapa1(
+        ejecutar_etapa1(serie, "otro", "anual", timestamps=timestamps), mes_inicio_anio=7
+    )
+    pruebas = {
+        t["prueba"]: t
+        for grupo in ("independencia", "homogeneidad", "tendencia", "atipicos")
+        for t in payload[grupo]
+    }
+
+    anderson = pruebas["anderson"]["explicacion"]["desglose"]
+    assert len(anderson) == pruebas["anderson"]["explicacion"]["terminos"]["k_max"]
+    assert len(pruebas["chow"]["explicacion"]["desglose"]) == len(serie)
+    for nombre in ("helmert", "t_student", "cramer"):
+        assert pruebas[nombre]["explicacion"]["desglose"] is None

@@ -43,8 +43,8 @@ const ANDERSON_R = [0.35, 0.1, -0.62, 0.05, -0.2, 0.18];
 /** Anderson con un desglose de 6 lags (n = 16). Las bandas se calculan con la
  * Ec. III-3 solo para que el fixture sea coherente; en producción las trae
  * `core/`. El lag 3 (r = −0,62) es el único fuera de banda y el que da el
- * estadístico. Es un MOCK del contrato propuesto (Tanda 2 del plan de feedback
- * de directores): el backend todavía no emite `desglose`. */
+ * estadístico. Mismas claves que emite `core/etapa1/independence.py` (addendum
+ * del 01/10/2026 a la DECISIÓN 064). */
 export function makeAndersonConDesglose(): TestResultDetail {
   const denominador = 1000;
   const desglose = ANDERSON_R.map((r, i) => {

@@ -396,6 +396,15 @@ docente necesita ver por qué `aprobada` exige que los dos aprueben, no solo
 el reportado. `analysis_results.etapa1` persiste el mismo payload para
 CU-01 — `explicacion` llega igual al historial.
 
+**`explicacion.desglose` — addendum del 01/10/2026 a la DECISIÓN 064.**
+Un renglón por paso de la prueba, con los valores intermedios que la prueba
+ya calcula para decidir. **Anderson:** uno por lag,
+`{k, numerador, r_k, banda_inf, banda_sup, fuera}` (`lags_fuera` se cuenta
+sobre estas filas). **Chow:** uno por observación, `{i, x_i, ln_x_i, z_i}`
+(`i` de 1 a n; `max(z_i)` es el estadístico). Las demás pruebas llevan
+`desglose: null`; los análisis persistidos antes de esa fecha no lo traen
+(sin backfill). Suma ~5–6 KB al evento con n ≈ 40.
+
 ---
 
 ## Secuencia real del stream con Etapa 2 (DECISIÓN 052, cerrado 09/08/2026)

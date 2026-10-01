@@ -21,26 +21,43 @@ def calcular_anderson(serie: list[float]) -> TestResult:
     k_max = math.ceil(n / 3)  # DECISIÓN 016 — docs/decisiones/decision016.md
     r_values = []
     r_crit_upper_values = []
+    r_crit_lower_values = []
     numerador_values = []
 
     for k in range(1, k_max + 1):
         numerador = np.sum((arr[: n - k] - media) * (arr[k:] - media))
         r_k = numerador / denominador if denominador != 0 else 0.0
         r_crit_upper = (-1 + Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
+        # Ec. III-3, banda inferior — la misma expresión que antes se calculaba
+        # en línea dentro del conteo de lags_fuera; ahora se guarda para el
+        # desglose (addendum a la DECISIÓN 064), sin cambiar ningún número.
+        r_crit_lower = (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
         r_values.append(r_k)
         r_crit_upper_values.append(r_crit_upper)
+        r_crit_lower_values.append(r_crit_lower)
         numerador_values.append(float(numerador))
 
     idx_max = int(np.argmax(np.abs(r_values)))
     estadistico = float(r_values[idx_max])
     valor_critico = float(min(r_crit_upper_values))
 
-    lags_fuera = sum(
-        1
+    # Un renglón por lag. lags_fuera se cuenta sobre estas mismas filas, así el
+    # conteo y el desglose no pueden divergir.
+    desglose = [
+        {
+            "k": k,
+            "numerador": numerador_values[k - 1],
+            "r_k": float(r_values[k - 1]),
+            "banda_inf": float(r_crit_lower_values[k - 1]),
+            "banda_sup": float(r_crit_upper_values[k - 1]),
+            "fuera": bool(
+                r_values[k - 1] > r_crit_upper_values[k - 1]
+                or r_values[k - 1] < r_crit_lower_values[k - 1]
+            ),
+        }
         for k in range(1, k_max + 1)
-        if r_values[k - 1] > r_crit_upper_values[k - 1]
-        or r_values[k - 1] < (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
-    )
+    ]
+    lags_fuera = sum(1 for fila in desglose if fila["fuera"])
     tolerancia = math.ceil(k_max * 0.10)
     aprobada = lags_fuera <= tolerancia
 
@@ -69,6 +86,7 @@ def calcular_anderson(serie: list[float]) -> TestResult:
             "lags_fuera": lags_fuera,
             "tolerancia": tolerancia,
         },
+        desglose=desglose,
     )
 
     return TestResult(

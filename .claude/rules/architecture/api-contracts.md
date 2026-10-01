@@ -343,6 +343,8 @@ llegaba a `HistoryDetailPage`).
 }
 ```
 
+`etapa1` es el mismo payload de `result_etapa1` (`statistical-pipeline.md`), incluido `explicacion.desglose` de Anderson y Chow desde el addendum del 01/10/2026 a la DECISIÓN 064 (ausente en análisis anteriores, sin backfill).
+
 `serie`/`timestamps`/`configuracion` son la entrada tal como se subió y
 configuró (`analyses`, DECISIÓN 058 §1) — no el resultado del análisis, que
 ya viaja dentro de `etapa1.datos`. `timestamps` es `null` para cualquier

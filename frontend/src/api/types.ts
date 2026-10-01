@@ -112,12 +112,11 @@ export interface Explicacion {
   terminos: Record<string, number | null>;
   // Plan de feedback de directores, ítem E — un renglón por paso de la prueba
   // (Anderson: uno por lag k; Chow: uno por observación). Es el detalle que
-  // `core/` ya calcula y hoy descarta; el frontend solo lo renderiza (DECISIÓN
-  // 064). AUSENTE hasta que el backend lo emita (Tanda 2, con Octavio: el
-  // contrato está en docs/plan-backend-feedback-directores-20-09-2026.md §3) y
-  // en cualquier análisis persistido antes de eso — sin backfill, mismo
-  // criterio que DECISIÓN 058 §4. Quien lo consume degrada a la vista sin
-  // desglose si falta.
+  // `core/` ya calcula para decidir; el frontend solo lo renderiza (DECISIÓN
+  // 064). Lo emiten Anderson y Chow desde el 01/10/2026 (addendum a la 064);
+  // null en las demás pruebas y ausente en cualquier análisis persistido antes
+  // de eso — sin backfill, mismo criterio que DECISIÓN 058 §4. Quien lo consume
+  // degrada a la vista sin desglose si falta.
   desglose?: DesgloseFila[] | null;
 }
 
