@@ -141,3 +141,19 @@ class WarningItem(BaseModel):
     codigo: str
     nivel: WarningNivel
     descripcion: str
+
+
+class SimulateExclusionRequest(BaseModel):
+    """DECISIÓN 071 — what-if de atípicos. `serie`/`anios` son
+    `datos.serie_efectiva` y los años de `datos.timestamps_efectivos`: la serie
+    YA agregada, y los índices son posiciones en ella (no en la serie cruda).
+    `cramer_particion` llega como texto, igual que en POST /analysis/stream, y
+    se valida con la misma función del borde."""
+
+    serie: list[float]
+    anios: list[int]
+    tipo_variable: TipoVariable
+    cramer_particion: str = "default"
+    indices_excluidos: list[int]
+    etapas: list[int]
+    tratamiento: str = "eliminar"

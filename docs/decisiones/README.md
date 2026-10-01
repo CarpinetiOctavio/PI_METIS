@@ -197,7 +197,7 @@ situ.
 | [068](decision068.md) | Corrección de fórmula IV-153 (Gen. Pareto, Mínimos Cuadrados) — la ecuación vieja era la condición de optimalidad de otro modelo (OLS libre), no la de la tesis | 04/09/2026 | Aplicada (backend) |
 | [069](decision069.md) | GenExp/Momentos-L: desfasaje de índice M̂0/M̂1/M̂2 (IV-83/84) — usaba la media donde iba M̂1 y nunca calculaba M̂2; corregido, `α̂ = M̂2/M̂1` directo, guard `λ ≤ 0 → NO_APLICABLE` | 09/09/2026 | Aplicada (backend) |
 | [070](decision070.md) | Umbral de DIST_HIGH_EEA: se mantiene en 5 %, configurabilidad diferida a v2 | 09/09/2026 | Confirmado — sin cambios de código funcional |
-| 071 | *(reservado — exclusión de puntos y `simulate-exclusion`, PR 5 del plan de fixes post-verificación)* | — | Pendiente |
+| [071](decision071.md) | Exclusión de puntos: eliminar en cualquier posición y `POST /analysis/simulate-exclusion` sin estado (reemplazo por la media postergado) | 01/10/2026 | Decidida y aplicada (backend + frontend) |
 | 072 | *(reservado — exploración de distribuciones sin id para CU-02, bloque B del plan de backend del feedback de directores; no entra en el plan del 01/10)* | — | Pendiente |
 | [073](decision073.md) | Valores negativos: estado propio `disabled_negatives` en Etapa 2 y código propio `TEST_NOT_EXECUTED_NEGATIVES` para Chow | 01/10/2026 | Decidida y aplicada (backend) |
 | [074](decision074.md) | Generalizada de Pareto "pendiente de validación" en V1.0: se calcula y se muestra, pero no se puede elegir y va al final del ranking | 01/10/2026 | Decidida y aplicada (backend + frontend) — se cierra con el addendum de la V2 |

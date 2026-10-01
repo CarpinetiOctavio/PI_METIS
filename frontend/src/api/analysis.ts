@@ -47,15 +47,8 @@ export function postRecalcularDesignEvents(
   );
 }
 
-// Ítem A del plan de feedback de directores — what-if de atípicos. El endpoint
-// todavía no existe en el backend (Tanda 2): mientras tanto la interfaz que lo
-// usa queda apagada salvo que se habilite `VITE_SIMULATE_EXCLUSION=1` (para
-// probar contra un backend que ya lo tenga o un stub). Cuando el backend lo
-// publique se borra el flag y la interfaz queda siempre encendida.
-export function simulacionExclusionDisponible(): boolean {
-  return import.meta.env.VITE_SIMULATE_EXCLUSION === "1";
-}
-
+// Ítem A del plan de feedback de directores — what-if de atípicos
+// (DECISIÓN 071). Sin estado en el backend: recalcula y no guarda nada.
 export function postSimularExclusion(
   body: SimulateExclusionRequest,
 ): Promise<SimulateExclusionResponse> {

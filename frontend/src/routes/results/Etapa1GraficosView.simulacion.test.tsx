@@ -10,8 +10,8 @@ import { ApiError } from "../../api/client";
 import type { SimulateExclusionResponse } from "../../api/types";
 import { Etapa1GraficosView } from "./Etapa1GraficosView";
 
-// El what-if de atípicos (A2) contra un `simular` mockeado: el endpoint todavía
-// no existe en el backend, así que esto fija el contrato que la vista espera.
+// El what-if de atípicos (A2) contra un `simular` mockeado: fija el contrato que
+// la vista espera de POST /analysis/simulate-exclusion (DECISIÓN 071).
 const RECALCULAR = /Recalcular sin los puntos seleccionados/;
 
 function montar(simular?: (i: number[]) => Promise<SimulateExclusionResponse>) {

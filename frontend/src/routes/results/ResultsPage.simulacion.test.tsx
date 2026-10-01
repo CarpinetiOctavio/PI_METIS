@@ -11,8 +11,7 @@ import type { CramerParticion, TipoVariable } from "../../api/types";
 import { ResultsPage } from "./ResultsPage";
 
 // Cableado del what-if de atípicos en la página (ítem A, A2): cuándo aparece el
-// botón y qué pide al backend. El endpoint todavía no existe (Tanda 2), así que
-// la interfaz está apagada por defecto detrás de VITE_SIMULATE_EXCLUSION.
+// botón y qué pide al backend (POST /analysis/simulate-exclusion, DECISIÓN 071).
 const RECALCULAR = /Recalcular sin los puntos seleccionados/;
 
 interface Estado {
@@ -60,14 +59,7 @@ describe("ResultsPage — what-if de atípicos", () => {
     vi.unstubAllGlobals();
   });
 
-  it("con el endpoint apagado (default) no ofrece recalcular", async () => {
-    montar();
-    await screen.findByRole("heading", { name: "Resultados de Etapa 1" });
-    expect(screen.queryByRole("button", { name: RECALCULAR })).not.toBeInTheDocument();
-  });
-
   it("sin la configuración del análisis en el estado tampoco lo ofrece", async () => {
-    vi.stubEnv("VITE_SIMULATE_EXCLUSION", "1");
     montar({});
     await screen.findByRole("heading", { name: "Resultados de Etapa 1" });
     expect(screen.queryByRole("button", { name: RECALCULAR })).not.toBeInTheDocument();
@@ -90,7 +82,6 @@ describe("ResultsPage — what-if de atípicos", () => {
       [1],
     ],
   ])("pide al backend la serie efectiva y la configuración: %s", async (_caso, estado, tipo, cramer, etapas) => {
-    vi.stubEnv("VITE_SIMULATE_EXCLUSION", "1");
     const { fetchMock, user } = montar(estado);
 
     const grilla = await screen.findByRole("group", { name: /Años de la serie/ });
