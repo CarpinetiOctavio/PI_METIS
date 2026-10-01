@@ -135,3 +135,26 @@ async def test_recalcular_design_events_400_si_periodos_retorno_fuera_de_rango()
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail["error"]["codigo"] == "DIST_SELECTION_INVALID"
+
+
+@pytest.mark.unit
+async def test_recalcular_design_events_400_si_la_distribucion_esta_pendiente_de_validacion():
+    # DECISIÓN 074 — tampoco se puede explorar desde el historial; no llega a
+    # tocar la base.
+    user = _user()
+
+    with patch(
+        "metis.api.v1.analysis.recalcular_eventos_diseno",
+        new_callable=AsyncMock,
+    ) as mock_recalcular:
+        with pytest.raises(HTTPException) as exc_info:
+            await recalcular_design_events(
+                analysis_id=uuid.uuid4(),
+                body=_body(distribucion="gen_pareto", metodo="momentos"),
+                db=object(),
+                current_user=user,
+            )
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail["error"]["codigo"] == "DIST_PENDING_VALIDATION"
+    mock_recalcular.assert_not_awaited()

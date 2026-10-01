@@ -259,6 +259,7 @@ def _serializar_etapa2(result: Etapa2Result, seleccion: dict | None = None) -> d
             "metodos": [metodo_dict(m) for m in d.metodos],
             "mejor_eea": d.mejor_eea,
             "mejor_metodo": d.mejor_metodo,
+            "pendiente_validacion": d.pendiente_validacion,
         }
 
     def warning_dict(w) -> dict:

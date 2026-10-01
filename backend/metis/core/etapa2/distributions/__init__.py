@@ -49,3 +49,21 @@ TOLERA_CEROS_CON_ADVERTENCIA: frozenset[str] = frozenset(
         "gen_exponencial",
     }
 )
+
+# Distribuciones que se calculan y se muestran, pero que NO se pueden elegir,
+# nunca llevan "menor EEA" y van al final del ranking (DECISIÓN 074,
+# docs/decisiones/decision074.md). Sus fórmulas de referencia tienen una
+# inconsistencia conocida en la fuente que todavía no se corrigió.
+#
+# gen_pareto: la sección IV.3.10 de la tesis mezcla dos convenciones de signo
+# del parámetro de forma (los estimadores en la de Hosking, la función de
+# distribución IV-146 y el cuantil IV-174 en la de Coles), IV-167 tiene el signo
+# del numerador cambiado, y Mínimos Cuadrados (IV-153/IV-155) no recupera el
+# parámetro. El código reproduce la tesis fielmente; la corrección queda para la
+# V2. Diagnóstico completo:
+# docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md.
+#
+# Cuando una distribución se corrige, sale de acá; el mecanismo queda para
+# futuros casos. CU-03 (selección automática por menor EEA) tiene que saltear
+# las que estén en este conjunto.
+PENDIENTES_VALIDACION: frozenset[str] = frozenset({"gen_pareto"})

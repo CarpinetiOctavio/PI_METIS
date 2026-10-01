@@ -92,6 +92,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "La serie tiene ceros y este ajuste se calculó igual — el comportamiento ante ceros está pendiente de confirmación con Facundo.",
   DIST_METHOD_NOT_FITTED:
     "Esa combinación de distribución y método no tiene parámetros ajustados en este análisis.",
+  DIST_PENDING_VALIDATION:
+    "Esa distribución no se puede elegir en esta versión: sus fórmulas de referencia tienen una inconsistencia que está en revisión con el autor de la tesis.",
 
   // Stream
   PARSE_ERROR:

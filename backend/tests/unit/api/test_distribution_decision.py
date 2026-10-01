@@ -148,3 +148,21 @@ async def test_validacion_corre_antes_que_el_chequeo_de_sesion():
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail["error"]["codigo"] == "DIST_SELECTION_INVALID"
+
+
+@pytest.mark.unit
+async def test_distribucion_pendiente_de_validacion_da_400_dist_pending_validation():
+    # DECISIÓN 074 — gen_pareto se muestra pero no se puede elegir.
+    session_id = uuid.uuid4()
+    session_store.create_session(str(session_id))
+
+    with pytest.raises(HTTPException) as exc_info:
+        await distribution_decision(
+            body=_body(session_id=session_id, distribucion="gen_pareto", metodo="momentos"),
+            current_user=None,
+        )
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail["error"]["codigo"] == "DIST_PENDING_VALIDATION"
+    # la sesión sigue esperando: no se registró ninguna decisión
+    assert session_store.get_decision(str(session_id)) is None

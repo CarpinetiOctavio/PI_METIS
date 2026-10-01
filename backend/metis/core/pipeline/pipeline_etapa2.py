@@ -13,6 +13,7 @@ import numpy as np
 
 from metis.core.etapa2.distributions import (
     DISABLED_WITH_ZEROS,
+    PENDIENTES_VALIDACION,
     TOLERA_CEROS_CON_ADVERTENCIA,
 )
 from metis.core.etapa2.distributions import (
@@ -175,12 +176,17 @@ def ejecutar_etapa2(serie: np.ndarray, tiene_ceros: bool = False) -> Etapa2Resul
                 metodos=metodos_resultado,
                 mejor_eea=mejor_eea,
                 mejor_metodo=mejor_metodo,
+                pendiente_validacion=nombre in PENDIENTES_VALIDACION,
             )
         )
 
-    # Ordenar: distribuciones con EEA primero (asc), luego las sin EEA al final
+    # Ordenar: distribuciones con EEA primero (asc), luego las sin EEA, y al
+    # final de todo las pendientes de validación (DECISIÓN 074) — aunque su EEA
+    # sea el menor, no pueden encabezar el ranking ni llevar "menor EEA". El
+    # orden relativo de las demás no cambia.
     ranking.sort(
         key=lambda d: (
+            d.pendiente_validacion,
             d.mejor_eea is None,
             d.mejor_eea if d.mejor_eea is not None else float("inf"),
             d.n_parametros,

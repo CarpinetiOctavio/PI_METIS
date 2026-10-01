@@ -48,6 +48,7 @@ def _etapa2_result_de_ejemplo() -> Etapa2Result:
                 ],
                 mejor_eea=None,
                 mejor_metodo=None,
+                pendiente_validacion=True,
             ),
         ],
         warnings=[
@@ -93,6 +94,15 @@ def test_serializar_etapa2_expone_mejor_eea_y_mejor_metodo():
     gen_pareto_dict = resultado["ranking"][1]
     assert gen_pareto_dict["mejor_eea"] is None
     assert gen_pareto_dict["mejor_metodo"] is None
+
+
+@pytest.mark.unit
+def test_serializar_etapa2_expone_pendiente_validacion():
+    # DECISIÓN 074 — queda persistido en analysis_results.etapa2: el historial
+    # sabe qué distribución no se podía elegir sin recalcular nada.
+    ranking = _serializar_etapa2(_etapa2_result_de_ejemplo())["ranking"]
+
+    assert [d["pendiente_validacion"] for d in ranking] == [False, True]
 
 
 @pytest.mark.unit
