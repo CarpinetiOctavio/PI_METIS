@@ -547,23 +547,27 @@ export function ConfigPage() {
                 Otro
               </button>
             </div>
-            {/* Bloque F (plan post-avance, Opción 1) — el efecto real de este
-                control es chico y no se ve en ningún otro lado de la UI:
-                un warning de signo y qué código reporta Chow ante ceros.
-                Sin esta nota, el usuario no tiene forma de saber qué cambia
-                al tocar el toggle. */}
-            <p className="fn">
-              Con <b>Caudal/Precip.</b>, METIS avisa si hay valores negativos
-              (no existen físicamente) y trata los ceros de forma distinta en
-              la prueba de Chow, que trabaja sobre logaritmos. Con{" "}
-              <b>Otro</b>, un valor negativo es un dato válido (ej. una
-              temperatura bajo cero), pero no todo el análisis puede
-              usarlo: en Etapa 2 las distribuciones Log-Normal de 2
-              parámetros, Log-Pearson III, Gamma de 2 parámetros, Exponencial
-              (β) y Generalizada Exponencial no se pueden ajustar con
-              negativos y quedan fuera del ranking, y la prueba de Chow (que
-              trabaja sobre logaritmos) no se ejecuta.
-            </p>
+            {/* F2 (plan de fixes post-verificación, 01/10/2026) — una nota por
+                opción, solo la de la elegida, como la de "mes de inicio del
+                año". La nota anterior explicaba las dos a la vez y se leía como
+                "elegir Otro saca cinco distribuciones": lo que las saca son los
+                negativos de la serie, no el botón. Sin negativos ni ceros, las
+                dos opciones dan exactamente el mismo análisis. */}
+            {tipoVariable === "caudal_precipitacion" ? (
+              <p className="fn">
+                METIS avisa si la serie tiene valores negativos, que en un caudal
+                o una precipitación no existen.
+              </p>
+            ) : (
+              <p className="fn">
+                Un valor negativo se toma como dato válido (por ejemplo, una
+                temperatura bajo cero). <b>Si la serie tiene alguno</b>, Chow no
+                se ejecuta y cinco distribuciones de Etapa 2 no se pueden
+                ajustar: aparecen al final del ranking, marcadas como no
+                aplicables. Si la serie no tiene negativos, el análisis es el
+                mismo que con Caudal/Precip.
+              </p>
+            )}
           </fieldset>
           <fieldset className="field">
             <legend>Alcance del análisis</legend>
