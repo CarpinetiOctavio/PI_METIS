@@ -24,7 +24,8 @@ function montar(simular?: (i: number[]) => Promise<SimulateExclusionResponse>) {
   );
   return {
     user: userEvent.setup(),
-    casillas: () => screen.getAllByRole("checkbox"),
+    casillas: () =>
+      within(screen.getByRole("group", { name: /Años de la serie/ })).getAllByRole("button"),
   };
 }
 

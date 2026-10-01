@@ -571,32 +571,30 @@ describe("ConfigPage", () => {
     expect(screen.queryByRole("button", { name: "Ver columnas" })).not.toBeInTheDocument();
   });
 
-  // Bloque F (plan post-avance, Opción 1) — nota explicando qué hace
-  // realmente "Tipo de variable".
+  // F2 (plan de fixes post-verificación, 01/10/2026) — una nota por opción, solo
+  // la de la elegida. La de "Otro" tiene que dejar claro que lo que saca
+  // distribuciones y Chow son los negativos de la serie, no el botón.
+  const NOTA_CAUDAL = /METIS avisa si la serie tiene valores negativos/;
+  const NOTA_OTRO = /Un valor negativo se toma como dato válido/;
 
-  it("F — explica qué cambia el toggle de tipo de variable", async () => {
+  it("F2 — con Caudal/Precip. (default) se ve solo su nota; al elegir Otro se ve solo la de Otro", async () => {
     stubFetch();
     renderConfigPage();
     await waitForReady();
 
-    expect(
-      screen.getByText(/METIS avisa si hay valores negativos/),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/trata los ceros de forma distinta en la prueba de Chow/)).toBeInTheDocument();
-  });
+    expect(screen.getByText(NOTA_CAUDAL)).toBeInTheDocument();
+    expect(screen.queryByText(NOTA_OTRO)).not.toBeInTheDocument();
 
-  // Ítem C del plan de feedback de directores: la nota no puede prometer que un
-  // negativo "es un dato válido" sin decir qué queda fuera de Etapa 2 y de Chow.
-  it("C — avisa que con 'Otro' y valores negativos varias distribuciones y Chow quedan fuera", async () => {
-    stubFetch();
-    renderConfigPage();
-    await waitForReady();
+    fireEvent.click(screen.getByRole("button", { name: "Otro" }));
 
-    const nota = screen.getByText(/un valor negativo es un dato válido/).closest("p")!;
-    expect(nota).toHaveTextContent(/Log-Normal de 2 parámetros/);
-    expect(nota).toHaveTextContent(/Log-Pearson III/);
-    expect(nota).toHaveTextContent(/quedan fuera del ranking/);
-    expect(nota).toHaveTextContent(/Chow.*no se ejecuta/);
+    expect(screen.queryByText(NOTA_CAUDAL)).not.toBeInTheDocument();
+    const nota = screen.getByText(NOTA_OTRO).closest("p")!;
+    expect(nota).toHaveTextContent(/Si la serie tiene alguno, Chow no se ejecuta/);
+    expect(nota).toHaveTextContent(/al final del ranking/);
+    expect(nota).toHaveTextContent(/Si la serie no tiene negativos, el análisis es el mismo/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Caudal/Precip." }));
+    expect(screen.queryByText(NOTA_OTRO)).not.toBeInTheDocument();
   });
 
   // Bloque H1 (plan post-avance, DECISIÓN 036) — partición de Cramer personalizada.

@@ -59,3 +59,10 @@ commit_msg.txt
 
 # Bibliografia de referencia (PDFs pesados, no van al repo)
 Bibliografia/
+
+# Series de prueba grandes: se regeneran con docs/series prueba/generar_series_grandes.py
+docs/series prueba/bajo_limite.csv
+docs/series prueba/sobre_limite.csv
+docs/series prueba/serie_horaria_40anios.xlsx
+# Archivo de la UCC: no se publica hasta confirmar que se puede
+docs/series prueba/UCC-DAT-ESR-AH-001-26-00.xlsx

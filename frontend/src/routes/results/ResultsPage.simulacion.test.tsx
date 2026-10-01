@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
@@ -93,7 +93,8 @@ describe("ResultsPage — what-if de atípicos", () => {
     vi.stubEnv("VITE_SIMULATE_EXCLUSION", "1");
     const { fetchMock, user } = montar(estado);
 
-    const casillas = await screen.findAllByRole("checkbox");
+    const grilla = await screen.findByRole("group", { name: /Años de la serie/ });
+    const casillas = within(grilla).getAllByRole("button");
     await user.click(casillas[3]);
     await user.click(screen.getByRole("button", { name: RECALCULAR }));
 

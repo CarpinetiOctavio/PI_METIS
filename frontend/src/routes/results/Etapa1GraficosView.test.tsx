@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderPage } from "../../test/renderPage";
 import { mockChartRect } from "../../test/chartRect";
@@ -23,7 +23,10 @@ function montar(overrides: Partial<Etapa1Datos> = {}, nombreArchivo?: string) {
   const { container } = renderPage(
     <Etapa1GraficosView datos={makeEtapa1Datos(overrides)} nombreArchivo={nombreArchivo} />,
   );
-  const casillas = () => screen.getAllByRole("checkbox");
+  // Las celdas de la grilla por década: un botón aria-pressed por año, en orden
+  // cronológico (las celdas vacías no son botones).
+  const casillas = () =>
+    within(screen.getByRole("group", { name: /Años de la serie/ })).getAllByRole("button");
   const huecos = () => container.querySelectorAll("circle[data-marked]").length;
   return { container, casillas, huecos, user: userEvent.setup() };
 }
@@ -42,11 +45,13 @@ describe("Etapa1GraficosView — exclusión de puntos", () => {
     const { casillas, huecos } = montar();
 
     expect(casillas()).toHaveLength(12);
-    expect(casillas().every((c) => !(c as HTMLInputElement).checked)).toBe(true);
+    expect(casillas().every((c) => c.getAttribute("aria-pressed") === "false")).toBe(true);
     // el atípico de Chow (índice 5, año 2005) está señalado pero no seleccionado
-    expect(screen.getAllByText("sugerido por Chow")).toHaveLength(1);
-    expect(screen.getByText("sugerido por Chow").closest("label")).toHaveTextContent("2005");
-    expect(screen.getByText("Ningún punto excluido.")).toBeInTheDocument();
+    const sugeridas = casillas().filter((c) => /sugerido por Chow/.test(c.getAttribute("aria-label") ?? ""));
+    expect(sugeridas).toHaveLength(1);
+    expect(sugeridas[0]).toHaveAccessibleName("2005, 115, incluido, sugerido por Chow");
+    expect(screen.getByText(/sugerido por Chow \(no viene seleccionado\)/)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Ningún punto excluido");
     expect(huecos()).toBe(0);
     expect(screen.getByRole("button", { name: /Descargar serie sin los puntos/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Limpiar selección" })).toBeDisabled();
@@ -58,13 +63,15 @@ describe("Etapa1GraficosView — exclusión de puntos", () => {
     await user.click(casillas()[3]);
 
     // el conteo vive en una región `status` (<output>): el lector de pantalla lo anuncia
-    expect(screen.getByRole("status")).toHaveTextContent("1 de 12 puntos excluidos.");
+    expect(screen.getByRole("status")).toHaveTextContent("1 de 12 excluidos · quedan 11");
+    expect(casillas()[3]).toHaveAttribute("aria-pressed", "true");
+    expect(casillas()[3]).toHaveAccessibleName(/, excluido$/);
     expect(huecos()).toBe(2); // serie temporal + gráfico de Chow
     expect(screen.getByRole("button", { name: /Descargar serie sin los puntos/ })).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Limpiar selección" }));
 
-    expect(screen.getByText("Ningún punto excluido.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Ningún punto excluido");
     expect(huecos()).toBe(0);
   });
 
@@ -82,11 +89,11 @@ describe("Etapa1GraficosView — exclusión de puntos", () => {
     };
 
     clic();
-    expect((casillas()[3] as HTMLInputElement).checked).toBe(true);
-    expect(screen.getByText("1 de 12 puntos excluidos.")).toBeInTheDocument();
+    expect(casillas()[3]).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("1 de 12 excluidos");
 
     clic();
-    expect((casillas()[3] as HTMLInputElement).checked).toBe(false);
+    expect(casillas()[3]).toHaveAttribute("aria-pressed", "false");
   });
 
   it("descargar entrega el CSV sin los excluidos, nombrado con el archivo original", async () => {
@@ -124,6 +131,38 @@ describe("Etapa1GraficosView — exclusión de puntos", () => {
 
     for (const texto of presentes) expect(screen.getByText(texto)).toBeInTheDocument();
     for (const texto of ausentes) expect(screen.queryByText(texto)).not.toBeInTheDocument();
+  });
+
+  it("la grilla va por década: diez columnas por fila, celdas vacías para los años que la serie no tiene", () => {
+    const { container } = montar(); // 2000-2011
+
+    const filas = screen.getAllByRole("group", { name: /^Década de/ });
+    expect(filas.map((f) => f.getAttribute("aria-label"))).toEqual(["Década de 2000", "Década de 2010"]);
+    expect(within(filas[0]).getAllByRole("button")).toHaveLength(10);
+    expect(within(filas[1]).getAllByRole("button")).toHaveLength(2);
+    // 2012-2019 quedan como celdas vacías: así 2011 cae en la misma columna que 2001
+    expect(container.querySelectorAll(".etapa1-exclusion__celda--vacia")).toHaveLength(8);
+  });
+
+  // La barra de fondo va de 0 % en el mínimo de la serie a 100 % en el máximo.
+  it.each([
+    ["el mínimo (2000, 100)", 0, "0%"],
+    ["el máximo (2011, 133)", 11, "100%"],
+    ["uno intermedio (2005, 115)", 5, "45%"],
+  ])("altura de la barra para %s", (_caso, indice, alto) => {
+    const { casillas } = montar();
+    expect((casillas()[indice] as HTMLElement).style.getPropertyValue("--alto")).toBe(alto);
+  });
+
+  it.each([
+    ["mensual" as const, /Tu archivo original era mensual/],
+    ["diaria" as const, /Tu archivo original era diaria/],
+  ])("con carga %s, el aviso de archivo agregado no aparece hasta que hay algo seleccionado", async (resolucion, aviso) => {
+    const { casillas, user } = montar({ resolucion_original: resolucion });
+
+    expect(screen.queryByText(aviso)).not.toBeInTheDocument();
+    await user.click(casillas()[0]);
+    expect(screen.getByText(aviso)).toBeInTheDocument();
   });
 
   it("en la vista calendario no se puede seleccionar sobre el gráfico (otra agregación, otros índices)", async () => {

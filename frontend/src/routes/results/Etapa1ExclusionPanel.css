@@ -1,44 +1,209 @@
-/* Lista de años con checkbox: la versión operable con teclado y lector de
-   pantalla de la selección que se hace con clic en los gráficos. Con series de
-   decenas de años, scroll propio en vez de alargar la página. */
-.etapa1-exclusion__lista {
-  margin: 12px 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  max-height: 220px;
-  overflow-y: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 4px 12px;
+/* F1 (plan de fixes post-verificación, 01/10/2026) — grilla por década en vez
+   de lista con scroll: una fila por década, diez columnas alineadas por el
+   último dígito del año, y una barra de fondo proporcional al valor para ver
+   el atípico sin leer números. Entra entera: sin scroll propio. */
+
+.etapa1-exclusion__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.etapa1-exclusion__lista legend {
-  padding: 0 6px;
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+.etapa1-exclusion__cabecera .ct {
+  margin: 0;
+}
+
+/* El estado como chip. Sigue siendo un <output>: el lector de pantalla
+   anuncia el conteo al cambiar. */
+.etapa1-exclusion__estado {
+  display: inline-block; /* <output> es inline por defecto */
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--mut);
-  font-weight: 700;
+  background: color-mix(in srgb, var(--mut) 12%, transparent);
 }
 
-.etapa1-exclusion__item {
+.etapa1-exclusion__estado.activo {
+  color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+}
+
+.etapa1-exclusion__grilla {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+
+.etapa1-exclusion__fila {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.etapa1-exclusion__decada {
+  align-self: center;
+  font-size: 11px;
+  color: var(--mut);
+}
+
+.etapa1-exclusion__celdas {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.etapa1-exclusion__celda {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-height: 44px; /* área táctil */
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surf);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    background-color var(--t-fast) var(--ease-out);
+}
+
+.etapa1-exclusion__celda:hover {
+  border-color: var(--line-strong);
+}
+
+.etapa1-exclusion__celda:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
+}
+
+.etapa1-exclusion__celda--vacia {
+  border-style: dashed;
+  background: transparent;
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* La barra vive detrás del texto, pegada al borde inferior. Un mínimo de 2px
+   para que el valor más bajo de la serie no desaparezca. */
+.etapa1-exclusion__barra {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: max(2px, calc(var(--alto, 0%) * 0.7));
+  background: color-mix(in srgb, var(--acc) 22%, transparent);
+  pointer-events: none;
+}
+
+.etapa1-exclusion__anio {
+  position: relative;
+  font-size: 10px;
+  color: var(--mut);
+}
+
+.etapa1-exclusion__valor {
+  position: relative;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Excluido: contorno hueco y valor tachado, el mismo lenguaje que el punto
+   hueco de los gráficos de arriba. */
+.etapa1-exclusion__celda--excluida {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--mut);
+}
+
+.etapa1-exclusion__celda--excluida .etapa1-exclusion__barra {
+  background: transparent;
+  border-top: 1px dashed var(--mut);
+}
+
+.etapa1-exclusion__celda--excluida .etapa1-exclusion__valor {
+  text-decoration: line-through;
+  color: var(--mut);
+}
+
+/* Sugerido por Chow: borde --warn y una marca chica en la esquina. */
+.etapa1-exclusion__celda--sugerida {
+  border-color: var(--warn);
+}
+
+.etapa1-exclusion__celda--sugerida::after,
+.etapa1-exclusion__marca {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+.etapa1-exclusion__celda--sugerida::after {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.etapa1-exclusion__leyenda {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 0;
-  cursor: pointer;
+  gap: 6px;
+  margin: 0;
 }
 
-.etapa1-exclusion__estado {
-  display: block; /* <output> es inline por defecto */
-  margin: 0 0 8px;
-  font-size: 12.5px;
+.etapa1-exclusion__marca {
+  display: inline-block;
+  flex: none;
+}
+
+.etapa1-exclusion__avisos {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--warn);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
+}
+
+.etapa1-exclusion__avisos .fn {
+  margin: 0;
+}
+
+.etapa1-exclusion__avisos .fn + .fn {
+  margin-top: 6px;
 }
 
 .etapa1-exclusion__acciones {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   margin-top: 12px;
+}
+
+/* "Limpiar" es la acción terciaria: sin borde ni fondo hasta el hover. */
+.etapa1-exclusion__limpiar {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Angosto: cinco columnas por fila, cada década ocupa dos. Sin scroll
+   horizontal. */
+@media (max-width: 560px) {
+  .etapa1-exclusion__fila {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .etapa1-exclusion__celdas {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
