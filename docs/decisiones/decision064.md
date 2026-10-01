@@ -299,3 +299,39 @@ igual que la versión de texto plano.
 - Pendiente al momento de escribir este addendum: verificación en el
   navegador con las 8 pruebas en tema claro y oscuro (Definition of done
   del plan de fixes — se corre después del último commit).
+
+## Addendum — 01/10/2026: `Explicacion.desglose` para Anderson y Chow
+
+**El principio no cambia** ("`core/` expone, el frontend renderiza, nunca recalcula"); se amplía **qué** expone.
+Pedido de Kevin (los k lags de Anderson) y de Facundo (gráficos por prueba), ítem E del feedback de directores.
+Hecho por Kevin y Claude (PR 4 del plan de fixes post-verificación; Octavio sin tiempo para la Tanda 2).
+
+**Causa:** `calcular_anderson()` ya calculaba `r_k`, el numerador y las bandas de **cada** lag para decidir, y
+después los descartaba: `terminos` solo guardaba el lag del estadístico. El frontend no podía dibujar el
+correlograma sin recalcular estadística, que esta misma decisión prohíbe.
+
+**Qué se agrega:**
+
+- `core/types.py::Explicacion.desglose: list[dict[str, float | int | bool | None]] | None = None`.
+- **Anderson** (`independence.py`): una fila por lag, `{k, numerador, r_k, banda_inf, banda_sup, fuera}`. La banda
+  inferior (Ec. III-3) antes se recalculaba en línea dentro del conteo de `lags_fuera`; ahora se guarda en una
+  lista con **la misma expresión**, y `lags_fuera` se cuenta sobre las filas. Así el conteo y el desglose no
+  pueden divergir.
+- **Chow** (`outliers.py`): una fila por observación, `{i, x_i, ln_x_i, z_i}` (`i` de 1 a n). Son los `z` que ya
+  se calculaban para el estadístico (`max(z_i)`).
+- Las demás pruebas llevan `desglose: null`. Wald-Wolfowitz, Helmert, Cramer y Mann-Kendall quedan para después
+  (prioridad media y baja en el plan de backend §3), igual que `n1_pct`/`n2_pct` de Cramer y el denominador de la t
+  de Student (siguen abiertos en el checklist).
+- Se serializa dentro de `explicacion` en `test_result_dict()`. Los análisis persistidos antes de esta fecha no
+  lo traen (sin backfill, DECISIÓN 058 §4) y el frontend (`Etapa1Desglose`, PR #95) ya degradaba solo.
+
+**Verificación:**
+
+- Contra la línea base de las 9 estaciones: **solo aparece el campo `desglose`**; ningún estadístico, valor
+  crítico, veredicto ni conteo cambia.
+- Tests: la fila del lag reportado tiene el `r_k` del estadístico y el `numerador` de `terminos`;
+  `sum(fuera) == lags_fuera`; las bandas son las de la Ec. III-3 y la superior más restrictiva es el valor crítico
+  reportado; en Chow, `max(z_i) == estadístico`. Las claves coinciden con las que lee el frontend.
+- **Payload** (precedente: DECISIÓN 058): el evento de Etapa 1 pasa de 6,6 KB a 12,0 KB con est_01 (n = 40) y de
+  6,4 KB a 12,4 KB con est_08 (n = 43): unos 5–6 KB más, muy por debajo del peor caso de ~59 KB que dimensionó la
+  DECISIÓN 058.

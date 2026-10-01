@@ -77,6 +77,9 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
 - [ ] **C — `disabled_negatives`** (chico, independiente). Decisión 073.
 - [ ] **B — endpoint de exploración sin id** (CU-02). Decisión 072.
 - [ ] **E — `Explicacion.desglose`** + `n1_pct`/`n2_pct` en Cramer + denominador en t de Student. Addendum a la 064.
+      *Parcial 01/10/2026 (Kevin y Claude, PR 4 del plan de fixes post-verificación): `desglose` de Anderson y Chow hecho,
+      con addendum a la 064. Siguen abiertos `n1_pct`/`n2_pct` de Cramer, el denominador de la t de Student y el desglose de
+      Wald, Helmert, Cramer y Mann-Kendall.*
 - [ ] **A — `aplicar_exclusiones()` + `simulate-exclusion`** (el más grande). Decisión 071.
 - [ ] Cada código de error nuevo (`CONTRACT_EXCLUSION_INVALID`, `CONTRACT_SERIES_INVALID`, y `TEST_NOT_EXECUTED_NEGATIVES`
       si se hace) va a `api-contracts.md` **y** a `frontend/src/i18n/errors.es.ts` **en el mismo commit**
@@ -91,6 +94,8 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
       (Anderson: `k, numerador, r_k, banda_inf, banda_sup, fuera`; Chow: `i, x_i, ln_x_i, z_i`) — si no, se ajusta
       `Etapa1Desglose.tsx` y su fixture. Quitar la aritmética cosmética de `explicaciones.ts` (rótulos de Cramer
       "por n_w" y denominador de t de Student) y mostrar el porcentaje real. Sumar Wald-Wolfowitz/Helmert si se incluyen.
+      *Claves confirmadas 01/10/2026: coinciden exactamente (test de backend sobre el conjunto de claves). Lo de Cramer y la t
+      de Student sigue abierto, porque el backend todavía no manda esos campos.*
 - [ ] **A:** borrar el flag `VITE_SIMULATE_EXCLUSION` (`api/analysis.ts::simulacionExclusionDisponible`), armar el CSV
       con `serie`/`anios` de la respuesta en vez de en el cliente, y evaluar el botón en el historial.
 
