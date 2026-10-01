@@ -535,6 +535,10 @@ MC (Mínimos Cuadrados): sistema IV-153 a IV-166
     µ̂ = x1 - (ε/µ)·(1-z1)
     Nota: IV-155 es implícita — µ aparece en ambos lados.
           En implementación resolver como ecuación en µ.
+    NOTA 01/10/2026 (DECISIÓN 074): IV-155 no es dimensionalmente consistente (resta 1/unidades a un
+          valor con unidades); lo coherente con x = µ + (σ/ε)(1 - z) en i=1 sería µ = x1 - (σ/ε)·(1 - z1).
+          Y IV-153, bien transcrita, no recupera el parámetro (una sola raíz cerca de ε = 1). Sin cambiar
+          hasta que Facundo confirme. Ver docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md §5.
 
   Valor inicial de µ según asimetría (IV-166):
     g > 0 → µ = 0.3
@@ -555,6 +559,9 @@ MPP (Momentos de Probabilidad Pesada): IV-167 a IV-173
   I2 = M̂(0) - 2·M̂(1)                             (IV-171)
 
   ε̂ = (n·I1 + 2·I2·(n-1)) / (I2·(n-1) - I1)     (IV-167)
+  NOTA 01/10/2026 (DECISIÓN 074): despejado de IV-168 a IV-171 el numerador lleva "-":
+        ε̂ = (n·I1 - 2·I2·(n-1)) / (I2·(n-1) - I1). Con "+" da ε ≈ 4 en cualquier serie. El código
+        sigue la tesis hasta que Facundo confirme. Derivación: hallazgo-gen-pareto-convenciones.md §4.
   σ̂ = (1+ε̂)·(2+ε̂)·I2                            (IV-168)
   µ̂ = x1 - σ̂/(n+ε̂)                               (IV-169)
 
@@ -562,6 +569,13 @@ MPP (Momentos de Probabilidad Pesada): IV-167 a IV-173
 
 Cuantil: IV-174
   xT = ((1/(1-F(x)))^ε - 1)·(σ/ε) + µ   (IV-174)
+  NOTA 01/10/2026 (DECISIÓN 074): IV-145 (densidad), IV-146 (distribución,
+        F = 1 - (1 + ε(x-µ)/σ)^(-1/ε)) e IV-174 están en la convención de Coles (ε > 0: cola pesada);
+        los cuatro métodos de estimación, en la de Hosking (ε > 0: techo). El cuantil coherente con los
+        estimadores es xT = µ + (σ/ε)·[1 - (1-F)^ε]. El código sigue IV-174 tal cual; Pareto queda
+        "pendiente de validación" en V1.0 (no se puede elegir). Ver hallazgo-gen-pareto-convenciones.md §2-§3.
+        Las referencias de las dos convenciones (Hosking y Wallis 1987; Coles 2001) NO se citan acá todavía:
+        no están en Bibliografia/ ni verificadas (pendiente en docs/pendientes-tecnicos.md).
 
   Guard: |ε| < _DENOM_GUARD → límite ε→0:
     xT = µ - σ·ln(1-F(x))

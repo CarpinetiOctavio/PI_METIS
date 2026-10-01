@@ -426,6 +426,11 @@ Momentos (IV-147 a IV-149), MV (IV-150 a IV-152, incluida la
 verificación de la nota no-obvia del signo +n/σ en IV-152), MPP
 (IV-167 a IV-173) y cuantil (IV-174): verificados, sin hallazgos.
 
+> **Nota 01/10/2026:** "verificados, sin hallazgos" es correcto en el sentido en que se hizo esta
+> fase: el código coincide con la tesis. El problema está en la tesis misma: mezcla dos convenciones de
+> signo (estimadores de Hosking, IV-145/IV-146/IV-174 de Coles) e IV-167 tiene el signo del numerador
+> cambiado. Ver `docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md` y DECISIÓN 074.
+
 **Excepción — método MC (Mínimos Cuadrados, IV-153 a IV-166) no se
 pudo verificar con la misma confianza que el resto del capítulo.** La
 tipografía de la fuente para IV-153 (fracción con siete cantidades

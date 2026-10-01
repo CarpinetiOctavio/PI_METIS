@@ -388,6 +388,11 @@ Momentos de Gen. Pareto tiene una ambigüedad de raíz múltiple genuina, sin
 ningún guard de plausibilidad en el código (mismo tipo de vacío ya señalado
 para MPP en Fase 2, ahora extendido a Momentos).**
 
+> **Nota 01/10/2026:** el EEA de 279,5 de Momentos tiene causa: el cuantil IV-174 está en otra
+> convención de signo que los estimadores. Con el cuantil coherente, Momentos da EEA = 17,56 en esta
+> estación, mejor que el de las otras 12 distribuciones (25,26). MPP degenerado: IV-167 con el signo
+> cambiado. Ver `docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md` y DECISIÓN 074.
+
 **F. Exponencial x0β MV — diverge sin encajar en ningún patrón conocido
 del proyecto.** Fórmula (IV-72/73) reconstruida a mano de forma
 independiente en esta sesión: reproduce **exacto** el resultado de METIS

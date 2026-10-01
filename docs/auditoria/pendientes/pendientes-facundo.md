@@ -999,3 +999,30 @@ año calendario, un test de regresión que agregue por julio no las
 reproduce.
 Pregunta: ¿con qué `mes_inicio_anio` se construyeron los máximos anuales de
 las 9 estaciones de la tesis — calendario (enero) u otro?
+
+---
+
+## Generalizada de Pareto — convenciones de signo (01/10/2026)
+
+Detalle completo, derivaciones y evidencia: `docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md`.
+En V1.0 Pareto se muestra pero no se puede elegir (DECISIÓN 074) hasta tener estas respuestas.
+
+### ¿Qué convención de signo usó para el cuantil, y la de IV-146 es la que corresponde a sus estimadores?
+Los estimadores (Momentos IV-147 a IV-149, MV IV-150, Mínimos Cuadrados con `z = (1-F)^ε`, MPP IV-168/IV-169)
+están en la convención de Hosking (con ε > 0 la distribución tiene techo). La densidad IV-145, la distribución
+IV-146 y el cuantil IV-174 están en la de Coles (con ε > 0 la cola es pesada). Evaluar el cuantil de Coles con un
+ε estimado en la convención de Hosking hace explotar los cuantiles altos (en est_09, T=500 da 992.588.509,7).
+Pregunta: ¿el cuantil que usó en su planilla es `x = µ + (σ/ε)·[1 - (1-F)^ε]` (coherente con los estimadores) o
+IV-174 tal como está impresa?
+
+### ¿IV-167 lleva "-" en el numerador?
+Despejando ε de las propias IV-168 a IV-171 sale `ε = (n·I1 - 2·I2·(n-1)) / (I2·(n-1) - I1)`; la tesis imprime
+"+" en el segundo término. Con "+" el estimador da ε ≈ 4 en cualquier serie (simulación de 400 muestras).
+Pregunta: ¿es un error de tipeo de la tesis?
+
+### ¿Cuál es la expresión correcta de IV-153 y de IV-155?
+IV-153, transcrita y confirmada en la DECISIÓN 068, tiene una sola raíz cerca de ε = 1 en cualquier serie: no
+recupera el parámetro. IV-155, `µ = x1 - (ε/µ)·(1 - z1)`, no es dimensionalmente consistente; lo coherente con
+`x = µ + (σ/ε)(1 - z)` sería `µ = x1 - (σ/ε)·(1 - z1)`. Ya había una duda abierta sobre este método en
+`Bibliografia/Facundo/Tesis de Maestria/Dudas/Pareto - Minimos Cuadrados.docx`.
+Pregunta: ¿qué ecuaciones usó realmente para Mínimos Cuadrados, y IV-155 lleva σ/ε en lugar de ε/µ?

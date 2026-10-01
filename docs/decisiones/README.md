@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision069.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision074.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -196,3 +196,8 @@ situ.
 | [067](decision067.md) | Colisión de clave en la agregación: se conserva el máximo, no la última fila del archivo — `_acumular_maximo()` compartido | 28/08/2026 | Decidida y aplicada (backend) |
 | [068](decision068.md) | Corrección de fórmula IV-153 (Gen. Pareto, Mínimos Cuadrados) — la ecuación vieja era la condición de optimalidad de otro modelo (OLS libre), no la de la tesis | 04/09/2026 | Aplicada (backend) |
 | [069](decision069.md) | GenExp/Momentos-L: desfasaje de índice M̂0/M̂1/M̂2 (IV-83/84) — usaba la media donde iba M̂1 y nunca calculaba M̂2; corregido, `α̂ = M̂2/M̂1` directo, guard `λ ≤ 0 → NO_APLICABLE` | 09/09/2026 | Aplicada (backend) |
+| [070](decision070.md) | Umbral de DIST_HIGH_EEA: se mantiene en 5 %, configurabilidad diferida a v2 | 09/09/2026 | Confirmado — sin cambios de código funcional |
+| 071 | *(reservado — exclusión de puntos y `simulate-exclusion`, PR 5 del plan de fixes post-verificación)* | — | Pendiente |
+| 072 | *(reservado — exploración de distribuciones sin id para CU-02, bloque B del plan de backend del feedback de directores; no entra en el plan del 01/10)* | — | Pendiente |
+| 073 | *(reservado — `disabled_negatives`, PR 3 del plan de fixes post-verificación)* | — | Pendiente |
+| [074](decision074.md) | Generalizada de Pareto "pendiente de validación" en V1.0: se calcula y se muestra, pero no se puede elegir y va al final del ranking | 01/10/2026 | Decidida y aplicada (backend + frontend) — se cierra con el addendum de la V2 |

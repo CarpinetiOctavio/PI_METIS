@@ -424,8 +424,15 @@ no sobre la original.
 **Payload de `result_etapa2_ranking`:** `{"session_id", "ranking", "warnings",
 "puntos_empiricos", "seleccion"}`, donde `ranking` es la grilla completa
 serializada por `_serializar_etapa2()` (las 13 distribuciones, todos sus
-métodos con `status`/`eea`/`parametros`, `mejor_eea`, `mejor_metodo`) — sin
-aplanar a un top-3, ver DECISIÓN 055. **`puntos_empiricos`** — agregado en el
+métodos con `status`/`eea`/`parametros`, `mejor_eea`, `mejor_metodo`,
+`pendiente_validacion`) — sin aplanar a un top-3, ver DECISIÓN 055.
+**`pendiente_validacion`** (DECISIÓN 074, 01/10/2026) — `true` para las
+distribuciones de `PENDIENTES_VALIDACION` (`core/etapa2/distributions/__init__.py`,
+hoy solo `gen_pareto`): se calculan y se muestran, pero van al final del
+ranking (primer criterio de la clave de orden, antes que `mejor_eea`), nunca
+llevan "menor EEA" y elegirlas o explorarlas responde 400
+`DIST_PENDING_VALIDATION`. Se persiste en `analysis_results.etapa2`; los
+análisis anteriores no lo traen (sin backfill). **`puntos_empiricos`** — agregado en el
 Bloque C del plan de Etapa 2 (gráficos interactivos, DECISIÓN 056) — es la
 posición de ploteo Weibull de cada dato observado (`{valor, periodo_retorno,
 probabilidad}`, `core/etapa2/types.py::PuntoEmpirico`,
@@ -543,7 +550,10 @@ El ajuste es **automático y exhaustivo** — sin intervención del usuario.
 ### Selección de distribución
 
 - CU-01 y CU-02: el usuario selecciona manualmente desde la tabla rankeada
-- CU-03: selección automática por EEA (la de menor EEA)
+- CU-03: selección automática por EEA (la de menor EEA), salteando las
+  distribuciones de `PENDIENTES_VALIDACION` (DECISIÓN 074). Ojo:
+  `constraints.md` dice que CU-03 expone solo Etapa 1 — contradicción previa
+  entre los dos documentos, sin resolver (CU-03 no está implementado).
 - Después de la selección → calcular eventos de diseño via POST /analysis/design-events
 
 ### Año hidrológico
