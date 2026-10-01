@@ -66,7 +66,10 @@ def ejecutar_pipeline_completo(
     # (etapa1.serie_efectiva), no sobre los valores mensuales sin agregar.
     serie_np = np.asarray(etapa1.serie_efectiva, dtype=float)
     tiene_ceros = bool(np.any(serie_np == 0))
+    tiene_negativos = bool(np.any(serie_np < 0))  # DECISIÓN 073
 
-    etapa2 = ejecutar_etapa2(serie_np, tiene_ceros=tiene_ceros)
+    etapa2 = ejecutar_etapa2(
+        serie_np, tiene_ceros=tiene_ceros, tiene_negativos=tiene_negativos
+    )
 
     return FullPipelineResult(etapa1=etapa1, etapa2=etapa2)

@@ -52,6 +52,7 @@ from scipy.special import digamma, polygamma
 
 from metis.core.etapa2.types import (
     CONVERGENCIA,
+    STATUS_DISABLED_NEGATIVES,
     STATUS_DISABLED_ZEROS,
     STATUS_NO_APLICABLE,
     STATUS_NO_CONVERGE,
@@ -95,9 +96,11 @@ def _momentos_l(serie: np.ndarray) -> tuple[float, float, float]:
 
 
 def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
+    # DECISIÓN 073 — no definida para x < 0 (mismo motivo que marca el
+    # pipeline vía DISABLED_WITH_NEGATIVES; acá por si se llama directo).
     if np.any(serie < 0):
         return MetodoResult(
-            metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
+            metodo=metodo, parametros=None, eea=None, status=STATUS_DISABLED_NEGATIVES
         )
 
     n = len(serie)

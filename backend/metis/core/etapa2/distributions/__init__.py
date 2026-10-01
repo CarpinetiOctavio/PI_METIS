@@ -9,6 +9,22 @@ DISABLED_WITH_ZEROS: frozenset[str] = frozenset(
     }
 )
 
+# Distribuciones no definidas para valores negativos (DECISIÓN 073). Las cuatro
+# primeras ya devolvían no_aplicable con serie <= 0 y gen_exponencial con
+# serie < 0; ahora el pipeline marca el motivo con disabled_negatives. Las de 3
+# parámetros (lognormal3p, gamma3p, exponencial_x0_beta, gen_pareto) NO entran:
+# estiman un parámetro de posición y deciden por su cuenta con su chequeo
+# x0 >= min(serie). Depende de los datos, no de tipo_variable.
+DISABLED_WITH_NEGATIVES: frozenset[str] = frozenset(
+    {
+        "lognormal2p",
+        "logpearson3",
+        "gamma2p",
+        "exponencial_beta",
+        "gen_exponencial",
+    }
+)
+
 # Distribuciones cuyo comportamiento ante ceros está pendiente de confirmación
 # con Facundo — pregunta de DOMINIO (¿tiene sentido físico un cero para esta
 # variable?), no de mecánica de cálculo. Ver core-etapa2-implementation.md —

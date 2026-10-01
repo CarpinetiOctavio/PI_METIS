@@ -13,6 +13,21 @@ ALPHA_CHOW = 0.10
 def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
     arr = np.array(serie, dtype=float)
 
+    # Negativos → no ejecutar, con motivo propio (DECISIÓN 073). Va primero,
+    # con la misma precedencia que en Etapa 2: es el motivo más fuerte, y antes
+    # se perdía dentro de TEST_NOT_EXECUTED_CONDITION. Depende de los datos,
+    # no de tipo_variable (con Caudal/Precip. ya se advierte aparte,
+    # CONTRACT_NEGATIVE_VALUES).
+    if np.any(arr < 0):
+        return TestResult(
+            prueba="chow",
+            estadistico=None,
+            valor_critico=None,
+            veredicto="no_ejecutada",
+            warning_codigo="TEST_NOT_EXECUTED_NEGATIVES",
+            warning_nivel="normal",
+        )
+
     # Ceros en caudal_precipitacion → no ejecutar
     if tipo_variable == "caudal_precipitacion" and np.any(arr == 0):
         return TestResult(
@@ -24,7 +39,7 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
             warning_nivel="normal",
         )
 
-    # Valores ≤ 0 por cualquier causa → log no definido
+    # Ceros con tipo "otro" → log no definido
     if np.any(arr <= 0):
         return TestResult(
             prueba="chow",

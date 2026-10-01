@@ -34,12 +34,23 @@ def test_cero_en_otro_no_ejecutada():
     assert resultado.estadistico is None
 
 
+# DECISIÓN 073 — un negativo tiene código propio, con cualquier tipo de variable,
+# y gana sobre los ceros (antes caía en TEST_NOT_EXECUTED_CONDITION).
 @pytest.mark.unit
-def test_negativo_no_ejecutada():
-    serie = [-5.0] + [10.0] * 14
-    resultado = calcular_chow(serie, "otro")
+@pytest.mark.parametrize(
+    ("serie", "tipo"),
+    [
+        ([-5.0] + [10.0] * 14, "otro"),
+        ([-5.0] + [10.0] * 14, "caudal_precipitacion"),
+        ([-5.0, 0.0] + [10.0] * 13, "caudal_precipitacion"),  # negativo y cero
+        ([-5.0, 0.0] + [10.0] * 13, "otro"),
+    ],
+    ids=["otro", "caudal", "caudal-con-cero", "otro-con-cero"],
+)
+def test_negativo_no_ejecutada_con_codigo_propio(serie, tipo):
+    resultado = calcular_chow(serie, tipo)
     assert resultado.veredicto == "no_ejecutada"
-    assert resultado.warning_codigo == "TEST_NOT_EXECUTED_CONDITION"
+    assert resultado.warning_codigo == "TEST_NOT_EXECUTED_NEGATIVES"
     assert resultado.estadistico is None
 
 
