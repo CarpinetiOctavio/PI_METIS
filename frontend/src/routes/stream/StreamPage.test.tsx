@@ -217,6 +217,20 @@ describe("StreamPage", () => {
     await waitFor(() => expect(resolveOutlier).toHaveBeenCalledWith("rechazar"));
   });
 
+  // METIS no decide por el usuario: ninguno de los dos botones puede verse
+  // como la opción "por defecto" (antes Aceptar era primario y con efectos).
+  it("renders Rechazar and Aceptar with identical styling — no visual bias toward either decision", () => {
+    renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+    });
+
+    const rechazar = screen.getByRole("button", { name: "Rechazar" });
+    const aceptar = screen.getByRole("button", { name: "Aceptar" });
+    expect(aceptar.className).toBe(rechazar.className);
+    expect(aceptar.parentElement).toBe(rechazar.parentElement);
+  });
+
   // M3 (cierre de Fase 6, pasada de mejora 3): foco del modal de atípico.
   it("auto-focuses the dialog container (not either button) when the outlier modal opens", async () => {
     renderStreamPage({
