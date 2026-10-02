@@ -64,7 +64,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
 
     xbar = float(np.mean(serie))
     S = float(np.std(serie, ddof=1))
-    if S == 0.0:
+    if S <= 0.0:
         return MetodoResult(
             metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
         )

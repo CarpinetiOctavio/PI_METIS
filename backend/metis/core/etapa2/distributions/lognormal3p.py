@@ -108,7 +108,7 @@ def _skewness(x: np.ndarray) -> float:
         return 0.0
     xbar = float(np.mean(x))
     var_sesgada = float(np.var(x, ddof=0))
-    if var_sesgada == 0.0:
+    if var_sesgada <= 0.0:
         return 0.0
     g_sesg = float(np.mean((x - xbar) ** 3) / var_sesgada**1.5)
     return float((n**2 / ((n - 1) * (n - 2))) * g_sesg)
@@ -120,7 +120,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
     if metodo == "momentos":
         xbar = float(np.mean(serie))
         S = float(np.std(serie, ddof=1))
-        if S == 0.0:
+        if S <= 0.0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_APLICABLE
             )

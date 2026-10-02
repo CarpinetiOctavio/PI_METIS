@@ -130,9 +130,9 @@ def calcular_wald_wolfowitz(serie: list[float]) -> TestResult:
         )
 
     mu_u = (2 * n1 * n2) / (n1 + n2) + 1
-    sigma2_u = (2 * n1 * n2 * (2 * n1 * n2 - n1 - n2)) / (
-        (n1 + n2) ** 2 * (n1 + n2 - 1)
-    )
+    # n1, n2 >= 1 garantiza denom > 0; el guard lo hace explícito.
+    denom = (n1 + n2) ** 2 * (n1 + n2 - 1)
+    sigma2_u = (2 * n1 * n2 * (2 * n1 * n2 - n1 - n2)) / denom if denom > 0 else 0.0
     sigma_u = np.sqrt(sigma2_u)
     z_stat = (runs - mu_u) / sigma_u if sigma_u != 0 else 0.0
 

@@ -49,7 +49,7 @@ export function BlockMath({
   useEffect(() => {
     if (katex) return;
     let alive = true;
-    loadKatex().then((m) => {
+    void loadKatex().then((m) => {
       if (alive) setKatex(() => m);
     });
     return () => {
