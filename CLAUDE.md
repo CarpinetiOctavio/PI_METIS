@@ -45,7 +45,8 @@ backend/metis/
 │   ├── estadistica_descriptiva/   # descriptive.py
 │   ├── etapa1/            # independence.py, homogeneity.py, trend.py, outliers.py (Chow)
 │   ├── etapa2/            # eea.py, empirical.py, design_events.py, utils.py, types.py, distributions/ (13 archivos)
-│   ├── pipeline/          # pipeline_etapa1.py, pipeline_etapa2.py, full_pipeline.py, types.py
+│   ├── pipeline/          # pipeline_etapa1.py, pipeline_etapa2.py, full_pipeline.py, types.py,
+│   │                      # exclusiones.py (what-if de atípicos — DECISIÓN 071)
 │   ├── validacion/        # contract.py (validación de contrato de datos), parser.py,
 │   │                      # aggregation.py (mensual/diaria → máximos anuales — DECISIÓN 057/065)
 │   ├── types.py, utils.py
