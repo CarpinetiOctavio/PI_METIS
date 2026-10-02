@@ -1144,6 +1144,60 @@ async def unarchive_analysis(
     return True
 
 
+def _seleccion_recalculada(etapa2_result: Etapa2Result, seleccion: dict) -> dict:
+    """Eventos de diseño y curva de ajuste de `seleccion` sobre un Etapa 2 ya
+    recalculado (simulate-exclusion). Misma forma que `seleccion` en
+    `analysis_results.etapa2`, y el mismo trato que el stream cuando la
+    combinación no tiene parámetros: eventos en null, curva vacía."""
+    distribucion = seleccion["distribucion"]
+    metodo = seleccion["metodo"]
+    periodos_retorno = seleccion["periodos_retorno"]
+
+    dist_result = next(
+        (d for d in etapa2_result.ranking if d.distribucion == distribucion), None
+    )
+    metodo_result = (
+        next((m for m in dist_result.metodos if m.metodo == metodo), None)
+        if dist_result is not None
+        else None
+    )
+
+    if (
+        metodo_result is not None
+        and metodo_result.status == "ok"
+        and metodo_result.parametros is not None
+    ):
+        modulo = _MODULOS_POR_DISTRIBUCION[distribucion]
+        eventos = calcular_eventos_diseno(
+            modulo, metodo_result.parametros, periodos_retorno
+        )
+        max_t_empirico = max(
+            (p.periodo_retorno for p in etapa2_result.puntos_empiricos),
+            default=1.05,
+        )
+        curva_ajuste = _calcular_curva_ajuste(
+            modulo, metodo_result.parametros, periodos_retorno, max_t_empirico
+        )
+    else:
+        eventos = [
+            EventoDiseno(periodo_retorno=t, valor=None) for t in periodos_retorno
+        ]
+        curva_ajuste = []
+
+    return {
+        "distribucion": distribucion,
+        "metodo": metodo,
+        "periodos_retorno": periodos_retorno,
+        "eventos_diseno": [
+            {"periodo_retorno": e.periodo_retorno, "valor": e.valor} for e in eventos
+        ],
+        "curva_ajuste": [
+            {"periodo_retorno": e.periodo_retorno, "valor": e.valor}
+            for e in curva_ajuste
+        ],
+    }
+
+
 def simular_exclusion(
     serie: list[float],
     anios: list[int],
@@ -1152,6 +1206,7 @@ def simular_exclusion(
     indices_excluidos: list[int],
     etapas: list[int],
     tratamiento: str = "eliminar",
+    seleccion: dict | None = None,
 ) -> dict:
     """POST /analysis/simulate-exclusion — DECISIÓN 071, ítem A del feedback de
     directores. Recalcula Etapa 1 (y Etapa 2 si se pidió) sobre `serie` sin los
@@ -1165,6 +1220,13 @@ def simular_exclusion(
     con Chow sin pausa — un atípico nuevo se informa en `etapa1.atipicos`, no
     detiene nada. El flujo de Chow del stream no se toca: que los dos den lo mismo
     lo prueba un test de integración, no un refactor compartido.
+
+    Con `seleccion` ({distribucion, metodo, periodos_retorno}, la elección del
+    análisis original) y Etapa 2 recalculada, `etapa2.seleccion` trae los eventos
+    de diseño y la curva de ajuste de esa misma elección con los parámetros
+    reajustados sin los puntos excluidos — los gráficos de evento de diseño se
+    comparan contra el original. Si la combinación ya no ajusta, los eventos van
+    con `valor: null` y la curva vacía, igual que en el stream.
 
     Levanta `ExclusionInvalidaError` (core/pipeline/exclusiones.py) si el pedido no
     aplica a la serie — el borde lo traduce a 400 CONTRACT_EXCLUSION_INVALID.
@@ -1182,12 +1244,16 @@ def simular_exclusion(
     etapa2 = None
     if 2 in etapas and result.nivel_confianza != "rechazado":
         valores = np.asarray(filtrar_numericos(result.serie_efectiva), dtype=float)
+        etapa2_result = ejecutar_etapa2(
+            valores,
+            tiene_ceros=bool(np.any(valores == 0)),
+            tiene_negativos=bool(np.any(valores < 0)),
+        )
         etapa2 = _serializar_etapa2(
-            ejecutar_etapa2(
-                valores,
-                tiene_ceros=bool(np.any(valores == 0)),
-                tiene_negativos=bool(np.any(valores < 0)),
-            )
+            etapa2_result,
+            seleccion=_seleccion_recalculada(etapa2_result, seleccion)
+            if seleccion is not None
+            else None,
         )
 
     return {

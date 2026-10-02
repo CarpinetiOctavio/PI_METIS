@@ -1,5 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
-import type { Etapa1Datos, Etapa1Result, TestResultDetail } from "../../api/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  Etapa1Datos,
+  Etapa1Result,
+  SimulateExclusionResponse,
+  TestResultDetail,
+} from "../../api/types";
 import { Etapa1BoxplotMensualChart } from "./Etapa1BoxplotMensualChart";
 import { Etapa1ChowChart } from "./Etapa1ChowChart";
 import { Etapa1Comparacion } from "./Etapa1Comparacion";
@@ -26,6 +31,7 @@ export function Etapa1GraficosView({
   nombreArchivo,
   resultado,
   simular,
+  onSimulacionVigente,
 }: Readonly<{
   datos: Etapa1Datos;
   chow?: TestResultDetail;
@@ -35,6 +41,9 @@ export function Etapa1GraficosView({
   // `simular` no hay botón de recalcular: queda la exclusión de A1.
   resultado?: Etapa1Result;
   simular?: SimularFn;
+  // La simulación que corresponde a la selección actual, o null si no hay o
+  // quedó desactualizada. La página la usa para los eventos de diseño del fondo.
+  onSimulacionVigente?: (simulacion: SimulateExclusionResponse | null) => void;
 }>) {
   const [excluidos, setExcluidos] = useState<ReadonlySet<number>>(new Set());
   const puntos = useMemo(() => puntosDeSerie(datos), [datos]);
@@ -58,6 +67,10 @@ export function Etapa1GraficosView({
     simulacion.fase === "lista" && mismaSeleccion(simulacion.indices, excluidos)
       ? simulacion.respuesta
       : null;
+
+  useEffect(() => {
+    onSimulacionVigente?.(simulacionVigente);
+  }, [simulacionVigente, onSimulacionVigente]);
 
   return (
     <div className="stack" style={{ marginTop: 14 }}>

@@ -581,12 +581,17 @@ por la media quedó postergado (`tratamiento` es el punto de extensión).
   "cramer_particion": "default",
   "indices_excluidos": [1],
   "etapas": [1, 2],
-  "tratamiento": "eliminar"
+  "tratamiento": "eliminar",
+  "seleccion": {"distribucion": "gumbel", "metodo": "momentos", "periodos_retorno": [2, 10, 100]}
 }
 ```
 `serie`/`anios` son `datos.serie_efectiva` y los años de `datos.timestamps_efectivos`: la serie
 **ya agregada**; los índices son posiciones en ella, no en la serie cruda subida.
 `cramer_particion` llega como texto, igual que en `/analysis/stream`. `tratamiento` es opcional.
+`seleccion` también (addendum 02/10/2026 a DECISIÓN 071): la distribución+método+períodos elegidos en el
+análisis original; con ella y Etapa 2, `etapa2.seleccion` trae sus `eventos_diseno` y `curva_ajuste`
+reajustados sin los puntos excluidos (misma forma que en `GET /history/{id}`; `valor: null` y curva vacía si
+la combinación ya no ajusta). Se valida como en `distribution-decision`.
 
 **Auth:** ninguna dependencia de usuario — responde igual con o sin cookie, como
 `preview-columns`. **Completamente sin estado:** no genera sesión, no toca `session_store`, no
@@ -604,7 +609,7 @@ siempre dentro de `etapa1.contract` (`CONTRACT_SERIES_TOO_SHORT`), con 200: no h
 ```json
 {
   "etapa1": { "...": "mismo payload que result_etapa1 (statistical-pipeline.md)" },
-  "etapa2": { "ranking": ["..."], "warnings": ["..."], "puntos_empiricos": ["..."], "seleccion": null },
+  "etapa2": { "ranking": ["..."], "warnings": ["..."], "puntos_empiricos": ["..."], "seleccion": "null, o la elección recalculada si se mandó seleccion" },
   "excluidos": [{ "indice": 1, "periodo": 1981, "valor_original": 89.83 }],
   "serie": [94.71, 105.13],
   "anios": [1980, 1982]
@@ -616,7 +621,8 @@ serie resultante, para que el frontend arme el CSV desde lo que devolvió `core/
 **Errores:** 400 `CONTRACT_SERIES_INVALID` (serie vacía, con más de 500 valores o con valores no
 finitos), 400 `CONTRACT_EXCLUSION_INVALID` (índices fuera de rango o repetidos, `anios` de otro
 largo que `serie`, `tratamiento` inexistente), 400 `CONTRACT_ETAPAS_INVALID` (`etapas` distinto
-de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 422 validación Pydantic (por
+de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 400 `DIST_SELECTION_INVALID` /
+`DIST_PENDING_VALIDATION` (`seleccion` mal formada o pendiente de validación), 422 validación Pydantic (por
 ejemplo, `tipo_variable` fuera de las dos opciones).
 
 ---

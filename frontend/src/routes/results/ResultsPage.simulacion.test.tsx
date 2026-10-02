@@ -7,7 +7,13 @@ import { renderPage } from "../../test/renderPage";
 import { makeEtapa1Datos } from "../../test/etapa1Fixtures";
 import { makeEtapa1Result, makeSimulacion } from "../../test/simulacionFixtures";
 import { stubFetchRouted } from "../../test/fetchStubs";
-import type { CramerParticion, TipoVariable } from "../../api/types";
+import { formatNum } from "../../i18n/format";
+import type { Etapa2EventosState } from "../../api/sse";
+import type {
+  CramerParticion,
+  SimulateExclusionResponse,
+  TipoVariable,
+} from "../../api/types";
 import { ResultsPage } from "./ResultsPage";
 
 // Cableado del what-if de atípicos en la página (ítem A, A2): cuándo aparece el
@@ -18,15 +24,19 @@ interface Estado {
   tipoVariable?: TipoVariable;
   cramerParticion?: CramerParticion;
   etapas?: "1" | "1,2";
+  eventosDiseno?: Etapa2EventosState;
 }
 
-function montar(estado: Estado = { tipoVariable: "otro" }) {
+function montar(
+  estado: Estado = { tipoVariable: "otro" },
+  respuesta: SimulateExclusionResponse = makeSimulacion(),
+) {
   const fetchMock = stubFetchRouted([
     { match: (url) => url.includes("/auth/me"), status: 401, body: {} },
     {
       match: (url, init) => init?.method === "POST" && url.includes("/simulate-exclusion"),
       status: 200,
-      body: makeSimulacion(),
+      body: respuesta,
     },
   ]);
   renderPage(
@@ -98,6 +108,76 @@ describe("ResultsPage — what-if de atípicos", () => {
       cramer_particion: cramer,
       indices_excluidos: [3],
       etapas,
+    });
+  });
+
+  describe("eventos de diseño sin los puntos excluidos", () => {
+    const ELECCION: Etapa2EventosState = {
+      distribucion: "gumbel",
+      metodo: "momentos",
+      eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+      curva_ajuste: [{ periodo_retorno: 100, valor: 312.7 }],
+    };
+    const SIMULADA = {
+      distribucion: "gumbel",
+      metodo: "momentos",
+      periodos_retorno: [100],
+      eventos_diseno: [{ periodo_retorno: 100, valor: 250.1 }],
+      curva_ajuste: [{ periodo_retorno: 100, valor: 250.1 }],
+    };
+    const conEtapa2 = makeSimulacion({
+      etapa2: { ranking: [], warnings: [], puntos_empiricos: [], seleccion: SIMULADA },
+    });
+
+    async function recalcular(user: ReturnType<typeof userEvent.setup>) {
+      const grilla = await screen.findByRole("group", { name: /Años de la serie/ });
+      await user.click(within(grilla).getAllByRole("button")[5]);
+      await user.click(screen.getByRole("button", { name: RECALCULAR }));
+      await screen.findByText("Resultados sin los puntos excluidos");
+    }
+
+    it("manda la elección del stream para que el backend recalcule sus eventos", async () => {
+      const { fetchMock, user } = montar(
+        { tipoVariable: "otro", etapas: "1,2", eventosDiseno: ELECCION },
+        conEtapa2,
+      );
+      await recalcular(user);
+
+      expect(pedidoDeSimulacion(fetchMock).seleccion).toEqual({
+        distribucion: "gumbel",
+        metodo: "momentos",
+        periodos_retorno: [100],
+      });
+    });
+
+    it("pasa a la versión recalculada y deja volver a la original", async () => {
+      const { user } = montar(
+        { tipoVariable: "otro", etapas: "1,2", eventosDiseno: ELECCION },
+        conEtapa2,
+      );
+      expect(screen.getByText(formatNum(312.7))).toBeInTheDocument();
+      await recalcular(user);
+
+      const sinExcluidos = screen.getByRole("button", { name: "Sin los puntos excluidos" });
+      expect(sinExcluidos).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText(/reajustada sin 2005/)).toBeInTheDocument();
+      expect(screen.getByText(formatNum(250.1))).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Original" }));
+      expect(screen.getByText(formatNum(312.7))).toBeInTheDocument();
+      expect(screen.queryByText(formatNum(250.1))).not.toBeInTheDocument();
+    });
+
+    it("si sin esos puntos no hay Etapa 2, lo dice y deja los eventos originales", async () => {
+      const { user } = montar(
+        { tipoVariable: "otro", etapas: "1,2", eventosDiseno: ELECCION },
+        makeSimulacion({ etapa2: null }),
+      );
+      await recalcular(user);
+
+      expect(screen.getByText(/no hay Etapa 2 que recalcular/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Sin los puntos excluidos" })).not.toBeInTheDocument();
+      expect(screen.getByText(formatNum(312.7))).toBeInTheDocument();
     });
   });
 });

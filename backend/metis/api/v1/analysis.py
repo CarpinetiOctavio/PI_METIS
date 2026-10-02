@@ -457,6 +457,12 @@ async def simulate_exclusion(body: SimulateExclusionRequest):
     if body.etapas not in ([1], [1, 2]):
         raise _ETAPAS_INVALIDAS
     cramer_particion = _parsear_cramer_particion(body.cramer_particion)
+    if body.seleccion is not None:
+        _validar_seleccion_distribucion(
+            body.seleccion.distribucion,
+            body.seleccion.metodo,
+            body.seleccion.periodos_retorno,
+        )
 
     try:
         return await run_in_threadpool(
@@ -468,6 +474,7 @@ async def simulate_exclusion(body: SimulateExclusionRequest):
             indices_excluidos=body.indices_excluidos,
             etapas=body.etapas,
             tratamiento=body.tratamiento,
+            seleccion=body.seleccion.model_dump() if body.seleccion else None,
         )
     except ExclusionInvalidaError as error:
         raise _exclusion_invalida(str(error)) from None

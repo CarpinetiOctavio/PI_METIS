@@ -91,3 +91,24 @@ y quién recalcula.
 - **DECISIÓN 064** (addendum 01/10/2026) — `desglose` de Anderson y Chow, presente en la respuesta.
 - **DECISIÓN 073** — `tiene_negativos` para Etapa 2 de la simulación.
 - **DECISIÓN 057/065** — la serie que se recibe ya está agregada; por eso `resolucion_temporal="anual"`.
+
+### Addendum 02/10/2026 — eventos de diseño de la elección, sin los puntos excluidos
+
+En uso real, recalcular sin el atípico actualizaba Etapa 1 y el ranking simulado, pero los gráficos de
+"Evento de diseño" del fondo de `ResultsPage` seguían mostrando la elección del análisis original. El
+backend no podía hacer otra cosa: el request no decía qué distribución+método se había elegido.
+
+- **Request:** campo opcional `seleccion: {distribucion, metodo, periodos_retorno}` — la elección del stream.
+  Se valida en el borde con la misma función que `distribution-decision` (400 `DIST_SELECTION_INVALID` y
+  `DIST_PENDING_VALIDATION`); sin códigos nuevos.
+- **Respuesta:** con `seleccion` y Etapa 2 recalculada, `etapa2.seleccion` trae `eventos_diseno` y
+  `curva_ajuste` de esa misma combinación con los parámetros reajustados sin los puntos excluidos
+  (`_seleccion_recalculada()`, mismas funciones que el stream: `calcular_eventos_diseno`,
+  `_calcular_curva_ajuste`). Si la combinación ya no ajusta, los eventos van con `valor: null` y la curva
+  vacía, igual que en el stream. Sin `seleccion`, o sin Etapa 2, `etapa2.seleccion` sigue en `null`.
+- **Frontend:** la sección "Evento de diseño" gana un selector Original / Sin los puntos excluidos mientras
+  haya una simulación vigente para la selección actual, con un rótulo de simulación. Al llegar una
+  simulación nueva pasa a esa vista; si la selección cambia y la simulación queda desactualizada, vuelve
+  sola al original.
+- **Explorar no es decidir (DECISIÓN 062):** la elección registrada no cambia y nada se persiste. Se mantiene
+  la misma distribución+método: elegir otra sobre el ranking simulado sigue requiriendo el bloque B.

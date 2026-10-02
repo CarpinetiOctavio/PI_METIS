@@ -1,4 +1,10 @@
-import type { Etapa1Result, Modo, TestResultDetail, WarningNivel } from "../../api/types";
+import type {
+  Etapa1Result,
+  Modo,
+  SimulateExclusionResponse,
+  TestResultDetail,
+  WarningNivel,
+} from "../../api/types";
 import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
@@ -187,6 +193,7 @@ export function Etapa1ResultView({
   mesInicioAnio,
   nombreArchivo,
   simular,
+  onSimulacionVigente,
 }: Readonly<{
   result: Etapa1Result;
   modo: Modo;
@@ -195,6 +202,9 @@ export function Etapa1ResultView({
   // Ítem A (A2): cómo recalcular sin los puntos excluidos. Opcional — solo la
   // sesión interactiva de ResultsPage lo provee.
   simular?: SimularFn;
+  // Avisa qué simulación vale para la selección actual (o null), para que la
+  // página muestre los eventos de diseño recalculados.
+  onSimulacionVigente?: (simulacion: SimulateExclusionResponse | null) => void;
 }>) {
   const pasoAPaso = modo === "paso_a_paso";
 
@@ -298,6 +308,7 @@ export function Etapa1ResultView({
           nombreArchivo={nombreArchivo}
           resultado={result}
           simular={simular}
+          onSimulacionVigente={onSimulacionVigente}
         />
       )}
 
