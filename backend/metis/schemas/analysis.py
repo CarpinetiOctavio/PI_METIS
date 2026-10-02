@@ -143,6 +143,16 @@ class WarningItem(BaseModel):
     descripcion: str
 
 
+class SeleccionSimulada(BaseModel):
+    """La distribución+método+períodos que el usuario eligió en el análisis
+    original. Con ella, POST /analysis/simulate-exclusion también recalcula los
+    eventos de diseño de esa elección sobre la serie sin los puntos excluidos."""
+
+    distribucion: str
+    metodo: str
+    periodos_retorno: list[float]
+
+
 class SimulateExclusionRequest(BaseModel):
     """DECISIÓN 071 — what-if de atípicos. `serie`/`anios` son
     `datos.serie_efectiva` y los años de `datos.timestamps_efectivos`: la serie
@@ -157,3 +167,4 @@ class SimulateExclusionRequest(BaseModel):
     indices_excluidos: list[int]
     etapas: list[int]
     tratamiento: str = "eliminar"
+    seleccion: SeleccionSimulada | None = None

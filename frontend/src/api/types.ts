@@ -475,10 +475,8 @@ export interface DistributionDecisionResponse {
 }
 
 // Ítem A del plan de feedback de directores (20/09/2026) — what-if de
-// atípicos: POST /analysis/simulate-exclusion. AÚN NO EXISTE en el backend
-// (Tanda 2, con Octavio); el contrato es el propuesto en
-// docs/plan-backend-feedback-directores-20-09-2026.md §4. Sin sesión, sin BD:
-// "explorar no es decidir" (DECISIÓN 062), no persiste nada.
+// atípicos: POST /analysis/simulate-exclusion (DECISIÓN 071). Sin sesión, sin
+// BD: "explorar no es decidir" (DECISIÓN 062), no persiste nada.
 export interface SimulateExclusionRequest {
   // = datos.serie_efectiva y los años de datos.timestamps_efectivos: la serie
   // YA agregada, y los índices son posiciones en ella (no en la serie cruda).
@@ -491,6 +489,14 @@ export interface SimulateExclusionRequest {
   indices_excluidos: number[];
   etapas: (1 | 2)[];
   tratamiento?: "eliminar";
+  // La elección del análisis original. Con ella y Etapa 2, la respuesta trae en
+  // `etapa2.seleccion` los eventos de diseño de esa elección reajustada sin los
+  // puntos excluidos.
+  seleccion?: {
+    distribucion: string;
+    metodo: string;
+    periodos_retorno: number[];
+  };
 }
 
 export interface ExcluidoSimulado {

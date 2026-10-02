@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import {
@@ -9,7 +9,13 @@ import { Etapa1ResultView } from "./Etapa1ResultView";
 import { Etapa2Explorador } from "./Etapa2Explorador";
 import { Etapa2RankingView } from "./Etapa2RankingView";
 import { Etapa2EventosView } from "./Etapa2EventosView";
-import type { CramerParticion, Etapa1Result, Modo, TipoVariable } from "../../api/types";
+import type {
+  CramerParticion,
+  Etapa1Result,
+  Modo,
+  SimulateExclusionResponse,
+  TipoVariable,
+} from "../../api/types";
 import type { SimularFn } from "./useSimulacionExclusion";
 import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
 import "./ResultsPage.css";
@@ -47,6 +53,17 @@ export function ResultsPage() {
   const locationState = location.state as ResultsLocationState | null;
   const result = locationState?.result;
 
+  // What-if de atípicos: la simulación que vale para los puntos excluidos hoy
+  // (Etapa1GraficosView avisa cuál es). Con ella, "Evento de diseño" puede
+  // mostrar la elección reajustada sin esos puntos. Al llegar una nueva se pasa
+  // a esa vista; la elección registrada no cambia (DECISIÓN 062).
+  const [simulacion, setSimulacion] = useState<SimulateExclusionResponse | null>(null);
+  const [vistaEventos, setVistaEventos] = useState<"original" | "simulada">("original");
+  const alCambiarSimulacion = useCallback((nueva: SimulateExclusionResponse | null) => {
+    setSimulacion(nueva);
+    setVistaEventos(nueva ? "simulada" : "original");
+  }, []);
+
   useEffect(() => {
     if (!result) navigate("/config", { replace: true });
   }, [result, navigate]);
@@ -78,15 +95,59 @@ export function ResultsPage() {
   // junto a la exploración, dentro de Etapa2Explorador, para compararlas; sin
   // él (CU-02) se muestra aparte, debajo del ranking de solo lectura.
   const explorable = Boolean(etapa2Resultado && analysisId);
+  const seleccionSimulada = simulacion?.etapa2?.seleccion ?? null;
+  const verSimulada = vistaEventos === "simulada" && seleccionSimulada !== null;
+  const aniosExcluidos = simulacion?.excluidos.map((e) => e.periodo).join(", ");
   const eventoDiseno = eventosDiseno && (
     <>
       <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
         Evento de diseño
       </h2>
-      <Etapa2EventosView
-        eventos={eventosDiseno}
-        puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
-      />
+      {simulacion && seleccionSimulada && (
+        <div className="seg" role="group" aria-label="Qué eventos de diseño mostrar">
+          <button
+            type="button"
+            className={verSimulada ? "" : "on"}
+            aria-pressed={!verSimulada}
+            onClick={() => setVistaEventos("original")}
+          >
+            Original
+          </button>
+          <button
+            type="button"
+            className={verSimulada ? "on" : ""}
+            aria-pressed={verSimulada}
+            onClick={() => setVistaEventos("simulada")}
+          >
+            Sin los puntos excluidos
+          </button>
+        </div>
+      )}
+      {simulacion && !seleccionSimulada && (
+        <p className="sub">
+          Sin los puntos excluidos no hay Etapa 2 que recalcular (Etapa 1 queda
+          rechazada), así que los eventos de diseño siguen siendo los del análisis original.
+        </p>
+      )}
+      {verSimulada && seleccionSimulada ? (
+        <>
+          <p className="sub">
+            Simulación: {seleccionSimulada.distribucion} · {seleccionSimulada.metodo}{" "}
+            reajustada sin {aniosExcluidos}. La elección registrada no cambia.
+          </p>
+          <Etapa2EventosView
+            key="simulada"
+            eventos={seleccionSimulada}
+            puntosEmpiricos={simulacion?.etapa2?.puntos_empiricos ?? []}
+          />
+        </>
+      ) : (
+        <Etapa2EventosView
+          key="original"
+          eventos={eventosDiseno}
+          puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
+        />
+      )}
     </>
   );
 
@@ -104,6 +165,15 @@ export function ResultsPage() {
             cramer_particion: cramerParticionComoTexto(locationState?.cramerParticion),
             indices_excluidos: indicesExcluidos,
             etapas: locationState?.etapas === "1,2" ? [1, 2] : [1],
+            // Con la elección del stream, el backend recalcula también sus
+            // eventos de diseño sin los puntos excluidos.
+            ...(eventosDiseno && {
+              seleccion: {
+                distribucion: eventosDiseno.distribucion,
+                metodo: eventosDiseno.metodo,
+                periodos_retorno: eventosDiseno.eventos_diseno.map((e) => e.periodo_retorno),
+              },
+            }),
           })
       : undefined;
 
@@ -116,6 +186,7 @@ export function ResultsPage() {
         mesInicioAnio={locationState?.mesInicioAnio}
         nombreArchivo={locationState?.nombreArchivo}
         simular={simular}
+        onSimulacionVigente={alCambiarSimulacion}
       />
       {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la
           pidió al configurar el análisis. Si no se pidió Etapa 2, no hay

@@ -51,6 +51,70 @@ async def test_con_etapa_2_devuelve_el_ranking_completo_sin_seleccion():
     assert r["etapa2"]["seleccion"] is None
 
 
+SELECCION = {"distribucion": "gumbel", "metodo": "momentos", "periodos_retorno": [2, 10, 100]}
+
+
+@pytest.mark.unit
+async def test_con_seleccion_recalcula_los_eventos_de_diseno_de_esa_eleccion():
+    r = await simulate_exclusion(_body(etapas=[1, 2], seleccion=SELECCION))
+
+    seleccion = r["etapa2"]["seleccion"]
+    assert seleccion["distribucion"] == "gumbel"
+    assert seleccion["metodo"] == "momentos"
+    assert seleccion["periodos_retorno"] == [2, 10, 100]
+    assert [e["periodo_retorno"] for e in seleccion["eventos_diseno"]] == [2, 10, 100]
+    assert all(e["valor"] is not None for e in seleccion["eventos_diseno"])
+    assert len(seleccion["curva_ajuste"]) == 60
+
+
+@pytest.mark.unit
+async def test_sin_el_atipico_los_eventos_de_diseno_bajan():
+    # El atípico (5000) infla la media y el desvío: sacarlo tiene que bajar xT.
+    con = await simulate_exclusion(
+        _body(indices_excluidos=[], etapas=[1, 2], seleccion=SELECCION)
+    )
+    sin = await simulate_exclusion(_body(etapas=[1, 2], seleccion=SELECCION))
+
+    valores_con = [e["valor"] for e in con["etapa2"]["seleccion"]["eventos_diseno"]]
+    valores_sin = [e["valor"] for e in sin["etapa2"]["seleccion"]["eventos_diseno"]]
+    assert all(s < c for s, c in zip(valores_sin, valores_con, strict=True))
+
+
+@pytest.mark.unit
+async def test_combinacion_que_no_ajusta_devuelve_eventos_en_null_como_el_stream():
+    r = await simulate_exclusion(
+        _body(etapas=[1, 2], seleccion={**SELECCION, "metodo": "inexistente"})
+    )
+
+    seleccion = r["etapa2"]["seleccion"]
+    assert [e["valor"] for e in seleccion["eventos_diseno"]] == [None, None, None]
+    assert seleccion["curva_ajuste"] == []
+
+
+@pytest.mark.unit
+async def test_seleccion_sin_etapa_2_no_calcula_nada():
+    r = await simulate_exclusion(_body(etapas=[1], seleccion=SELECCION))
+    assert r["etapa2"] is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("seleccion", "codigo"),
+    [
+        ({**SELECCION, "periodos_retorno": [1]}, "DIST_SELECTION_INVALID"),
+        ({**SELECCION, "distribucion": ""}, "DIST_SELECTION_INVALID"),
+        ({**SELECCION, "distribucion": "gen_pareto"}, "DIST_PENDING_VALIDATION"),
+    ],
+    ids=["periodo-invalido", "sin-distribucion", "pendiente-validacion"],
+)
+async def test_seleccion_invalida_400_con_el_codigo_de_distribution_decision(seleccion, codigo):
+    with pytest.raises(HTTPException) as exc_info:
+        await simulate_exclusion(_body(etapas=[1, 2], seleccion=seleccion))
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail["error"]["codigo"] == codigo
+
+
 @pytest.mark.unit
 async def test_sin_exclusiones_etapa1_identica_al_analisis_original():
     # Regresión 1 del plan de backend: con [] no puede haber dos criterios.

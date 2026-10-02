@@ -3,8 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAnalysisStream } from "../../api/sse";
 import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
 import { CountUp } from "../../components/CountUp";
-import { Magnet } from "../../components/Magnet";
-import { SpecularHighlight } from "../../components/SpecularHighlight";
 import { Etapa2RankingView } from "../results/Etapa2RankingView";
 import "./StreamPage.css";
 
@@ -467,27 +465,38 @@ export function StreamPage() {
               </span>
               . ¿Qué hacemos con este dato?
             </p>
+            <ul id="outlier-opciones" className="sub">
+              <li>
+                <b>Rechazar:</b> el dato se excluye de la serie y Etapa 1 se recalcula sin él.
+              </li>
+              <li>
+                <b>Aceptar:</b> el dato se conserva como parte de la población.
+              </li>
+            </ul>
+            <p className="sub">METIS no recomienda ninguna de las dos: la decisión es tuya.</p>
+            {/* Los dos botones son idénticos a propósito (misma clase, sin
+                efectos de hover propios): un estilo primario en uno solo
+                sesgaría la decisión, y METIS detecta y advierte pero no
+                decide por el usuario. */}
             <div className="row">
               <button
                 type="button"
                 className="b b-sec"
+                aria-describedby="outlier-opciones"
                 disabled={resolving}
                 onClick={() => handleOutlierDecision("rechazar")}
               >
                 Rechazar
               </button>
-              <Magnet>
-                <SpecularHighlight>
-                  <button
-                    type="button"
-                    className="b b-pri"
-                    disabled={resolving}
-                    onClick={() => handleOutlierDecision("aceptar")}
-                  >
-                    Aceptar
-                  </button>
-                </SpecularHighlight>
-              </Magnet>
+              <button
+                type="button"
+                className="b b-sec"
+                aria-describedby="outlier-opciones"
+                disabled={resolving}
+                onClick={() => handleOutlierDecision("aceptar")}
+              >
+                Aceptar
+              </button>
             </div>
           </div>
         </div>
