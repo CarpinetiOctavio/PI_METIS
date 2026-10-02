@@ -169,3 +169,14 @@ merge del PR #17 que esta misma secuencia necesita.
 "esto no estaba documentado en ningún lado" que esta decisión cierra para SonarCloud;
 [DECISIÓN 043](decision043.md) — precedente de hallazgo con estado PENDIENTE DE DECISIÓN para
 Kevin/Octavio.
+
+## Addendum 02/10/2026 — `.sonarcloud.properties`
+
+El quality gate de `staging` quedó en rojo (Reliability C sobre el código nuevo desde el
+30/07) aunque cada PR pasaba: el gate de un PR solo mira su diff, el de la rama acumula. De los
+17 bugs, 2 eran los prototipos HTML de `frontend/frontend-design/`, que `sonar-project.properties`
+ya excluía. Causa: **el Análisis Automático no lee `sonar-project.properties`, lee
+`.sonarcloud.properties`** — las exclusiones de ese archivo nunca se aplicaron. Se agregó
+`.sonarcloud.properties` (raíz) solo con `sonar.exclusions`. Los otros 15 (igualdad de floats en
+`std`/`var`, división del Wald-Wolfowitz, promesas sin `void`) se corrigieron sin cambiar
+comportamiento, en `fix/sonar-quality-gate-staging`.

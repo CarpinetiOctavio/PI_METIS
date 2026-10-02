@@ -59,7 +59,7 @@ def _skewness(yi: np.ndarray) -> float:
         return 0.0
     ybar = float(np.mean(yi))
     var_sesgada = float(np.var(yi, ddof=0))
-    if var_sesgada == 0.0:
+    if var_sesgada <= 0.0:
         return 0.0
     g_sesg = float(np.mean((yi - ybar) ** 3) / var_sesgada**1.5)
     return float((n**2 / ((n - 1) * (n - 2))) * g_sesg)
