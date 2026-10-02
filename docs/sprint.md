@@ -1,5 +1,10 @@
 # Estado del Sprint Actual
 
+> **Movido el 02/10/2026** desde `.claude/rules/sprint.md`: todo lo que está bajo `.claude/rules/`
+> se carga solo en cada sesión de Claude Code, y este registro (~100 KB) inflaba el contexto de todas.
+> Los links relativos se ajustaron a la ubicación nueva; las menciones a `sprint.md` en documentos
+> históricos y decisiones quedan como estaban.
+
 ## Sprint 1 — Etapa 1 completa
 
 ### Estrategia de ramas
@@ -30,7 +35,7 @@ SonarCloud, y no se pudo confirmar el estado de los tres checks de `ci.yml`
 como *required* porque este repo devuelve 404/lista vacía en los endpoints
 de Ruleset/branch-protection de la API para un token sin permiso `admin`
 (solo `push`/`maintain`) — pendiente de verificar con acceso admin real.
-Ver [DECISIÓN 044](../../docs/decisiones/decision044.md), sección "La
+Ver [DECISIÓN 044](decisiones/decision044.md), sección "La
 pregunta de gobernanza abierta".
 
 ### Orden de implementación
@@ -704,7 +709,7 @@ corrección).
 Cuarta pasada de mejora del frontend, sobre la identidad visual "Instrumento"
 cerrada en la pasada 4. Plan completo en
 `docs/historico/planes/frontend/plan-mejora-frontend-pasada5.md`, cierre en
-[`docs/historico/planes/frontend/informe-resultados-pasada5.md`](../../docs/historico/planes/frontend/informe-resultados-pasada5.md)
+[`docs/historico/planes/frontend/informe-resultados-pasada5.md`](historico/planes/frontend/informe-resultados-pasada5.md)
 — punto de entrada para retomar el estado exacto de verificación bloque por
 bloque. Cuatro PRs apilados (Bloque A+B #37, Bloque C+D #38, Bloque E #39,
 Bloque F #40), los cuatro mergeados a `staging`: paridad del tema claro
@@ -1191,13 +1196,13 @@ borrado en el mismo commit que esta sección.
 `docs/historico/planes/plan-resolucion-diaria.md` (revisión 2) — acepta
 `resolucion_temporal == "diaria"` como formato de entrada y lo agrega a
 máximos anuales por el **camino A**, igual que mensual (DECISIÓN 057). Sale
-del [informe de viabilidad](../../docs/historico/planes/informe-viabilidad-resoluciones-temporales.md),
+del [informe de viabilidad](historico/planes/informe-viabilidad-resoluciones-temporales.md),
 que descartó el camino B (analizar valores sub-anuales sin agregar) por
 riesgo académico. Bloques `R1`–`R6`. Decisiones:
-[065](../../docs/decisiones/decision065.md) (el "sí" al camino A para
+[065](decisiones/decision065.md) (el "sí" al camino A para
 diaria — directo diaria→anual, cobertura asimétrica extremos/interior,
 payload como agregación mensual, `== 1` en la inferencia) y
-[066](../../docs/decisiones/decision066.md) (el "no" al camino B —
+[066](decisiones/decision066.md) (el "no" al camino B —
 defendible por sí solo, no depende de que el resto se implemente).
 
 - **PR 1 — R1.1 (`parser.py`).** Mergeado ([#77](https://github.com/CarpinetiOctavio/PI_METIS/pull/77)).
@@ -1235,7 +1240,7 @@ instantáneo — **bloquea la exposición en la UI**, no la implementación),
 **R0.3** (directo vs. encadenado — implementado directo).
 
 - **PR 5 — fix de F1 + cierre de la revisión.** `fix/agregacion-colision-timestamp-duplicado`.
-  [DECISIÓN 067](../../docs/decisiones/decision067.md): `_acumular_maximo()` compartido por
+  [DECISIÓN 067](decisiones/decision067.md): `_acumular_maximo()` compartido por
   `agregar_a_maximos_anuales()` y `agregar_a_maximos_mensuales()` — ante colisión de clave
   (timestamp duplicado, warning no bloqueante) se conserva el **máximo**, no la última fila del
   archivo. Antes, un duplicado posterior de menor valor borraba el pico real del año sin ningún

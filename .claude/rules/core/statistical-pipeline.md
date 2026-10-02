@@ -573,12 +573,23 @@ y ceros a la vez gana `disabled_negatives`. Las de 3 parámetros deciden por su 
   distribuciones de `PENDIENTES_VALIDACION` (DECISIÓN 074). Ojo:
   `constraints.md` dice que CU-03 expone solo Etapa 1 — contradicción previa
   entre los dos documentos, sin resolver (CU-03 no está implementado).
-- Después de la selección → calcular eventos de diseño via POST /analysis/design-events
+- Después de la selección → CU-01/CU-02 la resuelven con `POST /analysis/distribution-decision`
+  (DECISIÓN 052) y los eventos llegan por el stream en `result_etapa2_eventos`. El
+  `POST /analysis/design-events` sin id nunca existió; `POST /analysis/{id}/design-events`
+  es otra cosa: el recálculo desde el historial (DECISIÓN 062).
 
 ### Año hidrológico
 
-Todo gráfico con eje temporal produce **dos versiones**:
-- Año calendario: 1 enero → 31 diciembre
-- Año hidrológico: 1 julio → 30 junio del año siguiente
+**Corregido 02/10/2026.** Esta sección decía que todo gráfico con eje temporal llevaba dos
+versiones obligatorias (calendario y julio-junio), incluidos Chow y los dos gráficos de Etapa 2.
+Quedó superada por DECISIÓN 057 y DECISIÓN 058:
 
-Ambas versiones son **obligatorias**, no opcionales. Aplica a: gráfico de Chow, gráfico de ajuste, gráfico de eventos de diseño, serie temporal, boxplot mensual.
+- El año arranca en `mes_inicio_anio ∈ [1..12]` (default 7), un parámetro del análisis. El año
+  calendario es el caso `mes_inicio_anio = 1`, no un modo aparte.
+- La vista comparativa calendario aplica solo a la **serie temporal** y al **boxplot mensual**,
+  y solo con carga mensual o diaria.
+- **No** aplica al gráfico de Chow (su atípico es un punto de `serie_efectiva`) ni a
+  `Etapa2AjusteChart`/`Etapa2EventosChart` (eje en T, sin toggle).
+
+Detalle: `constraints.md`, secciones "Año hidrológico — configurable, no una constante" y
+"Gráficos con eje temporal — corregido por DECISIÓN 058".

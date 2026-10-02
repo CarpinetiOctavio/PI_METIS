@@ -44,7 +44,7 @@ que toca `frontend/`. Esto **no se hizo**: la extensión de Chrome no estaba con
       (y verificar con `docker ps` el nombre real de los contenedores).
 - [ ] Después de mergear: `git checkout staging && git pull`, y borrar las tres ramas locales
       (`feature/etapa1-desglose`, `feature/excluir-recalcular`, `feature/etapa2-negativos-frontend`).
-- [ ] Sincronizar `.claude/rules/sprint.md`: no registra los PRs #88–#94 ni este (dice que el #88 está
+- [ ] Sincronizar `docs/sprint.md`: no registra los PRs #88–#94 ni este (dice que el #88 está
       abierto). Pesa ~97 KB; conviene sumar una sección corta y no seguir engordándolo.
 
 ---

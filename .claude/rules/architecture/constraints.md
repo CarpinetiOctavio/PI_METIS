@@ -12,6 +12,9 @@
 - API Keys almacenadas como hash bcrypt — nunca texto plano en BD
 - Variables de entorno en .env — nunca credenciales en código
 - .env nunca se commitea — está en .gitignore desde el inicio
+- API Key siempre en el header `X-API-Key` — nunca en la URL
+- CORS estricto — solo el dominio del frontend autorizado
+- HTTPS obligatorio en producción
 - auth/ implementado: usuario/contraseña + bcrypt + JWT HttpOnly Cookie con verificación @ucc.edu.ar (DECISIÓN 001). Parte 2 (envío real de mail con `aiosmtplib`): credenciales de IT recibidas 10/06, implementación pendiente de iniciar (DECISIÓN 004).
 
 ### Lógica de negocio

@@ -16,7 +16,7 @@ de que algo abierto desaparezca.
 **No están acá** porque no son planes sino documentos vivos: `frontend/frontend-implementation-plan.md` (fuente de
 verdad decisión por decisión del frontend, §10), `frontend/frontend-integration.md`, `pendientes-tecnicos.md`,
 `decisiones/` y `auditoria/`. El backend de Etapa 1 y Etapa 2 (PRs #1 a #16) se hizo antes de que existiera esta
-convención de planes en `docs/`; su historia está en `.claude/rules/sprint.md` y en `auditoria/`.
+convención de planes en `docs/`; su historia está en `docs/sprint.md` y en `auditoria/`.
 
 ---
 
@@ -190,7 +190,7 @@ revirtió la pasada 5 (DECISIÓN 051).
 - **Fechas y PRs:** 12/08; **#51** a **#56** (hot reload del backend, DECISIÓN 058, serie en el contrato de Etapa 1,
   serie temporal y Chow, boxplot mensual).
 - **Qué se hizo:** cerró FE-16 (la serie no llegaba al frontend). El plan se borró al cerrar y **nunca se versionó**:
-  su resumen está en `.claude/rules/sprint.md`, sección "Plan de cierre de pendientes no-test".
+  su resumen está en `docs/sprint.md`, sección "Plan de cierre de pendientes no-test".
 - **Decisiones:** 058.
 - **Archivo:** ninguno.
 
