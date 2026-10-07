@@ -52,7 +52,7 @@ function isPydanticErrorBody(body: unknown): body is PydanticErrorBody {
   );
 }
 
-async function toApiError(response: Response): Promise<ApiError> {
+export async function toApiError(response: Response): Promise<ApiError> {
   let body: unknown;
   try {
     body = await response.json();

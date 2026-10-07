@@ -7,6 +7,7 @@ import { errorText } from "../../i18n/errors.es";
 import { Etapa1ResultView } from "../results/Etapa1ResultView";
 import { Etapa2Explorador } from "../results/Etapa2Explorador";
 import { Etapa2EventosView } from "../results/Etapa2EventosView";
+import { ExportarPdfButton } from "../results/ExportarPdfButton";
 import type { AnalysisDetail, Modo } from "../../api/types";
 import "./HistoryDetailPage.css";
 
@@ -71,7 +72,10 @@ export function HistoryDetailPage() {
 
   return (
     <div className="history-detail-page">
-      <h1 className="h">Detalle del análisis</h1>
+      <div className="encabezado-exportable">
+        <h1 className="h">Detalle del análisis</h1>
+        <ExportarPdfButton analysisId={detail.id} />
+      </div>
       <p className="sub">
         {detail.tipo_variable} · {new Date(detail.created_at).toLocaleString("es-AR")}
       </p>
