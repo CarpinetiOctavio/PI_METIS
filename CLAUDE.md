@@ -148,7 +148,9 @@ Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de pu
 
 **SonarCloud** analiza cada PR además de estos jobs — no vía un paso propio de `ci.yml`, sino por
 Análisis Automático (App de GitHub de SonarCloud). Hoy el check no es *required* en el Ruleset, así
-que es consultivo, no bloqueante. Ver [decision044.md](docs/decisiones/decision044.md).
+que es consultivo, no bloqueante. **Exclusiones de Sonar van en `.sonarcloud.properties`** (raíz): el
+Análisis Automático ignora `sonar-project.properties` — sus exclusiones nunca se aplicaron hasta el
+addendum del 02/10/2026. Ver [decision044.md](docs/decisiones/decision044.md).
 
 ### Reglas de flujo de trabajo que no se deducen del código
 

@@ -178,8 +178,9 @@ Rating, Security Rating, issues nuevos, duplicación y Security Hotspots; hoy no
 porque el Análisis Automático no admite reportes de cobertura (requeriría migrar al scanner
 corriendo dentro de CI con un `SONAR_TOKEN` de secret — pendiente, no es una tarea de una sesión de
 agente). Ver [DECISIÓN 044](../../docs/decisiones/decision044.md) para el detalle completo,
-incluida la configuración en `sonar-project.properties` (raíz del repo) y el estado del check como
-consultivo (no bloqueante) en el Ruleset.
+y el estado del check como consultivo (no bloqueante) en el Ruleset. **Configuración:** el Análisis
+Automático lee `.sonarcloud.properties` (raíz), no `sonar-project.properties` — las exclusiones van
+en el primero (addendum del 02/10/2026 a DECISIÓN 044).
 
 ---
 
