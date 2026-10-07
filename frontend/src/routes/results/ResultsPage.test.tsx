@@ -177,6 +177,20 @@ describe("ResultsPage", () => {
     expect(container.querySelectorAll("details")).toHaveLength(0);
   });
 
+  // DECISIÓN 075 — exportar a PDF solo en CU-01 (sesión + análisis persistido).
+  it("CU-01 (con analysisId) — muestra el botón 'Exportar PDF'", async () => {
+    renderResultsPage(true, makeResult(), "experto");
+    expect(await screen.findByRole("button", { name: "Exportar PDF" })).toBeInTheDocument();
+  });
+
+  it("CU-02 (anónimo, sin analysisId) — no muestra 'Exportar PDF'", async () => {
+    renderResultsPage(false, makeResult(), "experto", { analysisId: null });
+    expect(
+      await screen.findByRole("heading", { name: "Resultados de Etapa 1" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Exportar PDF" })).not.toBeInTheDocument();
+  });
+
   // Bloque B del plan de Etapa 2 — Etapa 2 ya no es una pantalla mock
   // aparte: corrió (si se pidió) dentro de StreamPage, y acá se muestra de
   // solo lectura si el router state la trae.

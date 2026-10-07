@@ -16,6 +16,14 @@ import type {
 } from "../../api/types";
 import { ResultsPage } from "./ResultsPage";
 
+// Exportar PDF (DECISIÓN 075): jsdom no implementa URL.createObjectURL, así que
+// pedir y guardar el PDF se reemplazan en el borde.
+const { obtenerPdfAnalisis, guardarPdf } = vi.hoisted(() => ({
+  obtenerPdfAnalisis: vi.fn(),
+  guardarPdf: vi.fn(),
+}));
+vi.mock("../../api/export", () => ({ obtenerPdfAnalisis, guardarPdf }));
+
 // Cableado del what-if de atípicos en la página (ítem A, A2): cuándo aparece el
 // botón y qué pide al backend (POST /analysis/simulate-exclusion, DECISIÓN 071).
 const RECALCULAR = /Recalcular sin los puntos seleccionados/;
@@ -30,9 +38,14 @@ interface Estado {
 function montar(
   estado: Estado = { tipoVariable: "otro" },
   respuesta: SimulateExclusionResponse = makeSimulacion(),
+  sesion: { analysisId: string } | null = null,
 ) {
   const fetchMock = stubFetchRouted([
-    { match: (url) => url.includes("/auth/me"), status: 401, body: {} },
+    {
+      match: (url) => url.includes("/auth/me"),
+      status: sesion ? 200 : 401,
+      body: sesion ? { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true } : {},
+    },
     {
       match: (url, init) => init?.method === "POST" && url.includes("/simulate-exclusion"),
       status: 200,
@@ -44,7 +57,11 @@ function montar(
       initialEntries={[
         {
           pathname: "/results",
-          state: { result: makeEtapa1Result({ datos: makeEtapa1Datos() }), ...estado },
+          state: {
+            result: makeEtapa1Result({ datos: makeEtapa1Datos() }),
+            analysisId: sesion?.analysisId ?? null,
+            ...estado,
+          },
         },
       ]}
     >
@@ -67,6 +84,31 @@ describe("ResultsPage — what-if de atípicos", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("CU-01 — con una simulación vigente ofrece exportar el PDF con ella", async () => {
+    const pdf = { blob: new Blob(["%PDF"]), nombre: "metis_x_simulacion.pdf" };
+    obtenerPdfAnalisis.mockResolvedValue(pdf);
+    const { user } = montar({ tipoVariable: "otro" }, makeSimulacion(), { analysisId: "an-1" });
+
+    // La sesión se confirma con /auth/me después de montar: bajo la carga de la
+    // suite completa eso puede pasar el segundo de espera por defecto.
+    await screen.findByRole("button", { name: "Exportar PDF" }, { timeout: 5000 });
+    expect(
+      screen.queryByRole("button", { name: "Exportar PDF con la simulación" }),
+    ).not.toBeInTheDocument();
+
+    // makeSimulacion() responde con el año 2005 (índice 5) excluido; el botón
+    // usa los índices de la simulación vigente, no la selección en curso.
+    const grilla = await screen.findByRole("group", { name: /Años de la serie/ });
+    await user.click(within(grilla).getAllByRole("button")[5]);
+    await user.click(screen.getByRole("button", { name: RECALCULAR }));
+    await screen.findByText("Resultados sin los puntos excluidos");
+
+    await user.click(screen.getByRole("button", { name: "Exportar PDF con la simulación" }));
+    expect(obtenerPdfAnalisis).toHaveBeenCalledWith("an-1", [5]);
+    expect(guardarPdf).toHaveBeenCalledWith(pdf);
   });
 
   it("sin la configuración del análisis en el estado tampoco lo ofrece", async () => {

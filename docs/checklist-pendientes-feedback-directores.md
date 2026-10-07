@@ -120,7 +120,7 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
 - [ ] **`tests/e2e/` vacío** (E2E de API que `testing.md` compromete) y después **quitar la tolerancia del exit code 5**
       del job `test` en un PR propio.
 - [ ] **CU-03:** `POST /validate/` y gestión de API Keys (el modelo `api_client` existe, nada lo usa) — necesario para M7.
-- [ ] **`GET /export/{id}`** — exportación PDF de CU-01, sin implementar.
+- [x] **`GET /export/{id}`** — exportación PDF de CU-01. Implementada el 06/10/2026 (DECISIÓN 075).
 - [ ] **Persistir Etapa 1 si el usuario abandona la pausa de elección de distribución** (hoy se pierde todo). Requiere
       primero una decisión de producto.
 

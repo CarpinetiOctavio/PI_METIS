@@ -67,6 +67,13 @@ describe("HistoryDetailPage", () => {
     expect(await screen.findByText("validado")).toBeInTheDocument();
   });
 
+  it("ofrece exportar el análisis a PDF (DECISIÓN 075)", async () => {
+    stubFetch(200, makeDetail());
+    renderDetail();
+
+    expect(await screen.findByRole("button", { name: "Exportar PDF" })).toBeInTheDocument();
+  });
+
   it("shows a legible error banner on failure", async () => {
     stubFetch(404, { error: { codigo: "AUTH_USER_NOT_FOUND", mensaje: "..." } });
     renderDetail();

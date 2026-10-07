@@ -9,6 +9,7 @@ import { Etapa1ResultView } from "./Etapa1ResultView";
 import { Etapa2Explorador } from "./Etapa2Explorador";
 import { Etapa2RankingView } from "./Etapa2RankingView";
 import { Etapa2EventosView } from "./Etapa2EventosView";
+import { ExportarPdfButton } from "./ExportarPdfButton";
 import type {
   CramerParticion,
   Etapa1Result,
@@ -179,7 +180,18 @@ export function ResultsPage() {
 
   return (
     <div className="results-page">
-      <h1 className="h">Resultados de Etapa 1</h1>
+      <div className="encabezado-exportable">
+        <h1 className="h">Resultados de Etapa 1</h1>
+        {/* Exportar PDF (DECISIÓN 075): solo CU-01, que tiene el análisis
+            persistido. Exporta Etapa 1 o Etapa 1 + 2 según lo que se corrió y,
+            con una simulación vigente, también los resultados sin esos puntos. */}
+        {isAuthed && analysisId && (
+          <ExportarPdfButton
+            analysisId={analysisId}
+            indicesExcluidos={simulacion?.excluidos.map((e) => e.indice)}
+          />
+        )}
+      </div>
       <Etapa1ResultView
         result={result}
         modo={modoEfectivo}

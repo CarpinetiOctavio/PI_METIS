@@ -332,8 +332,9 @@ Mismo shape que `GET /api/v1/analysis/{analysis_id}` (llama a la misma función
 
 ### GET `/api/v1/export/{id}` (PDF)
 
-**⚠️ NO IMPLEMENTADO.** No hay router de exportación en el backend. Mockear en
-el frontend — el botón "Exportar PDF" no tiene backend real todavía.
+Implementado el 06/10/2026 (DECISIÓN 075). Requiere auth; responde `application/pdf`
+como adjunto, o `404 ANALYSIS_NOT_FOUND`. Lo consume `api/export.ts`, desde el botón
+"Exportar PDF" (`routes/results/ExportarPdfButton.tsx`) de `ResultsPage` y `HistoryDetailPage`.
 
 ### POST `/api/v1/validate/` (CU-03)
 
