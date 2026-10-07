@@ -2,12 +2,15 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from metis.api.errors import manejar_http_exception
 from metis.api.v1.analysis import router as analysis_router
 from metis.api.v1.history import router as history_router
 from metis.auth.router import router as auth_router
 
 app = FastAPI(title="METIS", version="1.0.0")
+app.add_exception_handler(StarletteHTTPException, manejar_http_exception)
 
 app.add_middleware(
     CORSMiddleware,

@@ -12,6 +12,13 @@
 }
 ```
 
+**Cómo se garantiza (06/10/2026):** los endpoints levantan `HTTPException(detail={"error": {...}})`, y el
+manejador global `metis/api/errors.py::manejar_http_exception` (registrado en `main.py`) responde ese `detail`
+tal cual, sin envolver. Antes, FastAPI respondía `{"detail": {"error": {...}}}`, `frontend/src/api/client.ts`
+no reconocía el código y mostraba el texto genérico — por ejemplo, en el login con contraseña incorrecta. Un
+`detail` que no tiene esta forma (un str como `"No autenticado"`, el 404 de ruta inexistente) y el 422 de Pydantic
+siguen con el formato de FastAPI (`{"detail": ...}`). Test: `tests/unit/api/test_estructura_error.py`.
+
 | HTTP | Cuándo |
 |------|--------|
 | 400 | Contrato de datos inválido |
