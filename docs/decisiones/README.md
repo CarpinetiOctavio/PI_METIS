@@ -201,3 +201,4 @@ situ.
 | 072 | *(reservado — exploración de distribuciones sin id para CU-02, bloque B del plan de backend del feedback de directores; no entra en el plan del 01/10)* | — | Pendiente |
 | [073](decision073.md) | Valores negativos: estado propio `disabled_negatives` en Etapa 2 y código propio `TEST_NOT_EXECUTED_NEGATIVES` para Chow | 01/10/2026 | Decidida y aplicada (backend) |
 | [074](decision074.md) | Generalizada de Pareto "pendiente de validación" en V1.0: se calcula y se muestra, pero no se puede elegir y va al final del ranking | 01/10/2026 | Decidida y aplicada (backend + frontend) — se cierra con el addendum de la V2 |
+| [075](decision075.md) | Exportación PDF de CU-01: ReportLab + matplotlib en el backend, siempre formato Experto, módulo `metis/reportes/` | 06/10/2026 | Decidida y aplicada (backend + frontend) |

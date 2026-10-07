@@ -627,6 +627,41 @@ ejemplo, `tipo_variable` fuera de las dos opciones).
 
 ---
 
+### GET /api/v1/export/{id} (DECISIÓN 075)
+
+**Agregado 06/10/2026** — informe PDF de un análisis persistido de CU-01, generado en el momento y nunca
+guardado en disco. Exporta Etapa 1 o Etapa 1 + 2 según lo que se corrió, **siempre en formato Experto**
+(resultados directos, sin fórmulas ni explicaciones), sea cual sea el modo del análisis.
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Verifica pertenencia igual que `GET /history/{id}`.
+
+**Response 200:** `application/pdf`, con `Content-Disposition: attachment; filename="metis_<archivo>_<fecha>.pdf"`
+(nombre en ASCII). Contenido: datos y configuración del análisis, advertencias, estadística descriptiva, las ocho
+pruebas por batería con sus niveles, decisión ante el atípico, gráficos de la serie y del correlograma de Anderson;
+con Etapa 2, el ranking de las 13 distribuciones (mejor método, EEA, EEA/media, sin marcar ganadora), la
+distribución elegida con sus parámetros y eventos de diseño, y el gráfico de ajuste.
+
+**Errores:** 401 sin sesión; 404 `ANALYSIS_NOT_FOUND` si el análisis no existe o no pertenece al usuario (body con
+la estructura estándar `{"error": {...}}`).
+
+### POST /api/v1/export/{id}/simulacion (DECISIÓN 075)
+
+El mismo PDF más, en una página aparte, los resultados **sin los puntos excluidos** comparados con el análisis
+registrado — lo mismo que muestra la vista comparativa del what-if de atípicos (DECISIÓN 071) en Resultados.
+
+**Request (JSON):** `{"indices_excluidos": [3, 17]}` — posiciones en `etapa1.datos.serie_efectiva`, como en
+`simulate-exclusion`. Del cliente llegan solo los índices: serie, años, `tipo_variable`, `cramer_particion`, `etapas`
+y la distribución elegida salen del análisis persistido, y la simulación se recalcula con `simular_exclusion()`. No
+se guarda nada ni se toca `decisiones` (DECISIÓN 062).
+
+**Auth y response 200:** iguales a `GET /export/{id}`; el nombre del archivo termina en `_simulacion.pdf`.
+
+**Errores:** 401 y 404 como arriba; 400 `CONTRACT_EXCLUSION_INVALID` si `indices_excluidos` está vacío, tiene
+índices fuera de rango o repetidos, o el análisis no tiene registrada la serie analizada (anterior a DECISIÓN 058);
+422 validación Pydantic.
+
+---
+
 ### POST /api/v1/validate/ (CU-03)
 
 **Request (multipart/form-data):**
@@ -799,7 +834,9 @@ CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media"
 CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusion vacía, con más de 500 valores o con
                                         valores no finitos (DECISIÓN 071)
 CONTRACT_EXCLUSION_INVALID             indices_excluidos fuera de rango o repetidos, anios de otro largo que serie, o
-                                        tratamiento inexistente, en POST /analysis/simulate-exclusion (DECISIÓN 071)
+                                        tratamiento inexistente, en POST /analysis/simulate-exclusion (DECISIÓN 071).
+                                        También POST /export/{id}/simulacion: índices vacíos, fuera de rango o
+                                        repetidos, o análisis sin la serie analizada registrada (DECISIÓN 075)
 ```
 A diferencia de los dos grupos de arriba (series de datos), estos códigos validan
 un parámetro del request en `POST /analysis/stream` antes de tocar el archivo
@@ -872,7 +909,8 @@ SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante
 PARSE_FILE_TOO_LARGE             El archivo supera el límite de subida — respuesta HTTP 400, no evento SSE
 SESSION_NOT_FOUND                session_id no existe o ya expiró — respuesta HTTP 404, no evento SSE (DECISIÓN 052)
 ANALYSIS_NOT_FOUND               El análisis de POST /analysis/{id}/design-events no existe, no es del
-                                  usuario, o no tiene Etapa 2 — respuesta HTTP 404, sin sesión de por medio (DECISIÓN 062)
+                                  usuario, o no tiene Etapa 2 — respuesta HTTP 404, sin sesión de por medio (DECISIÓN 062).
+                                  También GET /export/{id}: no existe o no es del usuario (DECISIÓN 075)
 ```
 `PARSE_ERROR` y `SESSION_TIMEOUT` son eventos SSE `error`, no respuestas HTTP
 de error — ver nota general al principio de este archivo. Emitidos por

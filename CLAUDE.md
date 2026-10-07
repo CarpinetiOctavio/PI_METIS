@@ -40,7 +40,8 @@ Todo el código Python vive bajo `backend/`; los comandos de este repo (pytest, 
 backend/metis/
 ├── api/v1/               # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
 │   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /preview-columns, /distribution-decision, /{id}
-│   └── history.py        # /history/, /history/{id}, /history/{id}/archive|unarchive
+│   ├── history.py        # /history/, /history/{id}, /history/{id}/archive|unarchive
+│   └── export.py         # GET /export/{id}, POST /export/{id}/simulacion — PDF de CU-01 (DECISIÓN 075)
 ├── core/                 # Motor estadístico. SIN conocimiento de HTTP, BD, ni sesiones.
 │   ├── estadistica_descriptiva/   # descriptive.py
 │   ├── etapa1/            # independence.py, homogeneity.py, trend.py, outliers.py (Chow)
@@ -50,7 +51,10 @@ backend/metis/
 │   ├── validacion/        # contract.py (validación de contrato de datos), parser.py,
 │   │                      # aggregation.py (mensual/diaria → máximos anuales — DECISIÓN 057/065)
 │   ├── types.py, utils.py
-├── services/              # Orquestación: analysis_service.py (pipeline + SSE + persistencia), session_store.py
+├── services/              # Orquestación: analysis_service.py (pipeline + SSE + persistencia), session_store.py,
+│                          # export_service.py
+├── reportes/              # pdf.py — informe PDF (ReportLab + matplotlib). Presentación pura: recibe el dict de
+│                          # get_analysis_by_id(), no importa api/services/db/core (DECISIÓN 075)
 ├── db/                    # models/ (user, analysis, result, api_client) + base.py, session.py
 ├── schemas/               # Modelos Pydantic: analysis.py, auth.py, common.py
 └── auth/                  # router.py, jwt.py, email.py (aiosmtplib), dependencies.py
@@ -214,7 +218,7 @@ Historia de cómo se llegó a esto (fases 1-6, pasadas de mejora 2-5, planes de 
 
 ## Endpoints — estructura definitiva
 
-**Verificado contra `main.py` y los routers (21/09/2026): solo hay tres routers montados — auth, analysis, history.** `GET /export/{id}` y `POST /validate/` (CU-03, con `X-API-Key`) están en el contrato pero **no existen todavía**; tampoco la gestión de API Keys — `db/models/api_client.py` está modelado y nada lo importa. No asumir que responden.
+**Hay cuatro routers montados en `main.py` — auth, analysis, history, export.** `POST /validate/` (CU-03, con `X-API-Key`) está en el contrato pero **no existe todavía**; tampoco la gestión de API Keys — `db/models/api_client.py` está modelado y nada lo importa. No asumir que responden.
 
 ```
 POST   /api/v1/auth/register
@@ -233,7 +237,8 @@ GET    /api/v1/history/                   # ?archivados=true incluye archivados 
 GET    /api/v1/history/{id}
 POST   /api/v1/history/{id}/archive       # soft-delete — DECISIÓN 048
 POST   /api/v1/history/{id}/unarchive
-GET    /api/v1/export/{id}                # PDF on-demand — SIN IMPLEMENTAR
+GET    /api/v1/export/{id}                # PDF on-demand, siempre formato Experto — CU-01 (DECISIÓN 075)
+POST   /api/v1/export/{id}/simulacion     # El mismo PDF + resultados sin los puntos excluidos (DECISIÓN 071/075)
 POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1 — SIN IMPLEMENTAR
 ```
 

@@ -129,9 +129,10 @@ explícitamente como tal.
 
 ### PDF de exportación — CU-01
 Se genera on-demand, no se almacena en disco.
-Contenido varía según lo ejecutado (solo Etapa 1 vs pipeline completo) y el modo (paso a paso vs experto).
-En modo paso a paso: incluir fórmulas con valores sustituidos.
-En modo experto: resultados directos, sin fórmulas ni explicaciones.
+Contenido varía según lo ejecutado (solo Etapa 1 vs pipeline completo).
+**V1.0: siempre formato Experto** — resultados directos, sin fórmulas ni explicaciones, aunque el análisis se haya
+corrido en paso a paso. La variante "paso a paso con fórmulas sustituidas" quedó fuera: el modo docente vive en la
+pantalla (KaTeX, DECISIÓN 064). Ver `docs/decisiones/decision075.md` — DECISIÓN 075.
 
 ---
 
