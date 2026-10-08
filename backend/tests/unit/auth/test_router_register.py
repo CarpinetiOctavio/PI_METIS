@@ -190,3 +190,23 @@ async def test_register_race_concurrente_segundo_commit_falla_sin_excepcion_sin_
     )
     db_segundo.rollback.assert_awaited_once()
     db_primero.commit.assert_awaited_once()
+
+
+@pytest.mark.unit
+async def test_register_email_ya_registrado_responde_400_sin_mandar_mail():
+    # Arrange
+    db = _mock_db()
+    db.execute.return_value.scalar_one_or_none.return_value = MagicMock()
+
+    # Act
+    with patch(
+        "metis.auth.router.send_verification_email", new_callable=AsyncMock
+    ) as send:
+        with pytest.raises(HTTPException) as exc:
+            await register(_body(), db=db)
+
+    # Assert
+    assert exc.value.status_code == 400
+    assert exc.value.detail["error"]["codigo"] == "AUTH_EMAIL_ALREADY_REGISTERED"
+    send.assert_not_called()
+    db.add.assert_not_called()
