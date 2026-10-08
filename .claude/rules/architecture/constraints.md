@@ -180,9 +180,12 @@ están pendientes de confirmación en formato digital.
 - Bandas de confianza (RF-GEN-O-11): feature candidata, no prioritaria
 - Exportación a Google Drive institucional: feature candidata
 - Análisis raster: fuera del alcance
-- Tests de carga o performance
-- Tests end-to-end de UI automatizados (Selenium/Playwright)
 - CD automático a producción (bloqueado por infraestructura UCC)
+
+**Corrección 08/10/2026:** esta lista también excluía "Tests de carga o performance" y "Tests end-to-end de UI
+automatizados (Selenium/Playwright)" desde el PR #2 (05/05/2026), sin una decisión que lo justificara: era un
+recorte de la fase solo backend. Salieron por [DECISIÓN 046](../../../docs/decisiones/decision046.md) (E2E con
+Playwright) y [DECISIÓN 077](../../../docs/decisiones/decision077.md) (carga y esfuerzo sostenido).
 
 ---
 
@@ -206,4 +209,6 @@ CI corre en cada PR antes del merge. No mergear sin que CI pase.
 paso propio en el workflow). Hoy el check **no es required** en el Ruleset — el botón de merge
 queda habilitado con el gate en rojo — así que es consultivo de hecho, no bloqueante. Ver
 [DECISIÓN 044](../../../docs/decisiones/decision044.md), sección "La pregunta de gobernanza
-abierta", para el estado exacto y las opciones pendientes de decisión de Kevin/Octavio.
+abierta", para el estado exacto. **Resuelta por [DECISIÓN 077](../../../docs/decisiones/decision077.md)**
+(08/10/2026): SonarCloud pasa a análisis por CI y los checks pasan a requeridos, en el último PR del plan del TP de
+Calidad (necesita permisos de administración del repo). Hasta entonces sigue consultivo.

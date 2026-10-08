@@ -180,3 +180,11 @@ ya excluía. Causa: **el Análisis Automático no lee `sonar-project.properties`
 `.sonarcloud.properties` (raíz) solo con `sonar.exclusions`. Los otros 15 (igualdad de floats en
 `std`/`var`, división del Wald-Wolfowitz, promesas sin `void`) se corrigieron sin cambiar
 comportamiento, en `fix/sonar-quality-gate-staging`.
+
+## Addendum 08/10/2026 — D3 resuelta por DECISIÓN 077
+
+La pregunta de gobernanza abierta (D3) se resuelve con la **opción 1** (gate bloqueante), dentro de
+[DECISIÓN 077](decision077.md): SonarCloud pasa de Análisis Automático a análisis por CI (con cobertura importada)
+y sus checks y los de CI pasan a requeridos en el ruleset. Necesita permisos de administración del repositorio, así
+que se aplica en el último PR del plan del TP de Calidad de Software (`docs/plan-tp-calidad-software.md`, B13). Hasta
+ese PR el gate sigue consultivo, y lo cubre el gate propio de CI de DECISIÓN 077 (`diff-cover` y `jscpd`).
