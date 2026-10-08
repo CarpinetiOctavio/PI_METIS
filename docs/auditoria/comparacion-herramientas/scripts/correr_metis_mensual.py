@@ -20,11 +20,24 @@ from metis.core.pipeline.pipeline_etapa1 import ejecutar_etapa1  # noqa: E402
 from metis.core.validacion.parser import parse_file  # noqa: E402
 
 RES = AQUI.parent / "resultados"
+RAIZ_REPO = AQUI.parents[3]
+EXTENSIONES = {".csv", ".xlsx", ".xls"}
+
+
+def _ruta_segura(ruta: str) -> Path:
+    """La ruta llega por línea de comandos: solo se aceptan archivos de datos dentro del repositorio."""
+    archivo = Path(ruta).resolve()
+    if not archivo.is_relative_to(RAIZ_REPO):
+        raise SystemExit(f"El archivo tiene que estar dentro del repositorio ({RAIZ_REPO}).")
+    if archivo.suffix.lower() not in EXTENSIONES or not archivo.is_file():
+        raise SystemExit(f"Se espera un archivo {', '.join(sorted(EXTENSIONES))} existente.")
+    return archivo
 
 
 def main(ruta: str, col_x: str, col_y: str) -> None:
-    contenido = Path(ruta).read_bytes()
-    datos = parse_file(contenido, Path(ruta).name, col_x, col_y)
+    archivo = _ruta_segura(ruta)
+    contenido = archivo.read_bytes()
+    datos = parse_file(contenido, archivo.name, col_x, col_y)
     filas = []
     for mes in (6, 7):
         r1 = ejecutar_etapa1(
@@ -37,7 +50,7 @@ def main(ruta: str, col_x: str, col_y: str) -> None:
         pruebas = {t.prueba: t for g in ("independencia", "homogeneidad", "tendencia", "atipicos") for t in getattr(r1, g)}
         filas.append(
             {
-                "archivo": Path(ruta).name,
+                "archivo": archivo.name,
                 "variable": col_y,
                 "resolucion_inferida": datos.resolucion_temporal,
                 "mes_inicio_anio": mes,
