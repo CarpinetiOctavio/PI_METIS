@@ -141,13 +141,16 @@ array `routes` REAL (no rutas de mentira por archivo) — con ese patrón,
 "¿existe algún camino de clicks que lleve a `/history`?" pasó de ser una
 pregunta imposible de formular a un test real.
 
-### Capa 3 — E2E con Playwright contra Docker (no implementada, requiere decisión)
+### Capa 3 — E2E con Playwright contra Docker (decidida, en implementación)
 
 Propuesta por el plan de arreglo para los defectos que solo son detectables
 con el sistema completo corriendo junto (F1, F4, F5, F6, F9 del informe de
-diagnóstico). Contradice `constraints.md` — "Scope V1.0 — lo que NO entra"
-excluye explícitamente los tests E2E automatizados. **No implementar sin
-escribir primero `docs/decisiones/decision046.md`** revisando esa exclusión.
+diagnóstico). Habilitada por [DECISIÓN 046](../../docs/decisiones/decision046.md)
+(08/10/2026), que sacó de `constraints.md` la exclusión de E2E: Playwright en
+`frontend/e2e/`, seis escenarios contra el build de producción detrás de nginx,
+con el registro probado contra Mailpit (DECISIÓN 049). Se implementa en el
+Bloque B6 de `docs/plan-tp-calidad-software.md`; esta sección pasa a
+"implementada" cuando el job `e2e` corra en CI.
 
 ### Capa 4 — cambio de proceso (gratis, y la que más importa)
 

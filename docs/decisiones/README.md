@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision076.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision077.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -172,10 +172,10 @@ situ.
 | [043](decision043.md) | Contraste WCAG AA del tema Instrumento: hallazgos y propuesta, no aplicada | 29/07/2026 | PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [044](decision044.md) | SonarCloud: quality gate, limpieza del PR #17/B, rechazo de `<dialog>` nativo, merge del PR #17 en rojo | 30/07/2026 | Aplicada — gate de gobernanza PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [045](decision045.md) | Fondos animados en Canvas 2D sin dependencias, WebGL descartado — addendum 05/08/2026: excepción acotada para Threads (three.js) en la puerta de entrada, vía code-splitting | 31/07/2026 | Decidida — implementación en curso |
-| 046 | *(reservado — E2E con Playwright, revisa la exclusión de `constraints.md`)* | — | Pendiente — ver `docs/historico/planes/plan-post-pasada4-roadmap.md` §3, Bloque C1b |
+| [046](decision046.md) | E2E automatizados con Playwright contra el sistema desplegado; sale de `constraints.md` la exclusión de E2E de UI | 08/10/2026 | Decidida — implementación en el Bloque B6 de `docs/plan-tp-calidad-software.md` |
 | [047](decision047.md) | Endpoint `preview-columns`: parseo de cabeceras del lado del servidor, no del cliente | 31/07/2026 | Decidida — implementación en curso |
 | [048](decision048.md) | Archivado de análisis por soft-delete, no borrado físico | 31/07/2026 | Decidida — implementación en curso |
-| 049 | *(reservado — escotilla SMTP de desarrollo en `auth/email.py`. Corrección 05/08/2026: el plan de arreglo de UI y su informe de resultados citaban 045 para esto, pero 045 quedó asignada a "Fondos animados en Canvas 2D" antes de que la escotilla SMTP se escribiera — ver `docs/historico/planes/plan-post-pasada4-roadmap.md`, H1)* | — | Pendiente — ver `sprint.md`, "Pendiente de esta rama" |
+| [049](decision049.md) | Mailpit como servidor SMTP de captura en desarrollo, E2E y CI; sin escotilla en `auth/email.py` (número reservado originalmente para la escotilla SMTP, reasignado de 045 el 05/08/2026) | 08/10/2026 | Decidida — implementación en el Bloque B4 de `docs/plan-tp-calidad-software.md` |
 | [050](decision050.md) | Límite de tamaño de subida: valor (10 MB), nginx + backend, código de error nuevo | 05/08/2026 | Decidida — implementación en curso |
 | [051](decision051.md) | ThreadsBackground pasa de Three.js a Canvas 2D; Three.js sale del proyecto — supera el addendum de la excepción de DECISIÓN 045 | 06/08/2026 | Implementada |
 | [052](decision052.md) | Transporte de Etapa 2 por SSE con pausa; `distribution-decision` reemplaza `design-events` | 09/08/2026 | Decidida — implementación en curso |
@@ -203,3 +203,4 @@ situ.
 | [074](decision074.md) | Generalizada de Pareto "pendiente de validación" en V1.0: se calcula y se muestra, pero no se puede elegir y va al final del ranking | 01/10/2026 | Decidida y aplicada (backend + frontend) — se cierra con el addendum de la V2 |
 | [075](decision075.md) | Exportación PDF de CU-01: ReportLab + matplotlib en el backend, siempre formato Experto, módulo `metis/reportes/` | 06/10/2026 | Decidida y aplicada (backend + frontend) |
 | [076](decision076.md) | El período de retorno se rotula según la serie que se ajustó: T sigue en años, el texto dice qué se cargó y qué representa el valor de diseño | 08/10/2026 | Decidida y aplicada (frontend + informe PDF) |
+| [077](decision077.md) | Pruebas de carga y esfuerzo sostenido (k6, provisoria), cobertura y quality gate en CI, SonarCloud por CI — resuelve D3 de DECISIÓN 044 | 08/10/2026 | Decidida — Bloques B1 y B7 de `docs/plan-tp-calidad-software.md`; Sonar por CI y checks requeridos en el último PR (requieren admin del repo) |
