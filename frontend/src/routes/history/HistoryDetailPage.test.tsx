@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { renderPage } from "../../test/renderPage";
 import { HistoryDetailPage } from "./HistoryDetailPage";
 import { makeEtapa2 } from "../../test/etapa2Fixtures";
+import { makeEtapa1Datos } from "../../test/etapa1Fixtures";
 import { stubFetchRouted } from "../../test/fetchStubs";
 import type { AnalysisDetail } from "../../api/types";
 
@@ -171,6 +172,35 @@ describe("HistoryDetailPage", () => {
 
     expect(await screen.findByText("Elección registrada")).toBeInTheDocument();
     expect(screen.getByText(/gumbel · momentos · períodos de retorno: 2, 10, 100/)).toBeInTheDocument();
+  });
+
+  it("DECISIÓN 076: rotula T y el valor de diseño según la carga persistida", async () => {
+    const base = makeDetail();
+    stubFetch(
+      200,
+      makeDetail({
+        etapa1: { ...base.etapa1!, datos: makeEtapa1Datos({ resolucion_original: "diaria" }) },
+        configuracion: { cramer_particion: "default", mes_inicio_anio: 7, variable_diaria: "media" },
+        etapa2: makeEtapa2({
+          seleccion: {
+            distribucion: "gumbel",
+            metodo: "momentos",
+            periodos_retorno: [2, 10, 100],
+            eventos_diseno: [{ periodo_retorno: 2, valor: 138.4 }],
+            curva_ajuste: [{ periodo_retorno: 1.05, valor: 61.2 }],
+          },
+        }),
+      }),
+    );
+    renderDetail();
+
+    expect(
+      await screen.findByText("Valor de diseño (media diaria máxima del año) · T = 2 años"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/toma la media diaria máxima de cada año \(de julio a junio\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Períodos de retorno T \(años, de julio a junio, separados por coma\)/)).toBeInTheDocument();
   });
 
   it("C3 — muestra un banner de estado vacío cuando etapa2 no tiene ninguna elección registrada", async () => {

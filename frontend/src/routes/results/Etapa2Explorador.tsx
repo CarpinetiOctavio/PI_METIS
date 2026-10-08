@@ -3,6 +3,7 @@ import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
 import type { Etapa2EventosState } from "../../api/sse";
 import type { DesignEventsRecalcResponse, Etapa2Result } from "../../api/types";
+import type { ContextoSerie } from "../../i18n/periodoRetorno";
 import { Etapa2EventosView } from "./Etapa2EventosView";
 import { Etapa2RankingView } from "./Etapa2RankingView";
 import "./Etapa2Explorador.css";
@@ -54,12 +55,15 @@ export function Etapa2Explorador({
   mediaSerie,
   seleccionRegistrada,
   eleccion,
+  contextoSerie,
 }: Readonly<{
   etapa2: Etapa2Result;
   explorar: ExplorarEtapa2Fn;
   mediaSerie?: number | null;
   seleccionRegistrada?: { distribucion: string; metodo: string } | null;
   eleccion?: ReactNode;
+  // DECISIÓN 076: rótulos del período de retorno según la serie ajustada.
+  contextoSerie?: ContextoSerie;
 }>) {
   const [exploracion, setExploracion] = useState<ExploracionState | null>(null);
   const [explorando, setExplorando] = useState(false);
@@ -105,6 +109,7 @@ export function Etapa2Explorador({
         resolving={explorando}
         mediaSerie={mediaSerie}
         seleccionRegistrada={seleccionRegistrada}
+        contextoSerie={contextoSerie}
       />
 
       {error && (
@@ -127,6 +132,7 @@ export function Etapa2Explorador({
               <Etapa2EventosView
                 eventos={exploracion.eventos}
                 puntosEmpiricos={etapa2.puntos_empiricos}
+                contextoSerie={contextoSerie}
               />
             </div>
           )}

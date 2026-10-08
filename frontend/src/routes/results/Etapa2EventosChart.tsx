@@ -13,6 +13,7 @@ export function Etapa2EventosChart({
   eventosDiseno,
   curvaAjuste,
   periodoResaltado,
+  rotuloT = "Período de retorno T (años)",
 }: Readonly<{
   eventosDiseno: EventoDiseno[];
   curvaAjuste: EventoDiseno[];
@@ -21,6 +22,8 @@ export function Etapa2EventosChart({
   // --acc-hi. El chip ya es la fuente de verdad (aria-pressed) — acá no hay
   // estado nuevo.
   periodoResaltado?: number | null;
+  // DECISIÓN 076: rótulo del eje según la serie ajustada (i18n/periodoRetorno.ts).
+  rotuloT?: string;
 }>) {
   const curvaValida = curvaAjuste.filter(
     (e): e is { periodo_retorno: number; valor: number } => e.valor !== null,
@@ -59,7 +62,7 @@ export function Etapa2EventosChart({
     <InteractiveChart
       series={series}
       ariaLabel={ariaLabel}
-      xLabel="Período de retorno T (años)"
+      xLabel={rotuloT}
       yLabel="Valor estimado (xT)"
       xTickFormat={(v) => formatAxis(v)}
       yTickFormat={(v) => formatAxis(v)}

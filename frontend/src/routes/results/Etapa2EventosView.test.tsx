@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { renderPage } from "../../test/renderPage";
 import { makeEtapa2 } from "../../test/etapa2Fixtures";
 import { Etapa2EventosView } from "./Etapa2EventosView";
+import type { ContextoSerie } from "../../i18n/periodoRetorno";
 
 const EVENTOS = {
   distribucion: "gumbel",
@@ -18,9 +19,13 @@ const EVENTOS = {
   ],
 };
 
-function montar() {
+function montar(contextoSerie?: ContextoSerie) {
   renderPage(
-    <Etapa2EventosView eventos={EVENTOS} puntosEmpiricos={makeEtapa2().puntos_empiricos} />,
+    <Etapa2EventosView
+      eventos={EVENTOS}
+      puntosEmpiricos={makeEtapa2().puntos_empiricos}
+      contextoSerie={contextoSerie}
+    />,
   );
 }
 
@@ -32,5 +37,35 @@ describe("Etapa2EventosView", () => {
     expect(screen.getByText(/T = 2 años/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "100" }));
     expect(screen.getByText(/T = 100 años/)).toBeInTheDocument();
+  });
+
+  // DECISIÓN 076: T queda en años (se ajusta la serie de máximos anuales); lo
+  // que cambia con la carga es qué representa el valor y la nota que lo explica.
+  it("con carga anual rotula el valor sin agregación y explica que T está en años", () => {
+    montar({ resolucion: "anual", mesInicioAnio: 7 });
+
+    expect(screen.getByText("Valor de diseño · T = 2 años")).toBeInTheDocument();
+    expect(
+      screen.getByText(/^La distribución se ajustó a la serie de máximos anuales, por eso T se mide en años/),
+    ).toBeInTheDocument();
+  });
+
+  it("con carga mensual nombra el máximo mensual y explica por qué T no está en meses", () => {
+    montar({ resolucion: "mensual", mesInicioAnio: 7 });
+
+    expect(
+      screen.getByText("Valor de diseño (valor mensual máximo del año) · T = 2 años"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/T se mide en años y no en meses/)).toBeInTheDocument();
+    expect(screen.getAllByText("Período de retorno T (años, de julio a junio)").length).toBeGreaterThan(0);
+  });
+
+  it("con carga diaria de medias lo dice en el rótulo del valor", () => {
+    montar({ resolucion: "diaria", mesInicioAnio: 1, variableDiaria: "media" });
+
+    expect(
+      screen.getByText("Valor de diseño (media diaria máxima del año) · T = 2 años"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/T se mide en años y no en días/)).toBeInTheDocument();
   });
 });

@@ -363,3 +363,90 @@ def test_nombre_archivo_pdf_con_simulacion():
         nombre_archivo_pdf(detalle, simulacion=True)
         == "metis_analisis_2026-10-06_simulacion.pdf"
     )
+
+
+# ---------------------------------------------------------------------------
+# Rótulos del período de retorno según la serie ajustada (DECISIÓN 076)
+# ---------------------------------------------------------------------------
+
+
+def _con_carga(detalle: dict, resolucion: str, **config) -> dict:
+    """El mismo análisis, como si la carga hubiera sido mensual o diaria. Solo
+    cambia lo que leen los rótulos: la serie ajustada sigue siendo anual."""
+    otro = copy.deepcopy(detalle)
+    otro["etapa1"]["datos"]["resolucion_original"] = resolucion
+    otro["configuracion"].update(config)
+    return otro
+
+
+def _fila_cabecera_eventos(textos: list[str]) -> str:
+    return next(t for t in textos if "Prob. de no excedencia" in t)
+
+
+@pytest.mark.unit
+def test_carga_anual_rotula_t_en_anios_sin_criterio_de_anio(detalle_completo, est):
+    textos = _textos(_seccion_etapa2(detalle_completo, est))
+
+    assert _fila_cabecera_eventos(textos) == (
+        "Período de retorno T [años] | Prob. de no excedencia | Valor de diseño"
+    )
+    assert any(
+        t.startswith("La distribución se ajustó a la serie de máximos anuales")
+        and "1/T" in t
+        for t in textos
+    )
+
+
+@pytest.mark.unit
+def test_carga_mensual_explica_que_t_sigue_en_anios(detalle_completo, est):
+    detalle = _con_carga(detalle_completo, "mensual", mes_inicio_anio=7)
+    textos = _textos(_seccion_etapa2(detalle, est))
+
+    assert _fila_cabecera_eventos(textos) == (
+        "Período de retorno T [años, de julio a junio] | Prob. de no excedencia"
+        " | Valor de diseño (valor mensual máximo del año)"
+    )
+    nota = next(t for t in textos if t.startswith("Se cargó una serie mensual"))
+    assert "toma el valor mensual máximo de cada año (de julio a junio)" in nota
+    assert "T se mide en años y no en meses" in nota
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("variable", "valor", "articulado"),
+    [
+        ("pico", "pico diario máximo", "el pico diario máximo"),
+        ("media", "media diaria máxima", "la media diaria máxima"),
+    ],
+)
+def test_carga_diaria_nombra_la_variable_diaria(
+    detalle_completo, est, variable, valor, articulado
+):
+    detalle = _con_carga(
+        detalle_completo, "diaria", mes_inicio_anio=1, variable_diaria=variable
+    )
+    textos = _textos(_seccion_etapa2(detalle, est))
+
+    assert _fila_cabecera_eventos(textos).endswith(f"Valor de diseño ({valor} del año)")
+    assert "T [años, de enero a diciembre]" in _fila_cabecera_eventos(textos)
+    nota = next(t for t in textos if t.startswith("Se cargó una serie de"))
+    assert f"toma {articulado} de cada año (de enero a diciembre)" in nota
+    assert "T se mide en años y no en días" in nota
+
+
+@pytest.mark.unit
+def test_simulacion_rotula_t_igual_que_el_analisis(detalle_completo, est):
+    detalle = _con_carga(detalle_completo, "mensual", mes_inicio_anio=7)
+    simulacion = _simular_desde_detalle(detalle, [0])
+    textos = _textos(_seccion_simulacion(detalle, simulacion, est))
+
+    assert any(
+        t.startswith("Período de retorno T [años, de julio a junio] | Original")
+        for t in textos
+    )
+
+
+@pytest.mark.unit
+def test_pdf_con_carga_diaria_es_valido(detalle_completo):
+    detalle = _con_carga(detalle_completo, "diaria", variable_diaria="media")
+    assert _es_pdf(generar_pdf_analisis(detalle))

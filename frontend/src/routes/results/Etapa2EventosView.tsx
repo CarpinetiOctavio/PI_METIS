@@ -2,6 +2,12 @@ import { useState } from "react";
 import { formatNum } from "../../i18n/format";
 import type { Etapa2EventosState } from "../../api/sse";
 import type { PuntoEmpirico } from "../../api/types";
+import {
+  notaPeriodoRetorno,
+  rotuloEjePeriodoRetorno,
+  rotuloValorDiseno,
+  type ContextoSerie,
+} from "../../i18n/periodoRetorno";
 import { Etapa2AjusteChart } from "./Etapa2AjusteChart";
 import { Etapa2EventosChart } from "./Etapa2EventosChart";
 import "./Etapa2EventosView.css";
@@ -14,11 +20,21 @@ import "./Etapa2EventosView.css";
  *
  * `puntosEmpiricos` viene del evento result_etapa2_ranking (Etapa2RankingState),
  * previo a esta pausa — siempre disponible en este punto del flujo (Bloque C).
+ *
+ * `contextoSerie` (DECISIÓN 076): qué se cargó (anual, mensual, diaria) y con
+ * qué año se agregó. T está siempre en años porque se ajusta la serie de
+ * máximos anuales; el contexto solo cambia los rótulos y la nota que lo
+ * explican. Sin contexto, los rótulos son los de una carga anual.
  */
 export function Etapa2EventosView({
   eventos,
   puntosEmpiricos,
-}: Readonly<{ eventos: Etapa2EventosState; puntosEmpiricos: PuntoEmpirico[] }>) {
+  contextoSerie,
+}: Readonly<{
+  eventos: Etapa2EventosState;
+  puntosEmpiricos: PuntoEmpirico[];
+  contextoSerie?: ContextoSerie;
+}>) {
   const periodos = eventos.eventos_diseno.map((e) => e.periodo_retorno);
   const [seleccionado, setSeleccionado] = useState<number | null>(
     periodos[0] ?? null,
@@ -27,6 +43,7 @@ export function Etapa2EventosView({
   const actual = eventos.eventos_diseno.find(
     (e) => e.periodo_retorno === seleccionado,
   );
+  const rotuloT = rotuloEjePeriodoRetorno(contextoSerie);
 
   return (
     <div className="etapa2-eventos card soft" style={{ textAlign: "center", padding: 22 }}>
@@ -50,7 +67,7 @@ export function Etapa2EventosView({
         className="fn"
         style={{ textTransform: "uppercase", letterSpacing: 0.5, fontSize: 10 }}
       >
-        Valor de diseño · T = {seleccionado} años
+        {rotuloValorDiseno(contextoSerie)} · T = {seleccionado} años
       </div>
       <div className="num" style={{ fontSize: 38, fontWeight: 700 }}>
         {actual ? formatNum(actual.valor) : "—"}
@@ -60,6 +77,9 @@ export function Etapa2EventosView({
           No se pudo calcular el evento de diseño para este período de retorno.
         </p>
       )}
+      <p className="fn etapa2-eventos__nota-t" style={{ marginTop: 10, textAlign: "left" }}>
+        {notaPeriodoRetorno(contextoSerie)}
+      </p>
 
       <div style={{ marginTop: 24, textAlign: "left" }}>
         <h3 className="h" style={{ fontSize: 13, marginBottom: 8 }}>
@@ -70,6 +90,7 @@ export function Etapa2EventosView({
           curvaAjuste={eventos.curva_ajuste}
           distribucion={eventos.distribucion}
           metodo={eventos.metodo}
+          rotuloT={rotuloT}
         />
       </div>
 
@@ -81,6 +102,7 @@ export function Etapa2EventosView({
           eventosDiseno={eventos.eventos_diseno}
           curvaAjuste={eventos.curva_ajuste}
           periodoResaltado={seleccionado}
+          rotuloT={rotuloT}
         />
       </div>
     </div>

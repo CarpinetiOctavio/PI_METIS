@@ -17,11 +17,14 @@ export function Etapa2AjusteChart({
   curvaAjuste,
   distribucion,
   metodo,
+  rotuloT = "Período de retorno T (años)",
 }: Readonly<{
   puntosEmpiricos: PuntoEmpirico[];
   curvaAjuste: EventoDiseno[];
   distribucion: string;
   metodo: string;
+  // DECISIÓN 076: rótulo del eje según la serie ajustada (i18n/periodoRetorno.ts).
+  rotuloT?: string;
 }>) {
   const curvaValida = curvaAjuste.filter(
     (e): e is { periodo_retorno: number; valor: number } => e.valor !== null,
@@ -48,7 +51,7 @@ export function Etapa2AjusteChart({
     <InteractiveChart
       series={series}
       ariaLabel={`Gráfico de ajuste: puntos empíricos contra la curva de ${distribucion} (${metodo})`}
-      xLabel="Período de retorno T (años)"
+      xLabel={rotuloT}
       yLabel="Valor"
       xTickFormat={(v) => formatAxis(v)}
       yTickFormat={(v) => formatAxis(v)}

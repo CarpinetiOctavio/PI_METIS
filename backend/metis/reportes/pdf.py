@@ -146,6 +146,103 @@ _MESES = [
 ]  # fmt: skip
 
 
+# ---------------------------------------------------------------------------
+# Período de retorno: rótulos según la serie que se ajustó (DECISIÓN 076)
+# ---------------------------------------------------------------------------
+# METIS ajusta siempre la serie de máximos anuales (DECISIÓN 066): con carga
+# mensual o diaria, el paso 0 la agrega a un máximo por año antes de Etapa 1.
+# T = 1 / (1 - F) se mide en el intervalo de muestreo de la serie ajustada, así
+# que está en años para las tres resoluciones. Lo que cambia con la carga es
+# qué representa el valor de diseño y qué año se usó para agregar, y eso es lo
+# que estos rótulos dejan explícito. Mismo texto que
+# frontend/src/i18n/periodoRetorno.ts: si se cambia uno, cambiar el otro.
+
+_MAXIMO_AGREGADO = {
+    ("mensual", None): "valor mensual máximo",
+    ("diaria", "pico"): "pico diario máximo",
+    ("diaria", "media"): "media diaria máxima",
+}
+
+_MAXIMO_CON_ARTICULO = {
+    ("mensual", None): "el valor mensual máximo",
+    ("diaria", "pico"): "el pico diario máximo",
+    ("diaria", "media"): "la media diaria máxima",
+}
+
+_CARGA_AGREGADA = {
+    ("mensual", None): "una serie mensual",
+    ("diaria", "pico"): "una serie de picos diarios",
+    ("diaria", "media"): "una serie de medias diarias",
+}
+
+
+def _contexto_serie(detalle: dict) -> tuple[str | None, int | None, str | None]:
+    """(resolución de la carga, mes de inicio del año, variable diaria)."""
+    config = detalle.get("configuracion") or {}
+    datos = (detalle.get("etapa1") or {}).get("datos") or {}
+    resolucion = datos.get("resolucion_original")
+    mes = config.get("mes_inicio_anio")
+    if not (isinstance(mes, int) and 1 <= mes <= 12):
+        mes = None
+    variable = None
+    if resolucion == "diaria":
+        variable = "media" if config.get("variable_diaria") == "media" else "pico"
+    return resolucion, mes, variable
+
+
+def _rango_anio(mes: int) -> str:
+    fin = 12 if mes == 1 else mes - 1
+    return f"de {_MESES[mes - 1]} a {_MESES[fin - 1]}"
+
+
+def _clave_agregada(detalle: dict) -> tuple[str, str | None] | None:
+    resolucion, _, variable = _contexto_serie(detalle)
+    clave = (resolucion, variable)
+    return clave if clave in _MAXIMO_AGREGADO else None
+
+
+def _unidad_periodo_retorno(detalle: dict) -> str:
+    """'años', o 'años, de julio a junio' cuando la serie se agregó."""
+    _, mes, _ = _contexto_serie(detalle)
+    if _clave_agregada(detalle) is None or mes is None:
+        return "años"
+    return f"años, {_rango_anio(mes)}"
+
+
+def _rotulo_eje_periodo_retorno(detalle: dict) -> str:
+    return f"Período de retorno T [{_unidad_periodo_retorno(detalle)}]"
+
+
+def _rotulo_valor_diseno(detalle: dict) -> str:
+    clave = _clave_agregada(detalle)
+    if clave is None:
+        return "Valor de diseño"
+    return f"Valor de diseño ({_MAXIMO_AGREGADO[clave]} del año)"
+
+
+def _nota_periodo_retorno(detalle: dict) -> str:
+    promedio = (
+        "el valor de diseño de T años es el que se espera igualar o superar, en "
+        "promedio, una vez cada T años (probabilidad 1/T de ser superado en un año "
+        "cualquiera)."
+    )
+    clave = _clave_agregada(detalle)
+    if clave is None:
+        return (
+            "La distribución se ajustó a la serie de máximos anuales, por eso T se "
+            "mide en años: " + promedio
+        )
+    _, mes, _ = _contexto_serie(detalle)
+    anio = f"de cada año ({_rango_anio(mes)})" if mes is not None else "de cada año"
+    unidad_carga = "meses" if clave[0] == "mensual" else "días"
+    return (
+        f"Se cargó {_CARGA_AGREGADA[clave]}. METIS no ajusta la distribución a esos "
+        f"valores: toma {_MAXIMO_CON_ARTICULO[clave]} {anio} y ajusta la serie de "
+        f"esos máximos anuales. Por eso T se mide en años y no en {unidad_carga}: "
+        + promedio
+    )
+
+
 def _rotulo(tabla: dict, clave: str | None) -> str:
     if clave is None:
         return "—"
@@ -363,7 +460,9 @@ def _grafico_correlograma(anderson: dict) -> Figure | None:
     return fig
 
 
-def _grafico_ajuste(seleccion: dict, puntos: list[dict]) -> Figure | None:
+def _grafico_ajuste(
+    seleccion: dict, puntos: list[dict], rotulo_t: str
+) -> Figure | None:
     curva = [
         c for c in seleccion.get("curva_ajuste") or [] if c.get("valor") is not None
     ]
@@ -402,7 +501,7 @@ def _grafico_ajuste(seleccion: dict, puntos: list[dict]) -> Figure | None:
             label="Eventos de diseño",
         )
     ax.set_xscale("log")
-    ax.set_xlabel("Período de retorno T [años]", fontsize=8)
+    ax.set_xlabel(rotulo_t, fontsize=8)
     ax.set_ylabel("Valor", fontsize=8)
     ax.legend(fontsize=7, frameon=False)
     return fig
@@ -440,6 +539,7 @@ def _grafico_ajuste_comparado(
     puntos_original: list[dict],
     simulada: dict,
     puntos_simulada: list[dict],
+    rotulo_t: str,
 ) -> Figure | None:
     """Misma distribución+método ajustada con y sin los puntos excluidos."""
 
@@ -491,7 +591,7 @@ def _grafico_ajuste_comparado(
             label="Ajuste — sin los puntos",
         )
     ax.set_xscale("log")
-    ax.set_xlabel("Período de retorno T [años]", fontsize=8)
+    ax.set_xlabel(rotulo_t, fontsize=8)
     ax.set_ylabel("Valor", fontsize=8)
     ax.legend(fontsize=7, frameon=False)
     return fig
@@ -844,7 +944,11 @@ def _seccion_etapa2(detalle: dict, est) -> list:
     )
 
     eventos = [
-        ["Período de retorno T [años]", "Prob. de no excedencia", "Valor de diseño"]
+        [
+            _rotulo_eje_periodo_retorno(detalle),
+            "Prob. de no excedencia",
+            _rotulo_valor_diseno(detalle),
+        ]
     ]
     for e in seleccion.get("eventos_diseno") or []:
         t = e.get("periodo_retorno")
@@ -855,9 +959,18 @@ def _seccion_etapa2(detalle: dict, est) -> list:
                 _num(e.get("valor")) if e.get("valor") is not None else "Sin cuantil",
             ]
         )
-    story += [Spacer(1, 6), _tabla(eventos, [_ANCHO_UTIL / 3] * 3, est)]
+    story += [
+        Spacer(1, 6),
+        _tabla(eventos, [_ANCHO_UTIL / 3] * 3, est),
+        Spacer(1, 3),
+        _p(_nota_periodo_retorno(detalle), est["nota"]),
+    ]
 
-    fig = _grafico_ajuste(seleccion, etapa2.get("puntos_empiricos") or [])
+    fig = _grafico_ajuste(
+        seleccion,
+        etapa2.get("puntos_empiricos") or [],
+        _rotulo_eje_periodo_retorno(detalle),
+    )
     if fig is not None:
         story.append(
             KeepTogether(
@@ -964,14 +1077,14 @@ def _tabla_comparacion_niveles(original: dict, simulado: dict, est) -> list:
     ]
 
 
-def _eventos_comparados(sel_original: dict, sel_simulada: dict, est) -> Table:
+def _eventos_comparados(
+    sel_original: dict, sel_simulada: dict, rotulo_t: str, est
+) -> Table:
     originales = {
         e.get("periodo_retorno"): e.get("valor")
         for e in sel_original.get("eventos_diseno") or []
     }
-    filas = [
-        ["Período de retorno T [años]", "Original", "Sin los puntos", "Diferencia"]
-    ]
+    filas = [[rotulo_t, "Original", "Sin los puntos", "Diferencia"]]
     for e in sel_simulada.get("eventos_diseno") or []:
         t = e.get("periodo_retorno")
         antes, despues = originales.get(t), e.get("valor")
@@ -1099,13 +1212,16 @@ def _seccion_simulacion(detalle: dict, simulacion: dict, est) -> list:
             "elegida, reajustada sin los puntos excluidos.",
             est["nota_previa"],
         ),
-        _eventos_comparados(sel_original, sel_simulada, est),
+        _eventos_comparados(
+            sel_original, sel_simulada, _rotulo_eje_periodo_retorno(detalle), est
+        ),
     ]
     fig = _grafico_ajuste_comparado(
         sel_original,
         etapa2_original.get("puntos_empiricos") or [],
         sel_simulada,
         etapa2_simulada.get("puntos_empiricos") or [],
+        _rotulo_eje_periodo_retorno(detalle),
     )
     if fig is not None:
         story.append(

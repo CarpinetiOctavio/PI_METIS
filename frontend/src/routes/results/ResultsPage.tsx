@@ -10,6 +10,7 @@ import { Etapa2Explorador } from "./Etapa2Explorador";
 import { Etapa2RankingView } from "./Etapa2RankingView";
 import { Etapa2EventosView } from "./Etapa2EventosView";
 import { ExportarPdfButton } from "./ExportarPdfButton";
+import type { ContextoSerie } from "../../i18n/periodoRetorno";
 import type {
   CramerParticion,
   Etapa1Result,
@@ -30,6 +31,9 @@ interface ResultsLocationState {
   // Bloque F5 (DECISIÓN 057) — solo viaja en la sesión interactiva, ver la
   // nota de Etapa1ResultView sobre por qué no llega desde el historial.
   mesInicioAnio?: number;
+  // DECISIÓN 076: con mesInicioAnio y la resolución de la carga, nombra qué
+  // representa el período de retorno. Solo viaja en la sesión interactiva.
+  variableDiaria?: "pico" | "media";
   // Nombre del archivo subido — nombra el CSV de la serie sin los puntos excluidos.
   nombreArchivo?: string;
   // Configuración con la que se corrió el análisis — la necesita el what-if de
@@ -76,6 +80,12 @@ export function ResultsPage() {
 
   const etapa2 = locationState?.etapa2;
   const eventosDiseno = locationState?.eventosDiseno;
+  // DECISIÓN 076: qué se cargó y con qué año se agregó, para rotular T.
+  const contextoSerie: ContextoSerie = {
+    resolucion: result.datos?.resolucion_original,
+    mesInicioAnio: locationState?.mesInicioAnio,
+    variableDiaria: locationState?.variableDiaria,
+  };
   // Solo CU-01 persiste el análisis y devuelve un `analysis_id` — con él se
   // puede explorar otra distribución contra la BD (`POST /analysis/{id}/
   // design-events`, DECISIÓN 062). CU-02 (anónimo, sin id) sigue de solo
@@ -140,6 +150,7 @@ export function ResultsPage() {
             key="simulada"
             eventos={seleccionSimulada}
             puntosEmpiricos={simulacion?.etapa2?.puntos_empiricos ?? []}
+            contextoSerie={contextoSerie}
           />
         </>
       ) : (
@@ -147,6 +158,7 @@ export function ResultsPage() {
           key="original"
           eventos={eventosDiseno}
           puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
+          contextoSerie={contextoSerie}
         />
       )}
     </>
@@ -223,6 +235,7 @@ export function ResultsPage() {
               mediaSerie={result.descriptive?.media}
               seleccionRegistrada={eventosDiseno}
               eleccion={eventoDiseno}
+              contextoSerie={contextoSerie}
             />
           ) : (
             <Etapa2RankingView

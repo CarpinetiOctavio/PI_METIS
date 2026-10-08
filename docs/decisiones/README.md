@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision074.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision076.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -202,3 +202,4 @@ situ.
 | [073](decision073.md) | Valores negativos: estado propio `disabled_negatives` en Etapa 2 y código propio `TEST_NOT_EXECUTED_NEGATIVES` para Chow | 01/10/2026 | Decidida y aplicada (backend) |
 | [074](decision074.md) | Generalizada de Pareto "pendiente de validación" en V1.0: se calcula y se muestra, pero no se puede elegir y va al final del ranking | 01/10/2026 | Decidida y aplicada (backend + frontend) — se cierra con el addendum de la V2 |
 | [075](decision075.md) | Exportación PDF de CU-01: ReportLab + matplotlib en el backend, siempre formato Experto, módulo `metis/reportes/` | 06/10/2026 | Decidida y aplicada (backend + frontend) |
+| [076](decision076.md) | El período de retorno se rotula según la serie que se ajustó: T sigue en años, el texto dice qué se cargó y qué representa el valor de diseño | 08/10/2026 | Decidida y aplicada (frontend + informe PDF) |
