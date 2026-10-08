@@ -365,6 +365,12 @@ un único criterio de tesis para reconstruir en METIS, ni siquiera
 
 ## Discrepancias en EEA sin explicación (Causa C)
 
+**ACTUALIZADO 08/10/2026: causa identificada.** La planilla calcula U_T (IV-102) con F en lugar de
+1 − F cuando F > 0,5, contra IV-105. Con esa regla se reproducen los cuantiles impresos de la tesis
+hasta 0,004 % y el EEA de Log-Normal 3p MV de est_02 y est_05 hasta 0,4 %. Ver
+[hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md) y la pregunta al final
+de este archivo. La tabla de abajo queda como registro histórico.
+
 **ACTUALIZADO 10/07/2026:** las filas de Gamma 2p y LN3p MV ya NO son
 "sin acceso al código fuente no son verificables" — se reconstruyeron
 desde cero (serie real de est_05 y est_06 + fórmula de cuantil
@@ -1026,3 +1032,36 @@ recupera el parámetro. IV-155, `µ = x1 - (ε/µ)·(1 - z1)`, no es dimensional
 `x = µ + (σ/ε)(1 - z)` sería `µ = x1 - (σ/ε)·(1 - z1)`. Ya había una duda abierta sobre este método en
 `Bibliografia/Facundo/Tesis de Maestria/Dudas/Pareto - Minimos Cuadrados.docx`.
 Pregunta: ¿qué ecuaciones usó realmente para Mínimos Cuadrados, y IV-155 lleva σ/ε en lugar de ε/µ?
+
+---
+
+## Comparación con otras herramientas (08/10/2026)
+
+Origen: [comparacion-herramientas/README.md](../comparacion-herramientas/README.md), pedido de Carlos
+Catalini.
+
+### U_T para F > 0,5: ¿la planilla usa F o 1 − F? (resuelve la Causa C)
+
+En su planilla, ¿cómo se calcula U_T para F > 0,5? Si la celda usa F (y no 1 − F) dentro de
+V = √ln(1/F²), los cuantiles y el EEA de Normal, Log-Normal, Gamma y Log-Pearson de la tesis quedan
+desplazados hacia abajo en la cola: con ese cálculo se reproducen los valores publicados hasta la cuarta
+cifra significativa (est_01, 02, 05 y 09; est_03 y 07 hasta el redondeo de sus parámetros). ¿Confirma
+que IV-105 (usar 1 − F) es lo correcto?
+
+**Impacto según la respuesta:** si confirma, la Causa C y la Causa D quedan cerradas como error de la
+planilla y METIS no cambia. Si la planilla usara deliberadamente otra convención, habría que documentarla:
+la tesis escrita no la menciona. Detalle: [hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md).
+
+### Partición de t de Student con n impar: sí cambia un veredicto (Q16 de la fase 4)
+
+La consolidación de la fase 4 (Q16) registró que la tesis toma `n1 = ceil(n/2)` con n impar, METIS
+`floor(n/2)`, y que "no cambia ningún veredicto". Corriendo la función de METIS con `ceil(n/2)` se
+reproduce exactamente la t de la tesis en las 4 estaciones con n impar (est_03, 05, 07 y 08), pero **en
+est_05 el veredicto individual cambia**: t = 2,082 > 2,0262 en la tesis (rechaza) contra t = 1,817 en
+METIS (aprueba). El nivel de homogeneidad de METIS en est_05 pasaría de `homogeneidad_ok` a
+`homogeneidad_warning`. ¿Cuál es la convención correcta para el primer subgrupo con n impar?
+
+**Impacto según la respuesta:** si es `ceil`, es un cambio de una línea en
+`core/pipeline/pipeline_etapa1.py` (`n1_t = n_total // 2`) con su decisión numerada; si es `floor`, la
+tesis tiene esa diferencia y METIS no cambia.
+

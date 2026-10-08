@@ -1385,6 +1385,24 @@ media y el botón de simulación en `HistoryDetailPage`. Pendientes por persona 
 
 ---
 
+## Exportación PDF, rótulo de T y comparación con otras herramientas — 06 a 08/10/2026
+
+- **06/10, PR #107:** exportación PDF de CU-01 (DECISIÓN 075). `GET /export/{id}` y
+  `POST /export/{id}/simulacion`; botón en `ResultsPage` y `HistoryDetailPage`.
+- **08/10, `fix/rotulo-periodo-retorno`:** observación de Carlos Catalini, "los cálculos están bien pero el
+  texto de los eventos de diseño siempre dice años". Verificado que T está en años para carga anual, mensual y
+  diaria (DECISIÓN 066); el rótulo pasa a derivarse de la serie (DECISIÓN 076): eje, valor de diseño y una nota
+  que explica la agregación, en la app y en el PDF. `pytest tests/unit/reportes`: 23 passed; `vitest`: 497
+  passed en la rama (499 con el parche de `Etapa2Explorador` aplicado encima), lint y build limpios; verificado en el navegador
+  con una serie mensual (CU-02) y en el PDF con las tres resoluciones.
+- **08/10, `docs/comparacion-herramientas-y-pdf`:** comparación pedida por Carlos
+  (`docs/auditoria/comparacion-herramientas/README.md`). Hallazgo principal: la Causa C de la fase 4 es un
+  error de la planilla (U_T con F en lugar de 1 − F), documentado en
+  `docs/auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md` y escalado a Facundo. Documentación del proyecto
+  actualizada por la exportación PDF.
+
+---
+
 ## Decisiones pendientes — no implementar hasta confirmar
 
 - ~~**Partición de Cramer personalizada** — inalcanzable hoy por el endpoint

@@ -405,7 +405,7 @@ quede explícito qué es real y qué es maqueta.
 |---|---|---|
 | Ranking de distribuciones (Etapa 2) | `mocks/etapa2.mock.ts` con un ranking por EEA de ejemplo, shape según `api-contracts.md`. | `PendingBadge` en la pantalla + tooltip "Etapa 2 no expuesta por API todavía". |
 | `design-events` | `mocks/designEvents.mock.ts` con eventos de diseño de ejemplo por período de retorno. | `PendingBadge`. |
-| Exportación PDF (`/export/{id}`) | Botón visible pero deshabilitado o que abre un modal "próximamente". | Estado `disabled` + nota. |
+| Exportación PDF (`/export/{id}`) | Botón visible pero deshabilitado o que abre un modal "próximamente". *Superado 06/10/2026: botón real (`ExportarPdfButton`) en `ResultsPage` y `HistoryDetailPage`, DECISIÓN 075.* | Estado `disabled` + nota. |
 | CU-03 (`/validate/`, X-API-Key) | Fuera de alcance de esta fase (sprint.md). No se construye UI. | — |
 | `cramer_particion` custom | Opción "Personalizada" en config **deshabilitada** (roto en el wiring backend, §3 de integration). Solo "default" activo. | `PendingBadge` en la opción. |
 | Campos descriptivos extendidos (curtosis, MPP, rango, etc.) | No llegan por SSE. No mostrarlos, o mostrarlos como "—" con nota. Es gap de backend. | Nota si se decide exponerlos. |
@@ -716,7 +716,9 @@ No se implementó así — `sse.test.ts` arma las secuencias de eventos a mano s
   un solo mecanismo de mock en toda la suite de tests; MSW se reserva para el valor que sí es
   exclusivo suyo: un humano navegando la pantalla mock en el browser de dev sin tooling especial
   (verificado manualmente, ver más abajo). Detalle completo en DECISIÓN 041.
-- **Botón "Exportar PDF" ubicado solo en `DesignEventsPage`**, no repetido en `ResultsPage` ni
+- *(Superado 06/10/2026: con Etapa 2 dentro del stream ya no existe `DesignEventsPage`; el botón real vive
+  en `ResultsPage` y `HistoryDetailPage`, solo con sesión, DECISIÓN 075.)*
+  **Botón "Exportar PDF" ubicado solo en `DesignEventsPage`**, no repetido en `ResultsPage` ni
   `HistoryDetailPage` — mantiene `Etapa1ResultView` libre de lógica de auth (sigue sin saber de
   `isAuthed`, consistente con FE-17) y evita duplicar el mismo botón deshabilitado en tres pantallas.
   Visible únicamente si `isAuthed` (CU-02 anónimo y CU-03 no exportan, ver tabla de casos de uso de

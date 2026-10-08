@@ -181,7 +181,8 @@ frontend/src/
 ├── auth/          # AuthProvider.tsx (sesión), guards.tsx (RequireAuth/RequireSession/RedirectIfAuthed)
 ├── charts/        # InteractiveChart.tsx (SVG propio, d3-scale+d3-shape — DECISIÓN 056), BoxPlot.tsx, Sparkline.tsx
 ├── components/    # RootLayout, TopBar, fondos animados Canvas 2D, BlockMath (KaTeX)
-├── i18n/          # errors.es.ts (traducción del catálogo de códigos), mesInicioAnio.ts
+├── i18n/          # errors.es.ts (traducción del catálogo de códigos), mesInicioAnio.ts,
+│                  # periodoRetorno.ts (rótulos de T según la serie ajustada, DECISIÓN 076)
 ├── routes/        # entry/, config/, stream/, results/, history/, auth-verify/ — una carpeta por pantalla
 ├── theme/         # tokens.ts + tokens.instrumento.css (paridad verificada por tokenParity.test.ts)
 └── test/          # renderPage.tsx — helper que envuelve toda página en <StrictMode> (regla, no opcional)

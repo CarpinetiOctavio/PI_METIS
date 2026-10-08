@@ -121,6 +121,9 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
       del job `test` en un PR propio.
 - [ ] **CU-03:** `POST /validate/` y gestión de API Keys (el modelo `api_client` existe, nada lo usa) — necesario para M7.
 - [x] **`GET /export/{id}`** — exportación PDF de CU-01. Implementada el 06/10/2026 (DECISIÓN 075).
+- [x] **Rótulo del período de retorno según la serie** (pedido de Carlos, 08/10/2026). DECISIÓN 076, app y PDF.
+- [x] **Comparación con otras herramientas** (pedido de Carlos, 08/10/2026):
+  `docs/auditoria/comparacion-herramientas/README.md`.
 - [ ] **Persistir Etapa 1 si el usuario abandona la pausa de elección de distribución** (hoy se pierde todo). Requiere
       primero una decisión de producto.
 
@@ -159,6 +162,10 @@ Cada sección puede tener un addendum de cierre: revisar antes de mandar.
 - [ ] **Log-Normal 2p:** el criterio de `NO_APLICABLE` de la tesis no es uniforme entre estaciones.
 - [ ] **Gamma 3p + MPP:** la fórmula no está en el capítulo IV pese a que la Tabla IV-1 la lista.
 - [ ] **Normal y Log-Normal 2p:** la Tabla IV-1 solo lista MV, no Momentos.
+- [ ] **U_T de la planilla (08/10/2026):** ¿calcula U_T con F en lugar de 1 − F cuando F > 0,5? Explicaría toda
+  la Causa C. Ver `docs/auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md`.
+- [ ] **t de Student con n impar (08/10/2026):** ¿`ceil(n/2)` o `floor(n/2)` para el primer subgrupo? En est_05
+  cambia el veredicto individual.
 - [ ] **GVE Momentos — beta** no reproducible (est_02, est_03, est_05); **Gamma 3p MV** (est_06, est_08);
       **una cola vs. dos colas** en est_08 (Cramer/t de Student).
 - [ ] **El Excel de la planilla.** Sin él no se pueden explicar las discrepancias de EEA (Causa C) ni los cuantiles de LN3p MV est_05

@@ -479,6 +479,11 @@ resuelve la pausa con `{distribucion, metodo, periodos_retorno}`.
 falla para esa distribución+método — no tumba el resto de los eventos
 (`core/etapa2/design_events.py`, DECISIÓN mencionada arriba).
 
+**`periodo_retorno` está siempre en años**, sea cual sea la resolución de la carga: Etapa 2 ajusta
+`serie_efectiva`, que es la serie de máximos anuales (DECISIÓN 066), y T = 1/(1 − F) se mide en su intervalo
+de muestreo. La interfaz y el PDF rotulan T y el valor de diseño según `datos.resolucion_original`,
+`configuracion.mes_inicio_anio` y `configuracion.variable_diaria` (DECISIÓN 076); el payload no cambia.
+
 **`curva_ajuste`** — agregado en el Bloque C (gráficos interactivos,
 DECISIÓN 056). No son los `periodos_retorno` que pidió el usuario: es un
 muestreo denso de 60 puntos en escala logarítmica, entre T=1.05 y el mayor

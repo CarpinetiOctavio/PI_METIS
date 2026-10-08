@@ -32,6 +32,10 @@ toda fórmula implementada). Incluye:
   acá y no en `pendientes/` porque no siempre son preguntas abiertas a
   Facundo: pueden ser huecos de implementación que la auditoría original no
   detectó, verificados y documentados sin necesitar su intervención.
+- `comparacion-herramientas/` — las mismas series corridas en METIS, la
+  planilla de la tesis, una hoja de cálculo con funciones nativas, librerías
+  de referencia de R y Python, y SAMHIA, con los scripts para reproducirlo
+  (08/10/2026).
 
 ### `decisiones/`
 Un archivo por decisión (`decision001.md` a `decision043.md`, número
@@ -224,3 +228,8 @@ registro de cuándo se estableció o modificó.
   justificación. Antes de mover cada uno se verificó que todo pendiente
   abierto figurara en un documento vivo. Bloque L del
   `historico/planes/plan-fixes-post-verificacion-01-10-2026.md`.
+- **08/10/2026** — `auditoria/comparacion-herramientas/` (informe, scripts y
+  resultados de la comparación con otras herramientas pedida por Carlos
+  Catalini) y `auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md`.
+  `decisiones/` llega a `decision076.md` (075, exportación PDF; 076, rótulo del
+  período de retorno).
