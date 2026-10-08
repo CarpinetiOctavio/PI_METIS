@@ -134,6 +134,7 @@ jobs:
           # El lcov de Vitest trae SF relativo a frontend/: se reescribe a la raíz del repo.
           sed -E 's#^SF:src/#SF:frontend/src/#' reportes/frontend/coverage/lcov.info > reportes/frontend/lcov-repo.info
           BASE="origin/${{ github.base_ref }}"
+          set +e
           diff-cover reportes/backend/coverage.xml --compare-branch="$BASE" \
             --fail-under=80 --markdown-report reportes/diff-cover-backend.md
           B=$?
