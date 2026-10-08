@@ -158,7 +158,8 @@ revirtió la pasada 5 (DECISIÓN 051).
   frente 10, la 7 (feedback de UX) los frentes 12 y 13. Los números de decisión que proponía para esas pasadas
   (051 a 053) terminaron usados para otros temas.
 - **Decisiones:** 050.
-- **Quedó abierto:** la pasada 8, exportación PDF y CU-03 (checklist, "sin implementar").
+- **Quedó abierto:** la pasada 8, exportación PDF y CU-03 (checklist, "sin implementar"). La exportación PDF se
+  cerró el 06/10/2026 (§17).
 - **Archivo:** [`plan-post-pasada4-roadmap.md`](historico/planes/plan-post-pasada4-roadmap.md).
 
 ## 9. Pasada 5: pulido visual
@@ -182,7 +183,8 @@ revirtió la pasada 5 (DECISIÓN 051).
   bloque F se rediseñó a un solo parámetro `mes_inicio_anio`; el bloque E (PDF) nunca empezó.
 - **Decisiones:** 052 (SSE con pausa), 053 (`session_store` con TTL), 054 (`etapas`, cierra 037), 055
   (`full_pipeline.py`), 056 (gráficos con d3), 057 (año hidrológico configurable).
-- **Quedó abierto:** exportación PDF (checklist); `tests/regression/` vacío (`pendientes-tecnicos.md`).
+- **Quedó abierto:** exportación PDF (checklist, cerrada el 06/10/2026, §17); `tests/regression/` vacío
+  (`pendientes-tecnicos.md`).
 - **Archivo:** [`plan-etapa2-implementacion.md`](historico/planes/plan-etapa2-implementacion.md).
 
 ## 11. Cierre de pendientes no-test
@@ -273,3 +275,27 @@ revirtió la pasada 5 (DECISIÓN 051).
     la t de Student en el desglose, y el botón de simulación en `HistoryDetailPage`.
   - **En `pendientes-tecnicos.md`:** el umbral de `DIST_HIGH_EEA` con "Otro" y la corrección de Pareto para la V2.
 - **Archivo:** [`plan-fixes-post-verificacion-01-10-2026.md`](historico/planes/plan-fixes-post-verificacion-01-10-2026.md).
+
+## 17. Exportación PDF, rótulo del período de retorno y comparación con otras herramientas
+
+- **Fechas y PRs:** 06/10, **#107** (exportación PDF); 08/10, `fix/rotulo-periodo-retorno` y
+  `docs/comparacion-herramientas-y-pdf` (sin número de PR al escribir esto).
+- **Qué pedía:** el pendiente `GET /export/{id}` del checklist; después, dos pedidos de Carlos Catalini del
+  08/10: que el texto de los eventos de diseño no diga siempre "años" sin importar la serie, y justificar METIS
+  frente a las otras herramientas corriendo las mismas series en todas.
+- **Qué se hizo:**
+  - **#107:** PDF de CU-01 en el backend (`metis/reportes/pdf.py`, ReportLab + matplotlib), siempre en formato
+    Experto, con y sin los puntos excluidos del what-if; botón en `ResultsPage` y `HistoryDetailPage`.
+  - **Rótulo de T:** se verificó que T está en años para las tres resoluciones (se ajusta siempre la serie de
+    máximos anuales, DECISIÓN 066); el texto pasa a decir qué se cargó, con qué año se agregó y qué representa el
+    valor de diseño, en la app y en el PDF. Ningún cálculo cambió.
+  - **Comparación:** las 9 series de la tesis y una serie mensual de la UCC, corridas en METIS, la planilla de
+    Facundo (valores de la tesis), una hoja de cálculo con funciones nativas, librerías de referencia de R y
+    Python, y SAMHIA. Encontró la causa de la "Causa C" de la auditoría (la planilla calcula U_T con F en lugar
+    de 1 − F) y un veredicto que la Q16 de la fase 4 daba por no afectado.
+- **Decisiones:** 075 (PDF), 076 (rótulo del período de retorno).
+- **Quedó abierto:**
+  - **En `pendientes-facundo.md`:** confirmar la U_T de su planilla y la partición de t de Student con n impar.
+  - **En `pendientes-tecnicos.md`:** la inversa exacta en lugar de Wilson-Hilferty, candidata para la V2.
+- **Archivo:** [`auditoria/comparacion-herramientas/README.md`](auditoria/comparacion-herramientas/README.md),
+  [`auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md`](auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md).

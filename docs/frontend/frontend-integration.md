@@ -625,7 +625,8 @@ si corresponde:
    `null` en `GET /analysis/{id}`). La pantalla "Ranking de distribuciones"
    (variante D) no tiene datos reales para consumir todavía.
 3. **`GET /api/v1/export/{id}`** (PDF) — no implementado. Botón de exportación
-   sin backend.
+   sin backend. **Cerrado 06/10/2026:** implementado junto con
+   `POST /export/{id}/simulacion` (DECISIÓN 075, PR #107); ver la sección del endpoint más arriba.
 4. **`POST /api/v1/validate/`** (CU-03) y auth por `X-API-Key` — no
    implementados. Fuera de alcance de esta fase según `sprint.md`.
 5. **Partición de Cramer personalizada** — el campo existe en el form pero está
@@ -663,6 +664,8 @@ si corresponde:
   `frontend-design/metis-wireframes-fase1-decisiones.md`).
 - Etapa 2 (ranking, eventos de diseño, exportación PDF, CU-03) es **mock puro**
   en esta fase — el motor de cálculo existe pero no está expuesto por HTTP.
+  *(Nota 08/10/2026: superado. Etapa 2 es real desde el 09/08/2026 y la exportación PDF desde el
+  06/10/2026; solo CU-03 sigue sin implementar.)*
 - El shape real de los eventos SSE está en §4 de este documento — no coincide
   1:1 con `api-contracts.md` en varios detalles menores (campos `iteracion`,
   ausencia de `mensaje`/`descripcion` en eventos intermedios, nombres de campo

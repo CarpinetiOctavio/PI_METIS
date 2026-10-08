@@ -128,6 +128,11 @@ coincidiendo con la tesis).
 
 ## 4. La pregunta central sin resolver — Causa C, y por qué se necesita el Excel
 
+> **Addendum 08/10/2026: causa identificada sin necesidad del Excel.** La planilla calcula U_T (IV-102)
+> con F en lugar de 1 − F cuando F > 0,5, contra IV-105; con esa regla se reproducen los cuantiles impresos
+> hasta 0,004 %. La hipótesis (b) de abajo queda confirmada numéricamente, a reserva de que Facundo lo
+> verifique en su archivo. Ver [hallazgo-ut-planilla-causa-c.md](../../hallazgos/hallazgo-ut-planilla-causa-c.md).
+
 En las 9 estaciones, la familia Normal / Log-Normal (2p, 3p) / Gamma (2p, 3p) / Log-Pearson
 III muestra el mismo síntoma: los parámetros coinciden casi exacto con la tesis, pero el
 EEA/cuantil final no. La evidencia más rigurosa recolectada hasta ahora:
@@ -384,6 +389,8 @@ en el documento final?
 ### Prioridad baja (no bloquean nada, quedan documentadas por completitud)
 
 **Q16 — Partición de t-Student para n impar.**
+> **Addendum 08/10/2026:** sí cambia un veredicto individual: en est_05 la tesis rechaza (t = 2,082) y
+> METIS aprueba (t = 1,817). Pasa a `pendientes-facundo.md`, sección "Comparación con otras herramientas".
 En 5 de las 9 estaciones (n impar), los resultados de tesis solo se reproducen con la
 partición `n1 = ceil(n/2)` (el subgrupo 1 más grande). METIS usa `n1 = floor(n/2)`. No
 cambia ningún veredicto (ambas particiones aprueban o rechazan homogeneidad de la misma

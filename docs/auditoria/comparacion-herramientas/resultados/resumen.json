@@ -1,0 +1,114 @@
+{
+  "lmom_por_familia": {
+    "gamma2p": [
+      1.7226,
+      72
+    ],
+    "gumbel": [
+      0.0,
+      72
+    ],
+    "gve": [
+      0.1972,
+      72
+    ],
+    "normal": [
+      0.0198,
+      72
+    ]
+  },
+  "scipy_por_familia": {
+    "exponencial_beta": [
+      0.0,
+      72
+    ],
+    "gamma2p": [
+      2.0998,
+      72
+    ],
+    "gumbel": [
+      0.0,
+      72
+    ],
+    "gve": [
+      0.0013,
+      72
+    ],
+    "normal": [
+      1.6549,
+      72
+    ]
+  },
+  "aprox_por_familia_T100": {
+    "gamma2p": [
+      0.2423,
+      27
+    ],
+    "gamma3p": [
+      0.2264,
+      11
+    ],
+    "lognormal2p": [
+      0.0612,
+      18
+    ],
+    "lognormal3p": [
+      0.055,
+      16
+    ],
+    "logpearson3": [
+      0.9103,
+      11
+    ],
+    "normal": [
+      0.0139,
+      27
+    ]
+  },
+  "cuantiles_tesis_por_estacion": {
+    "est_01": [
+      17.582,
+      7
+    ],
+    "est_02": [
+      43.277,
+      14
+    ],
+    "est_03": [
+      54.128,
+      14
+    ],
+    "est_04": [
+      37.034,
+      14
+    ],
+    "est_05": [
+      38.318,
+      14
+    ],
+    "est_06": [
+      0.005,
+      7
+    ],
+    "est_07": [
+      18.246,
+      14
+    ],
+    "est_08": [
+      0.004,
+      7
+    ],
+    "est_09": [
+      6.001,
+      14
+    ]
+  },
+  "etapa1_metis_vs_r_max": {
+    "t de Student": 0.191016,
+    "Anderson, lags fuera de banda": 0.0,
+    "Wald-Wolfowitz, rachas": 0.0,
+    "Wald-Wolfowitz Z": 0.0,
+    "Mann-Kendall Z": 0.0,
+    "Kolmogorov-Smirnov Z": 0.0
+  }
+}
