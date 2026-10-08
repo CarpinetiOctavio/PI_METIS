@@ -38,8 +38,10 @@ Todo el código Python vive bajo `backend/`; los comandos de este repo (pytest, 
 
 ```
 backend/metis/
+├── api/                  # errors.py: manejador global → {"error": {...}} sin envolver en "detail"; deps.py: re-exporta get_db/get_current_user/get_optional_user
 ├── api/v1/               # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
-│   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /preview-columns, /distribution-decision, /{id}
+│   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /preview-columns, /distribution-decision,
+│   │                     # /{id}, /{id}/design-events (DECISIÓN 062), /simulate-exclusion (DECISIÓN 071)
 │   ├── history.py        # /history/, /history/{id}, /history/{id}/archive|unarchive
 │   └── export.py         # GET /export/{id}, POST /export/{id}/simulacion — PDF de CU-01 (DECISIÓN 075)
 ├── core/                 # Motor estadístico. SIN conocimiento de HTTP, BD, ni sesiones.
@@ -182,7 +184,9 @@ frontend/src/
 ├── charts/        # InteractiveChart.tsx (SVG propio, d3-scale+d3-shape — DECISIÓN 056), BoxPlot.tsx, Sparkline.tsx
 ├── components/    # RootLayout, TopBar, fondos animados Canvas 2D, BlockMath (KaTeX)
 ├── i18n/          # errors.es.ts (traducción del catálogo de códigos), mesInicioAnio.ts,
-│                  # periodoRetorno.ts (rótulos de T según la serie ajustada, DECISIÓN 076)
+│                  # periodoRetorno.ts (rótulos de T según la serie ajustada, DECISIÓN 076),
+│                  # explicaciones.ts (textos/LaTeX del modo paso a paso — solo sustituye `explicacion` de core/, DECISIÓN 064),
+│                  # format.ts (formateo numérico único de la UI, 5 decimales como la tesis)
 ├── routes/        # entry/, config/, stream/, results/, history/, auth-verify/ — una carpeta por pantalla
 ├── theme/         # tokens.ts + tokens.instrumento.css (paridad verificada por tokenParity.test.ts)
 └── test/          # renderPage.tsx — helper que envuelve toda página en <StrictMode> (regla, no opcional)
@@ -284,4 +288,4 @@ Para consultar cuando el trabajo lo amerite (no se cargan solos):
 - `docs/historico/` — documentos superados, conservados por trazabilidad.
 
 ## Documentación en Obsidian
-Cada vez que se ejecute /init en este repositorio, revisar también la documentación del proyecto en el vault de Obsidian ubicado en C:\Users\kevin\OneDrive\Documents\Kevin\Proyectos\PI_METIS\ y actualizarla si hay cambios relevantes en el código que no estén reflejados ahí.
+Cada vez que se ejecute /init en este repositorio, revisar también la documentación del proyecto en el vault de Obsidian (`C:\Users\kevin\OneDrive\Documents\Kevin\`) y actualizarla si hay cambios relevantes en el código que no estén reflejados ahí. Entrar siempre por `Inicio.md` (raíz del vault) y seguir lo que indica — el protocolo para agentes y el enlace a la nota de PI_METIS —, no ir directo a la carpeta del proyecto.
