@@ -234,6 +234,7 @@ export function StreamPage() {
         etapa2: state.etapa2,
         eventosDiseno: state.eventosDiseno,
         mesInicioAnio: form?.mes_inicio_anio,
+        variableDiaria: form?.variable_diaria,
         nombreArchivo: form?.archivo.name,
         // Configuración del análisis, para poder repetirlo sin los puntos
         // excluidos (ítem A, what-if).
@@ -250,6 +251,7 @@ export function StreamPage() {
     state.eventosDiseno,
     form?.modo,
     form?.mes_inicio_anio,
+    form?.variable_diaria,
     form?.archivo.name,
     form?.tipo_variable,
     form?.cramer_particion,
@@ -432,6 +434,11 @@ export function StreamPage() {
                   onElegir={handleDistribucionElegida}
                   resolving={resolvingDistribucion}
                   mediaSerie={state.result?.descriptive?.media}
+                  contextoSerie={{
+                    resolucion: state.result?.datos?.resolucion_original,
+                    mesInicioAnio: form.mes_inicio_anio,
+                    variableDiaria: form.variable_diaria,
+                  }}
                 />
               </>
             ) : (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { formatInt, formatNum } from "../../i18n/format";
+import { unidadPeriodoRetorno, type ContextoSerie } from "../../i18n/periodoRetorno";
 import type { DistribucionResult, Etapa2Result, MetodoStatus, WarningItem } from "../../api/types";
 import { SpotlightCard } from "../../components/SpotlightCard";
 import { Magnet } from "../../components/Magnet";
@@ -374,6 +375,7 @@ export function Etapa2RankingView({
   resolving,
   mediaSerie,
   seleccionRegistrada,
+  contextoSerie,
 }: Readonly<{
   etapa2: Etapa2Result;
   modo?: Etapa2RankingViewModo;
@@ -381,6 +383,8 @@ export function Etapa2RankingView({
   resolving?: boolean;
   mediaSerie?: number | null;
   seleccionRegistrada?: { distribucion: string; metodo: string } | null;
+  // DECISIÓN 076: solo cambia la unidad que nombra el campo de períodos de retorno.
+  contextoSerie?: ContextoSerie;
 }>) {
   const modoEfectivo: Etapa2RankingViewModo = modo ?? (onElegir ? "stream" : "lectura");
   const textoAccion = TEXTO_ACCION[modoEfectivo];
@@ -492,7 +496,7 @@ export function Etapa2RankingView({
       {onElegir && (
         <div className="field" style={{ marginBottom: 12, maxWidth: 420 }}>
           <label htmlFor="etapa2-periodos-retorno">
-            Períodos de retorno T (años, separados por coma)
+            Períodos de retorno T ({unidadPeriodoRetorno(contextoSerie)}, separados por coma)
           </label>
           <input
             id="etapa2-periodos-retorno"

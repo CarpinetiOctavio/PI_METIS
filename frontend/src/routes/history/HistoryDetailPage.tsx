@@ -9,6 +9,7 @@ import { Etapa2Explorador } from "../results/Etapa2Explorador";
 import { Etapa2EventosView } from "../results/Etapa2EventosView";
 import { ExportarPdfButton } from "../results/ExportarPdfButton";
 import type { AnalysisDetail, Modo } from "../../api/types";
+import type { ContextoSerie } from "../../i18n/periodoRetorno";
 import "./HistoryDetailPage.css";
 
 export function HistoryDetailPage() {
@@ -48,6 +49,12 @@ export function HistoryDetailPage() {
   // La elección registrada se muestra dentro del explorador, debajo del ranking
   // y junto a la exploración (en escritorio, lado a lado) para poder compararlas.
   const seleccion = detail.etapa2?.seleccion ?? null;
+  // DECISIÓN 076: qué se cargó y con qué año se agregó, para rotular T.
+  const contextoSerie: ContextoSerie = {
+    resolucion: detail.etapa1?.datos?.resolucion_original,
+    mesInicioAnio: detail.configuracion?.mes_inicio_anio,
+    variableDiaria: detail.configuracion?.variable_diaria,
+  };
   const eleccionRegistrada = seleccion && detail.etapa2 && (
     <>
       <h3 className="h" style={{ fontSize: 14, marginBottom: 4 }}>
@@ -66,6 +73,7 @@ export function HistoryDetailPage() {
           curva_ajuste: seleccion.curva_ajuste,
         }}
         puntosEmpiricos={detail.etapa2.puntos_empiricos}
+        contextoSerie={contextoSerie}
       />
     </>
   );
@@ -138,6 +146,7 @@ export function HistoryDetailPage() {
             }
             mediaSerie={detail.etapa1?.descriptive?.media}
             seleccionRegistrada={seleccion}
+            contextoSerie={contextoSerie}
             eleccion={eleccionRegistrada}
           />
         </div>
