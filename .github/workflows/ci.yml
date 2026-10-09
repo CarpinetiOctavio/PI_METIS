@@ -243,6 +243,14 @@ jobs:
         id: jscpd
         continue-on-error: true
         run: frontend/node_modules/.bin/jscpd --output reportes/jscpd backend/metis frontend/src
+      # Informativo (B11): complejidad ciclomática, índice de mantenibilidad y LOC del backend.
+      # No bloquea; ci_resumen.py lo suma a metricas.json y al resumen.
+      - name: Complejidad (radon)
+        continue-on-error: true
+        run: |
+          pip install --only-binary :all: radon==6.0.1
+          mkdir -p reportes/radon
+          for m in cc mi raw; do radon "$m" backend/metis -j > "reportes/radon/$m.json"; done
       - name: Cobertura del código nuevo (diff-cover)
         id: diffcover
         if: github.event_name == 'pull_request'
@@ -274,6 +282,7 @@ jobs:
           path: |
             reportes/metricas.json
             reportes/jscpd/
+            reportes/radon/
             reportes/diff-cover-*.md
           retention-days: 90
       - name: Resultado del gate
