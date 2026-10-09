@@ -69,3 +69,16 @@ editar el ruleset), y Kevin no la tiene: el repo es de Octavio. Por eso:
   línea de base del ambiente efímero, no como capacidad de producción.
 - DECISIÓN 044 queda con D3 resuelta por esta decisión; `testing.md` y `CLAUDE.md` describen el nuevo pipeline cuando
   se implemente.
+
+### Addendum (09/10/2026) — B7: k6 confirmado y carga en el pipeline
+
+- **Prueba de concepto** (`docs/calidad/herramienta-carga.md`): el mismo escenario en k6 2.3.0 y Locust 2.46.6 contra
+  el despliegue local. Midieron lo mismo (26,5 y 26,6 req/s); la diferencia está en los umbrales: k6 los trae nativos
+  y salió con código 99 ante uno violado; Locust sale con 1 ante cualquier request fallida, pero un umbral de latencia
+  o una tasa tolerada hay que programarlos. Matriz ponderada: k6 4,65, Locust 3,95. **El punto 6 deja de ser
+  provisorio.**
+- **Implementado:** `carga/k6/` (stress con perfiles `quiebre` y `ci`, sostenido), `carga/umbrales.json`,
+  `scripts/carga.sh`, job `carga` en `ci.yml` (perfil `ci` en cada PR, umbrales bloqueantes) y workflow
+  `carga-sostenida.yml` (manual y semanal). k6 corre en un contenedor dentro de la red del despliegue efímero.
+- **Hallazgo:** el punto de quiebre está entre 20 y 40 usuarios concurrentes; el sistema se degrada por latencia (un
+  solo proceso de uvicorn), sin errores. Registrado en `docs/pendientes-tecnicos.md`.

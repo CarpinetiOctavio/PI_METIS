@@ -180,6 +180,36 @@ jobs:
             frontend/test-results/
           retention-days: 30
 
+  # Stress con k6 (B7, DECISIÓN 077) sobre su propio despliegue efímero: carga fija por debajo del
+  # punto de quiebre, con los umbrales congelados de carga/umbrales.json. Falla si se superan.
+  # Solo en PR: corre unos 3 minutos de carga además del despliegue.
+  carga:
+    name: Carga (stress k6)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Desplegar
+        run: bash scripts/deploy-local.sh --sin-smoke
+      - name: Stress con umbrales
+        run: bash scripts/carga.sh ci
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### Stress k6 (perfil ci)"
+            echo '```'
+            sed -n '/THRESHOLDS/,/TOTAL RESULTS/p' carga/resultados/ci-*/resumen.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-carga
+          path: carga/resultados/
+          retention-days: 30
+
   # Gate propio, independiente de SonarCloud (DECISIÓN 077): cobertura del código nuevo
   # ≥ 80 % (diff-cover, solo en PR) y duplicación ≤ 5 % (jscpd). Resume todo en el job.
   quality-gate:

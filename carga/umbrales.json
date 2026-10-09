@@ -1,0 +1,15 @@
+{
+  "ci": {
+    "usuarios": 15,
+    "tasa_error": 0.01,
+    "p95_ms": {
+      "preview-columns": 150,
+      "stream": 250,
+      "simulate-exclusion": 500
+    }
+  },
+  "sostenido": {
+    "usuarios": 5,
+    "crecimiento_memoria_mb_h": 50
+  }
+}

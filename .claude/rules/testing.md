@@ -276,6 +276,21 @@ Los casos de un solo uso se construyen inline dentro del test.
 Todo fixture nuevo debe ser verificado con un smoke test antes
 de commitear — ver sección de smoke tests más abajo.
 
+## Carga y esfuerzo sostenido (B7, DECISIÓN 077)
+
+k6 (confirmado por prueba de concepto contra Locust: `docs/calidad/herramienta-carga.md`), en un contenedor dentro de
+la red del despliegue de `scripts/deploy-local.sh`, contra nginx. Recorrido de CU-02 en `carga/k6/metis.js`
+(`preview-columns` → `stream` con `etapas=1` → `simulate-exclusion` con Etapa 2), cada request con tag `endpoint`.
+
+- **Stress `quiebre`** (`scripts/carga.sh quiebre`): rampa de 10 a 120 usuarios, exploratoria; `carga/analizar.py`
+  arma la tabla por minuto. Quiebre medido entre 20 y 40 usuarios (latencia, sin errores).
+- **Stress `ci`** (job `carga` de `ci.yml`, solo en PR): 15 usuarios, umbrales congelados en `carga/umbrales.json`
+  (p95 por endpoint y tasa de error < 1 %); k6 sale con 99 y el job falla si se superan.
+- **Sostenido** (workflow `carga-sostenida.yml`, manual y semanal): 5 usuarios durante 30 min, los mismos umbrales y
+  la pendiente de memoria del backend (`docker stats` cada 15 s, umbral en MB/h).
+
+Cambiar un umbral es cambiar `carga/umbrales.json` en un PR, con la corrida que lo justifica.
+
 ## Smoke del despliegue (B5) — no confundir con los de desarrollo
 
 `backend/tests/smoke/` (marker `smoke`) sí vive en `tests/` y sí corre en CI:
