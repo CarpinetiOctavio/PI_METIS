@@ -67,6 +67,10 @@ Cubren:
 
 Viven en `tests/e2e/`. Validan flujos completos desde request HTTP hasta response.
 
+**Estado (09/10/2026):** `tests/e2e/` del backend sigue vacío. Los flujos de CU-01
+y CU-02 de abajo se cubren desde la UI con Playwright (`frontend/e2e/`, Capa 3
+del frontend, más abajo), que pasa por la misma API; CU-03 no existe todavía.
+
 Flujos mínimos a cubrir:
 - CU-01: autenticación → carga serie → Etapa 1 → Etapa 2 → exportación PDF
 - CU-02: carga serie → Etapa 1 → Etapa 2 → verificar que no hay exportación
@@ -141,16 +145,17 @@ array `routes` REAL (no rutas de mentira por archivo) — con ese patrón,
 "¿existe algún camino de clicks que lleve a `/history`?" pasó de ser una
 pregunta imposible de formular a un test real.
 
-### Capa 3 — E2E con Playwright contra Docker (decidida, en implementación)
+### Capa 3 — E2E con Playwright contra Docker (implementada, B6)
 
-Propuesta por el plan de arreglo para los defectos que solo son detectables
-con el sistema completo corriendo junto (F1, F4, F5, F6, F9 del informe de
-diagnóstico). Habilitada por [DECISIÓN 046](../../docs/decisiones/decision046.md)
-(08/10/2026), que sacó de `constraints.md` la exclusión de E2E: Playwright en
-`frontend/e2e/`, seis escenarios contra el build de producción detrás de nginx,
-con el registro probado contra Mailpit (DECISIÓN 049). Se implementa en el
-Bloque B6 de `docs/plan-tp-calidad-software.md`; esta sección pasa a
-"implementada" cuando el job `e2e` corra en CI.
+Para los defectos que solo son detectables con el sistema completo corriendo
+junto (F1, F4, F5, F6, F9 del informe de diagnóstico). Habilitada por
+[DECISIÓN 046](../../docs/decisiones/decision046.md): Playwright en
+`frontend/e2e/`, seis escenarios (E2E-0 a E2E-5) contra el build de
+producción detrás de nginx, con el registro probado contra Mailpit (DECISIÓN
+049). Corren en el job `despliegue` de CI en cada PR, después del smoke, y
+en local con `scripts/deploy-local.sh` + `npm run test:e2e`. Nunca contra
+`npm run dev` (StrictMode de desarrollo duplica efectos). Escenarios y
+reglas para sumar uno: `docs/calidad/despliegue-y-e2e.md`.
 
 ### Capa 4 — cambio de proceso (gratis, y la que más importa)
 
@@ -206,6 +211,7 @@ markers =
     integration: tests de integración (con BD de test)
     e2e: tests end-to-end
     regression: tests de regresión matemática contra tesis de Facundo
+    smoke: smoke del despliegue — httpx contra nginx de un stack levantado
 ```
 
 ```bash
@@ -269,6 +275,15 @@ Solo si es reutilizado por más de un archivo de test.
 Los casos de un solo uso se construyen inline dentro del test.
 Todo fixture nuevo debe ser verificado con un smoke test antes
 de commitear — ver sección de smoke tests más abajo.
+
+## Smoke del despliegue (B5) — no confundir con los de desarrollo
+
+`backend/tests/smoke/` (marker `smoke`) sí vive en `tests/` y sí corre en CI:
+siete pruebas black-box con httpx contra nginx de un stack levantado por
+`scripts/deploy-local.sh` (SPA, `/ping`, `preview-columns`, login, stream
+hasta `complete`, historial). No importa nada de `metis`. Sin stack se
+saltean; con `METIS_REQUIRE_SMOKE=1` fallan. Detalle en
+`docs/calidad/despliegue-y-e2e.md`. Lo que sigue es otra cosa.
 
 ## Smoke tests de desarrollo
 

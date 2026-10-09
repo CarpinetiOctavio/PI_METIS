@@ -172,7 +172,7 @@ situ.
 | [043](decision043.md) | Contraste WCAG AA del tema Instrumento: hallazgos y propuesta, no aplicada | 29/07/2026 | PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [044](decision044.md) | SonarCloud: quality gate, limpieza del PR #17/B, rechazo de `<dialog>` nativo, merge del PR #17 en rojo | 30/07/2026 | Aplicada — gate de gobernanza PENDIENTE DE DECISIÓN — Kevin/Octavio |
 | [045](decision045.md) | Fondos animados en Canvas 2D sin dependencias, WebGL descartado — addendum 05/08/2026: excepción acotada para Threads (three.js) en la puerta de entrada, vía code-splitting | 31/07/2026 | Decidida — implementación en curso |
-| [046](decision046.md) | E2E automatizados con Playwright contra el sistema desplegado; sale de `constraints.md` la exclusión de E2E de UI | 08/10/2026 | Decidida — implementación en el Bloque B6 de `docs/plan-tp-calidad-software.md` |
+| [046](decision046.md) | E2E automatizados con Playwright contra el sistema desplegado; sale de `constraints.md` la exclusión de E2E de UI | 08/10/2026 | Aplicada (B6) — `frontend/e2e/`, job `despliegue` de CI, `docs/calidad/despliegue-y-e2e.md` |
 | [047](decision047.md) | Endpoint `preview-columns`: parseo de cabeceras del lado del servidor, no del cliente | 31/07/2026 | Decidida — implementación en curso |
 | [048](decision048.md) | Archivado de análisis por soft-delete, no borrado físico | 31/07/2026 | Decidida — implementación en curso |
 | [049](decision049.md) | Mailpit como servidor SMTP de captura en desarrollo, E2E y CI; sin escotilla en `auth/email.py` (número reservado originalmente para la escotilla SMTP, reasignado de 045 el 05/08/2026) | 08/10/2026 | Aplicada (B4) — `SMTP_STARTTLS`, Mailpit en compose y CI, test de integración |

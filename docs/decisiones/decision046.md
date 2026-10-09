@@ -1,7 +1,7 @@
 # DECISIÓN 046: E2E automatizados con Playwright contra el sistema desplegado; sale de `constraints.md` la exclusión de E2E de UI
 
 **Fecha:** 8 de octubre de 2026
-**Estado:** Decidida — implementación en el Bloque B6 de `docs/plan-tp-calidad-software.md`.
+**Estado:** Aplicada (B6, 09/10/2026) — ver "Implementación" al final.
 **Decide:** Kevin.
 **Origen:** número reservado el 31/07/2026 por `docs/historico/planes/frontend/plan-arreglo-ui-rota.md` §4.3 para
 "escribir primero la revisión de la exclusión" antes de sumar Playwright. Se escribe ahora porque se dan las dos
@@ -76,3 +76,15 @@ hueco. La capa 3 (E2E) quedó pendiente de esta decisión, y la verificación ma
 - Vitest tiene que excluir `e2e/**`: su `include` por defecto toma `*.spec.ts` y correría los specs de Playwright
   con jsdom.
 - `testing.md`, "Capa 3", pasa de "no implementada, requiere decisión" a apuntar a esta decisión.
+
+### Implementación (09/10/2026, B5 y B6)
+
+- `frontend/e2e/`, `@playwright/test` 1.63.0 exacta, solo Chromium. Los seis escenarios del plan (E2E-0 a E2E-5), más
+  un caso de E2E-1 con contraseña incorrecta (siete tests). Detalle y reglas para sumar escenarios:
+  `docs/calidad/despliegue-y-e2e.md`.
+- El plan nombraba dos overrides (`docker-compose.ci.yml` para B5 y `docker-compose.e2e.yml` para B6). Quedó uno
+  solo, `docker-compose.ci.yml`: el smoke y los E2E necesitan exactamente el mismo stack.
+- En CI corren en el job `despliegue`, después del smoke y en el mismo despliegue, solo en PR (punto 4). El reporte
+  `reporte-e2e` se sube siempre.
+- Primera corrida local contra el despliegue: 7/7 en verde. El único rojo intermedio fue un selector del propio test
+  (`getByText("en vivo")` también encontraba el título "Análisis en vivo"), no un defecto de la aplicación.

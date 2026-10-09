@@ -7,7 +7,7 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   // public/mockServiceWorker.js es generado por `npx msw init` — vendor,
   // no se edita a mano, no corresponde lintearlo.
-  { ignores: ["dist", "coverage", "public/mockServiceWorker.js"] },
+  { ignores: ["dist", "coverage", "playwright-report", "test-results", "public/mockServiceWorker.js"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
