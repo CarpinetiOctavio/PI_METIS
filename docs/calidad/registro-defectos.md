@@ -15,7 +15,8 @@ TP integrador de Calidad de Software, bloque B10 (`docs/plan-tp-calidad-software
    commit o PR del fix.
 6. Un defecto que queda abierto a propósito puede tener ya su test de aceptación escrito con
    `pytest.mark.xfail(strict=True)`: documenta lo esperado y, cuando alguien lo corrige, el xfail estricto hace fallar
-   la suite hasta que se saca la marca y se cierra el issue (D-10).
+   la suite hasta que se saca la marca y se cierra el issue. Así se llevó D-10: abierto con su test en xfail
+   el 09/10/2026 y corregido el mismo día en un PR propio, que sacó la marca.
 
 ## 2. Criterios
 
@@ -62,7 +63,7 @@ dos (D-08 y D-09): son dos fallas distintas, con tests distintos.
 | D-07 | [#120](https://github.com/CarpinetiOctavio/PI_METIS/issues/120) | Errores envueltos en `detail`, texto genérico en el login | media | uso real | cerrado | `test_estructura_error.py::test_error_con_codigo_responde_la_estructura_estandar` | b24eaaa (#106) |
 | D-08 | [#121](https://github.com/CarpinetiOctavio/PI_METIS/issues/121) | GVE Momentos-L con la serie en orden ascendente | crítica | auditoría | cerrado | `test_gve.py::test_gve_ml_q100_serie_facundo` | auditoría de 4 fases (#15) |
 | D-09 | [#122](https://github.com/CarpinetiOctavio/PI_METIS/issues/122) | Log-Normal 3p con exponente 1/4 en σ̂y (IV-116) | crítica | auditoría | cerrado | `test_lognormal3p.py::test_lognormal3p_momentos_sigma_y_raiz_cuadrada` | DECISIÓN 015 (#15) |
-| D-10 | [#123](https://github.com/CarpinetiOctavio/PI_METIS/issues/123) | El warning de muestra chica de Mann-Kendall no llega a la lista agregada | baja | revisión | **abierto** | `test_trend.py::test_muestra_chica_de_mann_kendall_llega_a_los_warnings_agregados` (`xfail(strict=True)`) | — |
+| D-10 | [#123](https://github.com/CarpinetiOctavio/PI_METIS/issues/123) | El warning de muestra chica de Mann-Kendall no llega a la lista agregada | baja | revisión | cerrado (09/10/2026) | `test_trend.py::test_muestra_chica_de_mann_kendall_llega_a_los_warnings_agregados` y `test_pipeline_etapa1.py::test_muestra_chica_de_wald_y_mann_kendall_sale_como_un_solo_warning` | `fix/mann-kendall-muestra-chica` |
 
 Las rutas de los tests del backend son relativas a `backend/tests/` (`integration/`, `unit/core/…`, `unit/api/`).
 
