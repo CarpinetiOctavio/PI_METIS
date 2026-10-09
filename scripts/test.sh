@@ -10,8 +10,8 @@
 #   scripts/test.sh all          backend + frontend + duplicacion
 #   scripts/test.sh smoke        smoke del despliegue contra nginx (requiere scripts/deploy-local.sh)
 #   scripts/test.sh e2e [spec]   Playwright contra el despliegue (requiere scripts/deploy-local.sh)
-#
-# stress y soak se suman con el bloque B7.
+#   scripts/test.sh stress       k6 con umbrales (perfil ci de scripts/carga.sh; requiere el despliegue)
+#   scripts/test.sh soak [30m]   k6 sostenido + memoria del backend (requiere el despliegue)
 #
 # Backend: usa el Python activo si tiene las dependencias de requirements.txt; si no, corre dentro
 # del contenedor `backend` de docker compose (reconstruirlo si requirements.txt cambió:
@@ -80,12 +80,14 @@ case "${1:-}" in
     export E2E_PASSWORD="${E2E_PASSWORD:-${SMOKE_PASSWORD:-smoke-metis-1234}}"
     (cd frontend && npm run test:e2e -- "${@:2}")
     ;;
-  stress | soak)
-    echo "'$1' todavía no existe: llega con el bloque B7." >&2
-    exit 2
+  stress)
+    bash scripts/carga.sh ci
+    ;;
+  soak)
+    bash scripts/carga.sh sostenido "${2:-30m}"
     ;;
   *)
-    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

@@ -1,0 +1,44 @@
+name: Carga sostenida
+
+# Esfuerzo sostenido con k6 (B7 del plan del TP de Calidad, DECISIÓN 077): carga moderada y constante
+# sobre un despliegue efímero, vigilando latencia, errores y crecimiento de memoria del backend.
+# No corre en cada PR (dura media hora): a mano, con la duración como input, y una vez por semana.
+on:
+  workflow_dispatch:
+    inputs:
+      duracion:
+        description: "Duración de la carga (formato de k6: 30m, 1h)"
+        default: "30m"
+        required: true
+  schedule:
+    - cron: "0 6 * * 0"
+
+jobs:
+  sostenido:
+    name: Esfuerzo sostenido (k6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Desplegar
+        run: bash scripts/deploy-local.sh --sin-smoke
+      - name: Carga sostenida y memoria
+        env:
+          DURACION: ${{ inputs.duracion || '30m' }}
+        run: bash scripts/carga.sh sostenido "$DURACION"
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### Esfuerzo sostenido"
+            echo '```'
+            cat carga/resultados/sostenido-*/memoria.txt
+            sed -n '/THRESHOLDS/,/TOTAL RESULTS/p' carga/resultados/sostenido-*/resumen.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-carga-sostenida
+          path: carga/resultados/
+          retention-days: 90

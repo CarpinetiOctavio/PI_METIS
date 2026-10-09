@@ -77,3 +77,6 @@ docs/series prueba/UCC-DAT-ESR-AH-001-26-00.xlsx
 coverage.xml
 junit-*.xml
 reports/
+
+# Resultados de las pruebas de carga (B7): se suben como artefacto en CI; lo que se cita queda en docs/calidad/
+carga/resultados/
