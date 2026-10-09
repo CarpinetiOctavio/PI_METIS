@@ -29,6 +29,38 @@ jobs:
   test:
     name: Tests (pytest)
     runs-on: ubuntu-latest
+    # Integración contra servicios reales (B3/B4 del plan del TP de Calidad): PostgreSQL con
+    # las migraciones aplicadas y Mailpit como servidor SMTP de captura (DECISIÓN 049).
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: metis
+          POSTGRES_PASSWORD: metis
+          POSTGRES_DB: metis_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U metis -d metis_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.20.0
+        env:
+          MP_SMTP_AUTH_ACCEPT_ANY: "1"
+          MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+        ports: ["1025:1025", "8025:8025"]
+    env:
+      DATABASE_URL: postgresql+asyncpg://metis:metis@localhost:5432/metis_test
+      JWT_SECRET_KEY: clave-de-ci-sin-valor-real
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_USER: metis
+      SMTP_PASSWORD: metis
+      SMTP_FROM_ADDRESS: metis-noreply@ucc.edu.ar
+      SMTP_STARTTLS: "false"
+      MAILPIT_URL: http://localhost:8025
+      # Con servicios caídos los tests de BD/SMTP fallan en vez de saltearse.
+      METIS_REQUIRE_DB: "1"
+      METIS_REQUIRE_MAILPIT: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,6 +72,9 @@ jobs:
           key: pip-${{ hashFiles('backend/requirements.txt') }}
           restore-keys: pip-
       - run: pip install -r requirements.txt
+        working-directory: backend
+      # Paso explícito: nada en la app aplica las migraciones al arrancar (incidente del 05/08/2026).
+      - run: alembic upgrade head
         working-directory: backend
       # Cobertura de sentencia y de decisión (--cov-branch) — DECISIÓN 077.
       - name: Run tests

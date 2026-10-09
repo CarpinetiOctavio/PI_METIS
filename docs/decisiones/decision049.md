@@ -1,7 +1,9 @@
 # DECISIÓN 049: Mailpit como servidor SMTP de captura en desarrollo, E2E y CI; sin escotilla en `auth/email.py`
 
 **Fecha:** 8 de octubre de 2026
-**Estado:** Decidida — implementación en el Bloque B4 de `docs/plan-tp-calidad-software.md`.
+**Estado:** Aplicada (08/10/2026, B4 de `docs/plan-tp-calidad-software.md`): `SMTP_STARTTLS` en `auth/email.py`,
+servicio `mailpit` en `docker-compose.yml` y en el job `test` de CI, y
+`tests/integration/db/test_registro_mailpit.py`. Contrato y contingencia: `docs/calidad/integracion-smtp.md`.
 **Decide:** Kevin.
 **Origen:** número reservado para la "escotilla SMTP de desarrollo en `auth/email.py`"
 (`docs/historico/planes/frontend/plan-arreglo-ui-rota.md` §1.3(b), reasignado de 045 a 049 el 05/08/2026). Se

@@ -175,7 +175,7 @@ situ.
 | [046](decision046.md) | E2E automatizados con Playwright contra el sistema desplegado; sale de `constraints.md` la exclusión de E2E de UI | 08/10/2026 | Decidida — implementación en el Bloque B6 de `docs/plan-tp-calidad-software.md` |
 | [047](decision047.md) | Endpoint `preview-columns`: parseo de cabeceras del lado del servidor, no del cliente | 31/07/2026 | Decidida — implementación en curso |
 | [048](decision048.md) | Archivado de análisis por soft-delete, no borrado físico | 31/07/2026 | Decidida — implementación en curso |
-| [049](decision049.md) | Mailpit como servidor SMTP de captura en desarrollo, E2E y CI; sin escotilla en `auth/email.py` (número reservado originalmente para la escotilla SMTP, reasignado de 045 el 05/08/2026) | 08/10/2026 | Decidida — implementación en el Bloque B4 de `docs/plan-tp-calidad-software.md` |
+| [049](decision049.md) | Mailpit como servidor SMTP de captura en desarrollo, E2E y CI; sin escotilla en `auth/email.py` (número reservado originalmente para la escotilla SMTP, reasignado de 045 el 05/08/2026) | 08/10/2026 | Aplicada (B4) — `SMTP_STARTTLS`, Mailpit en compose y CI, test de integración |
 | [050](decision050.md) | Límite de tamaño de subida: valor (10 MB), nginx + backend, código de error nuevo | 05/08/2026 | Decidida — implementación en curso |
 | [051](decision051.md) | ThreadsBackground pasa de Three.js a Canvas 2D; Three.js sale del proyecto — supera el addendum de la excepción de DECISIÓN 045 | 06/08/2026 | Implementada |
 | [052](decision052.md) | Transporte de Etapa 2 por SSE con pausa; `distribution-decision` reemplaza `design-events` | 09/08/2026 | Decidida — implementación en curso |

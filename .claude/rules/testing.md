@@ -57,11 +57,11 @@ Viven en `tests/integration/`. Levantan la app completa con base de datos de tes
 Cubren:
 - Pipeline completo Etapa 1 con serie válida
 - Pipeline con cada código del catálogo de errores
-- Autenticación usuario/contraseña — PENDIENTE hasta confirmar IT (ver docs/decisiones/decision001.md — DECISIÓN 001)
+- Autenticación usuario/contraseña — con Mailpit como SMTP real de captura (DECISIÓN 049, `tests/integration/db/`)
 - CU-03 con API Key válida e inválida
 - Pausa ante atípico de Chow y reanudación con decisión del usuario
-- Persistencia correcta en BD para CU-01
-- Ausencia de persistencia para CU-02
+- Persistencia correcta en BD para CU-01 (`tests/integration/db/`, PostgreSQL real)
+- Ausencia de persistencia para CU-02 (ídem)
 
 ### 3. Tests end-to-end por CU
 
@@ -223,20 +223,19 @@ pytest -v
 
 ## Base de datos de test
 
-Usar una instancia PostgreSQL separada para tests. Configurar en `.env.test`:
+**Implementado 08/10/2026 (B3 del plan del TP de Calidad).** `tests/integration/db/` corre contra un PostgreSQL
+real con las migraciones aplicadas, en la `DATABASE_URL` del entorno: persistencia de CU-01, ausencia de
+persistencia de CU-02, historial con archivado y pertenencia (404 a un análisis ajeno, también por HTTP con login
+real). `test_registro_mailpit.py` prueba registro → mail → verificación → login contra Mailpit (DECISIÓN 049).
 
-```
-DATABASE_URL=postgresql://user:pass@localhost:5432/metis_test
-```
-
-Cada test que escribe en BD debe usar transacciones que se revierten al finalizar el test — nunca limpiar manualmente la BD entre tests.
-
-```python
-@pytest.fixture(autouse=True)
-async def rollback_after_test(db_session):
-    yield
-    await db_session.rollback()
-```
+- **CI:** el job `test` levanta `postgres:15` y `mailpit` como servicios, corre `alembic upgrade head` y setea
+  `METIS_REQUIRE_DB=1`/`METIS_REQUIRE_MAILPIT=1`: con un servicio caído los tests fallan, no se saltean.
+- **Local sin servicios:** se saltean con el motivo (`pytest -rs`).
+- **Aislamiento:** el rollback por test que proponía esta sección no alcanza, porque `stream_analysis()` y los
+  servicios del historial hacen `commit()` por su cuenta. Cada test crea usuarios con email único
+  (`crear_usuario` en `tests/integration/db/conftest.py`) y los borra al final; `ON DELETE CASCADE` se lleva los
+  análisis y resultados.
+- Contrato de la integración SMTP, dobles usados y contingencia: `docs/calidad/integracion-smtp.md`.
 
 ---
 

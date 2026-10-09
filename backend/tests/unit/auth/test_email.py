@@ -36,6 +36,7 @@ def _set_config(
     monkeypatch.setattr(email_module, "_SMTP_PASSWORD", password)
     monkeypatch.setattr(email_module, "_SMTP_FROM_ADDRESS", from_address)
     monkeypatch.setattr(email_module, "_FRONTEND_URL", "http://localhost:5173")
+    monkeypatch.setattr(email_module, "_SMTP_STARTTLS", True)
 
 
 @pytest.mark.unit
@@ -138,3 +139,48 @@ async def test_send_verification_email_propaga_smtpexception_sin_capturarla(
     ):
         with pytest.raises(aiosmtplib.SMTPException):
             await email_module.send_verification_email("legajo@ucc.edu.ar", "tok123")
+
+
+@pytest.mark.unit
+async def test_send_verification_email_sin_starttls_para_un_servidor_de_captura(
+    monkeypatch,
+):
+    # Arrange: Mailpit en desarrollo/E2E/CI no habla TLS (DECISIÓN 049)
+    _set_config(monkeypatch, host="mailpit", port=1025)
+    monkeypatch.setattr(email_module, "_SMTP_STARTTLS", False)
+
+    # Act
+    with patch("metis.auth.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
+        await email_module.send_verification_email("legajo@ucc.edu.ar", "tok123")
+
+    # Assert
+    assert mock_send.call_args.kwargs["start_tls"] is False
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("valor", "esperado"),
+    [
+        pytest.param(None, True, id="sin-definir"),
+        pytest.param("true", True, id="true"),
+        pytest.param("FALSE", False, id="false-mayusculas"),
+        pytest.param("0", False, id="cero"),
+        pytest.param("no", False, id="no"),
+    ],
+)
+def test_smtp_starttls_se_lee_del_entorno(monkeypatch, valor, esperado):
+    # Arrange
+    import importlib
+
+    if valor is None:
+        monkeypatch.delenv("SMTP_STARTTLS", raising=False)
+    else:
+        monkeypatch.setenv("SMTP_STARTTLS", valor)
+
+    # Act
+    modulo = importlib.reload(email_module)
+
+    # Assert
+    assert modulo._SMTP_STARTTLS is esperado
+    monkeypatch.undo()
+    importlib.reload(email_module)
