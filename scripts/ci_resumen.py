@@ -14,7 +14,8 @@ Lee siempre de `reportes/`, donde el job descargó los artefactos de los otros j
 rutas por línea de comandos: no hay nada que validar):
     backend/coverage.xml, backend/junit-backend.xml,
     frontend/coverage/coverage-summary.json, frontend/junit-frontend.xml,
-    jscpd/jscpd-report.json, diff-cover-backend.md, diff-cover-frontend.md (los dos últimos solo en PR).
+    jscpd/jscpd-report.json, diff-cover-backend.md, diff-cover-frontend.md (los dos últimos solo en PR),
+    radon/cc.json, radon/mi.json, radon/raw.json (complejidad del backend, B11).
 El job guarda la salida --json como reportes/metricas.json.
 """
 
@@ -25,6 +26,9 @@ from pathlib import Path
 
 UMBRAL_COBERTURA = 80.0
 UMBRAL_DUPLICACION = 5.0
+# radon: CC de 1 a 10 es rango A o B ("simple" a "bien estructurada"); desde 11, C en adelante.
+UMBRAL_CC = 10
+FUNCIONES_MAS_COMPLEJAS = 5
 
 
 def _junit(ruta: Path) -> dict | None:
@@ -70,6 +74,58 @@ def _duplicacion(ruta: Path) -> dict | None:
     }
 
 
+def _bloques_cc(cc: dict) -> list[dict]:
+    """Funciones y métodos, con el archivo. radon lista cada método también dentro de su clase, y la
+    clase con una complejidad propia: se saltean las clases para no contar dos veces."""
+    return [
+        {**b, "archivo": archivo}
+        for archivo, items in cc.items()
+        if isinstance(items, list)  # radon informa un error de parseo como dict
+        for b in items
+        if b["type"] != "class"
+    ]
+
+
+def _complejidad(carpeta: Path) -> dict | None:
+    rutas = {n: carpeta / f"{n}.json" for n in ("cc", "mi", "raw")}
+    if not all(r.is_file() for r in rutas.values()):
+        return None
+    cc, mi, raw = (json.loads(r.read_text(encoding="utf-8")) for r in rutas.values())
+
+    bloques = _bloques_cc(cc)
+    por_rango_cc: dict[str, int] = {}
+    for b in bloques:
+        por_rango_cc[b["rank"]] = por_rango_cc.get(b["rank"], 0) + 1
+    mas_complejas = sorted(bloques, key=lambda b: b["complexity"], reverse=True)
+
+    por_rango_mi: dict[str, int] = {}
+    for v in mi.values():
+        por_rango_mi[v["rank"]] = por_rango_mi.get(v["rank"], 0) + 1
+    menor_mi = min(mi.items(), key=lambda kv: kv[1]["mi"])
+
+    totales = {
+        k: sum(v[k] for v in raw.values()) for k in ("loc", "sloc", "comments", "multi")
+    }
+    return {
+        "funciones": len(bloques),
+        "cc_promedio": round(sum(b["complexity"] for b in bloques) / len(bloques), 2)
+        if bloques
+        else 0.0,
+        "cc_por_rango": dict(sorted(por_rango_cc.items())),
+        "cc_mayor_a_umbral": sum(1 for b in bloques if b["complexity"] > UMBRAL_CC),
+        "mas_complejas": [
+            {"funcion": f"{b['archivo']}::{b['name']}", "cc": b["complexity"]}
+            for b in mas_complejas[:FUNCIONES_MAS_COMPLEJAS]
+        ],
+        "archivos": len(mi),
+        "mi_por_rango": dict(sorted(por_rango_mi.items())),
+        "mi_menor": {"archivo": menor_mi[0], "mi": round(menor_mi[1]["mi"], 2)},
+        "loc": totales["loc"],
+        "sloc": totales["sloc"],
+        "lineas_comentario": totales["comments"] + totales["multi"],
+    }
+
+
 def _pct(par: list[int]) -> float:
     cubiertas, total = par
     return round(100.0 * cubiertas / total, 2) if total else 100.0
@@ -88,6 +144,7 @@ def construir(reportes: Path) -> tuple[dict, str]:
             reportes / "frontend" / "coverage" / "coverage-summary.json"
         ),
         "duplicacion": _duplicacion(reportes / "jscpd" / "jscpd-report.json"),
+        "complejidad_backend": _complejidad(reportes / "radon"),
     }
 
     lineas = ["## Calidad del pipeline", ""]
@@ -141,6 +198,25 @@ def construir(reportes: Path) -> tuple[dict, str]:
             f"líneas duplicadas ({d['lineas_duplicadas']}/{d['lineas']}, {d['clones']} clones). "
             f"Umbral: {UMBRAL_DUPLICACION:.0f} %."
         )
+    else:
+        lineas.append("sin reporte")
+
+    k = metricas["complejidad_backend"]
+    lineas += ["", "### Complejidad del backend (radon, informativo)", ""]
+    if k:
+        rangos_cc = ", ".join(f"{r}: {n}" for r, n in k["cc_por_rango"].items())
+        rangos_mi = ", ".join(f"{r}: {n}" for r, n in k["mi_por_rango"].items())
+        lineas += [
+            f"- {k['sloc']} líneas de código ({k['loc']} en total, {k['lineas_comentario']} de comentarios).",
+            f"- Complejidad ciclomática: {k['funciones']} funciones, promedio {k['cc_promedio']}; "
+            f"por rango {rangos_cc}. Con CC > {UMBRAL_CC}: {k['cc_mayor_a_umbral']}.",
+            f"- Índice de mantenibilidad: {k['archivos']} archivos; por rango {rangos_mi}. "
+            f"El menor: `{k['mi_menor']['archivo']}` ({k['mi_menor']['mi']}).",
+            "",
+            "| Función más compleja | CC |",
+            "|---|---|",
+        ]
+        lineas += [f"| `{f['funcion']}` | {f['cc']} |" for f in k["mas_complejas"]]
     else:
         lineas.append("sin reporte")
 

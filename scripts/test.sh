@@ -7,6 +7,7 @@
 #   scripts/test.sh frontend     Vitest con cobertura
 #   scripts/test.sh duplicacion  jscpd sobre backend/metis y frontend/src (umbral 5 %)
 #   scripts/test.sh gate         cobertura del código nuevo contra origin/staging (diff-cover ≥ 80 %)
+#   scripts/test.sh complejidad  radon (CC, índice de mantenibilidad, LOC) del backend, informativo
 #   scripts/test.sh all          backend + frontend + duplicacion
 #   scripts/test.sh smoke        smoke del despliegue contra nginx (requiere scripts/deploy-local.sh)
 #   scripts/test.sh e2e [spec]   Playwright contra el despliegue (requiere scripts/deploy-local.sh)
@@ -56,6 +57,12 @@ case "${1:-}" in
     sed -E -e '/^SF:/s#[\]#/#g' -e 's#^SF:src/#SF:frontend/src/#' frontend/coverage/lcov.info > frontend/coverage/lcov-repo.info
     diff-cover frontend/coverage/lcov-repo.info --compare-branch=origin/staging --fail-under=80
     ;;
+  complejidad)
+    command -v radon >/dev/null || { echo "Falta radon: pip install --only-binary :all: radon==6.0.1" >&2; exit 1; }
+    radon cc backend/metis -s -a -nc
+    radon mi backend/metis -s
+    radon raw backend/metis -s | tail -12
+    ;;
   all)
     "$0" backend
     "$0" frontend
@@ -87,7 +94,7 @@ case "${1:-}" in
     bash scripts/carga.sh sostenido "${2:-30m}"
     ;;
   *)
-    sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

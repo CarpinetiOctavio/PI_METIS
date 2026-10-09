@@ -30,7 +30,7 @@ cada corrida; los de carga, de `docs/calidad/herramienta-carga.md`.
 | OC-E3 | **Poca duplicación** | Líneas duplicadas sobre el total | ≤ 5 % | 0,63 % (139 de 22.156 líneas, 10 clones) | `jscpd` en el job `quality-gate` | El gate bloquea el merge |
 | OC-E4 | **Estilo y análisis estático sin hallazgos** | Hallazgos de ruff y ESLint | 0 | 0 | Jobs `lint` y `frontend` | Corre en cada push |
 | OC-E5 | **Un defecto corregido no vuelve** | Defectos cerrados sin test de regresión | 0 | 0 de 10 | `registro-defectos.md` | Un defecto se cierra solo con un test que lo cubra |
-| OC-E6 | **El pipeline es confiable** | Corridas de CI que fallan sin un problema real (flaky) | Ninguna conocida | 6 fallas en las primeras 222 corridas (2,7 %); B11 clasifica cuáles detectaron un problema real | API de GitHub Actions | Servicios que fallan en lugar de saltearse (`METIS_REQUIRE_DB`, `METIS_REQUIRE_MAILPIT`) |
+| OC-E6 | **El pipeline es confiable** | Corridas de CI que fallan sin un problema real (flaky) | Ninguna conocida | 8 fallas en 248 corridas (3,2 %), todas con causa determinista: 3 detectaron un defecto real (2 defectos distintos), 4 fueron de configuración del pipeline y 1 de estilo (`metricas.md` §3.1) | `scripts/metricas_proceso.py` | Servicios que fallan en lugar de saltearse (`METIS_REQUIRE_DB`, `METIS_REQUIRE_MAILPIT`) |
 
 ## 3. Para la organización (UCC, tribunal de ISI, directores)
 

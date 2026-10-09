@@ -7,6 +7,7 @@ cronograma.
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
 | 1.0 | 09/10/2026 | Kevin Massholder | Primera versión. Formaliza la estrategia que vivía en `.claude/rules/testing.md` y suma lo construido en B1–B8 |
+| 1.1 | 09/10/2026 | Kevin Massholder | Cronograma: B9 y B11 hechos |
 
 Este documento se versiona con el repo: un cambio de alcance, criterio o ambiente sube la versión y se anota en la
 tabla de arriba, en el mismo PR que lo introduce.
@@ -226,7 +227,7 @@ Del plan del TP (`plan-tp-calidad-software.md` §7), con lo hecho a la fecha de 
 |---|---|---|
 | 1 (08/10 a 12/10) | B0, B1a, B10 | Hechos (#110, #111, #124) |
 | 2 (13/10 a 19/10) | B2, B3, B4, B5, B7 | Hechos antes de la fecha (#111 a #113, #126) |
-| 3 (20/10 a 23/10) | B6, B7, B8, B9, B11 | B6 (#113), B8 (#127) y B9 (este documento) hechos; B11 pendiente |
+| 3 (20/10 a 23/10) | B6, B7, B8, B9, B11 | B6 (#113), B8 (#127), B9 (#128) y B11 (`metricas.md`) hechos |
 | Cierre (24/10 a 26/10) | B13, B12 | Pendientes. B13 depende del acceso de admin |
 
 ---
