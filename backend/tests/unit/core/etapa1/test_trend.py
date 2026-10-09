@@ -152,6 +152,29 @@ def test_ninguno_rechaza_sin_warning():
     assert "TEST_WARNING_TREND" not in codigos
 
 
+@pytest.mark.unit
+@pytest.mark.xfail(
+    strict=True,
+    reason="Defecto abierto D-10 (docs/calidad/registro-defectos.md, DECISIÓN 038): "
+    "determinar_warnings_tendencia no promueve el warning de muestra chica de Mann-Kendall",
+)
+def test_muestra_chica_de_mann_kendall_llega_a_los_warnings_agregados():
+    # Mann-Kendall con 10 ≤ n ≤ 30 aprueba pero marca TEST_WARNING_SMALL_SAMPLE en su TestResult
+    # (formulas-etapa1.md §7). Wald-Wolfowitz sí lo promueve a la lista agregada; Mann-Kendall no.
+    # strict=True: el día que se corrija, este test pasa y el xfail hace fallar la suite, para que
+    # se cierre el defecto y se saque la marca.
+    serie_sin_tendencia = [5.0, 3.0, 8.0, 1.0, 9.0, 2.0, 7.0, 4.0, 6.0, 10.0, 3.0, 8.0, 2.0, 9.0, 5.0]
+    mann_kendall = calcular_mann_kendall(serie_sin_tendencia)
+    assert mann_kendall.veredicto == "aprobada"
+    assert mann_kendall.warning_codigo == "TEST_WARNING_SMALL_SAMPLE"
+
+    warnings = determinar_warnings_tendencia(
+        mann_kendall, _make_trend_result("aprobada")
+    )
+
+    assert "TEST_WARNING_SMALL_SAMPLE" in [w.codigo for w in warnings]
+
+
 # ── explicacion (Bloque D, plan post-avance — DECISIÓN 064) ─────────────────
 
 
