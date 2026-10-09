@@ -125,4 +125,31 @@ producción (DECISIÓN 077, consecuencias).
 
 ### Esfuerzo sostenido (`scripts/carga.sh sostenido`)
 
-Ver el resultado de la corrida de 30 minutos en la sección siguiente.
+5 usuarios constantes durante 30 minutos (09/10/2026, despliegue local), con los mismos umbrales de latencia y error
+del stress de CI, y la memoria del backend muestreada cada 15 s con `docker stats`:
+
+| Medida | Resultado | Umbral |
+|---|---|---|
+| Requests | 24.393 (13,6 req/s) | — |
+| Tasa de error / checks | 0 % / 100 % (40.655 checks) | < 1 % |
+| p95 preview-columns | 30 ms | 150 ms |
+| p95 stream | 57 ms | 250 ms |
+| p95 simulate-exclusion | 118 ms | 500 ms |
+| Memoria del backend | 181,6 a 183,9 MiB en 106 muestras | — |
+| Pendiente de memoria (después de 5 min) | **+0,3 MB/h** | 50 MB/h |
+
+**Lectura.** Sin crecimiento sostenido de memoria: el `session_store` (sesiones del stream en memoria, DECISIÓN 053)
+no acumula con streams que terminan en `complete`. Lo que esta corrida no cubre son los streams abandonados en una
+pausa (Chow o elección de distribución): k6 lee la respuesta entera y no puede cortar a mitad de stream. Esas sesiones
+dependen del TTL de `session_store`, y quedan fuera de este escenario.
+
+## 7. Primera corrida en el pipeline
+
+El job `carga` del PR #126 (runner `ubuntu-latest`) midió, con los mismos 15 usuarios: p95 de 5 ms en
+`preview-columns`, 7 ms en `stream` y 45 ms en `simulate-exclusion`, con 0 % de error y 36,9 req/s. El runner resultó
+entre 3 y 10 veces más rápido que el Docker Desktop local, así que en CI los umbrales tienen mucho margen: detectan
+degradaciones grandes (de un orden de magnitud), no regresiones finas.
+
+Los umbrales congelados no se cambiaron con esta corrida: siguen sirviendo para la máquina local (donde se corre la
+demo) y para el pipeline. Si se quiere un gate más sensible en CI, la alternativa es separar umbrales por ambiente
+en `carga/umbrales.json`.
