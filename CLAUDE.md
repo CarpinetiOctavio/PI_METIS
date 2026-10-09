@@ -129,6 +129,10 @@ npm test          # Vitest + Testing Library, todos los tests (modo run, no watc
 npm run test:coverage                        # lo mismo con cobertura (frontend/coverage/, lcov + html)
 npm run test:watch                            # Vitest en modo watch
 npx vitest run src/routes/results/ResultsPage.test.tsx   # un solo archivo de test
+# E2E (Playwright, e2e/): desde la raíz, contra el despliegue de scripts/deploy-local.sh, nunca contra npm run dev.
+# scripts/test.sh exporta E2E_EMAIL/E2E_PASSWORD (el usuario sembrado); sin ellas los specs no arrancan.
+bash scripts/test.sh e2e                                  # los seis escenarios
+bash scripts/test.sh e2e e2e/e2e1-login.spec.ts           # uno solo
 ```
 
 Entorno completo (Docker):
@@ -151,7 +155,7 @@ docker exec <backend> alembic upgrade head
 
 Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de puertos en desarrollo" para por qué `backend` y `postgres` mapean puertos al host, y "DATABASE_URL — diferencia entre Docker y host" para el override de Alembic/psql desde la terminal local.
 
-**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"` con cobertura de sentencia y de decisión, `--cov-branch`; ya no tolera el exit code 5; levanta `postgres:15` y `mailpit` como servicios y corre `alembic upgrade head` antes, para `tests/integration/db/`), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test con cobertura + build) y job `quality-gate` (DECISIÓN 077): duplicación ≤ 5 % con `jscpd` (`.jscpd.json`) y, en PR, cobertura del código nuevo ≥ 80 % con `diff-cover`, una corrida para el backend y otra para el frontend. El job resume tests, cobertura y duplicación en el resumen de Actions (`scripts/ci_resumen.py`) y sube `metricas.json` como artefacto: los números del informe del TP de Calidad salen de ahí. No mergear sin que los cinco pasen. `scripts/test.sh` corre lo mismo en local (`backend`, `frontend`, `duplicacion`, `gate`, `all`).
+**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"` con cobertura de sentencia y de decisión, `--cov-branch`; ya no tolera el exit code 5; levanta `postgres:15` y `mailpit` como servicios y corre `alembic upgrade head` antes, para `tests/integration/db/`), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test con cobertura + build) y job `quality-gate` (DECISIÓN 077): duplicación ≤ 5 % con `jscpd` (`.jscpd.json`) y, en PR, cobertura del código nuevo ≥ 80 % con `diff-cover`, una corrida para el backend y otra para el frontend. El job resume tests, cobertura y duplicación en el resumen de Actions (`scripts/ci_resumen.py`) y sube `metricas.json` como artefacto: los números del informe del TP de Calidad salen de ahí. Job `despliegue` (B5/B6): levanta el stack completo con `docker-compose.ci.yml` vía `scripts/deploy-local.sh` (migraciones, usuario sembrado, smoke contra nginx) y, en PR, corre los E2E de Playwright y sube `reporte-e2e`. No mergear sin que los seis pasen. `scripts/test.sh` corre lo mismo en local (`backend`, `frontend`, `duplicacion`, `gate`, `all`, `smoke`, `e2e`).
 
 **SonarCloud** analiza cada PR además de estos jobs — no vía un paso propio de `ci.yml`, sino por
 Análisis Automático (App de GitHub de SonarCloud). Hoy el check no es *required* en el Ruleset, así
@@ -169,6 +173,7 @@ addendum del 02/10/2026. Ver [decision044.md](docs/decisiones/decision044.md).
 ### Scripts de desarrollo — `scripts/`
 
 - `seed-dev-user.sh [email]` / `clean-dev-user.sh [email]` — crean/borran un usuario ya verificado directo en Postgres (bcrypt vía el Python del contenedor backend), evitando el flujo `register`→`verify`. Para probar ese flujo en local, el servicio `mailpit` del compose captura los mails en http://localhost:8025 (DECISIÓN 049; configuración en `.env.example`).
+- `deploy-local.sh [--sin-smoke|--bajar]` — despliegue desde cero con la configuración de producción (`docker-compose.ci.yml`: sin `--reload` ni bind mount, Mailpit, proyecto `metis-ci` con base propia), migraciones, usuario sembrado y smoke. El mismo procedimiento que el job `despliegue` de CI. Ocupa el puerto 80: bajar antes el stack de desarrollo. Ver `docs/calidad/despliegue-y-e2e.md`.
 - `check-error-catalog.sh` — corre en el job `error-catalog` de CI (ver arriba); verifica en tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y traducido en `frontend/src/i18n/errors.es.ts`, esté sincronizado. Excepciones legítimas van en `error-catalog-allowlist.txt` (DECISIÓN 038).
 
 ---

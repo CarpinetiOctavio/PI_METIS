@@ -28,6 +28,9 @@ frontend/dist/
 frontend/build/
 frontend/.next/
 frontend/.nuxt/
+# Reportes de Playwright (B6 del TP de Calidad): en CI se suben como artefacto
+frontend/playwright-report/
+frontend/test-results/
 *.log
 npm-debug.log*
 yarn-debug.log*

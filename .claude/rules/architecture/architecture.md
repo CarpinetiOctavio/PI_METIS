@@ -111,6 +111,13 @@ real, esta configuración se mueve a un `docker-compose.override.yml` y el
 base vuelve al `CMD` del Dockerfile (que no cambia — sigue siendo el de
 producción, este `command` solo lo pisa a nivel de compose).
 
+**Actualización 09/10/2026 (B5 del plan del TP de Calidad):** el override va en la
+dirección inversa a la prevista: `docker-compose.ci.yml` se aplica *encima* del base
+y le saca el `--reload`, el bind mount y los puertos de `backend`/`postgres`, con la
+configuración en el propio archivo (no en `.env`). Es lo que usan el job `despliegue`
+de CI y `scripts/deploy-local.sh`; el base sigue siendo el de desarrollo. Detalle en
+`docs/calidad/despliegue-y-e2e.md`.
+
 ### Exposición de puertos en desarrollo — backend y postgres
 
 `expose` y `ports` no son equivalentes:

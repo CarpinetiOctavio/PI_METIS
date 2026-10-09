@@ -51,6 +51,12 @@ suite: `vi.stubGlobal("fetch", ...)` — MSW salió del proyecto por completo
 sintéticas armadas a mano según los shapes reales de
 `docs/frontend/frontend-integration.md`, no una grabación de sesión real.
 
+**E2E (`e2e/`, Playwright — DECISIÓN 046).** Seis escenarios contra el build de
+producción detrás de nginx, nunca contra `npm run dev`. Necesitan el stack
+desplegado con `scripts/deploy-local.sh` (desde la raíz del repo); Vitest
+excluye `e2e/**`. Escenarios y reglas para sumar uno:
+`docs/calidad/despliegue-y-e2e.md`.
+
 ## Comandos
 
 ```bash
@@ -59,6 +65,8 @@ npm run dev       # servidor de desarrollo (Vite), http://localhost:5173
 npm run build     # type-check (tsc -b) + build de producción a dist/
 npm run lint      # ESLint
 npm test          # tests unitarios (Vitest + Testing Library)
+npm run test:e2e  # E2E con Playwright; usar scripts/test.sh e2e desde la raíz (exporta E2E_EMAIL/E2E_PASSWORD)
+npx playwright install chromium   # una vez, para bajar el navegador de los E2E
 ```
 
 ## Desarrollo — proxy al backend

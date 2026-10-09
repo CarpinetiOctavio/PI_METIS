@@ -130,6 +130,56 @@ jobs:
       - run: npm run build
         working-directory: frontend
 
+  # Despliegue efímero (B5/B6 del plan del TP de Calidad): el stack completo con la configuración de
+  # producción (docker-compose.ci.yml) dentro del runner, el mismo procedimiento que la demo local
+  # (scripts/deploy-local.sh). Smoke en cada corrida; E2E con Playwright (DECISIÓN 046) en cada PR.
+  despliegue:
+    name: Despliegue efímero (smoke + E2E)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SMOKE_BASE_URL: http://localhost
+      E2E_BASE_URL: http://localhost
+      MAILPIT_URL: http://localhost:8025
+    steps:
+      - uses: actions/checkout@v4
+      # El smoke corre desde el runner, contra nginx, como un cliente cualquiera.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          pip install --only-binary :all: httpx==0.27.0 pytest==8.2.0 pytest-asyncio==0.23.6
+      - name: Desplegar y correr el smoke
+        run: bash scripts/deploy-local.sh
+      - uses: actions/setup-node@v4
+        if: github.event_name == 'pull_request'
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --ignore-scripts
+        if: github.event_name == 'pull_request'
+        working-directory: frontend
+      # El binario del lockfile (@playwright/test exacta), no npx: no baja nada fuera de package-lock.json.
+      - run: ./node_modules/.bin/playwright install --with-deps chromium
+        if: github.event_name == 'pull_request'
+        working-directory: frontend
+      - name: E2E (Playwright)
+        if: github.event_name == 'pull_request'
+        run: bash scripts/test.sh e2e
+      - name: Logs del despliegue
+        if: failure()
+        run: docker compose -p metis-ci -f docker-compose.yml -f docker-compose.ci.yml logs --tail 200
+      # Siempre, no solo al fallar: el reporte en verde es evidencia del TP y de la Capa 4 de testing.md.
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: reporte-e2e
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 30
+
   # Gate propio, independiente de SonarCloud (DECISIÓN 077): cobertura del código nuevo
   # ≥ 80 % (diff-cover, solo en PR) y duplicación ≤ 5 % (jscpd). Resume todo en el job.
   quality-gate:

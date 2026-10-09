@@ -8,8 +8,10 @@
 #   scripts/test.sh duplicacion  jscpd sobre backend/metis y frontend/src (umbral 5 %)
 #   scripts/test.sh gate         cobertura del código nuevo contra origin/staging (diff-cover ≥ 80 %)
 #   scripts/test.sh all          backend + frontend + duplicacion
+#   scripts/test.sh smoke        smoke del despliegue contra nginx (requiere scripts/deploy-local.sh)
+#   scripts/test.sh e2e [spec]   Playwright contra el despliegue (requiere scripts/deploy-local.sh)
 #
-# smoke, e2e, stress y soak se suman con los bloques B5, B6 y B7.
+# stress y soak se suman con el bloque B7.
 #
 # Backend: usa el Python activo si tiene las dependencias de requirements.txt; si no, corre dentro
 # del contenedor `backend` de docker compose (reconstruirlo si requirements.txt cambió:
@@ -59,12 +61,31 @@ case "${1:-}" in
     "$0" frontend
     "$0" duplicacion
     ;;
-  smoke | e2e | stress | soak)
-    echo "'$1' todavía no existe: llega con el bloque B5 (smoke), B6 (e2e) o B7 (stress, soak)." >&2
+  smoke)
+    # Black-box contra nginx: desde el Python local si tiene httpx y pytest; si no, desde un contenedor
+    # efímero en la red del despliegue (nginx se llama `nginx` ahí adentro).
+    if (cd backend && python -c "import httpx, pytest" 2>/dev/null); then
+      (cd backend && METIS_REQUIRE_SMOKE=1 python -m pytest -m smoke tests/smoke -v)
+    else
+      echo "Python local sin httpx/pytest: corriendo el smoke en un contenedor." >&2
+      COMPOSE_PATH_SEPARATOR=";" COMPOSE_FILE="docker-compose.yml;docker-compose.ci.yml" \
+        docker compose -p metis-ci run --rm --no-deps -e METIS_REQUIRE_SMOKE=1 \
+        -e SMOKE_BASE_URL=http://nginx -e SMOKE_EMAIL -e SMOKE_PASSWORD \
+        backend pytest -m smoke tests/smoke -v
+    fi
+    ;;
+  e2e)
+    # El usuario que siembra scripts/deploy-local.sh (el mismo del smoke).
+    export E2E_EMAIL="${E2E_EMAIL:-${SMOKE_EMAIL:-smoke@ucc.edu.ar}}"
+    export E2E_PASSWORD="${E2E_PASSWORD:-${SMOKE_PASSWORD:-smoke-metis-1234}}"
+    (cd frontend && npm run test:e2e -- "${@:2}")
+    ;;
+  stress | soak)
+    echo "'$1' todavía no existe: llega con el bloque B7." >&2
     exit 2
     ;;
   *)
-    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

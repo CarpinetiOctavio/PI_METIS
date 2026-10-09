@@ -1,0 +1,67 @@
+# Override de despliegue (B5/B6 del plan del TP de Calidad): el mismo docker-compose.yml, pero
+# como en producción. Lo usan el job de despliegue de CI y scripts/deploy-local.sh, siempre así:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.ci.yml -p metis-ci ...
+#
+# Diferencias con el compose de desarrollo:
+# - backend corre el código de la imagen: sin --reload ni bind mount (architecture.md, "Caveat de
+#   producción"). El CMD del Dockerfile es el de producción.
+# - la configuración vive acá, no en .env: el despliegue es reproducible y no depende de la máquina.
+#   Los dos secretos (contraseña de la base y clave del JWT) no están en el repo: scripts/deploy-local.sh
+#   los genera al azar en cada despliegue (METIS_CI_DB_PASSWORD, METIS_CI_JWT_SECRET). Sin el script
+#   quedan vacíos y el stack no arranca: Postgres se niega a inicializar sin contraseña.
+# - SMTP contra Mailpit (DECISIÓN 049), FRONTEND_URL=http://localhost (nginx) para que el link del
+#   mail de verificación abra la SPA servida por nginx.
+# - solo nginx (80) y Mailpit (8025) se publican al host. backend y postgres quedan en la red interna,
+#   así este stack puede convivir con la base de desarrollo y nunca se le pega salteándose nginx.
+# - proyecto aparte (-p metis-ci): volumen de base propio; `down -v` no toca la base de desarrollo.
+#
+# Las migraciones NO se aplican al arrancar (nada en la app lo hace): scripts/deploy-local.sh corre
+# `alembic upgrade head` como paso explícito (incidente del 05/08/2026, CLAUDE.md).
+
+x-entorno-backend: &entorno-backend
+  DATABASE_URL: postgresql+asyncpg://metis_user:${METIS_CI_DB_PASSWORD:-}@postgres:5432/metis
+  JWT_SECRET_KEY: ${METIS_CI_JWT_SECRET:-}
+  JWT_EXPIRE_MINUTES: "60"
+  FRONTEND_ORIGIN: http://localhost
+  FRONTEND_URL: http://localhost
+  # development: la cookie JWT sale sin Secure. El stack se sirve por HTTP (sin certificado), y con
+  # Secure el navegador y httpx no la devolverían: el login "funcionaría" sin sesión.
+  ENV: development
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  SMTP_USER: metis
+  SMTP_PASSWORD: metis
+  SMTP_FROM_ADDRESS: metis-noreply@ucc.edu.ar
+  SMTP_STARTTLS: "false"
+
+services:
+  backend:
+    command: !reset null
+    volumes: !reset []
+    env_file: !reset []
+    environment: *entorno-backend
+    ports: !reset []
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  postgres:
+    env_file: !reset []
+    environment:
+      POSTGRES_USER: metis_user
+      POSTGRES_PASSWORD: ${METIS_CI_DB_PASSWORD:-}
+      POSTGRES_DB: metis
+    ports: !reset []
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metis_user -d metis"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  nginx:
+    # Sin certificado no hay nada escuchando en 443.
+    ports: !override
+      - "80:80"
