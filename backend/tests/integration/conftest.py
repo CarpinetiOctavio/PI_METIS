@@ -11,6 +11,9 @@ import pytest
 os.environ.setdefault(
     "DATABASE_URL", "postgresql+asyncpg://test:test@localhost/test_unit_dummy"
 )
+# tests/integration/db/ importa metis.main (login por HTTP), que arrastra metis.auth.jwt:
+# JWT_SECRET_KEY se lee en import-time. Mismo criterio que tests/unit/api/conftest.py.
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-integration-tests")
 
 
 @pytest.fixture(autouse=True)
