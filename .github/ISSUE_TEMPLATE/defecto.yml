@@ -1,0 +1,95 @@
+name: Defecto
+description: Registrar un defecto (comportamiento distinto del esperado). Criterios en docs/calidad/registro-defectos.md.
+title: "[Defecto] "
+labels: ["defecto"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Un defecto se cierra solo con un test que lo cubra (el que falla antes del fix y pasa después).
+        Severidad, prioridad y fase de detección: ver los criterios en `docs/calidad/registro-defectos.md`
+        y aplicar el label `sev:`, `prio:` y `fase:` que corresponda.
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      description: Lo mínimo para verlo, en orden. Incluir el archivo de entrada si hace falta.
+      placeholder: |
+        1. Entrar como anónimo y subir docs/series prueba/serie_con_atipico.csv
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Resultado esperado
+      description: Qué debería pasar, y según qué fuente (contrato de API, ecuación de la tesis, decisión).
+    validations:
+      required: true
+  - type: textarea
+    id: obtenido
+    attributes:
+      label: Resultado obtenido
+      description: Qué pasa en realidad. Mensaje de error, valor numérico, captura o log.
+    validations:
+      required: true
+  - type: dropdown
+    id: severidad
+    attributes:
+      label: Severidad
+      description: "Impacto en el usuario o en el resultado, no urgencia."
+      options:
+        - "Crítica: resultado incorrecto en silencio o pérdida de datos"
+        - "Alta: un flujo principal no se puede completar"
+        - "Media: falla visible con alternativa, o mensaje engañoso"
+        - "Baja: cosmético o información incompleta"
+    validations:
+      required: true
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      options:
+        - "Alta: antes del próximo merge a staging"
+        - "Media: en el sprint actual"
+        - "Baja: cuando haya lugar"
+    validations:
+      required: true
+  - type: dropdown
+    id: fase
+    attributes:
+      label: Fase de detección
+      options:
+        - "Auditoría (contra la tesis o las fuentes)"
+        - "Desarrollo (lo encontró un test nuevo antes del merge)"
+        - "Revisión (PR, plan o análisis de código)"
+        - "CI (pipeline)"
+        - "Uso real (navegador, demo, usuario)"
+    validations:
+      required: true
+  - type: input
+    id: ambiente
+    attributes:
+      label: Ambiente
+      placeholder: "Docker local (docker-compose.ci.yml), Chromium 153 / CI / navegador del usuario"
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit o versión donde se detectó
+      placeholder: "staging @ abc1234"
+    validations:
+      required: true
+  - type: input
+    id: caso
+    attributes:
+      label: Caso de prueba relacionado
+      description: ID del caso documentado (B8) o escenario E2E, si existe.
+      placeholder: "E2E-3, CP-012"
+  - type: textarea
+    id: regresion
+    attributes:
+      label: Test de regresión
+      description: Al cerrar, el test que cubre el defecto (ruta::nombre) y los commits/PR del fix.
+      placeholder: "backend/tests/unit/api/test_estructura_error.py::test_error_con_codigo_responde_la_estructura_estandar — fix b24eaaa (#106)"

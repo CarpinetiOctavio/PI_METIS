@@ -880,7 +880,8 @@ TEST_NOT_EXECUTED_NEGATIVES      Chow no ejecutado por valores negativos en la s
 `core/etapa1/trend.py::determinar_warnings_tendencia` **no** hace lo mismo con el
 de Mann-Kendall — el `TestResult` individual lo lleva, pero nunca llega a la lista
 agregada de warnings. Gap encontrado y documentado, no corregido — ver
-`docs/decisiones/decision038.md` — DECISIÓN 038.
+`docs/decisiones/decision038.md` — DECISIÓN 038. Registrado como defecto abierto D-10 (issue #123,
+`docs/calidad/registro-defectos.md`), con su test de aceptación en `xfail(strict=True)` en `test_trend.py`.
 
 ### Etapa 2 — distribuciones
 ```
