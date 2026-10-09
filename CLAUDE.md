@@ -296,6 +296,7 @@ Para consultar cuando el trabajo lo amerite (no se cargan solos):
 - `docs/decisiones/README.md` — índice de decisiones tomadas, descartadas o reemplazadas (una por archivo, `decisionNNN.md`), transversal a todo el proyecto. Consultar cuando algo en el código no coincida con una decisión vigente.
 - `docs/auditoria/` — fases de auditoría, regresión numérica contra la tesis de Facundo y pendientes sin resolver (`pendientes/pendientes-facundo.md`). `hallazgos/` reúne verificaciones dirigidas a un tema puntual. Ver `docs/README.md`.
 - `docs/pendientes-tecnicos.md` — deuda técnica abierta y cerrada, con fecha y qué la cerró. Consultar antes de asumir que algo "no está hecho".
+- `docs/calidad/` — documentos del TP de Calidad (índice en su `README.md`): plan de pruebas versionado, riesgos, objetivos de calidad, matriz ISO 25010, trazabilidad RF → caso → test → defecto, contingencia. Un requisito, un riesgo o una dependencia nueva se refleja ahí en el mismo PR.
 - `docs/historico/` — documentos superados, conservados por trazabilidad.
 
 ## Documentación en Obsidian
