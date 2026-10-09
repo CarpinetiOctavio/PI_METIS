@@ -50,6 +50,11 @@ def test_anderson_resultado_conocido():
 
 **Criterio de aceptación:** el valor crítico calculado por METIS debe coincidir con el producido por el programa Excel de Facundo para la misma serie de prueba.
 
+**Casos de caja negra (B8 del TP de Calidad, 09/10/2026).** Valores límite, clases de equivalencia y tablas de
+decisión documentados en `docs/calidad/casos-de-prueba.md`, cada uno con el test que lo implementa. Los que no tenían
+test viven en `tests/unit/casos_dinamicos/` (también funciones del borde de `api/` y de `services/`, no solo de
+`core/`), parametrizados con el ID del caso como id: `pytest tests/unit/casos_dinamicos -v` muestra `[VL-01a n=9]`.
+
 ### 2. Tests de integración del pipeline
 
 Viven en `tests/integration/`. Levantan la app completa con base de datos de test.

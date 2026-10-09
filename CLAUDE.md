@@ -38,7 +38,9 @@ Todo el código Python vive bajo `backend/`; los comandos de este repo (pytest, 
 
 ```
 backend/metis/
-├── api/                  # errors.py: manejador global → {"error": {...}} sin envolver en "detail"; deps.py: re-exporta get_db/get_current_user/get_optional_user
+├── api/
+│   ├── errors.py         # Manejador global: HTTPException(detail={"error": {...}}) se responde sin envolver en "detail"
+│   └── deps.py           # get_db, get_current_user, get_optional_user — los routers importan de acá
 ├── api/v1/               # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
 │   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /preview-columns, /distribution-decision,
 │   │                     # /{id}, /{id}/design-events (DECISIÓN 062), /simulate-exclusion (DECISIÓN 071)
@@ -169,6 +171,7 @@ addendum del 02/10/2026. Ver [decision044.md](docs/decisiones/decision044.md).
 - **`docs/decisiones/decisionNNN.md` nuevo:** hacer `git fetch` y comparar el número más alto contra `origin/staging` antes de elegir NNN (hay ramas en paralelo). Hay números reservados sin archivo (035, 072) — no reutilizarlos.
 - **PR que toca `frontend/`:** además de lint + test + build, correr el flujo en el navegador después del último commit y dejar evidencia (captura o pestaña Network). Los tests bajo `StrictMode` no reemplazan esto — ver `.claude/rules/testing.md`, "Capa 4".
 - **Defecto encontrado** (comportamiento distinto del esperado, no una mejora): issue con la plantilla *Defecto* (`.github/ISSUE_TEMPLATE/defecto.yml`) y labels `defecto`/`sev:`/`prio:`/`fase:`. Se cierra solo con un test que lo cubra, nombrado en el comentario de cierre. Criterios y registro: `docs/calidad/registro-defectos.md`.
+- **Borde, clase o regla de decisión nueva** (un límite de n, un parámetro validado en el borde, una combinación que cambia un nivel): se agrega su caso a `docs/calidad/casos-de-prueba.md` con el test que lo implementa. Los tests propios de esos casos viven en `backend/tests/unit/casos_dinamicos/`, con el ID del caso en el id de `parametrize` (B8).
 - **Ramas:** `feature/xxx` / `fix/xxx` salen de `staging` y vuelven a `staging` por PR; `main` solo recibe PRs desde `staging`. Push directo bloqueado por Ruleset.
 
 ### Scripts de desarrollo — `scripts/`
