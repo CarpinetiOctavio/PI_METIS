@@ -69,3 +69,8 @@ docs/series prueba/UCC-DAT-ESR-AH-001-26-00.xlsx
 
 # Documentación escrita del PI (tesis, informes, IPI) — vive fuera de GitHub
 /Proyecto Integrador/
+
+# Reportes de calidad generados por CI o por scripts/test.sh (DECISIÓN 077)
+coverage.xml
+junit-*.xml
+reports/

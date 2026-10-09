@@ -175,6 +175,13 @@ cd frontend && npm run lint
 
 Ambos corren automáticamente en GitHub Actions en cada push.
 
+**Cobertura y gate propio (DECISIÓN 077, 08/10/2026).** El job `test` mide cobertura de sentencia y de
+decisión (`pytest-cov --cov-branch`) y el job `frontend` la de Vitest (`@vitest/coverage-v8`). El job
+`quality-gate` falla si la duplicación supera el 5 % (`jscpd`, configurado en `.jscpd.json`) o, en un PR, si
+la cobertura del código nuevo queda debajo del 80 % (`diff-cover`, backend y frontend por separado). Los
+números quedan en el resumen del job y en el artefacto `reporte-calidad/metricas.json`. En local:
+`scripts/test.sh backend|frontend|duplicacion|gate|all`.
+
 **SonarCloud** corre además sobre cada PR (`carpinetioctavio/PI_METIS`), vía Análisis Automático
 de la App de GitHub de SonarCloud — no hay ningún paso de Sonar en `ci.yml`. Evalúa Reliability
 Rating, Security Rating, issues nuevos, duplicación y Security Hotspots; hoy no importa cobertura

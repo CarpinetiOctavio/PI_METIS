@@ -126,6 +126,7 @@ npm run dev       # Vite dev server, http://localhost:5173 — proxy /api y /pin
 npm run build     # tsc -b + build de producción a dist/
 npm run lint      # ESLint
 npm test          # Vitest + Testing Library, todos los tests (modo run, no watch)
+npm run test:coverage                        # lo mismo con cobertura (frontend/coverage/, lcov + html)
 npm run test:watch                            # Vitest en modo watch
 npx vitest run src/routes/results/ResultsPage.test.tsx   # un solo archivo de test
 ```
@@ -150,7 +151,7 @@ docker exec <backend> alembic upgrade head
 
 Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de puertos en desarrollo" para por qué `backend` y `postgres` mapean puertos al host, y "DATABASE_URL — diferencia entre Docker y host" para el override de Alembic/psql desde la terminal local.
 
-**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"`, exit code 5 tolerado — `tests/integration/` ya tiene tests reales, así que la tolerancia sobra y queda por sacar en un PR propio; `tests/e2e/` y `tests/regression/` siguen vacíos), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test + build). No mergear sin que los cuatro pasen.
+**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"` con cobertura de sentencia y de decisión, `--cov-branch`; ya no tolera el exit code 5), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test con cobertura + build) y job `quality-gate` (DECISIÓN 077): duplicación ≤ 5 % con `jscpd` (`.jscpd.json`) y, en PR, cobertura del código nuevo ≥ 80 % con `diff-cover`, una corrida para el backend y otra para el frontend. El job resume tests, cobertura y duplicación en el resumen de Actions (`scripts/ci_resumen.py`) y sube `metricas.json` como artefacto: los números del informe del TP de Calidad salen de ahí. No mergear sin que los cinco pasen. `scripts/test.sh` corre lo mismo en local (`backend`, `frontend`, `duplicacion`, `gate`, `all`).
 
 **SonarCloud** analiza cada PR además de estos jobs — no vía un paso propio de `ci.yml`, sino por
 Análisis Automático (App de GitHub de SonarCloud). Hoy el check no es *required* en el Ruleset, así

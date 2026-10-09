@@ -41,16 +41,25 @@ jobs:
           restore-keys: pip-
       - run: pip install -r requirements.txt
         working-directory: backend
+      # Cobertura de sentencia y de decisión (--cov-branch) — DECISIÓN 077.
       - name: Run tests
         working-directory: backend
         env:
           PYTHONPATH: .
         run: |
-          set +e
-          pytest -m "unit or integration" --tb=short
-          EXIT=$?
-          set -e
-          [ $EXIT -eq 0 ] || [ $EXIT -eq 5 ]
+          pytest -m "unit or integration" --tb=short \
+            --cov=metis --cov-branch \
+            --cov-report=term --cov-report=xml --cov-report=html \
+            --junitxml=junit-backend.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-backend
+          path: |
+            backend/coverage.xml
+            backend/junit-backend.xml
+            backend/htmlcov/
+          retention-days: 30
 
   error-catalog:
     name: Catálogo de códigos de error (DECISIÓN 038)
@@ -73,7 +82,91 @@ jobs:
         working-directory: frontend
       - run: npm run lint
         working-directory: frontend
-      - run: npm test
+      - run: npm run test:coverage -- --reporter=default --reporter=junit --outputFile.junit=junit-frontend.xml
         working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-frontend
+          path: |
+            frontend/coverage/
+            frontend/junit-frontend.xml
+          retention-days: 30
       - run: npm run build
         working-directory: frontend
+
+  # Gate propio, independiente de SonarCloud (DECISIÓN 077): cobertura del código nuevo
+  # ≥ 80 % (diff-cover, solo en PR) y duplicación ≤ 5 % (jscpd). Resume todo en el job.
+  quality-gate:
+    name: Quality gate (cobertura nueva, duplicación)
+    runs-on: ubuntu-latest
+    needs: [test, frontend]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        with:
+          name: reporte-backend
+          path: reportes/backend
+      - uses: actions/download-artifact@v4
+        with:
+          name: reporte-frontend
+          path: reportes/frontend
+      # jscpd viene fijado en frontend/package-lock.json: npm ci --ignore-scripts no corre
+      # scripts de instalación y no se baja nada fuera del lockfile.
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
+      - name: Duplicación (jscpd)
+        id: jscpd
+        continue-on-error: true
+        run: frontend/node_modules/.bin/jscpd --output reportes/jscpd backend/metis frontend/src
+      - name: Cobertura del código nuevo (diff-cover)
+        id: diffcover
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          pip install --only-binary :all: diff-cover==9.2.0
+          # coverage.xml trae <source> absoluto del job test (mismo path en este runner).
+          # El lcov de Vitest trae SF relativo a frontend/: se reescribe a la raíz del repo.
+          sed -E 's#^SF:src/#SF:frontend/src/#' reportes/frontend/coverage/lcov.info > reportes/frontend/lcov-repo.info
+          BASE="origin/${{ github.base_ref }}"
+          set +e
+          diff-cover reportes/backend/coverage.xml --compare-branch="$BASE" \
+            --fail-under=80 --markdown-report reportes/diff-cover-backend.md
+          B=$?
+          diff-cover reportes/frontend/lcov-repo.info --compare-branch="$BASE" \
+            --fail-under=80 --markdown-report reportes/diff-cover-frontend.md
+          F=$?
+          set -e
+          [ $B -eq 0 ] && [ $F -eq 0 ]
+      - name: Resumen
+        if: always()
+        run: |
+          python scripts/ci_resumen.py >> "$GITHUB_STEP_SUMMARY"
+          python scripts/ci_resumen.py --json > reportes/metricas.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-calidad
+          path: |
+            reportes/metricas.json
+            reportes/jscpd/
+            reportes/diff-cover-*.md
+          retention-days: 90
+      - name: Resultado del gate
+        if: always()
+        run: |
+          echo "tests backend: ${{ needs.test.result }} | tests frontend: ${{ needs.frontend.result }}"
+          echo "duplicación: ${{ steps.jscpd.outcome }} | cobertura nueva: ${{ steps.diffcover.outcome }}"
+          [ "${{ needs.test.result }}" = "success" ]
+          [ "${{ needs.frontend.result }}" = "success" ]
+          [ "${{ steps.jscpd.outcome }}" = "success" ]
+          [ "${{ steps.diffcover.outcome }}" != "failure" ]

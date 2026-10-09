@@ -114,9 +114,7 @@ async def test_register_falla_smtpexception_no_toca_bd():
             await register(_body(), db=db)
 
     assert exc_info.value.status_code == 500
-    assert (
-        exc_info.value.detail["error"]["codigo"] == "AUTH_VERIFICATION_EMAIL_FAILED"
-    )
+    assert exc_info.value.detail["error"]["codigo"] == "AUTH_VERIFICATION_EMAIL_FAILED"
     db.add.assert_not_called()
     db.commit.assert_not_awaited()
     assert _pending_tokens == {}
@@ -135,9 +133,7 @@ async def test_register_falla_runtimeerror_config_no_toca_bd():
             await register(_body(), db=db)
 
     assert exc_info.value.status_code == 500
-    assert (
-        exc_info.value.detail["error"]["codigo"] == "AUTH_VERIFICATION_EMAIL_FAILED"
-    )
+    assert exc_info.value.detail["error"]["codigo"] == "AUTH_VERIFICATION_EMAIL_FAILED"
     db.add.assert_not_called()
     db.commit.assert_not_awaited()
 
@@ -153,9 +149,7 @@ async def test_register_integrityerror_en_commit_mapea_a_email_already_registere
             await register(_body(), db=db)
 
     assert exc_info.value.status_code == 400
-    assert (
-        exc_info.value.detail["error"]["codigo"] == "AUTH_EMAIL_ALREADY_REGISTERED"
-    )
+    assert exc_info.value.detail["error"]["codigo"] == "AUTH_EMAIL_ALREADY_REGISTERED"
     db.rollback.assert_awaited_once()
     assert _pending_tokens == {}
 
@@ -185,8 +179,27 @@ async def test_register_race_concurrente_segundo_commit_falla_sin_excepcion_sin_
     assert len(_pending_tokens) == 1
 
     assert exc_info.value.status_code == 400
-    assert (
-        exc_info.value.detail["error"]["codigo"] == "AUTH_EMAIL_ALREADY_REGISTERED"
-    )
+    assert exc_info.value.detail["error"]["codigo"] == "AUTH_EMAIL_ALREADY_REGISTERED"
     db_segundo.rollback.assert_awaited_once()
     db_primero.commit.assert_awaited_once()
+
+
+@pytest.mark.unit
+async def test_register_email_ya_registrado_responde_400_sin_mandar_mail():
+    # Arrange
+    db = _mock_db()
+    db.execute.return_value.scalar_one_or_none.return_value = MagicMock()
+    body = _body()
+
+    # Act
+    with patch(
+        "metis.auth.router.send_verification_email", new_callable=AsyncMock
+    ) as send:
+        with pytest.raises(HTTPException) as exc:
+            await register(body, db=db)
+
+    # Assert
+    assert exc.value.status_code == 400
+    assert exc.value.detail["error"]["codigo"] == "AUTH_EMAIL_ALREADY_REGISTERED"
+    send.assert_not_called()
+    db.add.assert_not_called()

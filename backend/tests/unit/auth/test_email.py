@@ -17,9 +17,14 @@ import pytest
 from metis.auth import email as email_module
 
 
-def _set_config(monkeypatch, host="smtp.example.com", port=587,
-                 user="metis", password="app-password",
-                 from_address="metis-noreply@ucc.edu.ar"):
+def _set_config(
+    monkeypatch,
+    host="smtp.example.com",
+    port=587,
+    user="metis",
+    password="app-password",
+    from_address="metis-noreply@ucc.edu.ar",
+):
     # user y from_address quedan con valores DISTINTOS a propósito (reflejan
     # el caso real: SMTP_USER es la identidad de autenticación del relay,
     # SMTP_FROM_ADDRESS es la dirección del remitente — ver DECISIÓN 034,
@@ -34,12 +39,12 @@ def _set_config(monkeypatch, host="smtp.example.com", port=587,
 
 
 @pytest.mark.unit
-async def test_send_verification_email_llama_aiosmtplib_send_con_parametros_correctos(monkeypatch):
+async def test_send_verification_email_llama_aiosmtplib_send_con_parametros_correctos(
+    monkeypatch,
+):
     _set_config(monkeypatch)
 
-    with patch(
-        "metis.auth.email.aiosmtplib.send", new_callable=AsyncMock
-    ) as mock_send:
+    with patch("metis.auth.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
         await email_module.send_verification_email("legajo@ucc.edu.ar", "tok123")
 
     mock_send.assert_awaited_once()
@@ -55,9 +60,7 @@ async def test_send_verification_email_llama_aiosmtplib_send_con_parametros_corr
 async def test_send_verification_email_arma_el_mensaje_con_link_correcto(monkeypatch):
     _set_config(monkeypatch)
 
-    with patch(
-        "metis.auth.email.aiosmtplib.send", new_callable=AsyncMock
-    ) as mock_send:
+    with patch("metis.auth.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
         await email_module.send_verification_email("legajo@ucc.edu.ar", "tok123")
 
     message = mock_send.call_args[0][0]
@@ -67,12 +70,12 @@ async def test_send_verification_email_arma_el_mensaje_con_link_correcto(monkeyp
 
 
 @pytest.mark.unit
-async def test_send_verification_email_sin_config_lanza_runtimeerror_sin_llamar_aiosmtplib(monkeypatch):
+async def test_send_verification_email_sin_config_lanza_runtimeerror_sin_llamar_aiosmtplib(
+    monkeypatch,
+):
     _set_config(monkeypatch, host=None, user=None, password=None)
 
-    with patch(
-        "metis.auth.email.aiosmtplib.send", new_callable=AsyncMock
-    ) as mock_send:
+    with patch("metis.auth.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
         with pytest.raises(RuntimeError):
             await email_module.send_verification_email("legajo@ucc.edu.ar", "tok123")
 
@@ -97,25 +100,25 @@ async def test_send_verification_email_from_es_independiente_de_smtp_user(monkey
         from_address="remitente-real@ucc.edu.ar",
     )
 
-    with patch(
-        "metis.auth.email.aiosmtplib.send", new_callable=AsyncMock
-    ) as mock_send:
+    with patch("metis.auth.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
         await email_module.send_verification_email("legajo@ucc.edu.ar", "tok123")
 
     message = mock_send.call_args[0][0]
     assert message["From"] == "remitente-real@ucc.edu.ar"
     assert message["From"] != "usuario-de-autenticacion-sin-arroba"
     # SMTP_USER se sigue usando para autenticación, no para el From.
-    assert mock_send.call_args.kwargs["username"] == "usuario-de-autenticacion-sin-arroba"
+    assert (
+        mock_send.call_args.kwargs["username"] == "usuario-de-autenticacion-sin-arroba"
+    )
 
 
 @pytest.mark.unit
-async def test_send_verification_email_sin_from_address_lanza_runtimeerror_sin_llamar_aiosmtplib(monkeypatch):
+async def test_send_verification_email_sin_from_address_lanza_runtimeerror_sin_llamar_aiosmtplib(
+    monkeypatch,
+):
     _set_config(monkeypatch, from_address=None)
 
-    with patch(
-        "metis.auth.email.aiosmtplib.send", new_callable=AsyncMock
-    ) as mock_send:
+    with patch("metis.auth.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
         with pytest.raises(RuntimeError):
             await email_module.send_verification_email("legajo@ucc.edu.ar", "tok123")
 
@@ -123,7 +126,9 @@ async def test_send_verification_email_sin_from_address_lanza_runtimeerror_sin_l
 
 
 @pytest.mark.unit
-async def test_send_verification_email_propaga_smtpexception_sin_capturarla(monkeypatch):
+async def test_send_verification_email_propaga_smtpexception_sin_capturarla(
+    monkeypatch,
+):
     _set_config(monkeypatch)
 
     with patch(
