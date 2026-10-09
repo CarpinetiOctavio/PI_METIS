@@ -120,16 +120,20 @@ jobs:
         with:
           name: reporte-frontend
           path: reportes/frontend
+      # jscpd viene fijado en frontend/package-lock.json: npm ci --ignore-scripts no corre
+      # scripts de instalación y no se baja nada fuera del lockfile.
+      - run: npm ci --ignore-scripts
+        working-directory: frontend
       - name: Duplicación (jscpd)
         id: jscpd
         continue-on-error: true
-        run: npx --yes jscpd@4.0.5 --output reportes/jscpd backend/metis frontend/src
+        run: frontend/node_modules/.bin/jscpd --output reportes/jscpd backend/metis frontend/src
       - name: Cobertura del código nuevo (diff-cover)
         id: diffcover
         if: github.event_name == 'pull_request'
         continue-on-error: true
         run: |
-          pip install diff-cover==9.2.0
+          pip install --only-binary :all: diff-cover==9.2.0
           # coverage.xml trae <source> absoluto del job test (mismo path en este runner).
           # El lcov de Vitest trae SF relativo a frontend/: se reescribe a la raíz del repo.
           sed -E 's#^SF:src/#SF:frontend/src/#' reportes/frontend/coverage/lcov.info > reportes/frontend/lcov-repo.info

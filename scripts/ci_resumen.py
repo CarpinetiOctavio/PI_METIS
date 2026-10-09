@@ -151,17 +151,26 @@ def construir(reportes: Path) -> tuple[dict, str]:
     return metricas, "\n".join(lineas) + "\n"
 
 
+def _ruta_segura(ruta: Path) -> Path:
+    """Las rutas llegan por línea de comandos: solo se aceptan dentro del directorio de trabajo."""
+    base = Path.cwd().resolve()
+    resuelta = (base / ruta).resolve()
+    if not resuelta.is_relative_to(base):
+        raise SystemExit(f"La ruta tiene que estar dentro de {base}: {ruta}")
+    return resuelta
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--reportes", type=Path, required=True)
     parser.add_argument("--salida-json", type=Path)
     args = parser.parse_args()
 
-    metricas, markdown = construir(args.reportes)
+    metricas, markdown = construir(_ruta_segura(args.reportes))
     # UTF-8 explícito: la consola de Windows (cp1252) no codifica los íconos del resumen.
     sys.stdout.buffer.write(markdown.encode("utf-8"))
     if args.salida_json:
-        args.salida_json.write_text(
+        _ruta_segura(args.salida_json).write_text(
             json.dumps(metricas, indent=2, ensure_ascii=False), encoding="utf-8"
         )
     return 0

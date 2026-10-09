@@ -71,10 +71,11 @@ async def test_verify_marca_el_email_como_verificado_y_consume_el_token():
 async def test_verify_token_desconocido_responde_400_sin_tocar_la_bd():
     # Arrange
     db = _db(None)
+    cuerpo = VerifyRequest(token="no-existe")
 
     # Act
     with pytest.raises(HTTPException) as exc:
-        await verify(VerifyRequest(token="no-existe"), db=db)
+        await verify(cuerpo, db=db)
 
     # Assert
     assert exc.value.status_code == 400
@@ -88,10 +89,11 @@ async def test_verify_token_usado_dos_veces_falla_la_segunda():
     _pending_tokens["tok-123"] = _EMAIL
     db = _db(_usuario(verificado=False))
     await verify(VerifyRequest(token="tok-123"), db=db)
+    cuerpo = VerifyRequest(token="tok-123")
 
     # Act
     with pytest.raises(HTTPException) as exc:
-        await verify(VerifyRequest(token="tok-123"), db=db)
+        await verify(cuerpo, db=db)
 
     # Assert
     assert exc.value.detail["error"]["codigo"] == "AUTH_INVALID_TOKEN"
@@ -102,10 +104,11 @@ async def test_verify_usuario_borrado_responde_404():
     # Arrange
     _pending_tokens["tok-123"] = _EMAIL
     db = _db(None)
+    cuerpo = VerifyRequest(token="tok-123")
 
     # Act
     with pytest.raises(HTTPException) as exc:
-        await verify(VerifyRequest(token="tok-123"), db=db)
+        await verify(cuerpo, db=db)
 
     # Assert
     assert exc.value.status_code == 404
@@ -152,10 +155,11 @@ async def test_login_credenciales_invalidas_responde_401_sin_cookie(usuario, pas
     # Arrange: el mismo código para los dos casos, sin revelar si el email existe
     db = _db(_usuario() if usuario == "EXISTE" else None)
     response = Response()
+    cuerpo = LoginRequest(email=_EMAIL, password=password)
 
     # Act
     with pytest.raises(HTTPException) as exc:
-        await login(LoginRequest(email=_EMAIL, password=password), response, db=db)
+        await login(cuerpo, response, db=db)
 
     # Assert
     assert exc.value.status_code == 401
@@ -168,10 +172,11 @@ async def test_login_email_sin_verificar_responde_403():
     # Arrange
     db = _db(_usuario(verificado=False))
     response = Response()
+    cuerpo = LoginRequest(email=_EMAIL, password=_PASSWORD)
 
     # Act
     with pytest.raises(HTTPException) as exc:
-        await login(LoginRequest(email=_EMAIL, password=_PASSWORD), response, db=db)
+        await login(cuerpo, response, db=db)
 
     # Assert
     assert exc.value.status_code == 403

@@ -84,10 +84,11 @@ async def test_get_current_user_responde_401(token, usuario, detalle):
 async def test_get_current_user_no_consulta_la_bd_sin_cookie():
     # Arrange
     db = _db(None)
+    request = _request(None)
 
     # Act
     with pytest.raises(HTTPException):
-        await get_current_user(_request(None), db=db)
+        await get_current_user(request, db=db)
 
     # Assert
     db.execute.assert_not_called()
