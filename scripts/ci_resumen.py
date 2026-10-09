@@ -2,19 +2,20 @@
 
 Lee los reportes que dejan los jobs de CI y escribe:
 - un resumen en Markdown por stdout (el job lo agrega a $GITHUB_STEP_SUMMARY);
-- `metricas.json` con los mismos números, como artefacto: los números del informe del TP salen de
+- con `--json`, los mismos números para `metricas.json`, que sube como artefacto: los números del informe del TP salen de
   acá, no de corridas locales.
 
 Solo biblioteca estándar: corre en el runner sin instalar nada.
 
-    python scripts/ci_resumen.py        (desde la raíz del repo)
+    python scripts/ci_resumen.py          > resumen en Markdown (desde la raíz del repo)
+    python scripts/ci_resumen.py --json   > los mismos números en JSON
 
-Lee y escribe siempre en `reportes/`, donde el job descargó los artefactos de los otros jobs (sin
+Lee siempre de `reportes/`, donde el job descargó los artefactos de los otros jobs (sin
 rutas por línea de comandos: no hay nada que validar):
     backend/coverage.xml, backend/junit-backend.xml,
     frontend/coverage/coverage-summary.json, frontend/junit-frontend.xml,
     jscpd/jscpd-report.json, diff-cover-backend.md, diff-cover-frontend.md (los dos últimos solo en PR).
-El resultado queda en reportes/metricas.json.
+El job guarda la salida --json como reportes/metricas.json.
 """
 
 import json
@@ -153,13 +154,15 @@ def construir(reportes: Path) -> tuple[dict, str]:
 
 
 def main() -> int:
-    reportes = Path("reportes")
-    metricas, markdown = construir(reportes)
-    # UTF-8 explícito: la consola de Windows (cp1252) no codifica los íconos del resumen.
-    sys.stdout.buffer.write(markdown.encode("utf-8"))
-    (reportes / "metricas.json").write_text(
-        json.dumps(metricas, indent=2, ensure_ascii=False), encoding="utf-8"
+    metricas, markdown = construir(Path("reportes"))
+    # Sin escritura de archivos: el job redirige la salida (resumen o, con --json, metricas.json).
+    salida = (
+        json.dumps(metricas, indent=2, ensure_ascii=False) + "\n"
+        if "--json" in sys.argv[1:]
+        else markdown
     )
+    # UTF-8 explícito: la consola de Windows (cp1252) no codifica los íconos del resumen.
+    sys.stdout.buffer.write(salida.encode("utf-8"))
     return 0
 
 
