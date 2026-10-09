@@ -29,6 +29,19 @@ services:
     ports:
       - "5432:5432"
 
+  # Servidor SMTP de captura (DECISIÓN 049): recibe los mails de verificación sin mandarlos
+  # afuera. Interfaz web y API en http://localhost:8025. El backend lo usa solo si el .env
+  # apunta a él (ver .env.example, "Desarrollo sin relay real").
+  mailpit:
+    image: axllent/mailpit:v1.20.0
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    expose:
+      - "1025"
+    ports:
+      - "8025:8025"
+
   nginx:
     image: nginx:alpine
     ports:

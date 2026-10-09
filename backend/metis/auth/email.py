@@ -3,7 +3,7 @@ Envío de mail de verificación de cuenta via aiosmtplib.
 
 Ver docs/decisiones/decision004.md — DECISIÓN 004 (mecanismo de envío)
 y docs/decisiones/decision034.md — DECISIÓN 034 (separación de identidad
-de autenticación y remitente).
+de autenticación y remitente). SMTP_STARTTLS: docs/decisiones/decision049.md.
 """
 
 import os
@@ -18,6 +18,13 @@ _SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 _SMTP_USER = os.environ.get("SMTP_USER")
 _SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 _SMTP_FROM_ADDRESS = os.environ.get("SMTP_FROM_ADDRESS")
+# DECISIÓN 049: STARTTLS se puede apagar para un servidor de captura local (Mailpit en
+# desarrollo, E2E y CI, que no habla TLS). Default "true": producción no cambia.
+_SMTP_STARTTLS = os.environ.get("SMTP_STARTTLS", "true").strip().lower() not in (
+    "false",
+    "0",
+    "no",
+)
 
 
 def generate_verification_token() -> str:
@@ -56,5 +63,5 @@ async def send_verification_email(email: str, token: str) -> None:
         port=_SMTP_PORT,
         username=_SMTP_USER,
         password=_SMTP_PASSWORD,
-        start_tls=True,
+        start_tls=_SMTP_STARTTLS,
     )
