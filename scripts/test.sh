@@ -51,7 +51,7 @@ case "${1:-}" in
     command -v diff-cover >/dev/null || { echo "Falta diff-cover: pip install --only-binary :all: diff-cover==9.2.0" >&2; exit 1; }
     git fetch -q origin staging
     diff-cover backend/coverage.xml --compare-branch=origin/staging --fail-under=80
-    sed -E '/^SF:/{s#\\#/#g;s#^SF:src/#SF:frontend/src/#}' frontend/coverage/lcov.info > frontend/coverage/lcov-repo.info
+    sed -E -e '/^SF:/s#[\]#/#g' -e 's#^SF:src/#SF:frontend/src/#' frontend/coverage/lcov.info > frontend/coverage/lcov-repo.info
     diff-cover frontend/coverage/lcov-repo.info --compare-branch=origin/staging --fail-under=80
     ;;
   all)
