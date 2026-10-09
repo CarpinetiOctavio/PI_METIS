@@ -220,3 +220,21 @@ asumido).
 **Ver también:** [DECISIÓN 040](decision040.md) — D1, la corrección de
 `STREAM_CONNECTION_ERROR` de código muerto a cableado de verdad, que este
 addendum complementa desde el lado del catálogo.
+
+### Addendum (09/10/2026) — el gap de Mann-Kendall queda corregido
+
+El gap de propagación documentado arriba (el `TEST_WARNING_SMALL_SAMPLE` de Mann-Kendall no llegaba a
+`Etapa1Result.warnings`) se registró como defecto D-10 (issue #123, `docs/calidad/registro-defectos.md`) y se
+corrigió en `fix/mann-kendall-muestra-chica`:
+
+- `trend.py::determinar_warnings_tendencia` promueve el warning de muestra chica del `TestResult` de Mann-Kendall,
+  igual que `determinar_nivel_independencia` hace con el de Wald-Wolfowitz.
+- Como las dos pruebas emiten el mismo código, `pipeline_etapa1.py::_un_warning_por_codigo` fusiona los repetidos en
+  uno solo (descripciones unidas, nivel más grave). Sin esto la lista tendría dos `TEST_WARNING_SMALL_SAMPLE` y el
+  frontend, que usa el código como clave de cada banner, mostraría dos carteles casi iguales.
+- No cambia ningún código del catálogo ni el `nivel_confianza`: con 10 ≤ n ≤ 30 el warning de Wald-Wolfowitz
+  (n ≤ 40) ya estaba en la lista, así que la serie ya quedaba `con_warnings`. Cambia el texto, que ahora nombra a
+  Mann-Kendall.
+- Queda sin cubrir un caso: con 10 ≤ n ≤ 30 y tendencia detectada, el `TestResult` de Mann-Kendall lleva
+  `TEST_WARNING_TREND` (un solo campo `warning_codigo`) y el de muestra chica no se registra en ningún lado. La lista
+  agregada igual muestra el de tendencia y el de muestra chica de Wald-Wolfowitz.

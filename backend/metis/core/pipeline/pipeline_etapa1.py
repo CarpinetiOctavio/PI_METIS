@@ -43,6 +43,28 @@ CODIGOS_WARNING_AGREGACION = frozenset(
 )
 
 
+def _un_warning_por_codigo(warnings: list[WarningItem]) -> list[WarningItem]:
+    """Fusiona los warnings que comparten código en uno solo, en la posición del primero.
+
+    Dos pruebas pueden emitir el mismo código: `TEST_WARNING_SMALL_SAMPLE` sale de
+    Wald-Wolfowitz (n ≤ 40) y de Mann-Kendall (10 ≤ n ≤ 30). La lista agregada lleva uno por
+    código —el frontend lo usa como clave de cada banner—, con las descripciones unidas y el nivel
+    más grave.
+    """
+    fusionados: dict[str, WarningItem] = {}
+    for w in warnings:
+        previo = fusionados.get(w.codigo)
+        if previo is None:
+            fusionados[w.codigo] = w
+            continue
+        fusionados[w.codigo] = WarningItem(
+            codigo=w.codigo,
+            nivel="critico" if "critico" in (previo.nivel, w.nivel) else previo.nivel,
+            descripcion=f"{previo.descripcion}; {w.descripcion}",
+        )
+    return list(fusionados.values())
+
+
 def _warnings_de_agregacion(
     agregacion: AgregacionResult, resolucion: str, variable_diaria: str = "pico"
 ) -> list[WarningItem]:
@@ -325,6 +347,8 @@ def ejecutar_etapa1(
                 descripcion="Chow detectó un dato atípico — decisión pendiente del usuario",
             )
         )
+
+    warnings = _un_warning_por_codigo(warnings)
 
     # ── Nivel de confianza global ─────────────────────────────────────────────
     if any(w.nivel == "critico" for w in warnings):

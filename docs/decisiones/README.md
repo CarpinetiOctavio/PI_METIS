@@ -164,7 +164,7 @@ situ.
 | 035 | *(reservado — GitHub Ruleset de protección de ramas, no tocar en esta pasada)* | — | Pendiente — ver `sprint.md`, sección "Estrategia de ramas", 20/07/2026 |
 | [036](decision036.md) | Partición de Cramer personalizada inalcanzable por el endpoint multipart | 29/07/2026 | Documentado — no implementado, requerimiento funcional caído |
 | [037](decision037.md) | Contrato de `/analysis/stream`: `etapas` descartado y `AnalysisRequest` sin cablear | 29/07/2026 | Cerrada por [DECISIÓN 054](decision054.md) (09/08/2026) |
-| [038](decision038.md) | Catálogo de códigos de error como fuente única, en ambas direcciones | 29/07/2026 | Aplicada — gap de propagación en `trend.py` documentado, no corregido |
+| [038](decision038.md) | Catálogo de códigos de error como fuente única, en ambas direcciones | 29/07/2026 | Aplicada — gap de propagación en `trend.py` corregido el 09/10/2026 (D-10, issue #123) |
 | [039](decision039.md) | Criterio de promoción de las decisiones de frontend y unificación de numeración | 29/07/2026 | Establecida |
 | [040](decision040.md) | SSE sobre fetch para el stream de Etapa 1 | 22/07/2026 | Implementado — verificado contra backend real |
 | [041](decision041.md) | Estado de servidor sin TanStack Query; `vi.stubGlobal("fetch")` como patrón único de test | 22-28/07/2026 | Diferido (TanStack Query, con criterio de habilitación) — Establecido (patrón de test) |

@@ -3,6 +3,8 @@ import pandas as pd
 import pytest
 
 from metis.core.pipeline import ejecutar_etapa1
+from metis.core.pipeline.pipeline_etapa1 import _un_warning_por_codigo
+from metis.core.types import WarningItem
 
 
 def _fechas_mensuales(anio_inicio: int, mes_inicio: int, cantidad: int) -> list[str]:
@@ -489,3 +491,37 @@ def test_sin_timestamps_timestamps_efectivos_sigue_siendo_none():
 
     assert resultado.timestamps_efectivos is None
     assert len(resultado.serie_efectiva) == 14
+
+
+# ── Un warning por código (D-10, issue #123) ──────────────────────────────────
+
+
+@pytest.mark.unit
+def test_muestra_chica_de_wald_y_mann_kendall_sale_como_un_solo_warning():
+    # n=15 sin tendencia: Wald-Wolfowitz (n ≤ 40) y Mann-Kendall (10 ≤ n ≤ 30) marcan muestra
+    # chica. La lista agregada lleva un único TEST_WARNING_SMALL_SAMPLE que nombra las dos.
+    serie = [5.0, 3.0, 8.0, 1.0, 9.0, 2.0, 7.0, 4.0, 6.0, 10.0, 3.0, 8.0, 2.0, 9.0, 5.0]
+
+    resultado = ejecutar_etapa1(serie, "otro", "anual")
+
+    muestra_chica = [w for w in resultado.warnings if w.codigo == "TEST_WARNING_SMALL_SAMPLE"]
+    assert len(muestra_chica) == 1
+    assert "Wald-Wolfowitz" in muestra_chica[0].descripcion
+    assert "Mann-Kendall" in muestra_chica[0].descripcion
+    codigos = [w.codigo for w in resultado.warnings]
+    assert len(codigos) == len(set(codigos))
+
+
+@pytest.mark.unit
+def test_un_warning_por_codigo_conserva_orden_y_nivel_mas_grave():
+    warnings = [
+        WarningItem("A", "normal", "uno"),
+        WarningItem("B", "normal", "b"),
+        WarningItem("A", "critico", "dos"),
+    ]
+
+    fusionados = _un_warning_por_codigo(warnings)
+
+    assert [w.codigo for w in fusionados] == ["A", "B"]
+    assert fusionados[0].nivel == "critico"
+    assert fusionados[0].descripcion == "uno; dos"

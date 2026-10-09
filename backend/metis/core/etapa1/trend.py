@@ -122,4 +122,15 @@ def determinar_warnings_tendencia(
                 descripcion="Tendencia detectada en la serie (Mann-Kendall o KS)",
             )
         )
+    # Mismo criterio que Wald-Wolfowitz en determinar_nivel_independencia: el warning de muestra
+    # chica del TestResult llega a la lista agregada (defecto D-10, issue #123; DECISIÓN 038).
+    if mann_kendall.warning_codigo == "TEST_WARNING_SMALL_SAMPLE":
+        warnings.append(
+            WarningItem(
+                codigo="TEST_WARNING_SMALL_SAMPLE",
+                nivel="normal",
+                descripcion="Mann-Kendall ejecutado con 10 ≤ n ≤ 30 — resultado no garantizable "
+                "por el tamaño de la muestra",
+            )
+        )
     return warnings

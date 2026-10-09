@@ -877,11 +877,11 @@ TEST_NOT_EXECUTED_NEGATIVES      Chow no ejecutado por valores negativos en la s
 
 (*) `core/etapa1/independence.py::determinar_warnings_independencia` promueve el
 `warning_codigo` de Wald-Wolfowitz a `result.warnings` correctamente.
-`core/etapa1/trend.py::determinar_warnings_tendencia` **no** hace lo mismo con el
-de Mann-Kendall — el `TestResult` individual lo lleva, pero nunca llega a la lista
-agregada de warnings. Gap encontrado y documentado, no corregido — ver
-`docs/decisiones/decision038.md` — DECISIÓN 038. Registrado como defecto abierto D-10 (issue #123,
-`docs/calidad/registro-defectos.md`), con su test de aceptación en `xfail(strict=True)` en `test_trend.py`.
+`core/etapa1/trend.py::determinar_warnings_tendencia` hace lo mismo con el de Mann-Kendall
+desde el 09/10/2026 (antes no lo hacía: gap documentado en DECISIÓN 038, defecto D-10, issue #123).
+Como los dos emiten el mismo código, `ejecutar_etapa1()` deja **un warning por código** en la lista
+agregada (`_un_warning_por_codigo`): un único `TEST_WARNING_SMALL_SAMPLE` cuya descripción nombra las
+pruebas afectadas, con el nivel más grave. El frontend usa el código como clave de cada banner.
 
 ### Etapa 2 — distribuciones
 ```
