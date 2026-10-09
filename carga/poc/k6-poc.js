@@ -10,7 +10,7 @@ export const options = {
   thresholds: { http_req_failed: ["rate<0.01"] },
 };
 
-export default function () {
+export default function recorrido() {
   previewColumns();
   streamEtapa1();
   simulateExclusion();

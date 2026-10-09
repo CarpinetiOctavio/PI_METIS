@@ -26,8 +26,12 @@ esac
 
 K6_IMAGEN="grafana/k6:2.3.0"
 RED="metis-ci_default"
-SALIDA="carga/resultados/${PERFIL}-$(date +%Y%m%d-%H%M%S)"
+CORRIDA="${PERFIL}-$(date +%Y%m%d-%H%M%S)"
+SALIDA="carga/resultados/$CORRIDA"
 mkdir -p "$SALIDA"
+# El contenedor de k6 corre con un usuario propio sin privilegios (uid 12345): necesita poder escribir los
+# resultados en la carpeta que creó el usuario del host.
+chmod a+rwx "$SALIDA"
 PY="$(command -v python3 || command -v python)"
 
 # Docker Desktop en Windows necesita la ruta en formato Windows para el volumen.
@@ -75,14 +79,13 @@ set -e
 
 case "$PERFIL" in
   quiebre)
-    "$PY" carga/analizar.py escalones "$SALIDA/k6.csv.gz" | tee "$SALIDA/escalones.md"
+    "$PY" carga/analizar.py escalones "$CORRIDA" | tee "$SALIDA/escalones.md"
     echo "Quiebre: exploratorio, no falla por umbrales (k6 salió con $CODIGO). Resultados en $SALIDA"
     exit 0
     ;;
   sostenido)
-    UMBRAL_MEM="$("$PY" -c "import json; print(json.load(open('carga/umbrales.json'))['sostenido']['crecimiento_memoria_mb_h'])")"
     set +e
-    "$PY" carga/analizar.py memoria "$SALIDA/memoria.csv" "$UMBRAL_MEM" | tee "$SALIDA/memoria.txt"
+    "$PY" carga/analizar.py memoria "$CORRIDA" | tee "$SALIDA/memoria.txt"
     MEM=${PIPESTATUS[0]}
     set -e
     [[ $CODIGO -eq 0 && $MEM -eq 0 ]] || exit 1

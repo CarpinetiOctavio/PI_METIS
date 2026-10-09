@@ -1,20 +1,35 @@
 """Análisis de las corridas de carga (B7). Solo librería estándar: corre en el runner sin instalar nada.
 
-    python carga/analizar.py escalones <k6.csv>            p95 y tasa de error por minuto (quiebre)
-    python carga/analizar.py memoria <memoria.csv> <MB/h>   pendiente de memoria del backend (sostenido)
+    python carga/analizar.py escalones <corrida>   p95 y tasa de error por minuto (quiebre)
+    python carga/analizar.py memoria <corrida>     pendiente de memoria del backend (sostenido)
 
-`escalones` lee la salida `--out csv` de k6 (comprimida con gzip o no). `memoria` lee las muestras de scripts/carga.sh
-(`epoch,mib`), descarta los primeros 5 minutos de calentamiento, ajusta una recta por mínimos
-cuadrados y sale con código 1 si la pendiente supera el umbral en MB por hora.
+<corrida> es el nombre de una carpeta de carga/resultados/ (por ejemplo, quiebre-20261009-111140), no una ruta: el
+script solo lee ahí adentro. `escalones` lee k6.csv.gz (la salida `--out csv` de k6). `memoria` lee memoria.csv (las
+muestras de scripts/carga.sh, `epoch,mib`), descarta los primeros 5 minutos de calentamiento, ajusta una recta por
+mínimos cuadrados y sale con código 1 si la pendiente supera `sostenido.crecimiento_memoria_mb_h` de
+carga/umbrales.json.
 """
 
 import csv
 import gzip
+import json
 import math
+import re
 import sys
 from collections import defaultdict
+from pathlib import Path
 
 CALENTAMIENTO_S = 300
+CARGA = Path(__file__).resolve().parent
+RESULTADOS = CARGA / "resultados"
+_CORRIDA = re.compile(r"(quiebre|ci|sostenido)-\d{8}-\d{6}")
+
+
+def _carpeta(corrida: str) -> Path:
+    """Valida el nombre de la corrida y devuelve su carpeta: nunca se lee fuera de carga/resultados/."""
+    if not _CORRIDA.fullmatch(corrida):
+        raise SystemExit(f"Corrida inválida: {corrida!r} (se espera, por ejemplo, sostenido-20261009-112123)")
+    return RESULTADOS / corrida
 
 
 def _p95(valores: list[float]) -> float:
@@ -30,13 +45,12 @@ def _endpoint(extra_tags: str) -> str | None:
     return None
 
 
-def escalones(ruta: str) -> None:
+def escalones(corrida: str) -> None:
     duraciones: dict[int, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     fallas: dict[int, list[float]] = defaultdict(list)
     usuarios: dict[int, float] = defaultdict(float)
     inicio = None
-    abrir = gzip.open if ruta.endswith(".gz") else open
-    with abrir(ruta, "rt", newline="") as f:
+    with gzip.open(_carpeta(corrida) / "k6.csv.gz", "rt", newline="") as f:
         for fila in csv.DictReader(f):
             t = int(fila["timestamp"])
             inicio = t if inicio is None else min(inicio, t)
@@ -59,8 +73,9 @@ def escalones(ruta: str) -> None:
         print(f"| {minuto + 1} | {usuarios[minuto]:.0f} | {total} | {error:.1f} % | " + " | ".join(p95s) + " |")
 
 
-def memoria(ruta: str, umbral_mb_h: float) -> int:
-    with open(ruta, newline="") as f:
+def memoria(corrida: str) -> int:
+    umbral_mb_h = float(json.loads((CARGA / "umbrales.json").read_text())["sostenido"]["crecimiento_memoria_mb_h"])
+    with open(_carpeta(corrida) / "memoria.csv", newline="") as f:
         muestras = [(float(t), float(m)) for t, m in csv.reader(f)]
     t0 = muestras[0][0]
     puntos = [((t - t0) / 3600, m) for t, m in muestras if t - t0 >= CALENTAMIENTO_S]
@@ -84,10 +99,10 @@ def memoria(ruta: str, umbral_mb_h: float) -> int:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 3 and sys.argv[1] == "escalones":
+    if len(sys.argv) == 3 and sys.argv[1] == "escalones":
         escalones(sys.argv[2])
-    elif len(sys.argv) >= 4 and sys.argv[1] == "memoria":
-        sys.exit(memoria(sys.argv[2], float(sys.argv[3])))
+    elif len(sys.argv) == 3 and sys.argv[1] == "memoria":
+        sys.exit(memoria(sys.argv[2]))
     else:
         print(__doc__)
         sys.exit(2)

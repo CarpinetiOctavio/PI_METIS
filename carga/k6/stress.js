@@ -52,7 +52,7 @@ export const options = {
   summaryTrendStats: ["avg", "med", "p(90)", "p(95)", "max"],
 };
 
-export default function () {
+export default function recorrido() {
   previewColumns();
   streamEtapa1();
   simulateExclusion();
