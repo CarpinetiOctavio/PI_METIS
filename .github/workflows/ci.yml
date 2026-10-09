@@ -150,7 +150,7 @@ jobs:
       - name: Resumen
         if: always()
         run: |
-          python scripts/ci_resumen.py --reportes reportes --salida-json reportes/metricas.json >> "$GITHUB_STEP_SUMMARY"
+          python scripts/ci_resumen.py >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -44,7 +44,7 @@ case "${1:-}" in
     (cd frontend && npm run test:coverage)
     ;;
   duplicacion)
-    [ -x frontend/node_modules/.bin/jscpd ] || (cd frontend && npm ci --ignore-scripts)
+    [[ -x frontend/node_modules/.bin/jscpd ]] || (cd frontend && npm ci --ignore-scripts)
     frontend/node_modules/.bin/jscpd backend/metis frontend/src
     ;;
   gate)

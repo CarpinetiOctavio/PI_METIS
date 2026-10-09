@@ -7,15 +7,16 @@ Lee los reportes que dejan los jobs de CI y escribe:
 
 Solo biblioteca estándar: corre en el runner sin instalar nada.
 
-    python scripts/ci_resumen.py --reportes <dir> [--salida-json metricas.json]
+    python scripts/ci_resumen.py        (desde la raíz del repo)
 
-<dir> es donde el job descargó los artefactos de los otros jobs:
+Lee y escribe siempre en `reportes/`, donde el job descargó los artefactos de los otros jobs (sin
+rutas por línea de comandos: no hay nada que validar):
     backend/coverage.xml, backend/junit-backend.xml,
     frontend/coverage/coverage-summary.json, frontend/junit-frontend.xml,
     jscpd/jscpd-report.json, diff-cover-backend.md, diff-cover-frontend.md (los dos últimos solo en PR).
+El resultado queda en reportes/metricas.json.
 """
 
-import argparse
 import json
 import sys
 import xml.etree.ElementTree as ET
@@ -151,28 +152,14 @@ def construir(reportes: Path) -> tuple[dict, str]:
     return metricas, "\n".join(lineas) + "\n"
 
 
-def _ruta_segura(ruta: Path) -> Path:
-    """Las rutas llegan por línea de comandos: solo se aceptan dentro del directorio de trabajo."""
-    base = Path.cwd().resolve()
-    resuelta = (base / ruta).resolve()
-    if not resuelta.is_relative_to(base):
-        raise SystemExit(f"La ruta tiene que estar dentro de {base}: {ruta}")
-    return resuelta
-
-
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--reportes", type=Path, required=True)
-    parser.add_argument("--salida-json", type=Path)
-    args = parser.parse_args()
-
-    metricas, markdown = construir(_ruta_segura(args.reportes))
+    reportes = Path("reportes")
+    metricas, markdown = construir(reportes)
     # UTF-8 explícito: la consola de Windows (cp1252) no codifica los íconos del resumen.
     sys.stdout.buffer.write(markdown.encode("utf-8"))
-    if args.salida_json:
-        _ruta_segura(args.salida_json).write_text(
-            json.dumps(metricas, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+    (reportes / "metricas.json").write_text(
+        json.dumps(metricas, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     return 0
 
 
