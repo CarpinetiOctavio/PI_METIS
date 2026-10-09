@@ -7,7 +7,9 @@
 # - backend corre el código de la imagen: sin --reload ni bind mount (architecture.md, "Caveat de
 #   producción"). El CMD del Dockerfile es el de producción.
 # - la configuración vive acá, no en .env: el despliegue es reproducible y no depende de la máquina.
-#   Las credenciales son de relleno; este stack nunca sale de la máquina o del runner.
+#   Los dos secretos (contraseña de la base y clave del JWT) no están en el repo: scripts/deploy-local.sh
+#   los genera al azar en cada despliegue (METIS_CI_DB_PASSWORD, METIS_CI_JWT_SECRET). Sin el script
+#   quedan vacíos y el stack no arranca: Postgres se niega a inicializar sin contraseña.
 # - SMTP contra Mailpit (DECISIÓN 049), FRONTEND_URL=http://localhost (nginx) para que el link del
 #   mail de verificación abra la SPA servida por nginx.
 # - solo nginx (80) y Mailpit (8025) se publican al host. backend y postgres quedan en la red interna,
@@ -18,8 +20,8 @@
 # `alembic upgrade head` como paso explícito (incidente del 05/08/2026, CLAUDE.md).
 
 x-entorno-backend: &entorno-backend
-  DATABASE_URL: postgresql+asyncpg://metis_user:metis_pass@postgres:5432/metis
-  JWT_SECRET_KEY: clave-de-despliegue-efimero-sin-valor-real
+  DATABASE_URL: postgresql+asyncpg://metis_user:${METIS_CI_DB_PASSWORD:-}@postgres:5432/metis
+  JWT_SECRET_KEY: ${METIS_CI_JWT_SECRET:-}
   JWT_EXPIRE_MINUTES: "60"
   FRONTEND_ORIGIN: http://localhost
   FRONTEND_URL: http://localhost
@@ -50,7 +52,7 @@ services:
     env_file: !reset []
     environment:
       POSTGRES_USER: metis_user
-      POSTGRES_PASSWORD: metis_pass
+      POSTGRES_PASSWORD: ${METIS_CI_DB_PASSWORD:-}
       POSTGRES_DB: metis
     ports: !reset []
     healthcheck:

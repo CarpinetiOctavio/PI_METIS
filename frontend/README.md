@@ -65,7 +65,7 @@ npm run dev       # servidor de desarrollo (Vite), http://localhost:5173
 npm run build     # type-check (tsc -b) + build de producción a dist/
 npm run lint      # ESLint
 npm test          # tests unitarios (Vitest + Testing Library)
-npm run test:e2e  # E2E con Playwright contra http://localhost (E2E_BASE_URL); requiere el despliegue
+npm run test:e2e  # E2E con Playwright; usar scripts/test.sh e2e desde la raíz (exporta E2E_EMAIL/E2E_PASSWORD)
 npx playwright install chromium   # una vez, para bajar el navegador de los E2E
 ```
 

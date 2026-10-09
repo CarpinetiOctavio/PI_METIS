@@ -129,8 +129,10 @@ npm test          # Vitest + Testing Library, todos los tests (modo run, no watc
 npm run test:coverage                        # lo mismo con cobertura (frontend/coverage/, lcov + html)
 npm run test:watch                            # Vitest en modo watch
 npx vitest run src/routes/results/ResultsPage.test.tsx   # un solo archivo de test
-npm run test:e2e                              # Playwright (e2e/) contra el despliegue de scripts/deploy-local.sh, nunca contra npm run dev
-npx playwright test e2e/e2e1-login.spec.ts    # un solo escenario E2E
+# E2E (Playwright, e2e/): desde la raíz, contra el despliegue de scripts/deploy-local.sh, nunca contra npm run dev.
+# scripts/test.sh exporta E2E_EMAIL/E2E_PASSWORD (el usuario sembrado); sin ellas los specs no arrancan.
+bash scripts/test.sh e2e                                  # los seis escenarios
+bash scripts/test.sh e2e e2e/e2e1-login.spec.ts           # uno solo
 ```
 
 Entorno completo (Docker):

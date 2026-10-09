@@ -27,6 +27,12 @@ export COMPOSE_PATH_SEPARATOR=";"
 export COMPOSE_FILE="docker-compose.yml;docker-compose.ci.yml"
 export COMPOSE_PROJECT_NAME="metis-ci"
 
+# Secretos del despliegue, nuevos en cada corrida (docker-compose.ci.yml no trae ninguno).
+aleatorio() { od -An -tx1 -N16 /dev/urandom | tr -d ' 
+'; }
+export METIS_CI_DB_PASSWORD="${METIS_CI_DB_PASSWORD:-$(aleatorio)}"
+export METIS_CI_JWT_SECRET="${METIS_CI_JWT_SECRET:-$(aleatorio)}"
+
 BASE_URL="${SMOKE_BASE_URL:-http://localhost}"
 export SMOKE_EMAIL="${SMOKE_EMAIL:-smoke@ucc.edu.ar}"
 export SMOKE_PASSWORD="${SMOKE_PASSWORD:-smoke-metis-1234}"

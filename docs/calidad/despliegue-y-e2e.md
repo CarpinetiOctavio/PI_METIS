@@ -20,8 +20,8 @@ Un solo procedimiento, `scripts/deploy-local.sh`, para la demo local y para el j
 
 - `backend` corre el `CMD` del Dockerfile, sin `--reload` ni bind mount: sirve el código de la imagen, no el del host
   (el "caveat de producción" de `architecture.md`).
-- La configuración está en el override, no en `.env`: el despliegue no depende de la máquina. Las credenciales son de
-  relleno porque el stack nunca sale de la máquina o del runner.
+- La configuración está en el override, no en `.env`: el despliegue no depende de la máquina. Los dos secretos (contraseña
+  de la base y clave del JWT) no están en el repo: el script los genera al azar en cada despliegue.
 - SMTP contra Mailpit; `FRONTEND_URL=http://localhost` para que el link del mail abra la SPA servida por nginx.
 - Solo nginx (80) y Mailpit (8025) se publican al host. Al backend y a la base no se les puede pegar salteándose nginx.
 - Proyecto de Compose aparte (`-p metis-ci`): su base no es la de desarrollo, y `down -v` no la toca.
@@ -56,7 +56,8 @@ Sin stack alcanzable los tests se saltean; con `METIS_REQUIRE_SMOKE=1` (lo setea
 ## 3. E2E (`frontend/e2e/`, Playwright)
 
 Contra el build de producción detrás de nginx, nunca contra `npm run dev` (DECISIÓN 046). Chromium, un worker, en
-orden: E2E-4 lee el historial que deja E2E-3.
+orden: E2E-4 lee el historial que deja E2E-3. Se corren con `scripts/test.sh e2e [spec]`, que exporta las
+credenciales del usuario sembrado (`E2E_EMAIL`/`E2E_PASSWORD`); los specs no traen ninguna escrita.
 
 | ID | Archivo | Flujo | Defecto o riesgo que cubre |
 |---|---|---|---|

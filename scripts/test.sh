@@ -9,7 +9,7 @@
 #   scripts/test.sh gate         cobertura del código nuevo contra origin/staging (diff-cover ≥ 80 %)
 #   scripts/test.sh all          backend + frontend + duplicacion
 #   scripts/test.sh smoke        smoke del despliegue contra nginx (requiere scripts/deploy-local.sh)
-#   scripts/test.sh e2e          Playwright contra el despliegue (requiere scripts/deploy-local.sh)
+#   scripts/test.sh e2e [spec]   Playwright contra el despliegue (requiere scripts/deploy-local.sh)
 #
 # stress y soak se suman con el bloque B7.
 #
@@ -75,7 +75,10 @@ case "${1:-}" in
     fi
     ;;
   e2e)
-    (cd frontend && npm run test:e2e)
+    # El usuario que siembra scripts/deploy-local.sh (el mismo del smoke).
+    export E2E_EMAIL="${E2E_EMAIL:-${SMOKE_EMAIL:-smoke@ucc.edu.ar}}"
+    export E2E_PASSWORD="${E2E_PASSWORD:-${SMOKE_PASSWORD:-smoke-metis-1234}}"
+    (cd frontend && npm run test:e2e -- "${@:2}")
     ;;
   stress | soak)
     echo "'$1' todavía no existe: llega con el bloque B7." >&2

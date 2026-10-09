@@ -8,7 +8,7 @@ test("E2E-0 · registro, mail de verificación en Mailpit, verificación y login
   // Email único por corrida: si la base no se recreó (en local), el registro no choca con
   // AUTH_EMAIL_ALREADY_REGISTERED.
   const email = `e2e-${Date.now()}@ucc.edu.ar`;
-  const password = "e2e-metis-1234";
+  const password = `e2e-${crypto.randomUUID()}`;
 
   await page.goto("/");
   await page.getByRole("button", { name: "Registrate" }).click();

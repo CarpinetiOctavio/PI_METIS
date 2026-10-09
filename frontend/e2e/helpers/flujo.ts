@@ -1,10 +1,17 @@
 import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
 
-// Usuario verificado que siembra scripts/deploy-local.sh (el mismo del smoke del backend).
+// Usuario verificado que siembra scripts/deploy-local.sh (el mismo del smoke del backend). Las
+// credenciales llegan por entorno: `scripts/test.sh e2e` las exporta.
+function requerida(nombre: string): string {
+  const valor = process.env[nombre];
+  if (!valor) throw new Error(`Falta ${nombre}: correr los E2E con scripts/test.sh e2e`);
+  return valor;
+}
+
 export const USUARIO = {
-  email: process.env.E2E_EMAIL ?? "smoke@ucc.edu.ar",
-  password: process.env.E2E_PASSWORD ?? "smoke-metis-1234",
+  email: requerida("E2E_EMAIL"),
+  password: requerida("E2E_PASSWORD"),
 };
 
 /** Ruta absoluta de un archivo de e2e/fixtures/. Copiados de docs/series prueba/ a propósito: si
