@@ -14,7 +14,7 @@ fijada en el repo y dónde está configurada.
 | **Gestión de defectos** | GitHub Issues, plantilla de formulario y labels | — | `.github/ISSUE_TEMPLATE/defecto.yml` | Issues #114 a #123 (`registro-defectos.md`) |
 | **Análisis estático — Python** | ruff (lint y formato) | 0.15.12 | Configuración por defecto (sin archivo propio), job `lint` | 0 hallazgos como criterio de merge |
 | **Análisis estático — TypeScript** | ESLint y `tsc` | ESLint 9, TypeScript 5.6 | `frontend/eslint.config.js`, `tsconfig*.json`, job `frontend` | ídem |
-| **Análisis estático — producto** | SonarCloud (Análisis Automático) | Servicio | `.sonarcloud.properties` | Reliability, Security, hotspots, smells, duplicación. Consultivo hasta B13 |
+| **Análisis estático — producto** | SonarCloud (por CI, job `sonarcloud`) | Servicio | `sonar-project.properties` | Reliability, Security, hotspots, smells, duplicación y cobertura importada. El job falla si el quality gate falla (B13) |
 | **Duplicación** | jscpd | 4.0.5 | `.jscpd.json`, job `quality-gate` | % de líneas duplicadas, umbral 5 % |
 | **Consistencia de contratos** | Script propio | — | `scripts/check-error-catalog.sh`, job `error-catalog` | Catálogo de errores sincronizado en tres lugares |
 | **Pruebas unitarias — backend** | pytest + pytest-asyncio | 8.2.0 / 0.23.6 | `backend/pytest.ini` (markers `unit`, `integration`, `smoke`, …) | 665 tests |

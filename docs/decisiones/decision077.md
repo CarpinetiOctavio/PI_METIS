@@ -82,3 +82,17 @@ editar el ruleset), y Kevin no la tiene: el repo es de Octavio. Por eso:
   `carga-sostenida.yml` (manual y semanal). k6 corre en un contenedor dentro de la red del despliegue efímero.
 - **Hallazgo:** el punto de quiebre está entre 20 y 40 usuarios concurrentes; el sistema se degrada por latencia (un
   solo proceso de uvicorn), sin errores. Registrado en `docs/pendientes-tecnicos.md`.
+
+### Addendum (14/10/2026) — B13: SonarCloud por CI
+
+- **Permisos, corregido:** el repo es de una cuenta personal de GitHub, no de una organización: no existe el rol de
+  admin para colaboradores. Kevin, como colaborador, sí pudo cargar el secret `SONAR_TOKEN`. Desactivar el Análisis
+  Automático y marcar falsos positivos son permisos de SonarCloud ("Administer" del proyecto), aparte de GitHub. Editar
+  el Ruleset queda solo para el dueño (Octavio).
+- **Implementado:** job `sonarcloud` en `ci.yml` (`SonarSource/sonarqube-scan-action@v8.3.0`, `fetch-depth: 0`),
+  después de `test` y `frontend`, con sus artefactos de cobertura (`coverage.xml` y lcov reescrito a rutas de la raíz,
+  igual que en `quality-gate`). `sonar.qualitygate.wait=true`: el job falla si falla el gate de Sonar, y eso lo hace
+  requerible. `sonar-project.properties` pasa a ser la única configuración (los tests de `frontend/src` se sacan de
+  las fuentes, porque un archivo no puede indexarse dos veces); `.sonarcloud.properties` se borra.
+- **Checks requeridos (punto 4):** los ocho jobs de `ci.yml`, configurados por Octavio en el Ruleset de `staging` y
+  `main`. Un job salteado cuenta como aprobado para GitHub; `carga` y los E2E solo corren en PR, que es donde se exigen.

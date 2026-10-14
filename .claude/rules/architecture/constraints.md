@@ -211,4 +211,6 @@ queda habilitado con el gate en rojo — así que es consultivo de hecho, no blo
 [DECISIÓN 044](../../../docs/decisiones/decision044.md), sección "La pregunta de gobernanza
 abierta", para el estado exacto. **Resuelta por [DECISIÓN 077](../../../docs/decisiones/decision077.md)**
 (08/10/2026): SonarCloud pasa a análisis por CI y los checks pasan a requeridos, en el último PR del plan del TP de
-Calidad (necesita permisos de administración del repo). Hasta entonces sigue consultivo.
+Calidad (necesita permisos de administración del repo). Hasta entonces sigue consultivo. **Implementado en B13:** job
+`sonarcloud` de `ci.yml` con el quality gate bloqueante; los checks requeridos los marca Octavio en el Ruleset (solo
+el dueño de un repo personal puede editarlo).

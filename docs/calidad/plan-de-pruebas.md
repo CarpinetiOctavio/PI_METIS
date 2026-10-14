@@ -152,7 +152,7 @@ escribe **antes** de correr el test, que es lo que pide el criterio de §6.1.
 
 ### 6.3 Criterios de salida (para mergear un PR)
 
-Los siete jobs del CI en verde (`.github/workflows/ci.yml`):
+Los ocho jobs del CI en verde (`.github/workflows/ci.yml`):
 
 - `lint`: ruff check y format sin hallazgos.
 - `test`: 0 fallas en unidad e integración, sin tests salteados por servicio caído (`METIS_REQUIRE_DB=1`,
@@ -162,10 +162,11 @@ Los siete jobs del CI en verde (`.github/workflows/ci.yml`):
 - `quality-gate`: cobertura del código nuevo ≥ 80 % (backend y frontend, `diff-cover`) y duplicación ≤ 5 % (`jscpd`).
 - `despliegue`: smoke y, en PR, los seis E2E.
 - `carga` (en PR): p95 y tasa de error dentro de los umbrales.
+- `sonarcloud`: quality gate de SonarCloud aprobado, con la cobertura importada (B13).
 
 Y además: si el PR toca `frontend/`, evidencia del flujo en el navegador (Capa 4 de `testing.md`). Si corrige un
-defecto, su issue cerrado con el test que lo cubre. SonarCloud informa pero hoy no bloquea; pasa a requerido con
-B13 (DECISIÓN 077).
+defecto, su issue cerrado con el test que lo cubre. Desde B13 (DECISIÓN 077) el gate de
+SonarCloud bloquea a través del job `sonarcloud`.
 
 ### 6.4 Criterios de suspensión y reanudación
 
@@ -240,5 +241,5 @@ Los riesgos del producto, con su probabilidad e impacto, están en `riesgos.md`.
 - **El oráculo de dominio responde con demora.** Hay preguntas abiertas a Facundo (Mann-Kendall 1,64 frente a 1,96,
   redondeo de Cramer, Generalizada de Pareto). Mientras tanto se prueba contra la implementación documentada y la
   divergencia queda registrada.
-- **El gate de SonarCloud no bloquea** hasta B13, que necesita permisos que Kevin no tiene. Mientras tanto, el gate
-  propio (`quality-gate`) cubre cobertura nueva y duplicación.
+- **El gate de SonarCloud depende de un servicio externo** (B13). Si cae, el gate propio (`quality-gate`) sigue
+  cubriendo cobertura nueva y duplicación; ver `contingencia.md`.

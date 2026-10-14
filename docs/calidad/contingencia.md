@@ -69,7 +69,7 @@ proceso: no usar el compose de desarrollo como producción (`architecture.md`).
 | Si cae | Qué se hace | Qué no se hace |
 |---|---|---|
 | GitHub Actions | Se espera. Para avanzar en local: `scripts/test.sh all` corre lo mismo que el pipeline (`backend`, `frontend`, `duplicacion`, `gate`, `smoke`, `e2e`) | **No se mergea sin el pipeline en verde**, aunque las corridas locales pasen: el ruleset lo bloquea y los números del informe salen del pipeline |
-| SonarCloud | Se mergea igual si los siete jobs propios pasan: Sonar es consultivo hasta B13. Se revisa el análisis cuando vuelve | — |
+| SonarCloud | Desde B13 el job `sonarcloud` es requerido y, con Sonar caído, falla. Se reintenta; si la caída se prolonga, Octavio (dueño del repo) puede quitarlo temporalmente de los checks requeridos: el gate propio (`quality-gate`) sigue cubriendo cobertura nueva y duplicación. Se vuelve a requerir cuando Sonar vuelve | No se desactiva el job ni se borra el secret para que pase |
 | Docker Hub, PyPI o npm | Reintentar el job | No se fijan imágenes o paquetes "de cualquier origen" para salir del paso |
 | Mailpit en CI | El job `test` falla (`METIS_REQUIRE_MAILPIT=1`), no saltea los tests: se reintenta | No se quita la variable para que pase |
 

@@ -214,7 +214,7 @@ que un test unitario de una sola función no ve.
 | B8 Casos de prueba | 5 | 3 | 09/10 | #127 |
 | B9 Documentos de QA | 8 | 3 | 09/10 | #128 |
 | B11 Métricas | 4 | 3 | Este PR | — |
-| B13 Sonar por CI y checks requeridos | (parte de B1) | Cierre (24–26/10) | Pendiente: requiere admin del repo | — |
+| B13 Sonar por CI y checks requeridos | (parte de B1) | Cierre (24–26/10) | En curso (14/10) | — |
 | B12 Informe y demo | 6 | Cierre | Pendiente | — |
 
 **Interpretación.** 12 de 14 bloques terminados en dos días de un cronograma de 18: el plan está adelantado unas dos
@@ -259,7 +259,7 @@ se escribieron esas líneas, así que no los introdujo ningún cambio reciente.
 
 | Métrica | Acción | Cuándo |
 |---|---|---|
-| Reliability D por un falso positivo | Marcarlo como falso positivo en SonarCloud | Con el acceso de admin (B13) |
+| Reliability D por un falso positivo | Marcarlo como falso positivo en SonarCloud | Con el permiso de administración del proyecto en SonarCloud (B13) |
 | Security D (contenedor y dependencias) | `.dockerignore`, usuario sin privilegios en el Dockerfile, requirements con hashes | Antes del despliegue en la UCC |
 | `pdf.py` con índice de mantenibilidad 0 y la función más compleja | Partir en un módulo por sección del informe | Al próximo cambio del informe |
 | `stream_analysis` con CC 35 | Extraer una función por fase del stream | Al próximo cambio del stream |
