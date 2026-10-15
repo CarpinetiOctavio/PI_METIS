@@ -258,7 +258,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
         _vals = np.array([_iv153(float(e)) for e in _scan])
         _finite = np.isfinite(_vals)
         _signs = np.where(_finite, np.sign(_vals), 0)
-        _idx = np.where((_finite[:-1] & _finite[1:]) & (np.diff(_signs) != 0))[0]
+        _idx = np.nonzero((_finite[:-1] & _finite[1:]) & (np.diff(_signs) != 0))[0]
 
         if len(_idx) == 0:
             return MetodoResult(
