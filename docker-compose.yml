@@ -4,6 +4,9 @@ services:
     command: uvicorn metis.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./backend:/app
+    # Solo desarrollo: la imagen corre sin privilegios, pero con el bind mount los archivos son del usuario del
+    # host y pytest/coverage escriben en /app. docker-compose.ci.yml lo resetea (configuración de producción).
+    user: root
     depends_on:
       - postgres
     env_file: .env

@@ -39,6 +39,7 @@ services:
   backend:
     command: !reset null
     volumes: !reset []
+    user: !reset null
     env_file: !reset []
     environment: *entorno-backend
     ports: !reset []
