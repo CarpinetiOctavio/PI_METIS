@@ -1,7 +1,7 @@
 import json
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 
 import numpy as np
 from sqlalchemy import select
@@ -1122,7 +1122,7 @@ async def archive_analysis(
     analysis = (await db.execute(stmt)).scalar_one_or_none()
     if analysis is None:
         return False
-    analysis.archivado_at = datetime.utcnow()
+    analysis.archivado_at = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
     return True
 

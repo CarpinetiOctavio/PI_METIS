@@ -1,0 +1,11 @@
+# Artefactos locales que no van a la imagen (complementa los COPY explícitos del Dockerfile).
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+junit*.xml
+.env
+.venv

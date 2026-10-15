@@ -129,7 +129,8 @@ def calcular_wald_wolfowitz(serie: list[float]) -> TestResult:
             warning_nivel="normal",
         )
 
-    mu_u = (2 * n1 * n2) / (n1 + n2) + 1
+    # n1, n2 >= 1 (guard de arriba), así que n1 + n2 >= 2: falso positivo de S3518 en SonarCloud.
+    mu_u = (2 * n1 * n2) / (n1 + n2) + 1  # NOSONAR
     # n1, n2 >= 1 garantiza denom > 0; el guard lo hace explícito.
     denom = (n1 + n2) ** 2 * (n1 + n2 - 1)
     sigma2_u = (2 * n1 * n2 * (2 * n1 * n2 - n1 - n2)) / denom if denom > 0 else 0.0

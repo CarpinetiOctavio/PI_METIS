@@ -187,7 +187,7 @@ def ajustar(serie: np.ndarray, metodo: str) -> MetodoResult:
             )
 
         _signs = np.sign(_vals)
-        _idx = np.where((_finite[:-1] & _finite[1:]) & (np.diff(_signs) != 0))[0]
+        _idx = np.nonzero((_finite[:-1] & _finite[1:]) & (np.diff(_signs) != 0))[0]
         if len(_idx) == 0:
             return MetodoResult(
                 metodo=metodo, parametros=None, eea=None, status=STATUS_NO_CONVERGE
