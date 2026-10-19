@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "../../auth/AuthProvider";
 import { renderPage } from "../../test/renderPage";
 import { makeEtapa1Datos } from "../../test/etapa1Fixtures";
+import { makeEtapa2 } from "../../test/etapa2Fixtures";
 import { makeEtapa1Result, makeSimulacion } from "../../test/simulacionFixtures";
 import { stubFetchRouted } from "../../test/fetchStubs";
 import { formatNum } from "../../i18n/format";
@@ -248,6 +249,32 @@ describe("ResultsPage — what-if de atípicos", () => {
       expect(screen.queryByText(formatNum(250.1))).not.toBeInTheDocument();
     });
 
+    it("si la elección deja de ajustar sin esos puntos, explica por qué", async () => {
+      const { user } = montar(
+        { tipoVariable: "otro", etapas: "1,2", eventosDiseno: ELECCION },
+        makeSimulacion({
+          etapa2: {
+            ranking: [],
+            warnings: [],
+            puntos_empiricos: [],
+            seleccion: {
+              ...SIMULADA,
+              eventos_diseno: [{ periodo_retorno: 100, valor: null }],
+              curva_ajuste: [],
+              estado: "no_converge",
+            },
+          },
+        }),
+      );
+      await recalcular(user);
+
+      expect(
+        screen.getByText(/Sin los años 2005, gumbel · momentos no se puede ajustar \(no converge\)/),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Original" }));
+      expect(screen.getByText(formatNum(312.7))).toBeInTheDocument();
+    });
+
     it("si sin esos puntos no hay Etapa 2, lo dice y deja los eventos originales", async () => {
       const { user } = montar(
         { tipoVariable: "otro", etapas: "1,2", eventosDiseno: ELECCION },
@@ -259,5 +286,159 @@ describe("ResultsPage — what-if de atípicos", () => {
       expect(screen.queryByRole("button", { name: "Sin los puntos excluidos" })).not.toBeInTheDocument();
       expect(screen.getByText(formatNum(312.7))).toBeInTheDocument();
     });
+  });
+});
+
+// Revisión de DECISIÓN 071 (18/10/2026): la exploración de otra distribución
+// respeta la simulación de exclusión, con un único selector para las dos columnas.
+describe("ResultsPage — exploración con la simulación de exclusión (CU-01)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  const ELECCION: Etapa2EventosState = {
+    distribucion: "gumbel",
+    metodo: "momentos",
+    eventos_diseno: [{ periodo_retorno: 100, valor: 312.7 }],
+    curva_ajuste: [{ periodo_retorno: 100, valor: 312.7 }],
+  };
+
+  // La respuesta del backend depende del pedido: los años excluidos salen de los
+  // índices, y `seleccion` repite la combinación pedida con un valor propio.
+  function respuestaSimulada(init?: RequestInit): SimulateExclusionResponse {
+    const pedido = JSON.parse(String(init?.body));
+    const indices: number[] = pedido.indices_excluidos;
+    const sel = pedido.seleccion;
+    return makeSimulacion({
+      excluidos: indices.map((i) => ({ indice: i, periodo: 2000 + i, valor_original: 100 })),
+      etapa2: {
+        ranking: [],
+        warnings: [],
+        puntos_empiricos: [],
+        seleccion: sel && {
+          ...sel,
+          eventos_diseno: [{ periodo_retorno: 100, valor: sel.distribucion === "gve" ? 222.2 : 250.1 }],
+          curva_ajuste: [],
+          estado: "ok",
+        },
+      },
+    });
+  }
+
+  function montarExplorable() {
+    const fetchMock = stubFetchRouted([
+      {
+        match: (url) => url.includes("/auth/me"),
+        status: 200,
+        body: { id: "1", email: "a@ucc.edu.ar", nombre: null, email_verified: true },
+      },
+      {
+        match: (url, init) => init?.method === "POST" && url.includes("/simulate-exclusion"),
+        status: 200,
+        responder: (_url, init) => respuestaSimulada(init),
+      },
+      {
+        match: (url, init) => init?.method === "POST" && url.includes("/design-events"),
+        status: 200,
+        body: { eventos_diseno: [{ periodo_retorno: 100, valor: 333.3 }], curva_ajuste: [] },
+      },
+    ]);
+    renderPage(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/results",
+            state: {
+              result: makeEtapa1Result({ datos: makeEtapa1Datos() }),
+              analysisId: "an-1",
+              tipoVariable: "otro",
+              etapas: "1,2",
+              eventosDiseno: ELECCION,
+              etapa2: { session_id: "s", ...makeEtapa2() },
+            },
+          },
+        ]}
+      >
+        <AuthProvider>
+          <Routes>
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+    return { fetchMock, user: userEvent.setup() };
+  }
+
+  async function simularSin(user: ReturnType<typeof userEvent.setup>, posiciones: number[]) {
+    const grilla = await screen.findByRole("group", { name: /Años de la serie/ });
+    for (const p of posiciones) await user.click(within(grilla).getAllByRole("button")[p]);
+    await user.click(screen.getByRole("button", { name: RECALCULAR }));
+  }
+
+  const pedidosSimulados = (fetchMock: ReturnType<typeof stubFetchRouted>) =>
+    fetchMock.mock.calls
+      .filter(([url]) => String(url).includes("/simulate-exclusion"))
+      .map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+
+  async function explorarGve(user: ReturnType<typeof userEvent.setup>) {
+    // "gve" es la segunda card del ranking (makeEtapa2).
+    await user.click(
+      (await screen.findAllByRole("button", { name: "Explorar este ajuste" }, { timeout: 5000 }))[1],
+    );
+  }
+
+  it("un solo selector cambia a la vez la elección y la exploración", async () => {
+    const { fetchMock, user } = montarExplorable();
+    await simularSin(user, [5]);
+    await screen.findByText(/reajustada sin 2005/);
+    await explorarGve(user);
+
+    expect(await screen.findByText(/Exploración sin los años 2005/)).toBeInTheDocument();
+    expect(screen.getAllByRole("group", { name: "Ver resultados" })).toHaveLength(1);
+    expect(screen.getByText(formatNum(250.1))).toBeInTheDocument();
+    expect(screen.getByText(formatNum(222.2))).toBeInTheDocument();
+    // La exploración simulada se pide con los mismos puntos y la combinación explorada.
+    expect(pedidosSimulados(fetchMock).at(-1)).toMatchObject({
+      indices_excluidos: [5],
+      seleccion: { distribucion: "gve", metodo: "ml" },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Original" }));
+    expect(screen.getByText(formatNum(312.7))).toBeInTheDocument();
+    expect(screen.getByText(formatNum(333.3))).toBeInTheDocument();
+    expect(screen.queryByText(formatNum(222.2))).not.toBeInTheDocument();
+    expect(screen.queryByText(formatNum(250.1))).not.toBeInTheDocument();
+  });
+
+  it("cambiar la simulación vuelve a pedir la exploración con los puntos nuevos", async () => {
+    const { fetchMock, user } = montarExplorable();
+    await simularSin(user, [5]);
+    await screen.findByText(/reajustada sin 2005/);
+    await explorarGve(user);
+    await screen.findByText(/Exploración sin los años 2005/);
+
+    await simularSin(user, [7]);
+
+    expect(await screen.findByText(/Exploración sin los años 2005, 2007/)).toBeInTheDocument();
+    expect(screen.queryByText(/Exploración sin los años 2005:/)).not.toBeInTheDocument();
+    expect(pedidosSimulados(fetchMock).at(-1)).toMatchObject({
+      indices_excluidos: [5, 7],
+      seleccion: { distribucion: "gve" },
+    });
+  });
+
+  it("limpiar la simulación oculta el selector y deja la exploración original", async () => {
+    const { user } = montarExplorable();
+    await simularSin(user, [5]);
+    await screen.findByText(/reajustada sin 2005/);
+    await explorarGve(user);
+    await screen.findByText(/Exploración sin los años 2005/);
+
+    await user.click(screen.getByRole("button", { name: "Limpiar selección" }));
+
+    expect(screen.queryByRole("group", { name: "Ver resultados" })).not.toBeInTheDocument();
+    expect(await screen.findByText(formatNum(333.3))).toBeInTheDocument();
+    expect(screen.queryByText(/Exploración sin los años/)).not.toBeInTheDocument();
   });
 });

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.core.etapa1.significancia import ALFA_DEFECTO
 from metis.core.etapa2.design_events import calcular_eventos_diseno
-from metis.core.etapa2.types import Etapa2Result, EventoDiseno
+from metis.core.etapa2.types import STATUS_NO_APLICABLE, Etapa2Result, EventoDiseno
 from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
 from metis.core.pipeline.exclusiones import aplicar_exclusiones
 from metis.core.pipeline.pipeline_etapa1 import CODIGOS_WARNING_AGREGACION
@@ -1176,7 +1176,13 @@ def _seleccion_recalculada(etapa2_result: Etapa2Result, seleccion: dict) -> dict
     """Eventos de diseño y curva de ajuste de `seleccion` sobre un Etapa 2 ya
     recalculado (simulate-exclusion). Misma forma que `seleccion` en
     `analysis_results.etapa2`, y el mismo trato que el stream cuando la
-    combinación no tiene parámetros: eventos en null, curva vacía."""
+    combinación no tiene parámetros: eventos en null, curva vacía.
+
+    Suma `estado`: el status de la combinación sobre la serie sin los puntos
+    excluidos (`ok`, `no_converge`, `no_aplicable`, `disabled_zeros`,
+    `disabled_negatives`), para que la interfaz explique por qué no hay eventos
+    cuando una combinación que ajustaba deja de ajustar (revisión de DECISIÓN 071,
+    18/10/2026). Una combinación que no existe en el ranking es `no_aplicable`."""
     distribucion = seleccion["distribucion"]
     metodo = seleccion["metodo"]
     periodos_retorno = seleccion["periodos_retorno"]
@@ -1216,6 +1222,9 @@ def _seleccion_recalculada(etapa2_result: Etapa2Result, seleccion: dict) -> dict
         "distribucion": distribucion,
         "metodo": metodo,
         "periodos_retorno": periodos_retorno,
+        "estado": metodo_result.status
+        if metodo_result is not None
+        else STATUS_NO_APLICABLE,
         "eventos_diseno": [
             {"periodo_retorno": e.periodo_retorno, "valor": e.valor} for e in eventos
         ],

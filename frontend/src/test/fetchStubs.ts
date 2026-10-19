@@ -3,7 +3,10 @@ import { vi } from "vitest";
 interface RutaStub {
   match: (url: string, init?: RequestInit) => boolean;
   status: number;
-  body: unknown;
+  body?: unknown;
+  // Para respuestas que dependen del pedido (por ejemplo, la simulación de
+  // exclusión según los índices del body). Si está, manda sobre `body`.
+  responder?: (url: string, init?: RequestInit) => unknown;
 }
 
 /** `fetch` ruteado por URL/método, para tests que disparan más de una llamada
@@ -22,7 +25,8 @@ export function stubFetchRouted(rutas: RutaStub[]) {
     return Promise.resolve({
       ok: ruta.status < 400,
       status: ruta.status,
-      json: () => Promise.resolve(ruta.body),
+      json: () =>
+        Promise.resolve(ruta.responder ? ruta.responder(String(url), init) : ruta.body),
     });
   });
   vi.stubGlobal("fetch", fn);
