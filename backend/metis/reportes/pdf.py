@@ -437,7 +437,7 @@ def _grafico_serie(etapa1: dict) -> Figure | None:
     return fig
 
 
-def _grafico_correlograma(anderson: dict) -> Figure | None:
+def _grafico_correlograma(anderson: dict, config: dict) -> Figure | None:
     desglose = (anderson.get("explicacion") or {}).get("desglose")
     if not desglose:
         return None
@@ -451,7 +451,7 @@ def _grafico_correlograma(anderson: dict) -> Figure | None:
         [fila["banda_inf"] for fila in desglose],
         color="#8a96a3",
         linewidth=0.9,
-        label="Límites de confianza (95 %)",
+        label=f"Límites de confianza ({_texto_confianza(config)})",
     )
     ax.axhline(0, color="#5f6b76", linewidth=0.6)
     ax.set_xlabel("Rezago k", fontsize=8)
@@ -622,6 +622,13 @@ def _texto_alfa(config: dict) -> str:
     if alfa == 0.05:
         return f"{texto} (estándar en hidrología)"
     return texto
+
+
+def _texto_confianza(config: dict) -> str:
+    """Nivel de confianza 1 − α de las bandas de Anderson (Ec. III-3), como el
+    rótulo de la interfaz (`frontend/src/i18n/alfa.ts`): "95 %", "90 %"."""
+    confianza = round((1 - config.get("alfa", 0.05)) * 100, 6)
+    return f"{confianza:g} %".replace(".", ",")
 
 
 def _seccion_datos(detalle: dict, autor: str | None, est) -> list:
@@ -801,7 +808,11 @@ def _seccion_etapa1(detalle: dict, est) -> list:
         story += [_p(encabezado, est["h2"]), _tabla_pruebas(pruebas, est)]
         if clave == "independencia":
             anderson = next((t for t in pruebas if t.get("prueba") == "anderson"), None)
-            fig = _grafico_correlograma(anderson) if anderson else None
+            fig = (
+                _grafico_correlograma(anderson, detalle.get("configuracion") or {})
+                if anderson
+                else None
+            )
             if fig is not None:
                 story += [
                     Spacer(1, 4),
@@ -1306,6 +1317,22 @@ def _canvas_con_pie(texto_pie: str):
     return _CanvasNumerado
 
 
+def _subtitulo(config: dict, simulacion: dict | None) -> str:
+    """El α es el del análisis (DECISIÓN 078), no un 5 % fijo (D-11, #130)."""
+    subtitulo = (
+        "Formato experto: resultados directos, sin fórmulas ni explicaciones. "
+        f"Nivel de significancia α = {_texto_alfa(config)}."
+    )
+    if simulacion is not None:
+        cantidad = len(simulacion.get("excluidos") or [])
+        subtitulo += (
+            " Incluye, al final, los resultados sin el punto excluido."
+            if cantidad == 1
+            else f" Incluye, al final, los resultados sin los {cantidad} puntos excluidos."
+        )
+    return subtitulo
+
+
 def generar_pdf_analisis(
     detalle: dict,
     autor: str | None = None,
@@ -1320,20 +1347,11 @@ def generar_pdf_analisis(
     est = _estilos()
     generado_en = generado_en or datetime.now()
 
-    subtitulo = (
-        "Formato experto: resultados directos, sin fórmulas ni explicaciones. "
-        "Nivel de significancia α = 5 %."
-    )
-    if simulacion is not None:
-        cantidad = len(simulacion.get("excluidos") or [])
-        subtitulo += (
-            " Incluye, al final, los resultados sin el punto excluido."
-            if cantidad == 1
-            else f" Incluye, al final, los resultados sin los {cantidad} puntos excluidos."
-        )
     story: list = [
         _p("Informe de análisis — METIS", est["titulo"]),
-        _p(subtitulo, est["subtitulo"]),
+        _p(
+            _subtitulo(detalle.get("configuracion") or {}, simulacion), est["subtitulo"]
+        ),
     ]
     story += _seccion_datos(detalle, autor, est)
     story += _seccion_etapa1(detalle, est)

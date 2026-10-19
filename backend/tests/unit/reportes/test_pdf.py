@@ -20,11 +20,13 @@ from metis.core.etapa2.design_events import calcular_eventos_diseno
 from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
 from metis.reportes.pdf import (
     _estilos,
+    _grafico_correlograma,
     _registrar_fuentes,
     _seccion_datos,
     _seccion_etapa1,
     _seccion_etapa2,
     _seccion_simulacion,
+    _subtitulo,
     generar_pdf_analisis,
     nombre_archivo_pdf,
 )
@@ -286,6 +288,46 @@ def test_nivel_de_significancia_en_datos_y_pruebas(
 
     assert f"Nivel de significancia (Etapa 1) | {esperado}" in datos
     assert f"nivel de significancia de {esperado}" in pruebas
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [
+        ({}, "α = 5 % (estándar en hidrología)"),
+        ({"alfa": 0.01}, "α = 1 %"),
+        ({"alfa": 0.1}, "α = 10 %"),
+    ],
+)
+def test_subtitulo_declara_el_alfa_del_analisis(config, esperado):
+    # D-11 (#130): el subtítulo decía "α = 5 %" fijo aunque el análisis
+    # hubiera corrido con otro α.
+    subtitulo = _subtitulo(config, simulacion=None)
+
+    assert f"Nivel de significancia {esperado}." in subtitulo
+    if config.get("alfa", 0.05) != 0.05:
+        assert "5 %" not in subtitulo
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [({}, "95 %"), ({"alfa": 0.01}, "99 %"), ({"alfa": 0.1}, "90 %")],
+)
+def test_correlograma_rotula_la_confianza_del_analisis(
+    detalle_completo, config, esperado
+):
+    # D-11 (#130): la leyenda decía "95 %" con cualquier α; las bandas de
+    # Anderson (Ec. III-3) se calculan con el α del análisis.
+    anderson = next(
+        t
+        for t in detalle_completo["etapa1"]["independencia"]
+        if t["prueba"] == "anderson"
+    )
+    fig = _grafico_correlograma(anderson, config)
+
+    leyenda = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+    assert leyenda == [f"Límites de confianza ({esperado})"]
 
 
 @pytest.mark.unit
