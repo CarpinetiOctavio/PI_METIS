@@ -633,7 +633,11 @@ frontend repite para que la simulación compare contra lo mismo. Fuera de `{0.01
 `seleccion` también (addendum 02/10/2026 a DECISIÓN 071): la distribución+método+períodos elegidos en el
 análisis original; con ella y Etapa 2, `etapa2.seleccion` trae sus `eventos_diseno` y `curva_ajuste`
 reajustados sin los puntos excluidos (misma forma que en `GET /history/{id}`; `valor: null` y curva vacía si
-la combinación ya no ajusta). Se valida como en `distribution-decision`.
+la combinación ya no ajusta). Se valida como en `distribution-decision`. La `seleccion` de la respuesta suma
+`estado` (revisión 18/10/2026 de DECISIÓN 071): el status de la combinación sobre la serie sin los puntos
+(`ok`, `no_converge`, `no_aplicable`, `disabled_zeros`, `disabled_negatives`), para explicar por qué no hay
+eventos. El frontend también la usa para explorar otra distribución bajo la simulación: manda la combinación
+explorada en `seleccion`, con los mismos índices.
 
 **Auth:** ninguna dependencia de usuario — responde igual con o sin cookie, como
 `preview-columns`. **Completamente sin estado:** no genera sesión, no toca `session_store`, no

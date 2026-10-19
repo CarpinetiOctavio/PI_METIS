@@ -459,6 +459,10 @@ export interface SeleccionEtapa2 {
   periodos_retorno: number[];
   eventos_diseno: EventoDiseno[];
   curva_ajuste: EventoDiseno[];
+  // Solo en POST /analysis/simulate-exclusion (revisión de DECISIÓN 071,
+  // 18/10/2026): el status de la combinación sobre la serie sin los puntos
+  // excluidos. Lo persistido en el historial no lo trae.
+  estado?: MetodoStatus;
 }
 
 export interface Etapa2Result {
