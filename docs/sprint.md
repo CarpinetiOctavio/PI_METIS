@@ -1403,6 +1403,18 @@ media y el botón de simulación en `HistoryDetailPage`. Pendientes por persona 
 
 ---
 
+## Plan de significancia y fixes de resultados — 18 y 19/10/2026, CERRADO
+
+`docs/historico/planes/plan-significancia-y-fixes-18-10-2026.md` (archivado; resumen en
+`docs/planes-implementados.md` §18). Cuatro PRs al `staging` del fork `Kevinmass/PI_METIS`, mergeados el 19/10:
+#5 (A, exploración con la simulación de exclusión), #6 (B, α elegible 1/5/10 %, DECISIÓN 078), #7 (C, Chow con
+todos los atípicos y una decisión por punto, DECISIÓN 079) y #8 (D, Chow no ejecutada explica por qué, revisión de
+la 073). Verificado por Kevin en el navegador el 19/10. Defecto encontrado en la verificación: D-11 (#130, PDF con
+α fijo en el subtítulo), corregido en #6. Al cierre: backend 920 tests de unidad e integración, frontend 532, E2E 7.
+Falta llevarlo al repo original.
+
+---
+
 ## Decisiones pendientes — no implementar hasta confirmar
 
 - ~~**Partición de Cramer personalizada** — inalcanzable hoy por el endpoint

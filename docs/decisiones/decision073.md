@@ -61,7 +61,7 @@ mínimo (estiajes, temperaturas mínimas), es otra funcionalidad, no esta (pregu
 
 ### Revisión 19/10/2026 — presentación de Chow no ejecutada
 
-Bloque D de `docs/plan-significancia-y-fixes-18-10-2026.md`. Con `serie_con_negativos_otro.csv` cargada como
+Bloque D de `docs/historico/planes/plan-significancia-y-fixes-18-10-2026.md`. Con `serie_con_negativos_otro.csv` cargada como
 caudal/precipitación, Chow no se ejecutaba (como corresponde), pero el gráfico de Chow se dibujaba igual que la
 serie temporal, sin franjas ni aviso, y los cinco negativos no tenían marca. El usuario esperaba verlos como
 atípicos.

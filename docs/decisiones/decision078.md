@@ -2,7 +2,7 @@
 
 **Fecha:** 18 de octubre de 2026
 **Estado:** Decidida y aplicada (backend + frontend + informe PDF) — bloque B de
-`docs/plan-significancia-y-fixes-18-10-2026.md`.
+`docs/historico/planes/plan-significancia-y-fixes-18-10-2026.md`.
 **Decide:** Kevin, a partir de la respuesta de Facundo Ganancias Martínez.
 **Origen:** la consulta sobre el nivel de significancia de Chow, abierta desde la DECISIÓN 018.
 

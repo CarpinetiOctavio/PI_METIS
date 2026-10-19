@@ -233,3 +233,9 @@ registro de cuándo se estableció o modificó.
   Catalini) y `auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md`.
   `decisiones/` llega a `decision076.md` (075, exportación PDF; 076, rótulo del
   período de retorno).
+- **19/10/2026** — plan de nivel de significancia configurable y fixes de
+  resultados cerrado: el plan y su estado de ejecución pasan a
+  `historico/planes/` (resumen en `planes-implementados.md` §18).
+  `decisiones/` llega a `decision079.md` (078, α configurable; 079, Chow con
+  todos los atípicos). Lo que quedó abierto está en `pendientes-tecnicos.md`
+  y `auditoria/pendientes/pendientes-facundo.md`.
