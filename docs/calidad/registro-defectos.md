@@ -64,10 +64,11 @@ dos (D-08 y D-09): son dos fallas distintas, con tests distintos.
 | D-08 | [#121](https://github.com/CarpinetiOctavio/PI_METIS/issues/121) | GVE Momentos-L con la serie en orden ascendente | crítica | auditoría | cerrado | `test_gve.py::test_gve_ml_q100_serie_facundo` | auditoría de 4 fases (#15) |
 | D-09 | [#122](https://github.com/CarpinetiOctavio/PI_METIS/issues/122) | Log-Normal 3p con exponente 1/4 en σ̂y (IV-116) | crítica | auditoría | cerrado | `test_lognormal3p.py::test_lognormal3p_momentos_sigma_y_raiz_cuadrada` | DECISIÓN 015 (#15) |
 | D-10 | [#123](https://github.com/CarpinetiOctavio/PI_METIS/issues/123) | El warning de muestra chica de Mann-Kendall no llega a la lista agregada | baja | revisión | cerrado (09/10/2026) | `test_trend.py::test_muestra_chica_de_mann_kendall_llega_a_los_warnings_agregados` y `test_pipeline_etapa1.py::test_muestra_chica_de_wald_y_mann_kendall_sale_como_un_solo_warning` | `fix/mann-kendall-muestra-chica` |
+| D-11 | [#130](https://github.com/CarpinetiOctavio/PI_METIS/issues/130) | El PDF declara α = 5 % en el subtítulo y 95 % en el correlograma con cualquier α (DECISIÓN 078) | media | uso real | abierto (fix en `feature/significancia-configurable`) | `unit/reportes/test_pdf.py::test_subtitulo_declara_el_alfa_del_analisis` y `unit/reportes/test_pdf.py::test_correlograma_rotula_la_confianza_del_analisis` | Kevinmass/PI_METIS#6 |
 
 Las rutas de los tests del backend son relativas a `backend/tests/` (`integration/`, `unit/core/…`, `unit/api/`).
 
-**Lectura rápida.** 5 de los 10 son críticos, y los cinco son resultados incorrectos en silencio: el motor siguió
+**Lectura rápida.** De los diez históricos (D-01 a D-10), 5 son críticos, y los cinco son resultados incorrectos en silencio: el motor siguió
 corriendo y entregó un número o una serie mal armada sin avisar. Ninguno de los críticos lo encontró el uso de la
 app: salieron de auditar contra la tesis (D-08, D-09), de un test escrito al desarrollar (D-03) o de revisar el
 código (D-04, D-05). Los dos de uso real con severidad alta (D-01, D-02) son de la interfaz y motivaron las capas 1 y
