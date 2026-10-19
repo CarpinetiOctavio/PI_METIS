@@ -112,3 +112,28 @@ backend no podía hacer otra cosa: el request no decía qué distribución+méto
   sola al original.
 - **Explorar no es decidir (DECISIÓN 062):** la elección registrada no cambia y nada se persiste. Se mantiene
   la misma distribución+método: elegir otra sobre el ranking simulado sigue requiriendo el bloque B.
+
+### Revisión 18/10/2026 — la exploración de otra distribución respeta la simulación
+
+En uso real, después de excluir el atípico de 950 y recalcular, la columna de exploración de
+`Etapa2Explorador` seguía llamando a `POST /analysis/{id}/design-events`, que parte del ranking persistido de
+la serie original: la curva explorada se veía con el 950 adentro aunque la simulación vigente lo hubiera
+quitado, y no había forma de verla sin él. Bloque A de `docs/plan-significancia-y-fixes-18-10-2026.md`.
+
+- **Sin endpoint nuevo.** Explorar bajo una simulación es llamar a `simulate-exclusion` con los mismos puntos
+  excluidos y la combinación explorada en `seleccion` (el campo del addendum anterior). Sigue sin estado y sin
+  tocar `decisiones` (DECISIÓN 062).
+- **`etapa2.seleccion.estado`** (respuesta): el status de la combinación sobre la serie sin los puntos (`ok`,
+  `no_converge`, `no_aplicable`, `disabled_zeros`, `disabled_negatives`; una combinación que no está en el
+  ranking es `no_aplicable`). Antes, una combinación que dejaba de ajustar volvía con los eventos en `null` sin
+  decir por qué. Solo lo trae esta respuesta: la `seleccion` persistida del historial no lo tiene.
+- **Un único selector "Ver resultados: Original | Sin los puntos excluidos"** sobre la comparación, que cambia
+  a la vez la elección registrada y la exploración. Comparar la elección sin los puntos contra una exploración
+  con los puntos no tiene sentido, y dos selectores independientes invitan a ese error. Aparece solo con una
+  simulación vigente que tenga Etapa 2. En CU-02 (sin exploración) queda donde estaba, en "Evento de diseño".
+- **La exploración se pide dos veces en paralelo** cuando hay simulación (contra el análisis original y sin los
+  puntos), y la vista simulada usa los `puntos_empiricos` de la simulación. Si la simulación cambia o se limpia,
+  la exploración simulada que había deja de mostrarse y se vuelve a pedir: ninguna vista queda mostrando una
+  simulación vieja. Si la combinación no ajusta sin los puntos, la vista lo explica con el status.
+- Tests: `test_simulate_exclusion.py` (combinación que ajusta con el atípico y no sin él), `Etapa2Explorador.test.tsx`
+  y `ResultsPage.simulacion.test.tsx`.

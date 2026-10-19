@@ -51,7 +51,11 @@ async def test_con_etapa_2_devuelve_el_ranking_completo_sin_seleccion():
     assert r["etapa2"]["seleccion"] is None
 
 
-SELECCION = {"distribucion": "gumbel", "metodo": "momentos", "periodos_retorno": [2, 10, 100]}
+SELECCION = {
+    "distribucion": "gumbel",
+    "metodo": "momentos",
+    "periodos_retorno": [2, 10, 100],
+}
 
 
 @pytest.mark.unit
@@ -89,6 +93,40 @@ async def test_combinacion_que_no_ajusta_devuelve_eventos_en_null_como_el_stream
     seleccion = r["etapa2"]["seleccion"]
     assert [e["valor"] for e in seleccion["eventos_diseno"]] == [None, None, None]
     assert seleccion["curva_ajuste"] == []
+    assert seleccion["estado"] == "no_aplicable"
+
+
+@pytest.mark.unit
+async def test_seleccion_que_ajusta_trae_estado_ok():
+    r = await simulate_exclusion(_body(etapas=[1, 2], seleccion=SELECCION))
+    assert r["etapa2"]["seleccion"]["estado"] == "ok"
+
+
+@pytest.mark.unit
+async def test_combinacion_que_ajusta_con_el_atipico_y_no_sin_el_explica_por_que():
+    # Revisión de DECISIÓN 071 (18/10/2026): explorar otra distribución bajo una
+    # simulación. Con esta serie, Exponencial x0-β por momentos ajusta con el 5000
+    # y queda no_aplicable sin él: la interfaz necesita el estado para explicarlo.
+    seleccion = {
+        "distribucion": "exponencial_x0_beta",
+        "metodo": "momentos",
+        "periodos_retorno": [2, 10],
+    }
+    con = await simulate_exclusion(
+        _body(indices_excluidos=[], etapas=[1, 2], seleccion=seleccion)
+    )
+    sin = await simulate_exclusion(_body(etapas=[1, 2], seleccion=seleccion))
+
+    assert con["etapa2"]["seleccion"]["estado"] == "ok"
+    assert all(
+        e["valor"] is not None for e in con["etapa2"]["seleccion"]["eventos_diseno"]
+    )
+    assert sin["etapa2"]["seleccion"]["estado"] == "no_aplicable"
+    assert [e["valor"] for e in sin["etapa2"]["seleccion"]["eventos_diseno"]] == [
+        None,
+        None,
+    ]
+    assert sin["etapa2"]["seleccion"]["curva_ajuste"] == []
 
 
 @pytest.mark.unit
@@ -107,7 +145,9 @@ async def test_seleccion_sin_etapa_2_no_calcula_nada():
     ],
     ids=["periodo-invalido", "sin-distribucion", "pendiente-validacion"],
 )
-async def test_seleccion_invalida_400_con_el_codigo_de_distribution_decision(seleccion, codigo):
+async def test_seleccion_invalida_400_con_el_codigo_de_distribution_decision(
+    seleccion, codigo
+):
     with pytest.raises(HTTPException) as exc_info:
         await simulate_exclusion(_body(etapas=[1, 2], seleccion=seleccion))
 
