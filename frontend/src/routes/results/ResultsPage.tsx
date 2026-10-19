@@ -6,15 +6,17 @@ import {
   postSimularExclusion,
 } from "../../api/analysis";
 import { Etapa1ResultView } from "./Etapa1ResultView";
-import { Etapa2Explorador } from "./Etapa2Explorador";
+import { Etapa2Explorador, type SimulacionExplorable } from "./Etapa2Explorador";
 import { Etapa2RankingView } from "./Etapa2RankingView";
 import { Etapa2EventosView } from "./Etapa2EventosView";
 import { ExportarPdfButton } from "./ExportarPdfButton";
 import type { ContextoSerie } from "../../i18n/periodoRetorno";
+import { textoSinAjusteSimulado } from "../../i18n/estadoMetodo";
 import type {
   CramerParticion,
   Etapa1Result,
   Modo,
+  SimulateExclusionRequest,
   SimulateExclusionResponse,
   TipoVariable,
 } from "../../api/types";
@@ -59,9 +61,9 @@ export function ResultsPage() {
   const result = locationState?.result;
 
   // What-if de atípicos: la simulación que vale para los puntos excluidos hoy
-  // (Etapa1GraficosView avisa cuál es). Con ella, "Evento de diseño" puede
-  // mostrar la elección reajustada sin esos puntos. Al llegar una nueva se pasa
-  // a esa vista; la elección registrada no cambia (DECISIÓN 062).
+  // (Etapa1GraficosView avisa cuál es). Con ella, "Evento de diseño" y la
+  // exploración pueden mostrarse reajustados sin esos puntos. Al llegar una
+  // nueva se pasa a esa vista; la elección registrada no cambia (DECISIÓN 062).
   const [simulacion, setSimulacion] = useState<SimulateExclusionResponse | null>(null);
   const [vistaEventos, setVistaEventos] = useState<"original" | "simulada">("original");
   const alCambiarSimulacion = useCallback((nueva: SimulateExclusionResponse | null) => {
@@ -106,41 +108,49 @@ export function ResultsPage() {
   // junto a la exploración, dentro de Etapa2Explorador, para compararlas; sin
   // él (CU-02) se muestra aparte, debajo del ranking de solo lectura.
   const explorable = Boolean(etapa2Resultado && analysisId);
-  const seleccionSimulada = simulacion?.etapa2?.seleccion ?? null;
-  const verSimulada = vistaEventos === "simulada" && seleccionSimulada !== null;
-  const aniosExcluidos = simulacion?.excluidos.map((e) => e.periodo).join(", ");
-  const eventoDiseno = eventosDiseno && (
-    <>
-      <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
-        Evento de diseño
-      </h2>
-      {simulacion && seleccionSimulada && (
-        <div className="seg" role="group" aria-label="Qué eventos de diseño mostrar">
-          <button
-            type="button"
-            className={verSimulada ? "" : "on"}
-            aria-pressed={!verSimulada}
-            onClick={() => setVistaEventos("original")}
-          >
-            Original
-          </button>
-          <button
-            type="button"
-            className={verSimulada ? "on" : ""}
-            aria-pressed={verSimulada}
-            onClick={() => setVistaEventos("simulada")}
-          >
-            Sin los puntos excluidos
-          </button>
-        </div>
-      )}
-      {simulacion && !seleccionSimulada && (
+  // Revisión de DECISIÓN 071 (18/10/2026): un único selector de vista para la
+  // elección y la exploración, solo con una simulación vigente que tenga Etapa 2.
+  const simulacionConEtapa2 = simulacion?.etapa2 ? simulacion : null;
+  const seleccionSimulada = simulacionConEtapa2?.etapa2?.seleccion ?? null;
+  const vistaSimulada = vistaEventos === "simulada" && simulacionConEtapa2 !== null;
+  const verSimulada = vistaSimulada && seleccionSimulada !== null;
+  const estadoSimulado = seleccionSimulada?.estado;
+  const aniosExcluidos = simulacion?.excluidos.map((e) => e.periodo).join(", ") ?? "";
+  const selectorVista = simulacionConEtapa2 && (
+    <div className="seg" role="group" aria-label="Ver resultados">
+      <button
+        type="button"
+        className={vistaSimulada ? "" : "on"}
+        aria-pressed={!vistaSimulada}
+        onClick={() => setVistaEventos("original")}
+      >
+        Original
+      </button>
+      <button
+        type="button"
+        className={vistaSimulada ? "on" : ""}
+        aria-pressed={vistaSimulada}
+        onClick={() => setVistaEventos("simulada")}
+      >
+        Sin los puntos excluidos
+      </button>
+    </div>
+  );
+
+  let eventosSimulados = null;
+  if (verSimulada && seleccionSimulada) {
+    eventosSimulados =
+      estadoSimulado && estadoSimulado !== "ok" ? (
         <p className="sub">
-          Sin los puntos excluidos no hay Etapa 2 que recalcular (Etapa 1 queda
-          rechazada), así que los eventos de diseño siguen siendo los del análisis original.
+          {textoSinAjusteSimulado(
+            seleccionSimulada.distribucion,
+            seleccionSimulada.metodo,
+            estadoSimulado,
+            aniosExcluidos,
+          )}{" "}
+          La elección registrada no cambia.
         </p>
-      )}
-      {verSimulada && seleccionSimulada ? (
+      ) : (
         <>
           <p className="sub">
             Simulación: {seleccionSimulada.distribucion} · {seleccionSimulada.metodo}{" "}
@@ -149,11 +159,27 @@ export function ResultsPage() {
           <Etapa2EventosView
             key="simulada"
             eventos={seleccionSimulada}
-            puntosEmpiricos={simulacion?.etapa2?.puntos_empiricos ?? []}
+            puntosEmpiricos={simulacionConEtapa2?.etapa2?.puntos_empiricos ?? []}
             contextoSerie={contextoSerie}
           />
         </>
-      ) : (
+      );
+  }
+
+  const eventoDiseno = eventosDiseno && (
+    <>
+      <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+        Evento de diseño
+      </h2>
+      {/* Con exploración, el selector va sobre la comparación (Etapa2Explorador). */}
+      {!explorable && selectorVista}
+      {simulacion && !simulacion.etapa2 && (
+        <p className="sub">
+          Sin los puntos excluidos no hay Etapa 2 que recalcular (Etapa 1 queda
+          rechazada), así que los eventos de diseño siguen siendo los del análisis original.
+        </p>
+      )}
+      {eventosSimulados ?? (
         <Etapa2EventosView
           key="original"
           eventos={eventosDiseno}
@@ -168,9 +194,9 @@ export function ResultsPage() {
   // análisis a mano, que viaja en el router state desde ConfigPage.
   const datos = result.datos;
   const tipoVariable = locationState?.tipoVariable;
-  const simular: SimularFn | undefined =
+  const pedirSimulacion =
     datos?.timestamps_efectivos && tipoVariable
-      ? (indicesExcluidos) =>
+      ? (indicesExcluidos: number[], seleccion?: SimulateExclusionRequest["seleccion"]) =>
           postSimularExclusion({
             serie: datos.serie_efectiva,
             anios: datos.timestamps_efectivos!.map((t) => t.anio),
@@ -180,17 +206,43 @@ export function ResultsPage() {
             etapas: locationState?.etapas === "1,2" ? [1, 2] : [1],
             // DECISIÓN 078 — la simulación compara contra el mismo α.
             alfa: result.alfa ?? 0.05,
-            // Con la elección del stream, el backend recalcula también sus
-            // eventos de diseño sin los puntos excluidos.
-            ...(eventosDiseno && {
-              seleccion: {
-                distribucion: eventosDiseno.distribucion,
-                metodo: eventosDiseno.metodo,
-                periodos_retorno: eventosDiseno.eventos_diseno.map((e) => e.periodo_retorno),
-              },
-            }),
+            ...(seleccion && { seleccion }),
           })
       : undefined;
+  // Con la elección del stream, el backend recalcula también sus eventos de
+  // diseño sin los puntos excluidos.
+  const simular: SimularFn | undefined =
+    pedirSimulacion &&
+    ((indicesExcluidos) =>
+      pedirSimulacion(
+        indicesExcluidos,
+        eventosDiseno
+          ? {
+              distribucion: eventosDiseno.distribucion,
+              metodo: eventosDiseno.metodo,
+              periodos_retorno: eventosDiseno.eventos_diseno.map((e) => e.periodo_retorno),
+            }
+          : undefined,
+      ));
+  // Explorar otra distribución bajo la simulación vigente: el mismo endpoint, con
+  // los mismos puntos excluidos y la combinación explorada como `seleccion`.
+  const indicesSimulados = simulacionConEtapa2?.excluidos.map((e) => e.indice) ?? [];
+  const simulacionExplorable: SimulacionExplorable | null =
+    simulacionConEtapa2 && pedirSimulacion
+      ? {
+          clave: indicesSimulados.join(","),
+          aniosExcluidos,
+          puntosEmpiricos: simulacionConEtapa2.etapa2?.puntos_empiricos ?? [],
+          explorar: async (distribucion, metodo, periodosRetorno) => {
+            const respuesta = await pedirSimulacion(indicesSimulados, {
+              distribucion,
+              metodo,
+              periodos_retorno: periodosRetorno,
+            });
+            return respuesta.etapa2?.seleccion ?? null;
+          },
+        }
+      : null;
 
   return (
     <div className="results-page">
@@ -239,6 +291,9 @@ export function ResultsPage() {
               seleccionRegistrada={eventosDiseno}
               eleccion={eventoDiseno}
               contextoSerie={contextoSerie}
+              simulacion={simulacionExplorable}
+              vista={vistaSimulada ? "simulada" : "original"}
+              selectorVista={selectorVista}
             />
           ) : (
             <Etapa2RankingView

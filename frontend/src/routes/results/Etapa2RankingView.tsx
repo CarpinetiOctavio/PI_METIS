@@ -1,19 +1,13 @@
 import { useState } from "react";
 import { formatInt, formatNum } from "../../i18n/format";
 import { unidadPeriodoRetorno, type ContextoSerie } from "../../i18n/periodoRetorno";
+import { STATUS_LABEL } from "../../i18n/estadoMetodo";
 import type { DistribucionResult, Etapa2Result, MetodoStatus, WarningItem } from "../../api/types";
 import { SpotlightCard } from "../../components/SpotlightCard";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
 import "./Etapa2RankingView.css";
 
-const STATUS_LABEL: Record<MetodoStatus, string> = {
-  ok: "ajustado",
-  no_converge: "no converge",
-  no_aplicable: "no aplicable",
-  disabled_zeros: "deshabilitada por ceros",
-  disabled_negatives: "no aplica: la serie tiene valores negativos",
-};
 
 // DECISIÓN 074 — respaldo SOLO para análisis persistidos antes de esa decisión,
 // que no traen `pendiente_validacion` (sin backfill, DECISIÓN 058 §4). La fuente
