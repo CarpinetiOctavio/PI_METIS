@@ -1,5 +1,7 @@
 # Estado de ejecución — plan de significancia y fixes (18/10/2026)
 
+> **Cerrado el 19/10/2026.** Los cuatro bloques se mergearon al `staging` del fork (PRs #5 a #8) y la verificación final está hecha. Lo que sigue abajo es el estado de ejecución tal como quedó durante el trabajo; el resumen final está en `docs/planes-implementados.md` §18.
+
 Para el agente que siga. Plan: `docs/plan-significancia-y-fixes-18-10-2026.md`. Se trabaja en el **fork
 `Kevinmass/PI_METIS`** (Octavio todavía no dio permisos en el original); Kevin mergea después.
 

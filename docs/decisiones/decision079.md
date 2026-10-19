@@ -2,7 +2,7 @@
 
 **Fecha:** 18 de octubre de 2026
 **Estado:** Decidida y aplicada (backend + frontend + informe PDF) — bloque C de
-`docs/plan-significancia-y-fixes-18-10-2026.md`.
+`docs/historico/planes/plan-significancia-y-fixes-18-10-2026.md`.
 **Decide:** Kevin, a partir de un caso encontrado al usar el sistema.
 **Depende de:** DECISIÓN 078 (el α de Chow, en cada extremo).
 

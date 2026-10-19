@@ -118,7 +118,7 @@ backend no podía hacer otra cosa: el request no decía qué distribución+méto
 En uso real, después de excluir el atípico de 950 y recalcular, la columna de exploración de
 `Etapa2Explorador` seguía llamando a `POST /analysis/{id}/design-events`, que parte del ranking persistido de
 la serie original: la curva explorada se veía con el 950 adentro aunque la simulación vigente lo hubiera
-quitado, y no había forma de verla sin él. Bloque A de `docs/plan-significancia-y-fixes-18-10-2026.md`.
+quitado, y no había forma de verla sin él. Bloque A de `docs/historico/planes/plan-significancia-y-fixes-18-10-2026.md`.
 
 - **Sin endpoint nuevo.** Explorar bajo una simulación es llamar a `simulate-exclusion` con los mismos puntos
   excluidos y la combinación explorada en `seleccion` (el campo del addendum anterior). Sigue sin estado y sin
