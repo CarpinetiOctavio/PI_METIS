@@ -188,3 +188,9 @@ La pregunta de gobernanza abierta (D3) se resuelve con la **opción 1** (gate bl
 y sus checks y los de CI pasan a requeridos en el ruleset. Necesita permisos de administración del repositorio, así
 que se aplica en el último PR del plan del TP de Calidad de Software (`docs/plan-tp-calidad-software.md`, B13). Hasta
 ese PR el gate sigue consultivo, y lo cubre el gate propio de CI de DECISIÓN 077 (`diff-cover` y `jscpd`).
+
+## Addendum 14/10/2026 — `.sonarcloud.properties` se borra (B13)
+
+Con SonarCloud por CI ([DECISIÓN 077](decision077.md), addendum del 14/10/2026) el Análisis Automático queda
+desactivado y el scanner lee `sonar-project.properties`. `.sonarcloud.properties` ya no lo lee nadie: se borra y sus
+exclusiones pasan a `sonar-project.properties`.

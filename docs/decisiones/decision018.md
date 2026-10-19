@@ -93,3 +93,13 @@ referencia externa (N=30), se mantiene sin cambios.
 
 **Estado: CONFIRMADO** (pasa de IMPLEMENTADO — PROVISORIO a definitivo).
 Sin cambios de código — el valor implementado ya era el correcto.
+
+### Revisión - 18 de Octubre de 2026 — nivel de significancia resuelto
+
+Respondido por Facundo Ganancias Martínez el 18/10/2026: 5 % como estándar hidrológico, para Chow y para
+todas las pruebas. La implementación anterior (α = 0,10 repartido en dos colas, `t_{1−0,10/(2n)}`) ya
+equivalía a 5 % por extremo (`t_{1−0,05/n}`); se reescribe en función de α sin cambiar ningún valor, y α
+pasa a ser elegible entre 1 %, 5 % y 10 % para toda la Etapa 1 (DECISIÓN 078). Con α = 0,10 y n = 30,
+K_N = 2,5651 contra 2,563 de la tabla de Bulletin 17B a 10 %.
+
+**Estado: RESUELTO** — sin consultas abiertas sobre el nivel de significancia de Chow.

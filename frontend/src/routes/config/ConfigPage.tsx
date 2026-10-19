@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { postPreviewColumns } from "../../api/analysis";
 import type {
+  Alfa,
   AnalysisStreamForm,
   ColumnaPreview,
   CramerParticion,
@@ -18,6 +19,7 @@ import type {
   TipoVariable,
 } from "../../api/types";
 import { etiquetaSelectorMes } from "../../i18n/mesInicioAnio";
+import { NIVELES_ALFA } from "../../i18n/alfa";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
 import { ColumnPreviewPanel } from "./ColumnPreviewPanel";
@@ -162,6 +164,9 @@ export function ConfigPage() {
   // PR 2.5 (DECISIÓN 065 / R0.2) — default "pico", igual que el backend. Se
   // manda siempre; solo tiene efecto con carga diaria.
   const [variableDiaria, setVariableDiaria] = useState<"pico" | "media">("pico");
+  // DECISIÓN 078 — 5 % marcado por defecto: es una configuración de la prueba
+  // (el estándar en hidrología), no una sugerencia sobre los resultados.
+  const [alfa, setAlfa] = useState<Alfa>(0.05);
   const [error, setError] = useState<string | null>(null);
   // Bloque E3 (pasada 5) — movida por onFocus/onBlur de los <select>, no por
   // su valor: resalta en ColumnPreviewPanel qué columna está eligiendo cada
@@ -261,6 +266,7 @@ export function ConfigPage() {
       etapas,
       mes_inicio_anio: mesInicioAnio,
       variable_diaria: variableDiaria,
+      alfa,
     };
     // El form (incluido el File) viaja como router state — no persiste a un
     // refresh, pero StreamPage lo consume una sola vez al montar, así que no
@@ -686,6 +692,26 @@ export function ConfigPage() {
                 : "Los dos bloques se toman del final del registro — el primer porcentaje es el período más largo."}
             </p>
           </div>
+          <fieldset className="field config-alfa">
+            <legend>Nivel de significancia de la Etapa 1</legend>
+            <div className="seg">
+              {NIVELES_ALFA.map(({ valor, rotulo }) => (
+                <button
+                  key={valor}
+                  type="button"
+                  className={alfa === valor ? "on" : ""}
+                  aria-pressed={alfa === valor}
+                  onClick={() => setAlfa(valor)}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+            <p className="fn">
+              Con 10 % las pruebas rechazan con más facilidad, porque la zona de
+              rechazo es más amplia; con 1 % solo rechazan ante evidencia muy fuerte.
+            </p>
+          </fieldset>
           <Magnet style={{ width: "100%", marginTop: 12 }}>
             <SpecularHighlight style={{ width: "100%" }}>
               <button type="submit" className="b b-pri" style={{ width: "100%" }}>

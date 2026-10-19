@@ -32,10 +32,13 @@ export function Etapa1GraficosView({
   resultado,
   simular,
   onSimulacionVigente,
+  tipoVariable,
 }: Readonly<{
   datos: Etapa1Datos;
   chow?: TestResultDetail;
   mesInicioAnio?: number;
+  // Para el texto de Chow no ejecutada: "físicamente imposible" solo en caudal.
+  tipoVariable?: string;
   nombreArchivo?: string | null;
   // A2 — el resultado original (para compararlo) y cómo pedir el simulado. Sin
   // `simular` no hay botón de recalcular: queda la exclusión de A1.
@@ -80,6 +83,7 @@ export function Etapa1GraficosView({
         chow={chow}
         mesInicioAnio={mesInicioAnio}
         seleccion={seleccion}
+        tipoVariable={tipoVariable}
       />
       {puntos.length > 0 && (
         <Etapa1ExclusionPanel
@@ -87,7 +91,18 @@ export function Etapa1GraficosView({
           excluidos={excluidos}
           onToggle={alternar}
           onLimpiar={limpiar}
-          sugerido={datos.indice_atipico}
+          sugeridos={
+            chow?.valores_atipicos
+              ? chow.valores_atipicos.map((a) => a.indice)
+              : datos.indice_atipico !== null
+                ? [datos.indice_atipico]
+                : []
+          }
+          noValidos={
+            chow?.veredicto === "no_ejecutada"
+              ? (chow.valores_no_validos ?? []).map((v) => v.indice)
+              : []
+          }
           resolucionOriginal={datos.resolucion_original}
           nombreArchivo={nombreArchivo}
           onRecalcular={simular && resultado ? () => calcular(excluidos) : undefined}

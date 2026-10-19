@@ -210,6 +210,38 @@ jobs:
           path: carga/resultados/
           retention-days: 30
 
+  # SonarCloud por CI (B13, DECISIÓN 077): reemplaza al Análisis Automático, que no importa cobertura.
+  # Son excluyentes: con el automático activo este job falla. Reusa la cobertura de los jobs test y
+  # frontend y espera el resultado del quality gate de Sonar, así el job falla si el gate falla.
+  sonarcloud:
+    name: SonarCloud (análisis y quality gate)
+    runs-on: ubuntu-latest
+    needs: [test, frontend]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Sonar necesita el historial para separar código nuevo de código total.
+      - uses: actions/download-artifact@v4
+        with:
+          name: reporte-backend
+          path: reportes/backend
+      - uses: actions/download-artifact@v4
+        with:
+          name: reporte-frontend
+          path: reportes/frontend
+      # coverage.xml trae <source> absoluto del job test (mismo path en este runner). El lcov de
+      # Vitest trae SF relativo a frontend/: se reescribe a la raíz del repo, igual que en quality-gate.
+      - run: sed -E 's#^SF:src/#SF:frontend/src/#' reportes/frontend/coverage/lcov.info > reportes/frontend/lcov-repo.info
+      # Action de terceros fijada por SHA y no por tag (Sonar S7637: un tag se puede mover). v8.3.0.
+      - uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=600
+
   # Gate propio, independiente de SonarCloud (DECISIÓN 077): cobertura del código nuevo
   # ≥ 80 % (diff-cover, solo en PR) y duplicación ≤ 5 % (jscpd). Resume todo en el job.
   quality-gate:

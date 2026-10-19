@@ -299,3 +299,48 @@ revirtió la pasada 5 (DECISIÓN 051).
   - **En `pendientes-tecnicos.md`:** la inversa exacta en lugar de Wilson-Hilferty, candidata para la V2.
 - **Archivo:** [`auditoria/comparacion-herramientas/README.md`](auditoria/comparacion-herramientas/README.md),
   [`auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md`](auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md).
+
+## 18. Nivel de significancia configurable, Chow con todos los atípicos y fixes de resultados
+
+- **Fechas y PRs:** 18 y 19/10. Cuatro PRs al `staging` del fork `Kevinmass/PI_METIS`, uno por bloque y
+  mergeados el 19/10: **#5** (A), **#6** (B), **#7** (C) y **#8** (D). Llegaron al repo original en el **#132**,
+  junto con B13.
+- **Qué pedía:** dos cosas. La respuesta de Facundo del 18/10 sobre Chow: el 5 % es el estándar en hidrología, y
+  dar a elegir 1 % y 10 % sería un plus. Y tres problemas que Kevin encontró al usar el sistema: la exploración de
+  otra distribución ignoraba la simulación de exclusión, Chow no decía por qué no marcaba nada con negativos, y en
+  la serie diaria de 40 años marcaba 1994 pero no 2005, que también quedaba fuera de las franjas.
+- **Qué se hizo:**
+  - **#5 (A):** `Etapa2Explorador` explora también sin los puntos excluidos, con un selector "Original / Sin los
+    puntos excluidos".
+  - **#6 (B):** α elegible (1 %, 5 % por defecto, 10 %) en toda la Etapa 1, Chow incluida, en el stream, la
+    simulación, la persistencia, el historial, el PDF y el paso a paso. Código nuevo `CONTRACT_ALFA_INVALID`. Con
+    α = 5 % no se mueve ningún número: `test_no_regresion_alfa.py` contra las 9 estaciones, Las Tapias y las series
+    de prueba.
+  - **#7 (C):** Chow marca todos los valores fuera de los dos umbrales de Bulletin 17B, altos y bajos, en una sola
+    pausa con una decisión por punto. Código nuevo `OUTLIER_DECISION_INVALID`.
+  - **#8 (D):** Chow no ejecutada informa los valores que lo impidieron (`valores_no_validos`), y el gráfico y el
+    panel de exclusión los marcan aparte de los atípicos.
+- **Lo que salió en la verificación (19/10):**
+  - **D-11 ([#130](https://github.com/CarpinetiOctavio/PI_METIS/issues/130)):** el PDF decía "α = 5 %" en el
+    subtítulo y "95 %" en la leyenda del correlograma con cualquier α. Se corrigió en #6, con dos tests.
+  - **CI de #6:** `test_no_regresion_alfa.py` comparaba floats con `==` contra una referencia generada en otra
+    máquina, y en el runner cambiaba el último dígito. Ahora compara con tolerancia relativa 1e-9, que sigue
+    detectando un cambio real de valor crítico (1,96 contra `norm.ppf(0,975)` difiere en 1,8e-5). SonarCloud marcó
+    tres comparaciones de α con `==` (S1244) y se pasaron a comparación con tolerancia.
+  - **Recorrido en el navegador:** Las Tapias con α = 1, 5 y 10 % (K_N = 2,82369 con 5 %, el 2,824 del plan); la
+    serie con el atípico de 950; la diaria de 40 años (1994 y 2005, uno rechazado y otro aceptado); y la de
+    negativos, como caudal y como "Otro". En experto y paso a paso, anónimo y con sesión. Más los PDF con α = 10 %,
+    con y sin simulación. Las capturas quedaron fuera del repo.
+  - **Cifras al cierre** (CI de #8): backend 920 tests de unidad e integración y 7 de smoke, frontend 532, E2E 7.
+    Decisiones: 77 archivos, de la 001 a la 079.
+- **Decisiones:** 078 (α configurable) y 079 (todos los atípicos de Chow). Revisiones de la 018 (el nivel de
+  significancia de Chow queda resuelto), la 071 (exploración sin los puntos excluidos) y la 073 (Chow no
+  ejecutada), y addendum a la 038 (prefijo `OUTLIER` en el catálogo).
+- **Quedó abierto:**
+  - **En `pendientes-facundo.md`:** si la tolerancia de rezagos de Anderson acompaña a α. No bloquea: queda fija.
+  - **En `pendientes-tecnicos.md`:** el gráfico de Chow dentro del diálogo de la pausa; el texto "decisión
+    pendiente del usuario" del warning de Chow en la simulación, donde no hay pausa; y el tooltip del último punto
+    del gráfico de Chow, que se corta en el borde.
+  - El PDF de un análisis guardado antes de estos cambios se cubrió solo con tests (`alfa_implicito`), sin captura.
+- **Archivo:** [`plan-significancia-y-fixes-18-10-2026.md`](historico/planes/plan-significancia-y-fixes-18-10-2026.md)
+  y su estado de ejecución, [`estado-plan-significancia-18-10-2026.md`](historico/planes/estado-plan-significancia-18-10-2026.md).

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAnalysisStream } from "../../api/sse";
-import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
+import type { AnalysisStreamForm, DecisionAtipico, TestResultDetail } from "../../api/types";
 import { CountUp } from "../../components/CountUp";
 import { Etapa2RankingView } from "../results/Etapa2RankingView";
+import { DecisionAtipicos } from "./DecisionAtipicos";
 import "./StreamPage.css";
 
 interface Group {
@@ -261,10 +262,10 @@ export function StreamPage() {
 
   if (!form) return null;
 
-  async function handleOutlierDecision(decision: "rechazar" | "aceptar") {
+  async function handleOutlierDecision(decisiones: Record<number, DecisionAtipico>) {
     setResolving(true);
     try {
-      await resolveOutlier(decision);
+      await resolveOutlier(decisiones);
     } finally {
       setResolving(false);
     }
@@ -463,48 +464,17 @@ export function StreamPage() {
             tabIndex={-1}
           >
             <h2 id="outlier-title" className="h">
-              Dato atípico detectado
+              {state.outlier.atipicos.length === 1
+                ? "Dato atípico detectado"
+                : "Datos atípicos detectados"}
             </h2>
-            <p className="sub">
-              Chow detectó un valor atípico:{" "}
-              <span className="num">
-                <CountUp value={state.outlier.valor_atipico} />
-              </span>
-              . ¿Qué hacemos con este dato?
-            </p>
-            <ul id="outlier-opciones" className="sub">
-              <li>
-                <b>Rechazar:</b> el dato se excluye de la serie y Etapa 1 se recalcula sin él.
-              </li>
-              <li>
-                <b>Aceptar:</b> el dato se conserva como parte de la población.
-              </li>
-            </ul>
-            <p className="sub">METIS no recomienda ninguna de las dos: la decisión es tuya.</p>
-            {/* Los dos botones son idénticos a propósito (misma clase, sin
-                efectos de hover propios): un estilo primario en uno solo
-                sesgaría la decisión, y METIS detecta y advierte pero no
-                decide por el usuario. */}
-            <div className="row">
-              <button
-                type="button"
-                className="b b-sec"
-                aria-describedby="outlier-opciones"
-                disabled={resolving}
-                onClick={() => handleOutlierDecision("rechazar")}
-              >
-                Rechazar
-              </button>
-              <button
-                type="button"
-                className="b b-sec"
-                aria-describedby="outlier-opciones"
-                disabled={resolving}
-                onClick={() => handleOutlierDecision("aceptar")}
-              >
-                Aceptar
-              </button>
-            </div>
+            {/* DECISIÓN 079 — una sola pausa con todos los valores fuera de los
+                umbrales, y una decisión por punto. */}
+            <DecisionAtipicos
+              atipicos={state.outlier.atipicos}
+              resolving={resolving}
+              onConfirmar={handleOutlierDecision}
+            />
           </div>
         </div>
       )}

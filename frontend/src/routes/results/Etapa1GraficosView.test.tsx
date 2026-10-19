@@ -3,8 +3,8 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderPage } from "../../test/renderPage";
 import { mockChartRect } from "../../test/chartRect";
-import { makeEtapa1Datos } from "../../test/etapa1Fixtures";
-import type { Etapa1Datos } from "../../api/types";
+import { makeEtapa1Datos, makeTestResult } from "../../test/etapa1Fixtures";
+import type { Etapa1Datos, TestResultDetail } from "../../api/types";
 import { descargarCsv } from "./exclusiones";
 import { Etapa1GraficosView } from "./Etapa1GraficosView";
 
@@ -19,9 +19,17 @@ vi.mock("./exclusiones", async (importOriginal) => ({
 // desde el cx/cy del marcador más ese margen, con el rect mockeado 1:1.
 const MARGEN = { left: 88, top: 12 };
 
-function montar(overrides: Partial<Etapa1Datos> = {}, nombreArchivo?: string) {
+function montar(
+  overrides: Partial<Etapa1Datos> = {},
+  nombreArchivo?: string,
+  chow?: TestResultDetail,
+) {
   const { container } = renderPage(
-    <Etapa1GraficosView datos={makeEtapa1Datos(overrides)} nombreArchivo={nombreArchivo} />,
+    <Etapa1GraficosView
+      datos={makeEtapa1Datos(overrides)}
+      nombreArchivo={nombreArchivo}
+      chow={chow}
+    />,
   );
   // Las celdas de la grilla por década: un botón aria-pressed por año, en orden
   // cronológico (las celdas vacías no son botones).
@@ -55,6 +63,49 @@ describe("Etapa1GraficosView — exclusión de puntos", () => {
     expect(huecos()).toBe(0);
     expect(screen.getByRole("button", { name: /Descargar serie sin los puntos/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Limpiar selección" })).toBeDisabled();
+  });
+
+  it("DECISIÓN 079 — todos los atípicos de Chow quedan sugeridos y ninguno seleccionado", () => {
+    const chow = makeTestResult({
+      prueba: "chow",
+      veredicto: "rechazada",
+      valor_atipico: 115,
+      indice_atipico: 5,
+      valores_atipicos: [
+        { indice: 5, valor: 115, z: 3.2, lado: "alto" },
+        { indice: 1, valor: 103, z: -2.9, lado: "bajo" },
+      ],
+    });
+    const { casillas } = montar({}, undefined, chow);
+
+    const sugeridas = casillas().filter((c) => /sugerido por Chow/.test(c.getAttribute("aria-label") ?? ""));
+    expect(sugeridas.map((c) => c.getAttribute("aria-label"))).toEqual([
+      "2001, 103, incluido, sugerido por Chow",
+      "2005, 115, incluido, sugerido por Chow",
+    ]);
+    expect(casillas().every((c) => c.getAttribute("aria-pressed") === "false")).toBe(true);
+  });
+
+  it("Chow no ejecutada: los valores que lo impidieron llevan su propia marca, no la de sugerido, y ninguno viene seleccionado", () => {
+    const chow = makeTestResult({
+      prueba: "chow",
+      veredicto: "no_ejecutada",
+      warning_codigo: "TEST_NOT_EXECUTED_NEGATIVES",
+      valores_no_validos: [
+        { indice: 2, valor: -1 },
+        { indice: 7, valor: -3 },
+      ],
+    });
+    const { casillas } = montar({ indice_atipico: null }, undefined, chow);
+
+    const marcadas = casillas().filter((c) => /no válido para Chow/.test(c.getAttribute("aria-label") ?? ""));
+    expect(marcadas.map((c) => c.getAttribute("aria-label"))).toEqual([
+      "2002, 106, incluido, valor no válido para Chow",
+      "2007, 121, incluido, valor no válido para Chow",
+    ]);
+    expect(casillas().some((c) => /sugerido por Chow/.test(c.getAttribute("aria-label") ?? ""))).toBe(false);
+    expect(casillas().every((c) => c.getAttribute("aria-pressed") === "false")).toBe(true);
+    expect(screen.getByText(/valor no válido para Chow \(no viene seleccionado\)/)).toBeInTheDocument();
   });
 
   it("marcar un año en la lista lo dibuja hueco en los DOS gráficos; Limpiar lo deshace", async () => {

@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision077.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision079.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -199,8 +199,10 @@ situ.
 | [070](decision070.md) | Umbral de DIST_HIGH_EEA: se mantiene en 5 %, configurabilidad diferida a v2 | 09/09/2026 | Confirmado — sin cambios de código funcional |
 | [071](decision071.md) | Exclusión de puntos: eliminar en cualquier posición y `POST /analysis/simulate-exclusion` sin estado (reemplazo por la media postergado) | 01/10/2026 | Decidida y aplicada (backend + frontend) |
 | 072 | *(reservado — exploración de distribuciones sin id para CU-02, bloque B del plan de backend del feedback de directores; no entra en el plan del 01/10)* | — | Pendiente |
-| [073](decision073.md) | Valores negativos: estado propio `disabled_negatives` en Etapa 2 y código propio `TEST_NOT_EXECUTED_NEGATIVES` para Chow | 01/10/2026 | Decidida y aplicada (backend) |
+| [073](decision073.md) | Valores negativos: estado propio `disabled_negatives` en Etapa 2 y código propio `TEST_NOT_EXECUTED_NEGATIVES` para Chow | 01/10/2026 | Decidida y aplicada (backend); revisión 19/10/2026: presentación de Chow no ejecutada (backend + frontend) |
 | [074](decision074.md) | Generalizada de Pareto "pendiente de validación" en V1.0: se calcula y se muestra, pero no se puede elegir y va al final del ranking | 01/10/2026 | Decidida y aplicada (backend + frontend) — se cierra con el addendum de la V2 |
 | [075](decision075.md) | Exportación PDF de CU-01: ReportLab + matplotlib en el backend, siempre formato Experto, módulo `metis/reportes/` | 06/10/2026 | Decidida y aplicada (backend + frontend) |
 | [076](decision076.md) | El período de retorno se rotula según la serie que se ajustó: T sigue en años, el texto dice qué se cargó y qué representa el valor de diseño | 08/10/2026 | Decidida y aplicada (frontend + informe PDF) |
 | [077](decision077.md) | Pruebas de carga y esfuerzo sostenido (k6, confirmada por la prueba de concepto de B7), cobertura y quality gate en CI, SonarCloud por CI — resuelve D3 de DECISIÓN 044 | 08/10/2026 | Aplicada salvo Sonar por CI y checks requeridos (último PR, requieren admin) — B1a y B7 de `docs/plan-tp-calidad-software.md`; Sonar por CI y checks requeridos en el último PR (requieren admin del repo) |
+| [078](decision078.md) | Nivel de significancia configurable en la Etapa 1 (1 %, 5 % por defecto, 10 %), Chow con el mismo α en cada extremo — resuelve el nivel de significancia de DECISIÓN 018 | 18/10/2026 | Decidida y aplicada (backend + frontend + PDF) |
+| [079](decision079.md) | Chow marca todos los valores fuera de los umbrales (altos y bajos, Bulletin 17B), una sola pausa con una decisión por punto y `OUTLIER_DECISION_INVALID` | 18/10/2026 | Decidida y aplicada (backend + frontend + PDF) |

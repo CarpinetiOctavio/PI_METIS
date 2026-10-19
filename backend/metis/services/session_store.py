@@ -27,6 +27,9 @@ class SessionState:
     tiene_ceros: bool = False
     tiene_negativos: bool = False  # DECISIÓN 073
     etapa2: Etapa2Result | None = None
+    # DECISIÓN 079 — los atípicos de Chow que esperan decisión, para validar
+    # que outlier-decision decida exactamente esos y ninguno más.
+    atipicos_pendientes: list[dict] | None = None
     created_at: float = field(default_factory=time.monotonic)
 
 

@@ -8,8 +8,11 @@ de banda), porque el frontend lo dibuja tal cual sin recalcular nada.
 import numpy as np
 import pytest
 
-from metis.core.etapa1.independence import Z_CRIT, calcular_anderson
+from metis.core.etapa1.independence import calcular_anderson
 from metis.core.etapa1.outliers import calcular_chow
+from metis.core.etapa1.significancia import z_bilateral
+
+Z_CRIT = z_bilateral(0.05)
 
 
 def _series(serie_facundo):
@@ -44,8 +47,12 @@ def test_anderson_desglose_coherente_con_lo_reportado(serie_facundo, nombre):
     # bandas de la Ec. III-3, y la más restrictiva es el valor crítico reportado
     for f in filas:
         k = f["k"]
-        assert f["banda_sup"] == pytest.approx((-1 + Z_CRIT * np.sqrt(n - k - 1)) / (n - k))
-        assert f["banda_inf"] == pytest.approx((-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k))
+        assert f["banda_sup"] == pytest.approx(
+            (-1 + Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
+        )
+        assert f["banda_inf"] == pytest.approx(
+            (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
+        )
         assert f["fuera"] == (f["r_k"] > f["banda_sup"] or f["r_k"] < f["banda_inf"])
     assert min(f["banda_sup"] for f in filas) == resultado.valor_critico
 
@@ -53,7 +60,10 @@ def test_anderson_desglose_coherente_con_lo_reportado(serie_facundo, nombre):
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "serie",
-    [[50.0] * 29 + [5000.0], [12.0, 15.0, 9.0, 30.0, 11.0, 14.0, 13.0, 10.0, 16.0, 12.5]],
+    [
+        [50.0] * 29 + [5000.0],
+        [12.0, 15.0, 9.0, 30.0, 11.0, 14.0, 13.0, 10.0, 16.0, 12.5],
+    ],
     ids=["con-atipico", "sin-atipico"],
 )
 def test_chow_desglose_una_fila_por_observacion(serie):
@@ -61,13 +71,18 @@ def test_chow_desglose_una_fila_por_observacion(serie):
     filas = resultado.explicacion.desglose
 
     # mismas claves que lee frontend/src/routes/results/Etapa1Desglose.tsx
-    assert set(filas[0]) == {"i", "x_i", "ln_x_i", "z_i"}
+    assert set(filas[0]) == {"i", "x_i", "ln_x_i", "z_i", "fuera"}
     assert [f["i"] for f in filas] == list(range(1, len(serie) + 1))
     assert [f["x_i"] for f in filas] == serie
     assert all(f["ln_x_i"] == pytest.approx(np.log(f["x_i"])) for f in filas)
     assert max(f["z_i"] for f in filas) == resultado.estadistico
+    # DECISIÓN 079 — "fuera" marca exactamente las observaciones de valores_atipicos.
+    fuera = {f["i"] - 1 for f in filas if f["fuera"]}
+    assert fuera == {a["indice"] for a in resultado.valores_atipicos}
 
 
 @pytest.mark.unit
 def test_chow_no_ejecutada_sin_explicacion():
-    assert calcular_chow([0.0] + [10.0] * 14, "caudal_precipitacion").explicacion is None
+    assert (
+        calcular_chow([0.0] + [10.0] * 14, "caudal_precipitacion").explicacion is None
+    )

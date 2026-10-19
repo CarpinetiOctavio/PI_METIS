@@ -67,12 +67,34 @@ export interface AnalysisStreamForm {
   // Solo tiene efecto con carga diaria: cambia el texto del warning
   // CONTRACT_DAILY_SERIES_AGGREGATED, no los números. Default "pico".
   variable_diaria?: "pico" | "media";
+  // DECISIÓN 078 — nivel de significancia de la Etapa 1. Default 0.05.
+  alfa?: Alfa;
 }
 
+// DECISIÓN 078 — los tres niveles de significancia que acepta el backend.
+export type Alfa = 0.01 | 0.05 | 0.1;
+
+export type DecisionAtipico = "rechazar" | "aceptar";
+
+// DECISIÓN 079 — un atípico de Chow: un valor fuera de los umbrales de Bulletin
+// 17B. `indice` es la posición en datos.serie_efectiva; `z`, la distancia a la
+// media de los logaritmos en desvíos, con signo.
+export interface AtipicoChow {
+  indice: number;
+  valor: number;
+  z: number;
+  lado: "alto" | "bajo";
+}
+
+// El mismo atípico en la pausa del stream, con su año.
+export interface AtipicoDetectado extends AtipicoChow {
+  periodo: number | null;
+}
+
+// DECISIÓN 079 — una decisión por cada atípico de la pausa, todas juntas.
 export interface OutlierDecisionRequest {
   session_id: string;
-  decision: "rechazar" | "aceptar";
-  dato_atipico: number;
+  decisiones: { indice: number; decision: DecisionAtipico }[];
 }
 
 export interface OutlierDecisionResponse {
@@ -138,6 +160,18 @@ export interface TestResultDetail {
   // existía en el backend (TestResult), nunca se serializaba.
   indice_atipico: number | null;
   explicacion: Explicacion | null;
+  // DECISIÓN 079 — Chow: todos los valores fuera de los umbrales, ordenados por
+  // |z|. Ausente en las demás pruebas y en los análisis anteriores.
+  valores_atipicos?: AtipicoChow[] | null;
+  // Revisión 19/10/2026 de la DECISIÓN 073 — Chow no ejecutada: los valores
+  // (negativos o ceros) que impidieron la prueba. Ausente en las demás pruebas
+  // y en los análisis anteriores.
+  valores_no_validos?: ValorNoValido[] | null;
+}
+
+export interface ValorNoValido {
+  indice: number;
+  valor: number;
 }
 
 // Timestamp normalizado — PR 3 (DECISIÓN 058 §4.4): siempre ISO-8601 str +
@@ -221,6 +255,9 @@ export interface Etapa1Result {
   // trae (sin backfill, DECISIÓN 058 §4). Sin este campo, la sección de
   // gráficos de Etapa1ResultView no se renderiza.
   datos?: Etapa1Datos;
+  // DECISIÓN 078 — con qué α corrió la batería. Ausente en los análisis
+  // guardados antes de que fuera configurable (corrieron con 0.05).
+  alfa?: Alfa;
 }
 
 // --- Eventos SSE — union discriminada por `type`. Todos llevan `iteracion`
@@ -264,6 +301,9 @@ export interface SseTestResultEvent extends TestResultDetail {
 export interface SseOutlierDetectedEvent {
   type: "outlier_detected";
   session_id: string;
+  // DECISIÓN 079 — todos los atípicos, para decidir uno por uno.
+  atipicos: AtipicoDetectado[];
+  // El más extremo; se conserva por compatibilidad.
   valor_atipico: number;
 }
 
@@ -338,6 +378,8 @@ export interface HistoryItem {
   // cuando nombre_archivo es null.
   nombre_archivo: string | null;
   serie_preview: number[];
+  // DECISIÓN 078 — 0.05 para los análisis anteriores.
+  alfa: Alfa;
 }
 
 // PR 3/5 del plan de cierre de pendientes no-test (DECISIÓN 058) —
@@ -354,6 +396,10 @@ export interface AnalysisConfiguracion {
   // DECISIÓN 065 (PR 2.5) — presente en análisis persistidos desde esa
   // fecha; opcional para no romper la lectura de análisis anteriores.
   variable_diaria?: "pico" | "media";
+  // DECISIÓN 078 — siempre presente en GET /history/{id}: un análisis anterior
+  // llega con 0.05 y `alfa_implicito: true` (corrió con 5 % sin registrarlo).
+  alfa?: Alfa;
+  alfa_implicito?: boolean;
 }
 
 export interface AnalysisDetail {
@@ -422,6 +468,10 @@ export interface SeleccionEtapa2 {
   periodos_retorno: number[];
   eventos_diseno: EventoDiseno[];
   curva_ajuste: EventoDiseno[];
+  // Solo en POST /analysis/simulate-exclusion (revisión de DECISIÓN 071,
+  // 18/10/2026): el status de la combinación sobre la serie sin los puntos
+  // excluidos. Lo persistido en el historial no lo trae.
+  estado?: MetodoStatus;
 }
 
 export interface Etapa2Result {
@@ -489,6 +539,8 @@ export interface SimulateExclusionRequest {
   indices_excluidos: number[];
   etapas: (1 | 2)[];
   tratamiento?: "eliminar";
+  // DECISIÓN 078 — el α del análisis original.
+  alfa?: Alfa;
   // La elección del análisis original. Con ella y Etapa 2, la respuesta trae en
   // `etapa2.seleccion` los eventos de diseño de esa elección reajustada sin los
   // puntos excluidos.

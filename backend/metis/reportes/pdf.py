@@ -437,7 +437,7 @@ def _grafico_serie(etapa1: dict) -> Figure | None:
     return fig
 
 
-def _grafico_correlograma(anderson: dict) -> Figure | None:
+def _grafico_correlograma(anderson: dict, config: dict) -> Figure | None:
     desglose = (anderson.get("explicacion") or {}).get("desglose")
     if not desglose:
         return None
@@ -451,7 +451,7 @@ def _grafico_correlograma(anderson: dict) -> Figure | None:
         [fila["banda_inf"] for fila in desglose],
         color="#8a96a3",
         linewidth=0.9,
-        label="Límites de confianza (95 %)",
+        label=f"Límites de confianza ({_texto_confianza(config)})",
     )
     ax.axhline(0, color="#5f6b76", linewidth=0.6)
     ax.set_xlabel("Rezago k", fontsize=8)
@@ -612,6 +612,27 @@ def _texto_particion(particion) -> str:
     return "Por defecto (60 % / 30 %)"
 
 
+def _texto_alfa(config: dict) -> str:
+    """DECISIÓN 078. Un análisis anterior a que α fuera configurable corrió con
+    5 % sin registrarlo (`alfa_implicito`)."""
+    alfa = config.get("alfa", 0.05)
+    texto = f"{alfa * 100:g} %".replace(".", ",")
+    if config.get("alfa_implicito"):
+        return f"{texto} (el único disponible cuando se corrió el análisis)"
+    # α llega como float de un conjunto cerrado (0,01 / 0,05 / 0,10): se compara
+    # con tolerancia, no con ==.
+    if math.isclose(alfa, 0.05):
+        return f"{texto} (estándar en hidrología)"
+    return texto
+
+
+def _texto_confianza(config: dict) -> str:
+    """Nivel de confianza 1 − α de las bandas de Anderson (Ec. III-3), como el
+    rótulo de la interfaz (`frontend/src/i18n/alfa.ts`): "95 %", "90 %"."""
+    confianza = round((1 - config.get("alfa", 0.05)) * 100, 6)
+    return f"{confianza:g} %".replace(".", ",")
+
+
 def _seccion_datos(detalle: dict, autor: str | None, est) -> list:
     config = detalle.get("configuracion") or {}
     etapa1 = detalle.get("etapa1") or {}
@@ -644,6 +665,7 @@ def _seccion_datos(detalle: dict, autor: str | None, est) -> list:
         filas.append(
             ["Partición de Cramer", _texto_particion(config["cramer_particion"])]
         )
+    filas.append(["Nivel de significancia (Etapa 1)", _texto_alfa(config)])
     filas.append(
         ["Nivel de confianza", _rotulo(_NIVELES, etapa1.get("nivel_confianza"))]
     )
@@ -766,6 +788,14 @@ def _seccion_etapa1(detalle: dict, est) -> list:
             )
         )
 
+    story.append(
+        _p(
+            "Valores críticos con un nivel de significancia de "
+            f"{_texto_alfa(detalle.get('configuracion') or {})}. Chow lo aplica a "
+            "cada extremo; Helmert y la tolerancia de rezagos de Anderson no dependen de él.",
+            est["nota_previa"],
+        )
+    )
     grupos = [
         ("Independencia", "independencia", etapa1.get("nivel_independencia")),
         ("Homogeneidad", "homogeneidad", etapa1.get("nivel_homogeneidad")),
@@ -780,7 +810,11 @@ def _seccion_etapa1(detalle: dict, est) -> list:
         story += [_p(encabezado, est["h2"]), _tabla_pruebas(pruebas, est)]
         if clave == "independencia":
             anderson = next((t for t in pruebas if t.get("prueba") == "anderson"), None)
-            fig = _grafico_correlograma(anderson) if anderson else None
+            fig = (
+                _grafico_correlograma(anderson, detalle.get("configuracion") or {})
+                if anderson
+                else None
+            )
             if fig is not None:
                 story += [
                     Spacer(1, 4),
@@ -793,7 +827,32 @@ def _seccion_etapa1(detalle: dict, est) -> list:
                 ]
 
     chow = (detalle.get("decisiones") or {}).get("chow")
-    if chow:
+    if chow and "atipicos" in chow:
+        # DECISIÓN 079 — una decisión por atípico.
+        filas = [["Año", "Valor", "Lado", "z", "Decisión"]]
+        for a in chow["atipicos"]:
+            filas.append(
+                [
+                    str(a.get("periodo") or "—"),
+                    _num(a.get("valor")),
+                    "Alto" if a.get("lado") == "alto" else "Bajo",
+                    _num(a.get("z")),
+                    "Rechazado: excluido del análisis"
+                    if a.get("decision") == "rechazar"
+                    else "Aceptado como parte de la población",
+                ]
+            )
+        anchos = [2.0 * cm, 3.0 * cm, 1.8 * cm, 2.4 * cm]
+        story += [
+            _p("Decisión ante los atípicos", est["h2"]),
+            _p(
+                "Chow marcó todos los valores fuera de los umbrales (Bulletin 17B). Los "
+                "resultados de este informe corresponden a la serie sin los rechazados.",
+                est["nota_previa"],
+            ),
+            _tabla(filas, anchos + [_ANCHO_UTIL - sum(anchos)], est),
+        ]
+    elif chow:
         accion = (
             "rechazó el dato atípico y se excluyó del análisis. Los resultados de "
             "este informe corresponden a la serie sin ese dato"
@@ -1285,6 +1344,22 @@ def _canvas_con_pie(texto_pie: str):
     return _CanvasNumerado
 
 
+def _subtitulo(config: dict, simulacion: dict | None) -> str:
+    """El α es el del análisis (DECISIÓN 078), no un 5 % fijo (D-11, #130)."""
+    subtitulo = (
+        "Formato experto: resultados directos, sin fórmulas ni explicaciones. "
+        f"Nivel de significancia α = {_texto_alfa(config)}."
+    )
+    if simulacion is not None:
+        cantidad = len(simulacion.get("excluidos") or [])
+        subtitulo += (
+            " Incluye, al final, los resultados sin el punto excluido."
+            if cantidad == 1
+            else f" Incluye, al final, los resultados sin los {cantidad} puntos excluidos."
+        )
+    return subtitulo
+
+
 def generar_pdf_analisis(
     detalle: dict,
     autor: str | None = None,
@@ -1299,20 +1374,11 @@ def generar_pdf_analisis(
     est = _estilos()
     generado_en = generado_en or datetime.now()
 
-    subtitulo = (
-        "Formato experto: resultados directos, sin fórmulas ni explicaciones. "
-        "Nivel de significancia α = 5 %."
-    )
-    if simulacion is not None:
-        cantidad = len(simulacion.get("excluidos") or [])
-        subtitulo += (
-            " Incluye, al final, los resultados sin el punto excluido."
-            if cantidad == 1
-            else f" Incluye, al final, los resultados sin los {cantidad} puntos excluidos."
-        )
     story: list = [
         _p("Informe de análisis — METIS", est["titulo"]),
-        _p(subtitulo, est["subtitulo"]),
+        _p(
+            _subtitulo(detalle.get("configuracion") or {}, simulacion), est["subtitulo"]
+        ),
     ]
     story += _seccion_datos(detalle, autor, est)
     story += _seccion_etapa1(detalle, est)

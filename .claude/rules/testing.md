@@ -192,6 +192,11 @@ la cobertura del código nuevo queda debajo del 80 % (`diff-cover`, backend y fr
 números quedan en el resumen del job y en el artefacto `reporte-calidad/metricas.json`. En local:
 `scripts/test.sh backend|frontend|duplicacion|gate|all`.
 
+**Actualización B13 (DECISIÓN 077):** SonarCloud corre por CI (job `sonarcloud`, `SonarSource/sonarqube-scan-action`)
+con la cobertura de backend (`coverage.xml`) y frontend (lcov) importada, y el job espera el quality gate
+(`sonar.qualitygate.wait=true`). El Análisis Automático está desactivado y `.sonarcloud.properties` se borró: toda la
+configuración está en `sonar-project.properties`. El párrafo de abajo describe el estado anterior.
+
 **SonarCloud** corre además sobre cada PR (`carpinetioctavio/PI_METIS`), vía Análisis Automático
 de la App de GitHub de SonarCloud — no hay ningún paso de Sonar en `ci.yml`. Evalúa Reliability
 Rating, Security Rating, issues nuevos, duplicación y Security Hotspots; hoy no importa cobertura

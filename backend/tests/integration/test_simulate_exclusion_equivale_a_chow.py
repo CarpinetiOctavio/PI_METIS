@@ -17,7 +17,7 @@ from metis.services.analysis_service import (
     registrar_outlier_decision,
     simular_exclusion,
 )
-from tests.integration._sse_helpers import parse_sse, run_stream
+from tests.integration._sse_helpers import decidir_todos, parse_sse, run_stream
 
 GRUPOS = ("independencia", "homogeneidad", "tendencia", "atipicos")
 CAMPOS = ("prueba", "estadistico", "valor_critico", "veredicto", "n1", "n2")
@@ -46,8 +46,12 @@ def _resumen(etapa1: dict) -> dict:
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("celda_vacia", [False, True], ids=["completa", "con-celda-vacia"])
-async def test_excluir_el_atipico_equivale_a_rechazarlo_en_el_flujo_de_chow(celda_vacia):
+@pytest.mark.parametrize(
+    "celda_vacia", [False, True], ids=["completa", "con-celda-vacia"]
+)
+async def test_excluir_el_atipico_equivale_a_rechazarlo_en_el_flujo_de_chow(
+    celda_vacia,
+):
     contenido = _csv(celda_vacia)
 
     # Primera pasada, igual que la hace el stream antes de pausar (el evento
@@ -69,8 +73,7 @@ async def test_excluir_el_atipico_equivale_a_rechazarlo_en_el_flujo_de_chow(celd
         if tipo == "outlier_detected":
             await registrar_outlier_decision(
                 session_id=session_id,
-                decision="rechazar",
-                dato_atipico=data["valor_atipico"],
+                decisiones=decidir_todos(data, "rechazar"),
                 db=None,
             )
         elif tipo == "result_etapa1":
@@ -88,4 +91,7 @@ async def test_excluir_el_atipico_equivale_a_rechazarlo_en_el_flujo_de_chow(celd
     )
 
     assert _resumen(simulado["etapa1"]) == _resumen(final)
-    assert simulado["etapa1"]["datos"]["serie_efectiva"] == final["datos"]["serie_efectiva"]
+    assert (
+        simulado["etapa1"]["datos"]["serie_efectiva"]
+        == final["datos"]["serie_efectiva"]
+    )

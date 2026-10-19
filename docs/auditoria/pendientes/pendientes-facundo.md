@@ -1065,3 +1065,16 @@ METIS (aprueba). El nivel de homogeneidad de METIS en est_05 pasaría de `homoge
 `core/pipeline/pipeline_etapa1.py` (`n1_t = n_total // 2`) con su decisión numerada; si es `floor`, la
 tesis tiene esa diferencia y METIS no cambia.
 
+## Nivel de significancia configurable (18/10/2026)
+
+Origen: [DECISIÓN 078](../../decisiones/decision078.md), a partir de su respuesta del 18/10 sobre Chow.
+
+### ¿La tolerancia de rezagos de Anderson acompaña a α?
+
+METIS deja elegir α entre 1 %, 5 % y 10 % en toda la Etapa 1. En Anderson eso cambia las bandas de cada rezago
+(Ec. III-3), pero la tolerancia de `⌈0,10 · k_max⌉` rezagos fuera de banda (DECISIONES 012 y 016) queda fija. ¿La
+tolerancia del 10 % de rezagos fuera de banda se mantiene fija aunque se cambie el nivel de significancia?
+
+**Impacto según la respuesta:** si se mantiene fija, METIS no cambia. Si tiene que acompañar a α, cambia una línea
+de `core/etapa1/independence.py` y se agrega una revisión a la DECISIÓN 078. Con α = 5 % no cambia nada en ningún
+caso. No bloquea.

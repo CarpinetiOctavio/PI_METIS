@@ -20,11 +20,13 @@ from metis.core.etapa2.design_events import calcular_eventos_diseno
 from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
 from metis.reportes.pdf import (
     _estilos,
+    _grafico_correlograma,
     _registrar_fuentes,
     _seccion_datos,
     _seccion_etapa1,
     _seccion_etapa2,
     _seccion_simulacion,
+    _subtitulo,
     generar_pdf_analisis,
     nombre_archivo_pdf,
 )
@@ -237,6 +239,44 @@ def test_decision_ante_atipico(detalle_completo, est):
 
 
 @pytest.mark.unit
+def test_decision_ante_varios_atipicos(detalle_completo, est):
+    # DECISIÓN 079 — una fila por atípico, con su lado y su decisión.
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["decisiones"] = {
+        "chow": {
+            "atipicos": [
+                {
+                    "indice": 14,
+                    "periodo": 1994,
+                    "valor": 296.93,
+                    "z": -3.52,
+                    "lado": "bajo",
+                    "decision": "rechazar",
+                    "codigo": "TEST_OUTLIER_REJECTED_BY_USER",
+                },
+                {
+                    "indice": 25,
+                    "periodo": 2005,
+                    "valor": 296.99,
+                    "z": -3.44,
+                    "lado": "bajo",
+                    "decision": "aceptar",
+                    "codigo": "TEST_OUTLIER_ACCEPTED_BY_USER",
+                },
+            ]
+        }
+    }
+
+    textos = _textos(_seccion_etapa1(detalle, est))
+
+    assert "Decisión ante los atípicos" in textos
+    assert any(
+        t.startswith("1994 |") and "Bajo" in t and "Rechazado" in t for t in textos
+    )
+    assert any(t.startswith("2005 |") and "Aceptado" in t for t in textos)
+
+
+@pytest.mark.unit
 def test_analisis_anterior_sin_datos_ni_desglose(detalle_completo):
     # Registros previos a DECISIÓN 058 / addendum de la 064: sin `datos`,
     # sin `desglose` y sin `timestamps` — se exporta igual, sin gráficos.
@@ -260,6 +300,72 @@ def test_datos_del_analisis(detalle_completo, est):
     assert "Etapas ejecutadas | Etapa 1 y Etapa 2" in textos
     assert "Inicio del año | Julio" in textos
     assert "Partición de Cramer | Por defecto (60 % / 30 %)" in textos
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [
+        ({"alfa": 0.05}, "5 % (estándar en hidrología)"),
+        ({"alfa": 0.1}, "10 %"),
+        (
+            {"alfa": 0.05, "alfa_implicito": True},
+            "5 % (el único disponible cuando se corrió el análisis)",
+        ),
+    ],
+)
+def test_nivel_de_significancia_en_datos_y_pruebas(
+    detalle_completo, est, config, esperado
+):
+    # DECISIÓN 078 — α en la configuración y sobre las tablas de pruebas.
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["configuracion"].update(config)
+
+    datos = _textos(_seccion_datos(detalle, None, est))
+    pruebas = " ".join(_textos(_seccion_etapa1(detalle, est)))
+
+    assert f"Nivel de significancia (Etapa 1) | {esperado}" in datos
+    assert f"nivel de significancia de {esperado}" in pruebas
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [
+        ({}, "α = 5 % (estándar en hidrología)"),
+        ({"alfa": 0.01}, "α = 1 %"),
+        ({"alfa": 0.1}, "α = 10 %"),
+    ],
+)
+def test_subtitulo_declara_el_alfa_del_analisis(config, esperado):
+    # D-11 (#130): el subtítulo decía "α = 5 %" fijo aunque el análisis
+    # hubiera corrido con otro α.
+    subtitulo = _subtitulo(config, simulacion=None)
+
+    assert f"Nivel de significancia {esperado}." in subtitulo
+    if config.get("alfa", 0.05) != 0.05:
+        assert "5 %" not in subtitulo
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [({}, "95 %"), ({"alfa": 0.01}, "99 %"), ({"alfa": 0.1}, "90 %")],
+)
+def test_correlograma_rotula_la_confianza_del_analisis(
+    detalle_completo, config, esperado
+):
+    # D-11 (#130): la leyenda decía "95 %" con cualquier α; las bandas de
+    # Anderson (Ec. III-3) se calculan con el α del análisis.
+    anderson = next(
+        t
+        for t in detalle_completo["etapa1"]["independencia"]
+        if t["prueba"] == "anderson"
+    )
+    fig = _grafico_correlograma(anderson, config)
+
+    leyenda = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+    assert leyenda == [f"Límites de confianza ({esperado})"]
 
 
 @pytest.mark.unit

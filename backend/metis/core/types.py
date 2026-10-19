@@ -42,6 +42,17 @@ class TestResult:
     valor_atipico: float | None = None
     indice_atipico: int | None = None
     explicacion: Explicacion | None = None
+    # Chow (DECISIÓN 079): TODOS los valores fuera de los umbrales, altos y bajos,
+    # {indice, valor, z, lado}, ordenados por |z| descendente. valor_atipico e
+    # indice_atipico siguen siendo el más extremo, por compatibilidad. None en
+    # las demás pruebas.
+    valores_atipicos: list[dict] | None = None
+    # Chow no ejecutada (revisión 19/10/2026 de la DECISIÓN 073): los valores que
+    # impidieron la prueba — negativos, o ceros — como {indice, valor}, en el
+    # espacio de la serie analizada. Es dato, no cálculo: el gráfico y el panel
+    # de exclusión los señalan sin inferirlos. Campo propio y no dentro de
+    # `explicacion`, que sigue siendo None en toda prueba no ejecutada.
+    valores_no_validos: list[dict] | None = None
 
 
 @dataclass
@@ -112,6 +123,8 @@ class Etapa1Result:
     serie_original: list = field(default_factory=list)
     timestamps_originales: list | None = None
     resolucion_original: str | None = None
+    # Nivel de significancia con el que corrió la batería (DECISIÓN 078).
+    alfa: float = 0.05
 
 
 @dataclass

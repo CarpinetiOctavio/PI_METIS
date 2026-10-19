@@ -45,3 +45,9 @@ def run_stream(content: bytes, **overrides):
     session_id = overrides.pop("session_id", str(uuid.uuid4()))
     kwargs = {**_KWARGS_BASE, "content": content, **overrides}
     return stream_analysis(session_id=session_id, **kwargs), session_id
+
+
+def decidir_todos(data: dict, decision: str) -> list[dict]:
+    """Una decisión igual para cada atípico del evento `outlier_detected`
+    (DECISIÓN 079): el cuerpo de `registrar_outlier_decision()`."""
+    return [{"indice": a["indice"], "decision": decision} for a in data["atipicos"]]

@@ -18,7 +18,9 @@
 - auth/ implementado: usuario/contraseña + bcrypt + JWT HttpOnly Cookie con verificación @ucc.edu.ar (DECISIÓN 001). Parte 2 (envío real de mail con `aiosmtplib`): credenciales de IT recibidas 10/06, implementación pendiente de iniciar (DECISIÓN 004).
 
 ### Lógica de negocio
-- α = 5% fijo — no es configurable por el usuario en V1.0
+- α configurable en la Etapa 1: 1 %, 5 % (por defecto, estándar en hidrología) o 10 % — DECISIÓN 078
+  (18/10/2026). Reemplaza el "α = 5 % fijo" anterior. Helmert y la tolerancia de Anderson no dependen de α;
+  la Etapa 2 no tiene nivel de significancia.
 - El pipeline siempre arranca por Etapa 1 — nunca se puede ejecutar Etapa 2 directamente
 - METIS no sugiere distribución ganadora — presenta el ranking, el usuario decide
 - METIS no corrige datos — detecta, advierte, y continúa (excepto CU-03 con auto_clean=true)
@@ -211,4 +213,6 @@ queda habilitado con el gate en rojo — así que es consultivo de hecho, no blo
 [DECISIÓN 044](../../../docs/decisiones/decision044.md), sección "La pregunta de gobernanza
 abierta", para el estado exacto. **Resuelta por [DECISIÓN 077](../../../docs/decisiones/decision077.md)**
 (08/10/2026): SonarCloud pasa a análisis por CI y los checks pasan a requeridos, en el último PR del plan del TP de
-Calidad (necesita permisos de administración del repo). Hasta entonces sigue consultivo.
+Calidad (necesita permisos de administración del repo). Hasta entonces sigue consultivo. **Implementado en B13:** job
+`sonarcloud` de `ci.yml` con el quality gate bloqueante; los checks requeridos los marca Octavio en el Ruleset (solo
+el dueño de un repo personal puede editarlo).

@@ -21,6 +21,7 @@ from metis.db.models import Analysis, AnalysisResult
 from metis.main import app
 from metis.services.analysis_service import (
     archive_analysis,
+    registrar_outlier_decision,
     get_analysis_by_id,
     get_history,
     unarchive_analysis,
@@ -74,6 +75,82 @@ async def test_cu01_persiste_el_analisis_y_su_resultado(db, crear_usuario):
     assert analisis.configuracion["nombre_archivo"] == "serie.csv"
     assert resultado.etapa1["nivel_confianza"] in ("validado", "con_warnings")
     assert resultado.etapa2 is None
+
+
+async def test_cu01_persiste_el_alfa_elegido(db, crear_usuario):
+    # DECISIÓN 078 — con otro α cambian los veredictos: el historial lo registra.
+    usuario = await crear_usuario()
+    gen, _ = run_stream(_csv(), columna_x="anio", user_id=usuario.id, db=db, alfa=0.10)
+    eventos = [parse_sse(e) async for e in gen]
+    analysis_id = eventos[-1][1]["analysis_id"]
+
+    detalle = await get_analysis_by_id(analysis_id, usuario.id, db)
+
+    assert detalle["configuracion"]["alfa"] == 0.10
+    assert "alfa_implicito" not in detalle["configuracion"]
+    assert detalle["etapa1"]["alfa"] == 0.10
+
+
+async def test_un_analisis_anterior_sin_alfa_se_lee_como_5_por_ciento_implicito(
+    db, crear_usuario
+):
+    usuario = await crear_usuario()
+    analysis_id = await _correr(db, usuario.id)
+    analisis = (
+        await db.execute(select(Analysis).where(Analysis.id == analysis_id))
+    ).scalar_one()
+    analisis.configuracion = {
+        k: v for k, v in analisis.configuracion.items() if k != "alfa"
+    }
+    await db.commit()
+
+    detalle = await get_analysis_by_id(analysis_id, usuario.id, db)
+
+    assert detalle["configuracion"]["alfa"] == 0.05
+    assert detalle["configuracion"]["alfa_implicito"] is True
+
+
+async def test_cu01_persiste_una_decision_por_atipico_con_su_codigo(db, crear_usuario):
+    # DECISIÓN 079 — dos atípicos bajos y uno alto; se rechaza solo el alto.
+    base = list(np.random.default_rng(3).lognormal(4.6, 0.15, 37))
+    serie = base[:5] + [3.0] + base[5:20] + [2.0] + base[20:] + [9000.0]
+    filas = [f"{1980 + i},{v}" for i, v in enumerate(serie)]
+    csv = ("anio,caudal\n" + "\n".join(filas) + "\n").encode()
+    usuario = await crear_usuario()
+    gen, session_id = run_stream(
+        csv,
+        columna_x="anio",
+        tipo_variable="caudal_precipitacion",
+        user_id=usuario.id,
+        db=db,
+    )
+    analysis_id = None
+    async for evento in gen:
+        tipo, data = parse_sse(evento)
+        if tipo == "outlier_detected":
+            await registrar_outlier_decision(
+                session_id,
+                [
+                    {
+                        "indice": a["indice"],
+                        "decision": "rechazar" if a["lado"] == "alto" else "aceptar",
+                    }
+                    for a in data["atipicos"]
+                ],
+                db=None,
+            )
+        elif tipo == "complete":
+            analysis_id = data["analysis_id"]
+
+    detalle = await get_analysis_by_id(analysis_id, usuario.id, db)
+
+    registro = detalle["decisiones"]["chow"]["atipicos"]
+    assert [(a["periodo"], a["decision"], a["codigo"]) for a in registro] == [
+        (2019, "rechazar", "TEST_OUTLIER_REJECTED_BY_USER"),
+        (2001, "aceptar", "TEST_OUTLIER_ACCEPTED_BY_USER"),
+        (1985, "aceptar", "TEST_OUTLIER_ACCEPTED_BY_USER"),
+    ]
+    assert len(detalle["etapa1"]["datos"]["serie_efectiva"]) == len(serie) - 1
 
 
 async def test_cu02_anonimo_no_persiste_nada(db):

@@ -197,10 +197,16 @@ const FORMULAS_PLANAS: CasoFormato[] = [
     contiene: [["D·√(n₁·n₂/(n₁+n₂))", "0,63246"]],
   },
   {
-    // α = 0,10, no el 0,05 del resto de Etapa 1
-    nombre: "chow — muestra K_N, el t Bonferroni-corregido y α = 0,10",
+    // DECISIÓN 078 — sin `alfa` en terminos (análisis anterior) corrió con 5 %.
+    nombre: "chow — muestra K_N, el t Bonferroni-corregido y α = 5 % por defecto",
     prueba: "chow",
-    contiene: [["K_N", "2,74500", "t_{n−2,1−α/(2n)} = 3,50000", "α = 0,10"]],
+    contiene: [["K_N", "2,74500", "t_{n−2,1−α/n} = 3,50000", "α = 5 %"]],
+  },
+  {
+    nombre: "chow — rotula el α que mandó el servidor",
+    prueba: "chow",
+    terminos: { alfa: 0.1 },
+    contiene: [["α = 10 %"]],
   },
 ];
 
@@ -219,12 +225,19 @@ const FORMULAS_LATEX: CasoFormato[] = [
     prueba: "anderson",
     contiene: [
       [
-        "r_{k}(95\\%) = \\dfrac{-1 \\pm 1{,}96\\sqrt{n-k-1}}{n-k}",
+        // DECISIÓN 078 — sin z_critico en terminos, el cuantil va con su símbolo.
+        "r_{k}(95\\,\\%) = \\dfrac{-1 \\pm z_{1-\\alpha/2}\\sqrt{n-k-1}}{n-k}",
         "no más del 10\\% de los",
       ],
       ["\\text{Lags fuera de las bandas: } 1 \\text{ de } 14", "\\text{tolerancia: } 2"],
       [],
     ],
+  },
+  {
+    nombre: "anderson — las bandas usan el α y el z que mandó el servidor",
+    prueba: "anderson",
+    terminos: { alfa: 0.01, z_critico: 2.5758 },
+    contiene: [["r_{k}(99\\,\\%)", "\\pm 2{,}57580\\sqrt{n-k-1}"], [], []],
   },
   {
     nombre: "wald_wolfowitz — R entero, µ_R y σ_R con decimales, Z del estadístico",
@@ -328,15 +341,21 @@ const FORMULAS_LATEX: CasoFormato[] = [
     prueba: "chow",
     contiene: [
       ["K_N = \\dfrac{n-1}{\\sqrt{n}}"],
-      ["t_{\\,n-2,\\;1-\\alpha/(2n)} = 3{,}50000", "n = 30"],
+      ["t_{\\,n-2,\\;1-\\alpha/n} = 3{,}50000", "n = 30"],
       [],
     ],
     igual: { 2: "K_N = 2{,}74500" },
   },
   {
-    nombre: "chow — rotula α = 0,10 (no el 0,05 del resto de Etapa 1)",
+    nombre: "chow — rotula α = 5 % (el mismo que el resto de Etapa 1) si no viene en terminos",
     prueba: "chow",
-    contiene: [[], ["\\alpha = 0{,}10", "0{,}05"], []],
+    contiene: [[], ["\\alpha = 5\\,\\%", "el mismo que el resto de la Etapa 1"], []],
+  },
+  {
+    nombre: "chow — rotula el α que mandó el servidor (10 %)",
+    prueba: "chow",
+    terminos: { alfa: 0.1 },
+    contiene: [[], ["\\alpha = 10\\,\\%"], []],
   },
 ];
 
@@ -423,6 +442,44 @@ describe("interpretar", () => {
     const conAtipico = caso("chow", { veredicto: "rechazada", valor_atipico: 950.0 });
     expect(interpretar(sinAtipico)).not.toContain("950");
     expect(interpretar(conAtipico)).toContain("950,00000");
+  });
+
+  it("chow (DECISIÓN 079) — con los umbrales del servidor, enuncia la regla y cuenta los valores por lado", () => {
+    const umbrales = { limite_inferior: 20, limite_superior: 900, alfa: 0.05 };
+    const conTres = caso(
+      "chow",
+      {
+        veredicto: "rechazada",
+        valores_atipicos: [
+          { indice: 4, valor: 5, z: -3.4, lado: "bajo" },
+          { indice: 9, valor: 950, z: 3.1, lado: "alto" },
+          { indice: 2, valor: 12, z: -2.9, lado: "bajo" },
+        ],
+      },
+      umbrales,
+    );
+    const texto = interpretar(conTres)!;
+    expect(texto).toContain("Bulletin 17B: todo valor fuera de los umbrales es atípico");
+    expect(texto).toContain("entre 20,00000 y 900,00000");
+    expect(texto).toContain("Quedan fuera 3 valores (1 por encima y 2 por debajo)");
+    // no habla de una decisión pendiente: la misma interpretación se lee en Resultados, después de la pausa
+    expect(texto).not.toContain("espera");
+
+    const ninguno = caso("chow", { veredicto: "aprobada", valores_atipicos: [] }, umbrales);
+    expect(interpretar(ninguno)).toContain("Ningún valor queda fuera.");
+
+    const unoAlto = caso(
+      "chow",
+      { veredicto: "rechazada", valores_atipicos: [{ indice: 9, valor: 950, z: 3.1, lado: "alto" }] },
+      umbrales,
+    );
+    expect(interpretar(unoAlto)).toContain("Quedan fuera 1 valor (1 por encima).");
+  });
+
+  it("chow — un análisis anterior a la DECISIÓN 079 (sin umbrales ni lista) conserva el texto de max|z| contra K_N", () => {
+    const viejo = caso("chow", { veredicto: "rechazada", valor_atipico: 950.0 });
+    expect(interpretar(viejo)).toContain("supera K_N");
+    expect(interpretar(viejo)).not.toContain("Bulletin 17B: todo valor");
   });
 });
 

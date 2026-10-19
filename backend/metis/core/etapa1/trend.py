@@ -1,18 +1,20 @@
 import numpy as np
 import pymannkendall as mk
-from scipy.stats import ks_2samp, norm
+from scipy.stats import ks_2samp
 
+from metis.core.etapa1.significancia import (
+    ALFA_DEFECTO,
+    KS_Z_CRIT,
+    validar_alfa,
+    z_bilateral,
+)
 from metis.core.types import Explicacion, TestResult, WarningItem
-
-ALPHA = 0.05
-Z_CRIT = norm.ppf(1 - ALPHA / 2)  # 1.96
-KS_Z_CRIT = 1.358  # Tabla A.5, α=0.05
 
 
 # ── Mann-Kendall ──────────────────────────────────────────────────────────────
 
 
-def calcular_mann_kendall(serie: list[float]) -> TestResult:
+def calcular_mann_kendall(serie: list[float], alfa: float = ALFA_DEFECTO) -> TestResult:
     arr = np.array(serie, dtype=float)
     n = len(arr)
 
@@ -26,9 +28,11 @@ def calcular_mann_kendall(serie: list[float]) -> TestResult:
             warning_nivel="normal",
         )
 
-    resultado = mk.original_test(arr, alpha=ALPHA)
+    # Ec. A.55: |Z| ≤ z_{1−α/2}. pymannkendall decide `h` con el mismo α
+    # (DECISIÓN 078).
+    valor_critico = z_bilateral(alfa)
+    resultado = mk.original_test(arr, alpha=alfa)
     estadistico = float(resultado.z)
-    valor_critico = float(Z_CRIT)
     aprobada = not bool(resultado.h)
     veredicto = "aprobada" if aprobada else "rechazada"
 
@@ -44,7 +48,13 @@ def calcular_mann_kendall(serie: list[float]) -> TestResult:
 
     explicacion = Explicacion(
         ecuacion="A.55",
-        terminos={"n": n, "s": float(resultado.s), "var_s": float(resultado.var_s)},
+        terminos={
+            "n": n,
+            "s": float(resultado.s),
+            "var_s": float(resultado.var_s),
+            "alfa": alfa,
+            "z_critico": valor_critico,
+        },
     )
 
     return TestResult(
@@ -61,7 +71,9 @@ def calcular_mann_kendall(serie: list[float]) -> TestResult:
 # ── Kolmogorov-Smirnov (tendencia) ───────────────────────────────────────────
 
 
-def calcular_ks_tendencia(serie: list[float]) -> TestResult:
+def calcular_ks_tendencia(serie: list[float], alfa: float = ALFA_DEFECTO) -> TestResult:
+    # Valor crítico de Ec. A.57 para α (Tabla A.5 a 5 %; DECISIÓN 078).
+    ks_z_crit = KS_Z_CRIT[validar_alfa(alfa)]
     arr = np.array(serie, dtype=float)
     n_total = len(arr)
 
@@ -83,8 +95,8 @@ def calcular_ks_tendencia(serie: list[float]) -> TestResult:
     z_stat = d_stat * ((n1 * n2) / (n1 + n2)) ** 0.5
 
     estadistico = float(z_stat)
-    valor_critico = KS_Z_CRIT  # 1.358 — Tabla A.5, α=0.05
-    aprobada = z_stat <= KS_Z_CRIT
+    valor_critico = ks_z_crit
+    aprobada = z_stat <= ks_z_crit
 
     veredicto = "aprobada" if aprobada else "rechazada"
     warning_codigo = "TEST_WARNING_TREND" if not aprobada else None
@@ -92,7 +104,13 @@ def calcular_ks_tendencia(serie: list[float]) -> TestResult:
 
     explicacion = Explicacion(
         ecuacion="A.57",
-        terminos={"n1": n1, "n2": n2, "d": float(d_stat)},
+        terminos={
+            "n1": n1,
+            "n2": n2,
+            "d": float(d_stat),
+            "alfa": alfa,
+            "z_critico": ks_z_crit,
+        },
     )
 
     return TestResult(

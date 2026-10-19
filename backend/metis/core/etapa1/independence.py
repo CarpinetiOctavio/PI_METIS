@@ -1,18 +1,19 @@
 import math
 
 import numpy as np
-from scipy.stats import norm
 
+from metis.core.etapa1.significancia import ALFA_DEFECTO, z_bilateral
 from metis.core.types import Explicacion, TestResult, WarningItem
-
-ALPHA = 0.05
-Z_CRIT = norm.ppf(1 - ALPHA / 2)  # 1.96
 
 
 # ── Anderson ──────────────────────────────────────────────────────────────────
 
 
-def calcular_anderson(serie: list[float]) -> TestResult:
+def calcular_anderson(serie: list[float], alfa: float = ALFA_DEFECTO) -> TestResult:
+    # Bandas de Ec. III-3 con z_{1−α/2} (DECISIÓN 078). La tolerancia de
+    # ⌈0,10·k_max⌉ lags fuera NO depende de α: es la regla de la tesis
+    # (DECISIONES 012 y 016).
+    z_crit = z_bilateral(alfa)
     arr = np.array(serie, dtype=float)
     n = len(arr)
     media = np.mean(arr)
@@ -27,11 +28,11 @@ def calcular_anderson(serie: list[float]) -> TestResult:
     for k in range(1, k_max + 1):
         numerador = np.sum((arr[: n - k] - media) * (arr[k:] - media))
         r_k = numerador / denominador if denominador != 0 else 0.0
-        r_crit_upper = (-1 + Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
+        r_crit_upper = (-1 + z_crit * np.sqrt(n - k - 1)) / (n - k)
         # Ec. III-3, banda inferior — la misma expresión que antes se calculaba
         # en línea dentro del conteo de lags_fuera; ahora se guarda para el
         # desglose (addendum a la DECISIÓN 064), sin cambiar ningún número.
-        r_crit_lower = (-1 - Z_CRIT * np.sqrt(n - k - 1)) / (n - k)
+        r_crit_lower = (-1 - z_crit * np.sqrt(n - k - 1)) / (n - k)
         r_values.append(r_k)
         r_crit_upper_values.append(r_crit_upper)
         r_crit_lower_values.append(r_crit_lower)
@@ -85,6 +86,8 @@ def calcular_anderson(serie: list[float]) -> TestResult:
             "k_max": k_max,
             "lags_fuera": lags_fuera,
             "tolerancia": tolerancia,
+            "alfa": alfa,
+            "z_critico": z_crit,
         },
         desglose=desglose,
     )
@@ -103,7 +106,9 @@ def calcular_anderson(serie: list[float]) -> TestResult:
 # ── Wald-Wolfowitz ────────────────────────────────────────────────────────────
 
 
-def calcular_wald_wolfowitz(serie: list[float]) -> TestResult:
+def calcular_wald_wolfowitz(
+    serie: list[float], alfa: float = ALFA_DEFECTO
+) -> TestResult:
     arr = np.array(serie, dtype=float)
     media = np.mean(arr)
 
@@ -129,14 +134,15 @@ def calcular_wald_wolfowitz(serie: list[float]) -> TestResult:
             warning_nivel="normal",
         )
 
-    mu_u = (2 * n1 * n2) / (n1 + n2) + 1
+    # n1, n2 >= 1 (guard de arriba), así que n1 + n2 >= 2: falso positivo de S3518 en SonarCloud.
+    mu_u = (2 * n1 * n2) / (n1 + n2) + 1  # NOSONAR
     # n1, n2 >= 1 garantiza denom > 0; el guard lo hace explícito.
     denom = (n1 + n2) ** 2 * (n1 + n2 - 1)
     sigma2_u = (2 * n1 * n2 * (2 * n1 * n2 - n1 - n2)) / denom if denom > 0 else 0.0
     sigma_u = np.sqrt(sigma2_u)
     z_stat = (runs - mu_u) / sigma_u if sigma_u != 0 else 0.0
 
-    valor_critico = Z_CRIT
+    valor_critico = z_bilateral(alfa)  # Ec. III-4: |Z| ≤ z_{1−α/2} (DECISIÓN 078)
     aprobada = abs(z_stat) <= valor_critico
     veredicto = "aprobada" if aprobada else "rechazada"
 
@@ -155,6 +161,8 @@ def calcular_wald_wolfowitz(serie: list[float]) -> TestResult:
             "r": runs,
             "mu_r": float(mu_u),
             "sigma_r": float(sigma_u),
+            "alfa": alfa,
+            "z_critico": valor_critico,
         },
     )
 

@@ -4,6 +4,8 @@ import { postDistributionDecision, postOutlierDecision } from "./analysis";
 import { errorText } from "../i18n/errors.es";
 import type {
   AnalysisStreamForm,
+  AtipicoDetectado,
+  DecisionAtipico,
   DescriptiveStats,
   DistribucionResult,
   Etapa1Result,
@@ -44,7 +46,7 @@ export interface StreamState {
   descriptive: DescriptiveStats | null;
   tests: Record<string, TestResultDetail>;
   progress: { completado: number; total: number };
-  outlier: { session_id: string; valor_atipico: number } | null;
+  outlier: { session_id: string; valor_atipico: number; atipicos: AtipicoDetectado[] } | null;
   result: Etapa1Result | null;
   etapa2: Etapa2RankingState | null;
   eventosDiseno: Etapa2EventosState | null;
@@ -76,7 +78,8 @@ const INITIAL_STATE: InternalState = {
 export interface UseAnalysisStreamResult {
   start: (form: AnalysisStreamForm) => void;
   state: StreamState;
-  resolveOutlier: (decision: "rechazar" | "aceptar") => Promise<void>;
+  // DECISIÓN 079 — una decisión por atípico, indexada por `indice`.
+  resolveOutlier: (decisiones: Record<number, DecisionAtipico>) => Promise<void>;
   resolveDistribution: (
     distribucion: string,
     metodo: string,
@@ -103,6 +106,7 @@ function buildFormData(form: AnalysisStreamForm): FormData {
   body.append("etapas", form.etapas ?? "1");
   body.append("mes_inicio_anio", String(form.mes_inicio_anio ?? 7));
   body.append("variable_diaria", form.variable_diaria ?? "pico");
+  body.append("alfa", String(form.alfa ?? 0.05));
   return body;
 }
 
@@ -184,6 +188,7 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
             outlier: {
               session_id: event.session_id,
               valor_atipico: event.valor_atipico,
+              atipicos: event.atipicos ?? [],
             },
           };
         case "result_etapa1":
@@ -320,13 +325,15 @@ export function useAnalysisStream(): UseAnalysisStreamResult {
   );
 
   const resolveOutlier = useCallback(
-    async (decision: "rechazar" | "aceptar") => {
+    async (decisiones: Record<number, DecisionAtipico>) => {
       const { outlier } = internalRef.current;
       if (!outlier) return;
       await postOutlierDecision({
         session_id: outlier.session_id,
-        decision,
-        dato_atipico: outlier.valor_atipico,
+        decisiones: outlier.atipicos.map((a) => ({
+          indice: a.indice,
+          decision: decisiones[a.indice],
+        })),
       });
       // El stream SSE es una conexión aparte de este POST: en cuanto el
       // servidor recibe la decisión, retoma el pipeline y puede emitir

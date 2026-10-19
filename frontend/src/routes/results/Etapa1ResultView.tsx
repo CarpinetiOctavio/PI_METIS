@@ -7,6 +7,7 @@ import type {
 } from "../../api/types";
 import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
+import { alfaDestacado, textoAlfaAnalisis } from "../../i18n/alfa";
 import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
 import { errorText } from "../../i18n/errors.es";
 import { BlockMath } from "../../components/BlockMath";
@@ -194,8 +195,10 @@ export function Etapa1ResultView({
   nombreArchivo,
   simular,
   onSimulacionVigente,
+  tipoVariable,
 }: Readonly<{
   result: Etapa1Result;
+  tipoVariable?: string;
   modo: Modo;
   mesInicioAnio?: number;
   nombreArchivo?: string | null;
@@ -221,6 +224,13 @@ export function Etapa1ResultView({
         <span className="ic">i</span> Resultado:{" "}
         <b>&nbsp;{NIVEL_CONFIANZA_LABEL[result.nivel_confianza]}</b>
       </div>
+      {/* DECISIÓN 078 — con qué α corrió la batería; destacado si no es el 5 %. */}
+      <p className="fn results-alfa">
+        Nivel de significancia de la Etapa 1:{" "}
+        <span className={alfaDestacado(result.alfa) ? "pill warn" : undefined}>
+          α = {textoAlfaAnalisis(result.alfa)}
+        </span>
+      </p>
 
       <div className="results-kpis">
         <div className="kpi">
@@ -309,6 +319,7 @@ export function Etapa1ResultView({
           resultado={result}
           simular={simular}
           onSimulacionVigente={onSimulacionVigente}
+          tipoVariable={tipoVariable}
         />
       )}
 

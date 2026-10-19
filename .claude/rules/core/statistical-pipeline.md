@@ -22,7 +22,7 @@ Services/ orquesta el pipeline y emite eventos SSE. Core/ solo calcula.
 6. Atípicos: Chow                          ← pausa para decisión del usuario en CU-01/CU-02
 ```
 
-**α = 5% fijo en toda la V1.0. No es configurable.**
+**α configurable: 1 %, 5 % (por defecto) o 10 %, el mismo para las ocho pruebas — DECISIÓN 078.**
 
 ### Paso 0a — Orden cronológico (DECISIÓN 030, Bloque H3 del plan post-avance)
 
@@ -146,7 +146,7 @@ if tipo_variable == "caudal_precipitacion" and any(v < 0 for v in serie):
 - Produce correlograma como output gráfico
 
 **Wald-Wolfowitz (verificación)**
-- Para n > 40: valor crítico de distribución normal estándar (Z = ±1.96 para α=5%)
+- Valor crítico de la normal estándar, z_{1−α/2} (±1.96 con α = 5 %)
 - Para n ≤ 40: ejecutar CON advertencia explícita `TEST_WARNING_SMALL_SAMPLE` — no omitir
 - Si Anderson acepta y Wald-Wolfowitz rechaza: resultado = INDEPENDIENTE con nota de Wald
 
@@ -158,7 +158,7 @@ if tipo_variable == "caudal_precipitacion" and any(v < 0 for v in serie):
 - Resultado directo, sin tabla
 
 **t de Student**
-- Tabla con ν = n₁ + n₂ − 2 grados de libertad, α = 5%
+- t_{1−α/2} con ν = n₁ + n₂ − 2 grados de libertad
 
 **Cramer (principal de homogeneidad)**
 - Distribución t de Student
@@ -181,17 +181,26 @@ homogeneidad_critica  → Cramer rechazó → WARNING CRÍTICO
 - n ≤ 10: Tabla A.4
 
 **Kolmogorov-Smirnov (tendencia)**
-- Z_crit = 1.358 para α = 0.05 (Tabla A.5)
+- Z_crit = 1.358 para α = 0.05 (Tabla A.5); 1.628 y 1.224 para 1 % y 10 % (DECISIÓN 078)
 
 ### Detección de atípicos: Chow
 
 - Aplica sobre **logaritmos** de la serie — CRÍTICO
 - Si hay ceros en caudal_precipitacion: marcar como `TEST_NOT_EXECUTED_ZEROS`, continuar
+- No ejecutada (negativos, ceros): `TestResult.valores_no_validos` = `[{indice, valor}]` con los valores que lo
+  impidieron, en el espacio de `serie_efectiva` (revisión 19/10/2026 de la DECISIÓN 073). Campo propio, no dentro
+  de `explicacion`, que sigue en `null`. El gráfico de Chow los marca y el panel de exclusión los señala; no son
+  atípicos. `null` en Chow ejecutada y en las demás pruebas
 - Fuente primaria: Grubbs-Beck / Bulletin 17B — DECISIÓN 018 (docs/decisiones/decision018.md),
   provisorio. Escalante Sandoval & Reyes Chávez (2005) citado previamente
   acá pero con fórmula distinta no verificada — pendiente confirmación.
 - Chow **nunca** genera warning Crítico — siempre es warning normal
-- Si detecta atípico: emitir `TEST_WARNING_OUTLIER_DETECTED` y pausar stream
+- **Todos los valores fuera de los umbrales** (DECISIÓN 079, Bulletin 17B): umbral alto ȳ + K_N·S y bajo
+  ȳ − K_N·S sobre los logaritmos, cada lado como prueba de un extremo, una sola pasada.
+  `TestResult.valores_atipicos` = `[{indice, valor, z, lado}]` ordenados por |z|; `valor_atipico`/`indice_atipico`
+  siguen siendo el más extremo. `explicacion.terminos` trae `limite_inferior`/`limite_superior` en la escala
+  original (el gráfico de Chow dibuja esos) y cada fila del `desglose` lleva `fuera`.
+- Si detecta atípicos: emitir `TEST_WARNING_OUTLIER_DETECTED` y pausar stream UNA vez, con la lista completa
   - CU-01/CU-02: esperar decisión del usuario via POST /analysis/outlier-decision
   - CU-03: registrar warning y continuar automáticamente (sin pausa)
 
@@ -259,7 +268,8 @@ f"event: {tipo}\ndata: {json.dumps(payload)}\n\n"
 "descriptive_stats"       # estadística descriptiva calculada
 "progress"                # avance del pipeline
 "test_result"             # resultado de una prueba individual
-"outlier_detected"        # pausa para decisión del usuario (CU-01/CU-02)
+"outlier_detected"        # pausa para decisión del usuario (CU-01/CU-02): {session_id, atipicos:
+                          # [{indice, periodo, valor, z, lado}], valor_atipico} — DECISIÓN 079
 "result_etapa1"           # resultados completos de Etapa 1
 "result_etapa2_ranking"   # ranking EEA completo (pausa para selección de distribución+método)
 "result_etapa2_eventos"   # eventos de diseño de la distribución elegida

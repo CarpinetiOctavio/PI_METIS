@@ -178,6 +178,16 @@ por qué no hay una corrección válida en software). Se persiste en
 que registrar bajo qué supuesto se construyó la serie. Pendiente de
 confirmación de dominio con Facundo (R0.2 en `pendientes-facundo.md`).
 
+**Agregado 18/10/2026 (DECISIÓN 078) — `alfa: str = Form("0.05")`.** Nivel de
+significancia de las ocho pruebas de la Etapa 1: `0.01`, `0.05` (por defecto,
+estándar en hidrología) o `0.10`. Llega como texto y se valida en el borde → 400
+`CONTRACT_ALFA_INVALID` para cualquier otro valor, también uno no numérico. Se
+pasa a la segunda pasada de la Etapa 1 tras rechazar un atípico, viaja en
+`result_etapa1.alfa` y se persiste en `analyses.configuracion.alfa`. Al leer un
+análisis anterior que no lo tiene, `GET /history/{id}` devuelve `alfa: 0.05` con
+`alfa_implicito: true` (sin backfill). Helmert y la tolerancia de rezagos de
+Anderson no dependen de α; la Etapa 2 no tiene nivel de significancia.
+
 **Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
 050. Excepción a la regla general de esta sección: como el archivo se lee
 completo (en chunks, con corte temprano) **antes** de construir el
@@ -190,14 +200,20 @@ El resto de los errores de parseo/contrato sí llegan como eventos SSE
 
 ### POST /api/v1/analysis/outlier-decision
 
+**Cambiado 18/10/2026 (DECISIÓN 079):** una sola pausa con todos los atípicos de Chow y una decisión por
+punto. Reemplaza al cuerpo `{session_id, decision, dato_atipico}`, que decidía uno solo.
+
 **Request:**
 ```json
 {
   "session_id": "uuid-de-sesion-activa",
-  "decision": "rechazar | aceptar",
-  "dato_atipico": 245.7
+  "decisiones": [
+    {"indice": 14, "decision": "rechazar"},
+    {"indice": 25, "decision": "aceptar"}
+  ]
 }
 ```
+`indice` es la posición en `datos.serie_efectiva`, la misma que trae `outlier_detected.atipicos`.
 
 **Auth:** JWT opcional (mismo que el stream activo)
 
@@ -205,6 +221,16 @@ El resto de los errores de parseo/contrato sí llegan como eventos SSE
 ```json
 {"ok": true, "pipeline_continua": true}
 ```
+
+**Errores:** 400 `OUTLIER_DECISION_INVALID` si los índices no son exactamente los de la pausa (falta uno, sobra
+uno ajeno, hay uno repetido, o la sesión no está en la pausa de Chow); 404 `SESSION_NOT_FOUND` si la sesión no
+existe o expiró. En ninguno de los dos casos se desbloquea el stream.
+
+Los rechazados se excluyen juntos, con la misma operación que `simulate-exclusion` (DECISIÓN 071), y la segunda
+pasada informa Chow sin volver a pausar. `decisiones.chow` se persiste como
+`{"atipicos": [{indice, periodo, valor, z, lado, decision, codigo}]}`, con `codigo`
+`TEST_OUTLIER_REJECTED_BY_USER` o `TEST_OUTLIER_ACCEPTED_BY_USER` por punto. Los análisis anteriores conservan
+la forma vieja `{"accion", "dato"}`, y el historial y el PDF leen las dos.
 
 **Solo para CU-01 y CU-02. CU-03 no usa este endpoint.**
 
@@ -283,10 +309,14 @@ caso, no oculta la fila ni la rompe.
     "created_at": "2026-07-31T01:19:27.556471",
     "archivado_at": null,
     "nombre_archivo": "estacion_04.csv",
-    "serie_preview": [94.71, 89.83, 105.13]
+    "serie_preview": [94.71, 89.83, 105.13],
+    "alfa": 0.05
   }
 ]
 ```
+
+`alfa` (DECISIÓN 078): nivel de significancia de la Etapa 1 del análisis; `0.05` para los guardados antes de
+que fuera configurable.
 
 ---
 
@@ -341,7 +371,8 @@ llegaba a `HistoryDetailPage`).
     }
   },
   "decisiones": {
-    "chow": {"accion": "rechazar", "dato": 950.0},
+    "chow": {"atipicos": [{"indice": 20, "periodo": 2000, "valor": 950.0, "z": 3.4, "lado": "alto",
+                           "decision": "rechazar", "codigo": "TEST_OUTLIER_REJECTED_BY_USER"}]},
     "distribucion": {"distribucion": "gve", "metodo": "ml", "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]}
   },
   "serie": [94.71, 89.83],
@@ -589,16 +620,24 @@ por la media quedó postergado (`tratamiento` es el punto de extensión).
   "indices_excluidos": [1],
   "etapas": [1, 2],
   "tratamiento": "eliminar",
-  "seleccion": {"distribucion": "gumbel", "metodo": "momentos", "periodos_retorno": [2, 10, 100]}
+  "seleccion": {"distribucion": "gumbel", "metodo": "momentos", "periodos_retorno": [2, 10, 100]},
+  "alfa": 0.05
 }
 ```
+`alfa` (DECISIÓN 078, opcional, `0.05` por defecto): el nivel de significancia del análisis original, que el
+frontend repite para que la simulación compare contra lo mismo. Fuera de `{0.01, 0.05, 0.10}` → 400
+`CONTRACT_ALFA_INVALID`.
 `serie`/`anios` son `datos.serie_efectiva` y los años de `datos.timestamps_efectivos`: la serie
 **ya agregada**; los índices son posiciones en ella, no en la serie cruda subida.
 `cramer_particion` llega como texto, igual que en `/analysis/stream`. `tratamiento` es opcional.
 `seleccion` también (addendum 02/10/2026 a DECISIÓN 071): la distribución+método+períodos elegidos en el
 análisis original; con ella y Etapa 2, `etapa2.seleccion` trae sus `eventos_diseno` y `curva_ajuste`
 reajustados sin los puntos excluidos (misma forma que en `GET /history/{id}`; `valor: null` y curva vacía si
-la combinación ya no ajusta). Se valida como en `distribution-decision`.
+la combinación ya no ajusta). Se valida como en `distribution-decision`. La `seleccion` de la respuesta suma
+`estado` (revisión 18/10/2026 de DECISIÓN 071): el status de la combinación sobre la serie sin los puntos
+(`ok`, `no_converge`, `no_aplicable`, `disabled_zeros`, `disabled_negatives`), para explicar por qué no hay
+eventos. El frontend también la usa para explorar otra distribución bajo la simulación: manda la combinación
+explorada en `seleccion`, con los mismos índices.
 
 **Auth:** ninguna dependencia de usuario — responde igual con o sin cookie, como
 `preview-columns`. **Completamente sin estado:** no genera sesión, no toca `session_store`, no
@@ -628,7 +667,7 @@ serie resultante, para que el frontend arme el CSV desde lo que devolvió `core/
 **Errores:** 400 `CONTRACT_SERIES_INVALID` (serie vacía, con más de 500 valores o con valores no
 finitos), 400 `CONTRACT_EXCLUSION_INVALID` (índices fuera de rango o repetidos, `anios` de otro
 largo que `serie`, `tratamiento` inexistente), 400 `CONTRACT_ETAPAS_INVALID` (`etapas` distinto
-de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 400 `DIST_SELECTION_INVALID` /
+de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 400 `CONTRACT_ALFA_INVALID`, 400 `DIST_SELECTION_INVALID` /
 `DIST_PENDING_VALIDATION` (`seleccion` mal formada o pendiente de validación), 422 validación Pydantic (por
 ejemplo, `tipo_variable` fuera de las dos opciones).
 
@@ -838,6 +877,8 @@ CONTRACT_CRAMER_PARTICION_INVALID      cramer_particion mal formado, fuera de ra
 CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
 CONTRACT_MES_INICIO_INVALID            mes_inicio_anio fuera de [1..12] (DECISIÓN 057)
 CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media"} (DECISIÓN 065, PR 2.5 / R0.2)
+CONTRACT_ALFA_INVALID                  alfa fuera de {0.01, 0.05, 0.10} en POST /analysis/stream o en
+                                        POST /analysis/simulate-exclusion (DECISIÓN 078)
 CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusion vacía, con más de 500 valores o con
                                         valores no finitos (DECISIÓN 071)
 CONTRACT_EXCLUSION_INVALID             indices_excluidos fuera de rango o repetidos, anios de otro largo que serie, o
@@ -915,7 +956,10 @@ códigos de contrato pese a validar un parámetro de request y no la serie.
 PARSE_ERROR                      No se pudo parsear el archivo subido (evento SSE "error")
 SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante un atípico (evento SSE "error")
 PARSE_FILE_TOO_LARGE             El archivo supera el límite de subida — respuesta HTTP 400, no evento SSE
-SESSION_NOT_FOUND                session_id no existe o ya expiró — respuesta HTTP 404, no evento SSE (DECISIÓN 052)
+SESSION_NOT_FOUND                session_id no existe o ya expiró — respuesta HTTP 404, no evento SSE (DECISIÓN 052).
+                                  También POST /analysis/outlier-decision desde DECISIÓN 079
+OUTLIER_DECISION_INVALID         Las decisiones de POST /analysis/outlier-decision no cubren exactamente los
+                                  atípicos de la pausa — respuesta HTTP 400, no evento SSE (DECISIÓN 079)
 ANALYSIS_NOT_FOUND               El análisis de POST /analysis/{id}/design-events no existe, no es del
                                   usuario, o no tiene Etapa 2 — respuesta HTTP 404, sin sesión de por medio (DECISIÓN 062).
                                   También GET /export/{id}: no existe o no es del usuario (DECISIÓN 075)

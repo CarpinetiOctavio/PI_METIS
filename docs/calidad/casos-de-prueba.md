@@ -82,6 +82,9 @@ Un representante por clase, válida o inválida.
 | CE-04c | | Inválido | `"3"`, `"2,1"`, … | 400 `CONTRACT_ETAPAS_INVALID` | ídem | `…/test_stream_etapas_validacion.py::test_etapas_invalida_da_400_no_500`, `::test_etapas_vacia_da_400` |
 | CE-05a | `variable_diaria` | `pico`, `media` | | Válido | DECISIÓN 065 | `tests/unit/api/test_stream_variable_diaria_validacion.py::test_valores_validos_no_lanzan` |
 | CE-05b | | Otro valor | | 400 `CONTRACT_VARIABLE_DIARIA_INVALID` | ídem | `…/test_stream_variable_diaria_validacion.py::test_valor_invalido_da_400` |
+| CE-06a | `alfa` (nivel de significancia) | Uno de los tres niveles | `0.01`, `0.05`, `0.10` | Válido | DECISIÓN 078 | `casos_dinamicos/test_clases_equivalencia.py::test_alfa_de_los_tres_niveles_es_valido` (3 ids) |
+| CE-06b | | Numérico fuera del conjunto | `0.2`, `0.025` | 400 `CONTRACT_ALFA_INVALID` | ídem | `…::test_alfa_fuera_del_conjunto_da_400[CE-06b …]` |
+| CE-06c | | No numérico | `abc`, vacío | 400 `CONTRACT_ALFA_INVALID` (no un 422 genérico) | ídem | `…::test_alfa_fuera_del_conjunto_da_400[CE-06c …]` |
 
 ---
 

@@ -36,6 +36,7 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_MES_INICIO_INVALID: "El mes de inicio del año debe estar entre 1 y 12.",
   CONTRACT_VARIABLE_DIARIA_INVALID:
     "El tipo de dato de la serie diaria no es válido — debe ser pico o media diaria.",
+  CONTRACT_ALFA_INVALID: "El nivel de significancia debe ser 1 %, 5 % o 10 %.",
   CONTRACT_SERIES_INVALID:
     "La serie que se mandó a recalcular no es válida: tiene que tener entre 1 y 500 valores numéricos.",
   CONTRACT_EXCLUSION_INVALID:
@@ -110,6 +111,8 @@ export const ERROR_TEXT: Record<string, string> = {
   SESSION_TIMEOUT:
     "Se agotó el tiempo de espera para decidir sobre el dato atípico.",
   SESSION_NOT_FOUND: "La sesión de análisis no existe o ya expiró.",
+  OUTLIER_DECISION_INVALID:
+    "Falta decidir algún atípico, o la decisión no corresponde a los atípicos detectados.",
   ANALYSIS_NOT_FOUND:
     "El análisis no existe, no te pertenece, o no tiene los resultados que pide esta operación.",
   STREAM_CONNECTION_ERROR:

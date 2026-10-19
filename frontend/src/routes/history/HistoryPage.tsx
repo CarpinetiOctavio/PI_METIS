@@ -6,6 +6,7 @@ import { errorText } from "../../i18n/errors.es";
 import type { HistoryItem } from "../../api/types";
 import { SpotlightCard } from "../../components/SpotlightCard";
 import { Sparkline } from "../../charts/Sparkline";
+import { ALFA_DEFECTO, alfaDestacado, formatAlfa } from "../../i18n/alfa";
 import "./HistoryPage.css";
 
 const PAGE_SIZE = 10;
@@ -243,7 +244,11 @@ function HistoryRow({
         </div>
         <p className="fn">
           Tipo: {item.tipo_variable} · Modo: {item.modo ?? "—"} · Etapas:{" "}
-          {item.etapas?.join(", ") ?? "—"}
+          {item.etapas?.join(", ") ?? "—"} ·{" "}
+          {/* DECISIÓN 078 — destacado si el análisis no usó el 5 %. */}
+          <span className={alfaDestacado(item.alfa) ? "pill warn" : undefined}>
+            α = {formatAlfa(item.alfa ?? ALFA_DEFECTO)}
+          </span>
         </p>
       </Link>
       <div className="row history-item-actions">
