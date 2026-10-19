@@ -7,7 +7,9 @@ Actualmente se modifico en funcion de como deben ser empleadas las mismas, refer
 Sirve para verificar que coincidan con las fuentes bibliográficas.
 Fuentes primarias: Tesis Facundo Ganancias Martínez; Caamaño Nelli & Dasso — Apéndice; Bulletin 17B (Chow).
 
-α = 0.05 fijo en toda la Etapa 1. Z_crit = 1.96 (normal estándar, two-tailed).
+α configurable en la Etapa 1: 0.01, 0.05 (por defecto) o 0.10 — DECISIÓN 078. Donde abajo dice 1.96 o
+1.358, es el valor con α = 0.05; el código usa z_{1−α/2} = norm.ppf(1 − α/2) y la tabla de
+`core/etapa1/significancia.py::KS_Z_CRIT`. Helmert y la tolerancia de Anderson no dependen de α.
 
 ---
 
@@ -108,7 +110,7 @@ r_k = Σ_{i=1}^{n-k} (x_i - x̄)(x_{i+k} - x̄)  /  Σ_{i=1}^{n} (x_i - x̄)²  
 ```
 k varía de 1 a k_max = ceil(n / 3)   # DECISIÓN 016 — la tesis escribe k = 1..n/3 sin redondear (III-1)
 
-### Valor crítico por lag k (two-tailed, α=5%)
+### Valor crítico por lag k (two-tailed; 1.96 = z_{1−α/2} con α = 5 %)
 ```
 r_crit_upper(k) = (-1 + 1.96 · √(n-k-1)) / (n-k)                    # [Ec. III-3]
 r_crit_lower(k) = (-1 - 1.96 · √(n-k-1)) / (n-k)                    # [Ec. III-3]
@@ -156,8 +158,8 @@ Es un error de notación en la ecuación original.
 
 ### Veredicto
 ```
-valor_critico = 1.96  (siempre — normal estándar)
-aprobada      = |Z| ≤ 1.96
+valor_critico = z_{1−α/2}  (normal estándar; 1.96 con α = 5 %)
+aprobada      = |Z| ≤ z_{1−α/2}
 ```
 Si n ≤ 40 → agrega warning TEST_WARNING_SMALL_SAMPLE (pero ejecuta igual)
 
@@ -210,7 +212,7 @@ t           = (x̄1 - x̄2) / (Sp · √(1/n1 + 1/n2))  # [Ec. III-8] (Estadíst
 
 ### Veredicto
 ```
-valor_critico = t_{ν, α/2=0.025}   (scipy.stats.t.ppf)
+valor_critico = t_{ν, 1−α/2}   (scipy.stats.t.ppf; α/2 = 0.025 con α = 5 %)
 aprobada      = |t| ≤ valor_critico              # según texto p.50, Tesis Facundo
 ```
 
@@ -273,8 +275,8 @@ Nota: Cada bloque se compara individualmente contra la media macro (x̄_global) 
 
 ### Veredicto
 ```
-valor_critico_w1 = t_{ν_w1, α/2=0.025}   (scipy.stats.t.ppf)
-valor_critico_w2 = t_{ν_w2, α/2=0.025}   (scipy.stats.t.ppf)
+valor_critico_w1 = t_{ν_w1, 1−α/2}   (scipy.stats.t.ppf)
+valor_critico_w2 = t_{ν_w2, 1−α/2}   (scipy.stats.t.ppf)
 
 aprobada         = (t_w1 ≤ valor_critico_w1) AND (t_w2 ≤ valor_critico_w2)  # Según texto p.51, Tesis Facundo
 ```
@@ -322,7 +324,7 @@ Var(S) = n(n−1)(2n+5)/18   (sin empates; con empates pymannkendall resta Σ tp
 Z   = (S − sgn(S)) / √Var(S)   # Ec. A.55 con I = S; el −sgn(S) es la corrección de
                                # continuidad. Verificado numéricamente contra pymannkendall
                                # (S>0, S<0, S=0 y con empates).
-valor_critico = 1.96                                    # Normal estándar bilateral, α=0.05
+valor_critico = z_{1−α/2}                               # Normal estándar bilateral (1.96 con α=0.05)
 aprobada = not resultado.h                              # h=True significa tendencia detectada
 
 Nota: La aproximación normal con corrección por varianza ante empates se delega al
@@ -362,8 +364,9 @@ Z = D · √(n1·n2 / (n1+n2))                                              # Ec
 
 ### Veredicto
 estadístico   = Z                      # Ec. A.57 — tipificado, es lo que se compara
-valor_critico = 1.358                  # Tabla A.5, Caamaño, α=0.05
-aprobada      = Z ≤ 1.358
+valor_critico = KS_Z_CRIT[α]           # 1.358 (Tabla A.5, α=0.05); 1.628 (1 %), 1.224 (10 %),
+                                       # c(α) = √(−ln(α/2)/2) redondeado — DECISIÓN 078
+aprobada      = Z ≤ valor_critico
 
 Nota: D (Ec. A.56, distancia máxima entre CDFs empíricas) se calcula vía
 scipy.stats.ks_2samp por conveniencia — es la misma cantidad que definiría
@@ -402,10 +405,11 @@ Z_i = |yi - ȳ| / S_y  para cada i       # Estadístico de Grubbs por observaci�
 
 ### Estadístico y valor crítico — K_N (Grubbs-Beck), no cuantil t crudo
 estadístico   = max(Z_i)                              # desvío estandarizado máximo
-α             = 0.10                                  # Bulletin 17B Apéndice 4 — NO el
-                                                       # 0.05 global de Etapa 1
+α             = el de la Etapa 1, en CADA extremo     # DECISIÓN 078 (Facundo, 18/10/2026: 5 %).
+                                                       # Antes: α = 0.10 en dos colas, t_{1−0.10/(2n)},
+                                                       # que es el mismo cuantil que t_{1−0.05/n}
 ν             = n - 2                                 # grados de libertad (Grubbs-Beck)
-t             = t_{ν, 1-α/(2n)}   (scipy.stats.t.ppf)  # Bonferroni, n comparaciones
+t             = t_{ν, 1-α/n}   (scipy.stats.t.ppf)    # Bonferroni, n comparaciones
 K_N           = (n-1)/√n · √(t² / (n-2+t²))           # transformación geométrica de Grubbs
 valor_critico = K_N
 

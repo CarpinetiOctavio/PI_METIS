@@ -3,6 +3,7 @@ import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartPoint, ChartSeries } from "../../charts/InteractiveChart";
 import type { DesgloseFila, TestResultDetail } from "../../api/types";
 import { BlockMath } from "../../components/BlockMath";
+import { formatConfianza } from "../../i18n/alfa";
 import { formatearFormulaAndersonLag } from "../../i18n/explicaciones";
 import { formatInt, formatNum } from "../../i18n/format";
 import "./Etapa1Desglose.css";
@@ -54,6 +55,7 @@ function AndersonDesglose({
   const series = useMemo(() => construirSeriesCorrelograma(filas, elegido), [filas, elegido]);
   const filaElegida = filas.find((f) => numero(f, "k") === elegido) ?? null;
   const pasos = filaElegida ? formatearFormulaAndersonLag(terminos, filaElegida) : null;
+  const confianza = formatConfianza(terminos.alfa);
 
   return (
     <details className="results-desglose">
@@ -64,7 +66,7 @@ function AndersonDesglose({
         xScale="linear"
         xName="lag k"
         yName="r_k"
-        ariaLabel="Correlograma de Anderson: autocorrelación r_k por lag con las bandas de confianza del 95%"
+        ariaLabel={`Correlograma de Anderson: autocorrelación r_k por lag con las bandas de confianza del ${confianza}`}
         xLabel="Lag k"
         yLabel="r_k"
         height={260}
@@ -74,7 +76,7 @@ function AndersonDesglose({
       />
       <p className="fn results-desglose__nota">
         Cada barra es la autocorrelación r_k de un lag; las líneas punteadas son las bandas del
-        95% (Ec. III-3) y en rojo están los lags que salen de ellas. Al elegir un lag, en el
+        {confianza} (Ec. III-3) y en rojo están los lags que salen de ellas. Al elegir un lag, en el
         gráfico o en la tabla, se muestra su cálculo.
       </p>
 

@@ -204,6 +204,8 @@ export function ResultsPage() {
             cramer_particion: cramerParticionComoTexto(locationState?.cramerParticion),
             indices_excluidos: indicesExcluidos,
             etapas: locationState?.etapas === "1,2" ? [1, 2] : [1],
+            // DECISIÓN 078 — la simulación compara contra el mismo α.
+            alfa: result.alfa ?? 0.05,
             ...(seleccion && { seleccion }),
           })
       : undefined;

@@ -4,6 +4,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.reportes.pdf import generar_pdf_analisis, nombre_archivo_pdf
+from metis.core.etapa1.significancia import ALFA_DEFECTO
 from metis.services.analysis_service import get_analysis_by_id, simular_exclusion
 
 
@@ -75,6 +76,8 @@ def _simular_desde_detalle(detalle: dict, indices_excluidos: list[int]) -> dict:
             if seleccion
             else None
         ),
+        # DECISIÓN 078 — el α del análisis registrado (5 % si es anterior).
+        alfa=(detalle.get("configuracion") or {}).get("alfa", ALFA_DEFECTO),
     )
 
 

@@ -76,6 +76,39 @@ async def test_cu01_persiste_el_analisis_y_su_resultado(db, crear_usuario):
     assert resultado.etapa2 is None
 
 
+async def test_cu01_persiste_el_alfa_elegido(db, crear_usuario):
+    # DECISIÓN 078 — con otro α cambian los veredictos: el historial lo registra.
+    usuario = await crear_usuario()
+    gen, _ = run_stream(_csv(), columna_x="anio", user_id=usuario.id, db=db, alfa=0.10)
+    eventos = [parse_sse(e) async for e in gen]
+    analysis_id = eventos[-1][1]["analysis_id"]
+
+    detalle = await get_analysis_by_id(analysis_id, usuario.id, db)
+
+    assert detalle["configuracion"]["alfa"] == 0.10
+    assert "alfa_implicito" not in detalle["configuracion"]
+    assert detalle["etapa1"]["alfa"] == 0.10
+
+
+async def test_un_analisis_anterior_sin_alfa_se_lee_como_5_por_ciento_implicito(
+    db, crear_usuario
+):
+    usuario = await crear_usuario()
+    analysis_id = await _correr(db, usuario.id)
+    analisis = (
+        await db.execute(select(Analysis).where(Analysis.id == analysis_id))
+    ).scalar_one()
+    analisis.configuracion = {
+        k: v for k, v in analisis.configuracion.items() if k != "alfa"
+    }
+    await db.commit()
+
+    detalle = await get_analysis_by_id(analysis_id, usuario.id, db)
+
+    assert detalle["configuracion"]["alfa"] == 0.05
+    assert detalle["configuracion"]["alfa_implicito"] is True
+
+
 async def test_cu02_anonimo_no_persiste_nada(db):
     # Arrange
     antes = await _contar_analisis(db)

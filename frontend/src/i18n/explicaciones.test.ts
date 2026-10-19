@@ -197,10 +197,16 @@ const FORMULAS_PLANAS: CasoFormato[] = [
     contiene: [["D·√(n₁·n₂/(n₁+n₂))", "0,63246"]],
   },
   {
-    // α = 0,10, no el 0,05 del resto de Etapa 1
-    nombre: "chow — muestra K_N, el t Bonferroni-corregido y α = 0,10",
+    // DECISIÓN 078 — sin `alfa` en terminos (análisis anterior) corrió con 5 %.
+    nombre: "chow — muestra K_N, el t Bonferroni-corregido y α = 5 % por defecto",
     prueba: "chow",
-    contiene: [["K_N", "2,74500", "t_{n−2,1−α/(2n)} = 3,50000", "α = 0,10"]],
+    contiene: [["K_N", "2,74500", "t_{n−2,1−α/n} = 3,50000", "α = 5 %"]],
+  },
+  {
+    nombre: "chow — rotula el α que mandó el servidor",
+    prueba: "chow",
+    terminos: { alfa: 0.1 },
+    contiene: [["α = 10 %"]],
   },
 ];
 
@@ -219,12 +225,19 @@ const FORMULAS_LATEX: CasoFormato[] = [
     prueba: "anderson",
     contiene: [
       [
-        "r_{k}(95\\%) = \\dfrac{-1 \\pm 1{,}96\\sqrt{n-k-1}}{n-k}",
+        // DECISIÓN 078 — sin z_critico en terminos, el cuantil va con su símbolo.
+        "r_{k}(95\\,\\%) = \\dfrac{-1 \\pm z_{1-\\alpha/2}\\sqrt{n-k-1}}{n-k}",
         "no más del 10\\% de los",
       ],
       ["\\text{Lags fuera de las bandas: } 1 \\text{ de } 14", "\\text{tolerancia: } 2"],
       [],
     ],
+  },
+  {
+    nombre: "anderson — las bandas usan el α y el z que mandó el servidor",
+    prueba: "anderson",
+    terminos: { alfa: 0.01, z_critico: 2.5758 },
+    contiene: [["r_{k}(99\\,\\%)", "\\pm 2{,}57580\\sqrt{n-k-1}"], [], []],
   },
   {
     nombre: "wald_wolfowitz — R entero, µ_R y σ_R con decimales, Z del estadístico",
@@ -328,15 +341,21 @@ const FORMULAS_LATEX: CasoFormato[] = [
     prueba: "chow",
     contiene: [
       ["K_N = \\dfrac{n-1}{\\sqrt{n}}"],
-      ["t_{\\,n-2,\\;1-\\alpha/(2n)} = 3{,}50000", "n = 30"],
+      ["t_{\\,n-2,\\;1-\\alpha/n} = 3{,}50000", "n = 30"],
       [],
     ],
     igual: { 2: "K_N = 2{,}74500" },
   },
   {
-    nombre: "chow — rotula α = 0,10 (no el 0,05 del resto de Etapa 1)",
+    nombre: "chow — rotula α = 5 % (el mismo que el resto de Etapa 1) si no viene en terminos",
     prueba: "chow",
-    contiene: [[], ["\\alpha = 0{,}10", "0{,}05"], []],
+    contiene: [[], ["\\alpha = 5\\,\\%", "el mismo que el resto de la Etapa 1"], []],
+  },
+  {
+    nombre: "chow — rotula el α que mandó el servidor (10 %)",
+    prueba: "chow",
+    terminos: { alfa: 0.1 },
+    contiene: [[], ["\\alpha = 10\\,\\%"], []],
   },
 ];
 

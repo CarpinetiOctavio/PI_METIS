@@ -7,6 +7,7 @@ import numpy as np
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from metis.core.etapa1.significancia import ALFA_DEFECTO
 from metis.core.etapa2.design_events import calcular_eventos_diseno
 from metis.core.etapa2.types import STATUS_NO_APLICABLE, Etapa2Result, EventoDiseno
 from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
@@ -226,6 +227,8 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
         "nivel_confianza": result.nivel_confianza,
         "warnings": [warning_dict(w) for w in result.warnings],
         "datos": datos,
+        # DECISIÓN 078 — con qué nivel de significancia corrió la batería.
+        "alfa": result.alfa,
     }
 
 
@@ -524,6 +527,7 @@ async def stream_analysis(
     db: AsyncSession,
     mes_inicio_anio: int = 7,
     variable_diaria: str = "pico",
+    alfa: float = ALFA_DEFECTO,
 ) -> AsyncGenerator[str, None]:
     # DECISIÓN 054 — etapas ya llega validado y parseado desde el borde del
     # endpoint. Con etapas == [1] todo lo de abajo se comporta exactamente
@@ -550,6 +554,7 @@ async def stream_analysis(
             cramer_particion=cramer_particion,
             mes_inicio_anio=mes_inicio_anio,
             variable_diaria=variable_diaria,
+            alfa=alfa,
         )
 
         for evento in _emitir_resultado(result, iteracion=1):
@@ -639,6 +644,10 @@ async def stream_analysis(
                     # hallazgo V2.
                     mes_inicio_anio=mes_inicio_anio,
                     variable_diaria=variable_diaria,
+                    # DECISIÓN 078 — el mismo α que la primera pasada: sin esto
+                    # la segunda caía al 5 % por defecto, el mismo defecto que
+                    # ya tuvo mes_inicio_anio.
+                    alfa=alfa,
                 )
                 # PR 3 (DECISIÓN 058) — esta segunda ejecución corre sobre
                 # serie_filtrada (ya agregada), así que no tiene forma de
@@ -832,6 +841,7 @@ async def stream_analysis(
                 cramer_particion=cramer_particion,
                 mes_inicio_anio=mes_inicio_anio,
                 variable_diaria=variable_diaria,
+                alfa=alfa,
                 etapas=etapas,
                 result=result_final,
                 etapa2_result=etapa2_result,
@@ -865,6 +875,7 @@ async def _persistir(
     decisiones: dict,
     db: AsyncSession,
     filename: str,
+    alfa: float = ALFA_DEFECTO,
 ) -> uuid.UUID:
     analysis = Analysis(
         user_id=user_id,
@@ -898,6 +909,8 @@ async def _persistir(
             "mes_inicio_anio": mes_inicio_anio,
             "variable_diaria": variable_diaria,
             "nombre_archivo": filename,
+            # DECISIÓN 078 — mismo criterio: con otro α cambian los veredictos.
+            "alfa": alfa,
         },
     )
     db.add(analysis)
@@ -996,8 +1009,21 @@ async def get_analysis_by_id(
         # resultado — ver DECISIÓN 058 §1 para la partición completa.
         "serie": analysis.serie,
         "timestamps": analysis.timestamps,
-        "configuracion": analysis.configuracion,
+        "configuracion": _configuracion_con_alfa(analysis.configuracion),
     }
+
+
+def _configuracion_con_alfa(configuracion: dict | None) -> dict:
+    """DECISIÓN 078 — los análisis guardados antes de que α fuera configurable
+    corrieron con 5 %, pero no lo registraron. Se devuelve `alfa = 0.05` con
+    `alfa_implicito = True`: la interfaz y el PDF lo muestran como el valor por
+    defecto de entonces, no como una elección del usuario. Sin backfill en la
+    BD (mismo criterio que `timestamps`, DECISIÓN 058 §4)."""
+    configuracion = dict(configuracion or {})
+    if "alfa" not in configuracion:
+        configuracion["alfa"] = ALFA_DEFECTO
+        configuracion["alfa_implicito"] = True
+    return configuracion
 
 
 async def recalcular_eventos_diseno(
@@ -1105,6 +1131,8 @@ async def get_history(
             # del payload de la lista. Sparkline decorativa, no un gráfico
             # real — sin timestamps, sin ejes.
             "serie_preview": a.serie,
+            # DECISIÓN 078 — 0.05 para los análisis anteriores (sin backfill).
+            "alfa": _configuracion_con_alfa(a.configuracion)["alfa"],
         }
         for a in rows
     ]
@@ -1216,6 +1244,7 @@ def simular_exclusion(
     etapas: list[int],
     tratamiento: str = "eliminar",
     seleccion: dict | None = None,
+    alfa: float = ALFA_DEFECTO,
 ) -> dict:
     """POST /analysis/simulate-exclusion — DECISIÓN 071, ítem A del feedback de
     directores. Recalcula Etapa 1 (y Etapa 2 si se pidió) sobre `serie` sin los
@@ -1248,6 +1277,7 @@ def simular_exclusion(
         resolucion_temporal="anual",
         timestamps=recortada.anios,
         cramer_particion=cramer_particion,
+        alfa=alfa,
     )
 
     etapa2 = None

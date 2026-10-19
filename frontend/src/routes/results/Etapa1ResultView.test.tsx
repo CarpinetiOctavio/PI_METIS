@@ -145,3 +145,49 @@ describe("Etapa1ResultView — desglose paso a paso (ítems E/F, plan de feedbac
     expect(screen.getByText(/Ec\. III-1/)).toBeInTheDocument();
   });
 });
+
+describe("Etapa1ResultView — nivel de significancia (DECISIÓN 078)", () => {
+  it("muestra el α con que corrió el análisis, sin destacar el 5 %", () => {
+    render(<Etapa1ResultView result={makeResult({ alfa: 0.05 })} modo="experto" />);
+    const linea = screen.getByText(/Nivel de significancia de la Etapa 1/);
+    expect(linea).toHaveTextContent("α = 5 % (estándar en hidrología)");
+    expect(linea.querySelector(".pill.warn")).toBeNull();
+  });
+
+  it("destaca un α distinto del 5 %", () => {
+    render(<Etapa1ResultView result={makeResult({ alfa: 0.1 })} modo="paso_a_paso" />);
+    const linea = screen.getByText(/Nivel de significancia de la Etapa 1/);
+    expect(linea.querySelector(".pill.warn")).toHaveTextContent("α = 10 %");
+  });
+
+  it("un análisis anterior sin α registrado se muestra como el 5 % de entonces", () => {
+    render(<Etapa1ResultView result={makeResult()} modo="experto" />);
+    expect(screen.getByText(/Nivel de significancia de la Etapa 1/)).toHaveTextContent(
+      "α = 5 % (el único disponible cuando se corrió)",
+    );
+  });
+
+  it("paso a paso: las bandas de Anderson usan el α y el z del servidor, no 1,96 escrito a mano", async () => {
+    const anderson = testResult({
+      prueba: "anderson",
+      explicacion: {
+        ecuacion: "III-1",
+        terminos: {
+          ...ANDERSON_CON_EXPLICACION.explicacion!.terminos,
+          alfa: 0.1,
+          z_critico: 1.6449,
+        },
+      },
+    });
+    const { container } = render(
+      <Etapa1ResultView
+        result={makeResult({ alfa: 0.1, independencia: [anderson] })}
+        modo="paso_a_paso"
+      />,
+    );
+    await waitFor(() => expect(container.querySelector(".katex")).not.toBeNull());
+    expect(container.textContent).toContain("90");
+    expect(container.textContent).not.toContain("1,96");
+  });
+});
+
