@@ -619,7 +619,9 @@ def _texto_alfa(config: dict) -> str:
     texto = f"{alfa * 100:g} %".replace(".", ",")
     if config.get("alfa_implicito"):
         return f"{texto} (el único disponible cuando se corrió el análisis)"
-    if alfa == 0.05:
+    # α llega como float de un conjunto cerrado (0,01 / 0,05 / 0,10): se compara
+    # con tolerancia, no con ==.
+    if math.isclose(alfa, 0.05):
         return f"{texto} (estándar en hidrología)"
     return texto
 
