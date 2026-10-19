@@ -147,7 +147,11 @@ describe("StreamPage — integración de punta a punta (componente + hook reales
     renderStream();
 
     testResult("anderson", 1, { estadistico: 0.11 });
-    emit("outlier_detected", { session_id: "sess-1", valor_atipico: 245.7 });
+    emit("outlier_detected", {
+      session_id: "sess-1",
+      valor_atipico: 245.7,
+      atipicos: [{ indice: 7, periodo: 1987, valor: 245.7, z: 3.1, lado: "alto" }],
+    });
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeInTheDocument();
@@ -156,12 +160,12 @@ describe("StreamPage — integración de punta a punta (componente + hook reales
     expect(dialog).toHaveTextContent("245,70000");
 
     fireEvent.click(screen.getByRole("button", { name: "Rechazar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continuar con estas decisiones" }));
 
     await waitFor(() =>
       expect(postSpy).toHaveBeenCalledWith({
         session_id: "sess-1",
-        decision: "rechazar",
-        dato_atipico: 245.7,
+        decisiones: [{ indice: 7, decision: "rechazar" }],
       }),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());

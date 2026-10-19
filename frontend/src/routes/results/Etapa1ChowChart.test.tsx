@@ -72,8 +72,9 @@ describe("Etapa1ChowChart", () => {
     const normales = container.querySelector('g[data-series="normales"]');
     expect(normales?.querySelectorAll("circle")).toHaveLength(2);
 
+    // DECISIÓN 079 — el atípico va con rombo, no solo con otro color.
     const atipico = container.querySelector('g[data-series="atipico"]');
-    expect(atipico?.querySelectorAll("circle")).toHaveLength(1);
+    expect(atipico?.querySelectorAll('path[data-shape="diamond"]')).toHaveLength(1);
 
     // La línea sigue incluyendo TODOS los puntos, atípico incluido — no
     // se rompe la continuidad de la serie.
@@ -84,10 +85,10 @@ describe("Etapa1ChowChart", () => {
   it("paints the outlier marker with the --crit token (stands out in light mode)", () => {
     const { container } = render(<Etapa1ChowChart datos={datosConAtipico()} />);
 
-    const circulo = container.querySelector(
-      'g[data-series="atipico"] circle',
-    ) as SVGCircleElement | null;
-    expect(circulo?.style.fill).toBe("var(--crit)");
+    const marcador = container.querySelector(
+      'g[data-series="atipico"] .interactive-chart__point',
+    ) as SVGElement | null;
+    expect(marcador?.style.fill).toBe("var(--crit)");
   });
 
   it("draws the máximos/mínimos bands as dashed reference lines when Chow ran", () => {
@@ -142,6 +143,32 @@ describe("Etapa1ChowChart", () => {
 
     rerender(<Etapa1ChowChart datos={datosSinAtipico()} mesInicioAnio={7} />);
     expect(screen.getByText(/Criterio de año: julio/)).toBeInTheDocument();
+  });
+
+  // DECISIÓN 079 — todos los valores fuera de los umbrales, no solo el más extremo.
+  it("marks every value of valores_atipicos and draws the bands the server sent", () => {
+    const datos: Etapa1Datos = {
+      ...datosSinAtipico(),
+      serie_efectiva: [5.0, 94.71, 500.0],
+      indice_atipico: 2,
+    };
+    const chow = chowConFajas({
+      valores_atipicos: [
+        { indice: 2, valor: 500.0, z: 1.3, lado: "alto" },
+        { indice: 0, valor: 5.0, z: -1.2, lado: "bajo" },
+      ],
+      explicacion: {
+        ecuacion: "Bulletin 17B",
+        terminos: { n: 3, media_log: 4.7, s_log: 0.3, limite_inferior: 60, limite_superior: 160 },
+      },
+    });
+    const { container } = render(<Etapa1ChowChart datos={datos} chow={chow} />);
+
+    const atipicos = container.querySelectorAll('g[data-series="atipico"] path[data-shape="diamond"]');
+    expect(atipicos).toHaveLength(2);
+    expect(container.querySelectorAll('g[data-series="normales"] circle')).toHaveLength(1);
+    expect(screen.getByRole("img", { name: /2 atípicos marcados/ })).toBeInTheDocument();
+    expect(screen.getByText(/umbrales de Bulletin 17B/)).toHaveTextContent("2 valores marcados");
   });
 
   it("renders nothing when there are no effective timestamps", () => {

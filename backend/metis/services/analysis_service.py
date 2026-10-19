@@ -127,6 +127,8 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
             "n2": tr.n2,
             "valor_atipico": tr.valor_atipico,
             "indice_atipico": tr.indice_atipico,
+            # DECISIÓN 079 — Chow: todos los valores fuera de los umbrales.
+            "valores_atipicos": tr.valores_atipicos,
             # Bloque D (plan post-avance, DECISIÓN 064) — piezas para la
             # fórmula sustituida en modo paso a paso. None para pruebas
             # "no_ejecutada" (nada que sustituir).
@@ -476,6 +478,68 @@ def _emitir_resultado(result: Etapa1Result, iteracion: int) -> list[str]:
     return eventos
 
 
+class DecisionAtipicoInvalidaError(ValueError):
+    """outlier-decision no decide exactamente los atípicos de la pausa
+    (DECISIÓN 079). El borde la traduce a 400 OUTLIER_DECISION_INVALID."""
+
+
+def _atipicos_para_decidir(result: Etapa1Result) -> list[dict]:
+    """Los atípicos de Chow de la primera pasada, con su año, para la pausa
+    (DECISIÓN 079). `indice` es la posición en serie_efectiva, la misma que
+    usa la exclusión de puntos (DECISIÓN 071)."""
+    chow = next((p for p in result.atipicos if p.prueba == "chow"), None)
+    if chow is None or not chow.valores_atipicos:
+        return []
+    hubo_agregacion = result.resolucion_original in ("mensual", "diaria")
+    timestamps = _serializar_timestamps(
+        result.timestamps_efectivos, agregados=hubo_agregacion
+    )
+    return [
+        {
+            "indice": a["indice"],
+            "periodo": timestamps[a["indice"]]["anio"] if timestamps else None,
+            "valor": a["valor"],
+            "z": a["z"],
+            "lado": a["lado"],
+        }
+        for a in chow.valores_atipicos
+    ]
+
+
+def _describir_chow_tras_decision(
+    result: Etapa1Result, decisiones_chow: list[dict], hubo_rechazos: bool
+) -> None:
+    """Reescribe el warning de Chow del resultado final, que ya no está
+    "pendiente de decisión" (DECISIÓN 079). Si la segunda pasada, sin los
+    rechazados, encuentra valores NUEVOS fuera de los umbrales, lo dice: no se
+    vuelve a pausar y quedan sugeridos en el panel de exclusión."""
+    aceptados = [a for a in decisiones_chow if a["decision"] == "aceptar"]
+    claves_aceptados = {(a["periodo"], a["valor"]) for a in aceptados}
+    nuevos = [
+        a
+        for a in _atipicos_para_decidir(result)
+        if (a["periodo"], a["valor"]) not in claves_aceptados
+    ]
+
+    def anios(lista: list[dict]) -> str:
+        return ", ".join(str(a["periodo"]) for a in lista if a["periodo"] is not None)
+
+    for w in result.warnings:
+        if w.codigo != "TEST_WARNING_OUTLIER_DETECTED":
+            continue
+        if hubo_rechazos and nuevos:
+            w.descripcion = (
+                f"Sin los atípicos rechazados, Chow encuentra {len(nuevos)} valor(es) nuevo(s) "
+                f"fuera de los umbrales ({anios(nuevos)}). No se vuelve a pausar: quedan "
+                "sugeridos en el panel de exclusión de puntos."
+            )
+        elif aceptados:
+            w.descripcion = (
+                "Chow detectó valores fuera de los umbrales que aceptaste como parte de "
+                f"la población ({anios(aceptados)})."
+            )
+
+
 def _extraer_atipico(result: Etapa1Result) -> float | None:
     """Retorna el valor atípico de Chow si fue detectado, None si no."""
     for prueba in result.atipicos:
@@ -575,15 +639,28 @@ async def stream_analysis(
         serie_efectiva = result.serie_efectiva
         timestamps_efectivos = result.timestamps_efectivos
 
-        # Chow detectó atípico — pausar y esperar decisión (CU-01 y CU-02)
+        # Chow detectó atípicos — pausar y esperar decisión (CU-01 y CU-02).
+        # DECISIÓN 079: una sola pausa con TODOS los valores fuera de los
+        # umbrales, y una decisión por punto.
         valor_atipico = _extraer_atipico(result)
+        atipicos = _atipicos_para_decidir(result)
         result_final = result
         serie_final = serie_efectiva
+        decisiones_chow: list[dict] = []
+        rechazados: list[int] = []
 
-        if valor_atipico is not None:
+        if atipicos:
+            estado_chow = session_store.get_session(session_id)
+            if estado_chow is not None:
+                estado_chow.atipicos_pendientes = atipicos
             yield _sse(
                 "outlier_detected",
-                {"session_id": session_id, "valor_atipico": valor_atipico},
+                {
+                    "session_id": session_id,
+                    "atipicos": atipicos,
+                    # El más extremo, por compatibilidad con clientes viejos.
+                    "valor_atipico": valor_atipico,
+                },
             )
 
             recibio_decision = await session_store.wait_for_decision(session_id)
@@ -601,33 +678,43 @@ async def stream_analysis(
             # DECISIÓN 053 — decision es un dict desde acá, no un str: mismo
             # mecanismo que usará distribution-decision, cada consumidor lee
             # su propia clave.
-            decision_payload = session_store.get_decision(session_id)
-            decision = decision_payload["decision"] if decision_payload else None
+            decision_payload = session_store.get_decision(session_id) or {}
+            decision_por_indice = {
+                d["indice"]: d["decision"]
+                for d in decision_payload.get("decisiones", [])
+            }
+            decisiones_chow = [
+                {
+                    **a,
+                    "decision": decision_por_indice[a["indice"]],
+                    "codigo": "TEST_OUTLIER_REJECTED_BY_USER"
+                    if decision_por_indice[a["indice"]] == "rechazar"
+                    else "TEST_OUTLIER_ACCEPTED_BY_USER",
+                }
+                for a in atipicos
+            ]
+            rechazados = [
+                _mapear_indice_a_serie_original(a["indice"], serie_efectiva)
+                for a in decisiones_chow
+                if a["decision"] == "rechazar"
+            ]
 
-            if decision == "rechazar":
-                indice_atipico = _extraer_indice_atipico(result)
-                indice_real = _mapear_indice_a_serie_original(
-                    indice_atipico, serie_efectiva
+            if rechazados:
+                # DECISIÓN 079 — los rechazados se excluyen JUNTOS, con la misma
+                # operación que la simulación de exclusión (DECISIÓN 071). La
+                # serie y sus timestamps se filtran de a pares: sin eso todo
+                # punto posterior quedaba corrido un año (hallazgo V2, plan
+                # post-avance 14/08/2026).
+                recortada = aplicar_exclusiones(
+                    serie_efectiva,
+                    timestamps_efectivos
+                    if timestamps_efectivos is not None
+                    else [None] * len(serie_efectiva),
+                    rechazados,
                 )
-                serie_filtrada = serie_efectiva.copy()
-                del serie_filtrada[indice_real]
-
-                # timestamps_efectivos está alineado 1:1 con serie_efectiva
-                # (misma construcción en ejecutar_etapa1()) — sin filtrar acá
-                # con el mismo índice, quedaba un elemento más largo que
-                # serie_filtrada: validar_contrato() evaluaba duplicados/orden/
-                # espaciado contra timestamps que ya no correspondían a la
-                # serie analizada, y todo punto posterior al atípico quedaba
-                # corrido un año en los gráficos (serie temporal, Chow) del
-                # resultado final. Hallazgo V2, plan post-avance 14/08/2026.
+                serie_filtrada = recortada.serie
                 timestamps_filtrados = (
-                    None
-                    if timestamps_efectivos is None
-                    else [
-                        t
-                        for i, t in enumerate(timestamps_efectivos)
-                        if i != indice_real
-                    ]
+                    None if timestamps_efectivos is None else recortada.anios
                 )
 
                 result_final = ejecutar_etapa1(
@@ -680,6 +767,11 @@ async def stream_analysis(
 
                 for evento in _emitir_resultado(result_final, iteracion=2):
                     yield evento
+
+        if decisiones_chow:
+            _describir_chow_tras_decision(
+                result_final, decisiones_chow, bool(rechazados)
+            )
 
         # Emitir resultado final completo
         yield _sse("result_etapa1", _serializar_etapa1(result_final, mes_inicio_anio))
@@ -820,13 +912,12 @@ async def stream_analysis(
                 "curva_ajuste": curva_ajuste_dicts,
             }
 
-        # Construir registro de decisiones
+        # Construir registro de decisiones. DECISIÓN 079: un registro por
+        # atípico, con su código de auditoría. El historial y el PDF siguen
+        # leyendo la forma vieja ({accion, dato}) de los análisis anteriores.
         decisiones: dict = {}
-        if valor_atipico is not None:
-            decisiones["chow"] = {
-                "accion": decision,
-                "dato": valor_atipico,
-            }
+        if decisiones_chow:
+            decisiones["chow"] = {"atipicos": decisiones_chow}
         if decision_etapa2 is not None:
             decisiones["distribucion"] = decision_etapa2
 
@@ -934,12 +1025,32 @@ async def _persistir(
 
 async def registrar_outlier_decision(
     session_id: str,
-    decision: str,
-    dato_atipico: float,
+    decisiones: list[dict],
     db: AsyncSession,
-) -> dict:
-    # DECISIÓN 053 — resolve_session ahora recibe un dict, no un str.
-    session_store.resolve_session(session_id, {"decision": decision})
+) -> dict | None:
+    """Registra una decisión por atípico y desbloquea el stream (DECISIÓN 079).
+
+    None si la sesión no existe (el borde responde 404 SESSION_NOT_FOUND).
+    Levanta DecisionAtipicoInvalidaError si los índices no son exactamente los
+    de la pausa: decidir uno de menos, uno ajeno o uno dos veces no puede
+    desbloquear el stream con un resultado a medias.
+    """
+    estado = session_store.get_session(session_id)
+    if estado is None:
+        return None
+    pendientes = {a["indice"] for a in estado.atipicos_pendientes or []}
+    indices = [d["indice"] for d in decisiones]
+    if (
+        not pendientes
+        or len(indices) != len(set(indices))
+        or set(indices) != pendientes
+    ):
+        raise DecisionAtipicoInvalidaError(
+            "Hay que decidir exactamente los atípicos detectados, una vez cada uno: "
+            f"{sorted(pendientes)}."
+        )
+    # DECISIÓN 053 — resolve_session recibe un dict.
+    session_store.resolve_session(session_id, {"decisiones": decisiones})
     return {"ok": True, "pipeline_continua": True}
 
 
@@ -953,10 +1064,8 @@ async def registrar_distribution_decision(
     en espera (DECISIÓN 052).
 
     Retorna None si la sesión no existe — el borde del endpoint lo traduce
-    a 404 SESSION_NOT_FOUND. A diferencia de registrar_outlier_decision(),
-    acá el chequeo de existencia es explícito porque el contrato de
-    distribution-decision lo exige (DECISIÓN 052), no porque Chow tuviera
-    el mismo gap resuelto — ese gap queda tal como está, fuera de alcance.
+    a 404 SESSION_NOT_FOUND, igual que registrar_outlier_decision() desde la
+    DECISIÓN 079.
     """
     if session_store.get_session(session_id) is None:
         return None

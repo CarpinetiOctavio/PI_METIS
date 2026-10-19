@@ -25,7 +25,11 @@
 }
 
 .modal-backdrop .card {
-  max-width: 380px;
+  /* DECISIÓN 079 — 380px → 560px: la pausa de Chow lista varios atípicos en
+     una tabla, con dos botones por fila. */
+  max-width: 560px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   width: 100%;
   /* Ronda 3 (05/08/2026): el desenfoque vivía en el SCRIM de fondo, con la
      tarjeta encima totalmente opaca (var(--surf)) — arquitectura invertida
@@ -67,4 +71,20 @@
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* DECISIÓN 079 — la tabla de atípicos de la pausa de Chow. */
+.decision-atipicos {
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+
+.decision-atipicos .row {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.decision-atipicos .b[aria-pressed="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
 }

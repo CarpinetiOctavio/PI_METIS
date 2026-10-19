@@ -74,10 +74,27 @@ export interface AnalysisStreamForm {
 // DECISIÓN 078 — los tres niveles de significancia que acepta el backend.
 export type Alfa = 0.01 | 0.05 | 0.1;
 
+export type DecisionAtipico = "rechazar" | "aceptar";
+
+// DECISIÓN 079 — un atípico de Chow: un valor fuera de los umbrales de Bulletin
+// 17B. `indice` es la posición en datos.serie_efectiva; `z`, la distancia a la
+// media de los logaritmos en desvíos, con signo.
+export interface AtipicoChow {
+  indice: number;
+  valor: number;
+  z: number;
+  lado: "alto" | "bajo";
+}
+
+// El mismo atípico en la pausa del stream, con su año.
+export interface AtipicoDetectado extends AtipicoChow {
+  periodo: number | null;
+}
+
+// DECISIÓN 079 — una decisión por cada atípico de la pausa, todas juntas.
 export interface OutlierDecisionRequest {
   session_id: string;
-  decision: "rechazar" | "aceptar";
-  dato_atipico: number;
+  decisiones: { indice: number; decision: DecisionAtipico }[];
 }
 
 export interface OutlierDecisionResponse {
@@ -143,6 +160,9 @@ export interface TestResultDetail {
   // existía en el backend (TestResult), nunca se serializaba.
   indice_atipico: number | null;
   explicacion: Explicacion | null;
+  // DECISIÓN 079 — Chow: todos los valores fuera de los umbrales, ordenados por
+  // |z|. Ausente en las demás pruebas y en los análisis anteriores.
+  valores_atipicos?: AtipicoChow[] | null;
 }
 
 // Timestamp normalizado — PR 3 (DECISIÓN 058 §4.4): siempre ISO-8601 str +
@@ -272,6 +292,9 @@ export interface SseTestResultEvent extends TestResultDetail {
 export interface SseOutlierDetectedEvent {
   type: "outlier_detected";
   session_id: string;
+  // DECISIÓN 079 — todos los atípicos, para decidir uno por uno.
+  atipicos: AtipicoDetectado[];
+  // El más extremo; se conserva por compatibilidad.
   valor_atipico: number;
 }
 

@@ -200,14 +200,20 @@ El resto de los errores de parseo/contrato sí llegan como eventos SSE
 
 ### POST /api/v1/analysis/outlier-decision
 
+**Cambiado 18/10/2026 (DECISIÓN 079):** una sola pausa con todos los atípicos de Chow y una decisión por
+punto. Reemplaza al cuerpo `{session_id, decision, dato_atipico}`, que decidía uno solo.
+
 **Request:**
 ```json
 {
   "session_id": "uuid-de-sesion-activa",
-  "decision": "rechazar | aceptar",
-  "dato_atipico": 245.7
+  "decisiones": [
+    {"indice": 14, "decision": "rechazar"},
+    {"indice": 25, "decision": "aceptar"}
+  ]
 }
 ```
+`indice` es la posición en `datos.serie_efectiva`, la misma que trae `outlier_detected.atipicos`.
 
 **Auth:** JWT opcional (mismo que el stream activo)
 
@@ -215,6 +221,16 @@ El resto de los errores de parseo/contrato sí llegan como eventos SSE
 ```json
 {"ok": true, "pipeline_continua": true}
 ```
+
+**Errores:** 400 `OUTLIER_DECISION_INVALID` si los índices no son exactamente los de la pausa (falta uno, sobra
+uno ajeno, hay uno repetido, o la sesión no está en la pausa de Chow); 404 `SESSION_NOT_FOUND` si la sesión no
+existe o expiró. En ninguno de los dos casos se desbloquea el stream.
+
+Los rechazados se excluyen juntos, con la misma operación que `simulate-exclusion` (DECISIÓN 071), y la segunda
+pasada informa Chow sin volver a pausar. `decisiones.chow` se persiste como
+`{"atipicos": [{indice, periodo, valor, z, lado, decision, codigo}]}`, con `codigo`
+`TEST_OUTLIER_REJECTED_BY_USER` o `TEST_OUTLIER_ACCEPTED_BY_USER` por punto. Los análisis anteriores conservan
+la forma vieja `{"accion", "dato"}`, y el historial y el PDF leen las dos.
 
 **Solo para CU-01 y CU-02. CU-03 no usa este endpoint.**
 
@@ -355,7 +371,8 @@ llegaba a `HistoryDetailPage`).
     }
   },
   "decisiones": {
-    "chow": {"accion": "rechazar", "dato": 950.0},
+    "chow": {"atipicos": [{"indice": 20, "periodo": 2000, "valor": 950.0, "z": 3.4, "lado": "alto",
+                           "decision": "rechazar", "codigo": "TEST_OUTLIER_REJECTED_BY_USER"}]},
     "distribucion": {"distribucion": "gve", "metodo": "ml", "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]}
   },
   "serie": [94.71, 89.83],
@@ -935,7 +952,10 @@ códigos de contrato pese a validar un parámetro de request y no la serie.
 PARSE_ERROR                      No se pudo parsear el archivo subido (evento SSE "error")
 SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante un atípico (evento SSE "error")
 PARSE_FILE_TOO_LARGE             El archivo supera el límite de subida — respuesta HTTP 400, no evento SSE
-SESSION_NOT_FOUND                session_id no existe o ya expiró — respuesta HTTP 404, no evento SSE (DECISIÓN 052)
+SESSION_NOT_FOUND                session_id no existe o ya expiró — respuesta HTTP 404, no evento SSE (DECISIÓN 052).
+                                  También POST /analysis/outlier-decision desde DECISIÓN 079
+OUTLIER_DECISION_INVALID         Las decisiones de POST /analysis/outlier-decision no cubren exactamente los
+                                  atípicos de la pausa — respuesta HTTP 400, no evento SSE (DECISIÓN 079)
 ANALYSIS_NOT_FOUND               El análisis de POST /analysis/{id}/design-events no existe, no es del
                                   usuario, o no tiene Etapa 2 — respuesta HTTP 404, sin sesión de por medio (DECISIÓN 062).
                                   También GET /export/{id}: no existe o no es del usuario (DECISIÓN 075)

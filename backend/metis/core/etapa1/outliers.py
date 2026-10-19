@@ -59,7 +59,9 @@ def calcular_chow(
     media = np.mean(log_serie)
     s = np.std(log_serie, ddof=1)
 
-    z_scores = np.abs((log_serie - media) / s) if s != 0 else np.zeros(n)
+    # z con signo: positivo por encima de la media de los logaritmos.
+    z_con_signo = (log_serie - media) / s if s != 0 else np.zeros(n)
+    z_scores = np.abs(z_con_signo)
     estadistico = float(np.max(z_scores))
 
     # Valor crítico K_N — Grubbs-Beck, Bulletin 17B Apéndice 4 (DECISIÓN 018).
@@ -73,7 +75,30 @@ def calcular_chow(
         ((n - 1) / np.sqrt(n)) * np.sqrt(t_val**2 / (n - 2 + t_val**2))
     )
 
-    atipico_detectado = estadistico > valor_critico
+    # DECISIÓN 079 — Bulletin 17B: umbral alto ȳ + K_N·S y bajo ȳ − K_N·S sobre
+    # los logaritmos, cada lado como prueba de un extremo, y TODO valor más allá
+    # de su umbral es atípico, no solo el más extremo. Una sola pasada: ȳ, S y
+    # K_N se calculan sobre la serie completa (el enmascaramiento queda
+    # declarado en la decisión). Que la lista no esté vacía equivale a
+    # max|z| > K_N, el criterio anterior.
+    valores_atipicos = sorted(
+        (
+            {
+                "indice": i,
+                "valor": float(arr[i]),
+                "z": float(z_con_signo[i]),
+                "lado": "alto" if z_con_signo[i] > 0 else "bajo",
+            }
+            for i in range(n)
+            if z_con_signo[i] > valor_critico or z_con_signo[i] < -valor_critico
+        ),
+        key=lambda a: -abs(a["z"]),
+    )
+    # Umbrales en la escala original: el gráfico de Chow dibuja exactamente estos.
+    limite_inferior = float(np.exp(media - valor_critico * s))
+    limite_superior = float(np.exp(media + valor_critico * s))
+
+    atipico_detectado = bool(valores_atipicos)
     veredicto = "rechazada" if atipico_detectado else "aprobada"
 
     # Chow nunca genera warning crítico — siempre normal
@@ -99,6 +124,8 @@ def calcular_chow(
             "nu": nu,
             "t_bonferroni": float(t_val),
             "alfa": alfa,
+            "limite_inferior": limite_inferior,
+            "limite_superior": limite_superior,
         },
         # Addendum 01/10/2026 a la DECISIÓN 064 — una fila por observación, con
         # los z que ya se calcularon para el estadístico (max(z_i)). `i` es la
@@ -109,6 +136,8 @@ def calcular_chow(
                 "x_i": float(arr[i]),
                 "ln_x_i": float(log_serie[i]),
                 "z_i": float(z_scores[i]),
+                # DECISIÓN 079 — la observación está fuera de los umbrales.
+                "fuera": bool(z_scores[i] > valor_critico),
             }
             for i in range(n)
         ],
@@ -124,4 +153,5 @@ def calcular_chow(
         valor_atipico=valor_atipico,
         indice_atipico=indice_atipico,
         explicacion=explicacion,
+        valores_atipicos=valores_atipicos,
     )

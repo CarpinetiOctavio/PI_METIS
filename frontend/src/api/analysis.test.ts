@@ -13,8 +13,7 @@ describe("postOutlierDecision", () => {
 
     const result = await postOutlierDecision({
       session_id: "sess-1",
-      decision: "rechazar",
-      dato_atipico: 245.7,
+      decisiones: [{ indice: 7, decision: "rechazar" }],
     });
 
     expect(result).toEqual({ ok: true, pipeline_continua: true });
@@ -24,8 +23,7 @@ describe("postOutlierDecision", () => {
         method: "POST",
         body: JSON.stringify({
           session_id: "sess-1",
-          decision: "rechazar",
-          dato_atipico: 245.7,
+          decisiones: [{ indice: 7, decision: "rechazar" }],
         }),
       }),
     );

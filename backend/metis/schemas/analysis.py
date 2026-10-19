@@ -38,10 +38,20 @@ class CramerParticionCustom(BaseModel):
 # --- Request/Response: POST /analysis/outlier-decision ---
 
 
-class OutlierDecisionRequest(BaseModel):
-    session_id: uuid.UUID
+class DecisionAtipico(BaseModel):
+    """DECISIÓN 079 — la decisión sobre UNO de los atípicos de la pausa."""
+
+    indice: int  # posición en datos.serie_efectiva, la de outlier_detected
     decision: OutlierDecision
-    dato_atipico: float
+
+
+class OutlierDecisionRequest(BaseModel):
+    """DECISIÓN 079 — una decisión por cada atípico detectado, en una sola
+    pausa. El conjunto de índices tiene que coincidir exactamente con el de
+    `outlier_detected` (se valida en el borde: OUTLIER_DECISION_INVALID)."""
+
+    session_id: uuid.UUID
+    decisiones: list[DecisionAtipico]
 
 
 class OutlierDecisionResponse(BaseModel):

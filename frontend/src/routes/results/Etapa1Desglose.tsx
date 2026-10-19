@@ -186,11 +186,18 @@ function ChowDesglose({ filas }: Readonly<{ filas: DesgloseFila[] }>) {
             {filas.map((fila, idx) => {
               const z = numero(fila, "z_i");
               const esMaximo = z !== null && z === zMax;
+              // DECISIÓN 079 — `fuera` lo calcula core/: |z_i| > K_N, atípico.
+              const fuera = fila.fuera === true;
               return (
-                <tr key={numero(fila, "i") ?? idx} data-activa={esMaximo || undefined}>
+                <tr
+                  key={numero(fila, "i") ?? idx}
+                  data-activa={esMaximo || undefined}
+                  data-fuera={fuera || undefined}
+                >
                   <td>
                     {formatInt(numero(fila, "i"))}
                     {esMaximo && <span className="fn"> · máximo</span>}
+                    {fuera && <span className="fn"> · fuera de los umbrales</span>}
                   </td>
                   <td className="num">{formatNum(numero(fila, "x_i"))}</td>
                   <td className="num">{formatNum(numero(fila, "ln_x_i"))}</td>

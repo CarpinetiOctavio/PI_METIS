@@ -26,9 +26,13 @@ import type { SeleccionPuntos } from "./exclusiones";
  * atípico cuando |ln(x) − media_log| / s_log supera K_N. Llevado a la
  * escala original de la serie, eso son dos umbrales horizontales:
  *   exp(media_log ± K_N · s_log)
- * entre los que cae la población "normal". Se dibujan punteados a partir
- * de `media_log`/`s_log` (`chow.explicacion.terminos`, DECISIÓN 064) y
- * K_N (`chow.valor_critico`). Si Chow no se ejecutó (serie con ceros o
+ * entre los que cae la población "normal". DECISIÓN 079: los umbrales vienen
+ * del servidor (`terminos.limite_inferior`/`limite_superior`), los mismos con
+ * que Chow decidió, y se marcan TODOS los valores fuera de ellos
+ * (`chow.valores_atipicos`), con un rombo además del color. Un análisis
+ * guardado antes de esa decisión no trae los umbrales: se reconstruyen de
+ * `media_log`/`s_log` y K_N, la cuenta que este gráfico hacía antes, y se
+ * marca solo `indice_atipico`. Si Chow no se ejecutó (serie con ceros o
  * valores ≤ 0) `explicacion` es null y las fajas no se dibujan.
  */
 export function Etapa1ChowChart({
@@ -53,30 +57,26 @@ export function Etapa1ChowChart({
     id: i,
   }));
   const { marked, onPointActivate } = interaccionDeSeleccion(seleccion);
-  const puntosSinAtipico = todosLosPuntos.filter(
-    (_, i) => i !== datos.indice_atipico,
+  const indicesAtipicos = new Set(
+    chow?.valores_atipicos
+      ? chow.valores_atipicos.map((a) => a.indice)
+      : datos.indice_atipico !== null
+        ? [datos.indice_atipico]
+        : [],
   );
-  const puntoAtipico =
-    datos.indice_atipico !== null ? todosLosPuntos[datos.indice_atipico] : null;
+  const puntosSinAtipico = todosLosPuntos.filter((_, i) => !indicesAtipicos.has(i));
+  const puntosAtipicos = todosLosPuntos.filter((_, i) => indicesAtipicos.has(i));
 
   const series: ChartSeries[] = [
     { id: "linea", kind: "line", label: "Serie analizada", colorVar: "--acc", data: todosLosPuntos },
   ];
 
-  const mediaLog = chow?.explicacion?.terminos.media_log;
-  const sLog = chow?.explicacion?.terminos.s_log;
-  const kN = chow?.valor_critico;
-  if (
-    todosLosPuntos.length > 0 &&
-    typeof mediaLog === "number" &&
-    typeof sLog === "number" &&
-    typeof kN === "number"
-  ) {
+  const limites = umbralesDeChow(chow);
+  if (todosLosPuntos.length > 0 && limites) {
     const xs = todosLosPuntos.map((p) => p.x);
     const xMin = Math.min(...xs);
     const xMax = Math.max(...xs);
-    const limiteSuperior = Math.exp(mediaLog + kN * sLog);
-    const limiteInferior = Math.exp(mediaLog - kN * sLog);
+    const { limiteInferior, limiteSuperior } = limites;
     series.push(
       {
         id: "faja-max",
@@ -111,16 +111,19 @@ export function Etapa1ChowChart({
     data: puntosSinAtipico,
     marked,
   });
-  if (puntoAtipico) {
+  if (puntosAtipicos.length > 0) {
     series.push({
       id: "atipico",
       kind: "points",
       label: "Atípico (Chow)",
       // --crit (rojo) en vez de --acc2: en modo claro --acc2 (verde oliva)
       // se confundía con --acc (teal) del resto de los puntos. --crit
-      // destaca en ambos temas y es el token semántico de "anomalía".
+      // destaca en ambos temas y es el token semántico de "anomalía". El
+      // rombo lo distingue también sin color (DECISIÓN 079).
       colorVar: "--crit",
-      data: [puntoAtipico],
+      shape: "diamond",
+      pointRadius: 4.5,
+      data: puntosAtipicos,
       marked,
     });
   }
@@ -135,12 +138,50 @@ export function Etapa1ChowChart({
         series={series}
         xScale="linear"
         onPointActivate={onPointActivate}
-        ariaLabel="Gráfico de Chow: serie analizada, fajas de máximos y mínimos, y el atípico marcado"
+        ariaLabel={`Gráfico de Chow: serie analizada, fajas de máximos y mínimos, y ${
+          puntosAtipicos.length === 1
+            ? "el atípico marcado"
+            : `${puntosAtipicos.length} atípicos marcados`
+        }`}
         xLabel="Año"
         yLabel="Valor"
         xTickFormat={(v) => String(Math.round(v))}
         yTickFormat={(v) => formatAxis(v)}
       />
+      {limites && (
+        <p className="fn results-chow-leyenda">
+          Líneas punteadas: umbrales de Bulletin 17B. Todo valor fuera de ellos es atípico
+          {puntosAtipicos.length > 0 && (
+            <>
+              {" "}
+              — <span aria-hidden="true">◆</span> {puntosAtipicos.length === 1
+                ? "1 valor marcado"
+                : `${puntosAtipicos.length} valores marcados`}
+            </>
+          )}
+          .
+        </p>
+      )}
     </div>
   );
+}
+
+/** Umbrales de Chow en la escala de la serie: los del servidor (DECISIÓN
+ * 079) o, en un análisis anterior que no los trae, los que se dibujaban antes. */
+function umbralesDeChow(
+  chow: TestResultDetail | undefined,
+): { limiteInferior: number; limiteSuperior: number } | null {
+  const t = chow?.explicacion?.terminos;
+  if (!t) return null;
+  if (typeof t.limite_inferior === "number" && typeof t.limite_superior === "number") {
+    return { limiteInferior: t.limite_inferior, limiteSuperior: t.limite_superior };
+  }
+  const kN = chow?.valor_critico;
+  if (typeof t.media_log !== "number" || typeof t.s_log !== "number" || typeof kN !== "number") {
+    return null;
+  }
+  return {
+    limiteInferior: Math.exp(t.media_log - kN * t.s_log),
+    limiteSuperior: Math.exp(t.media_log + kN * t.s_log),
+  };
 }

@@ -41,6 +41,8 @@ function emit(type: string, payload: Record<string, unknown> = {}) {
   } as never);
 }
 
+const ATIPICO = { indice: 7, periodo: 1987, valor: 245.7, z: 3.1, lado: "alto" } as const;
+
 describe("useAnalysisStream", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -171,22 +173,23 @@ describe("useAnalysisStream", () => {
 
     const { result } = renderHook(() => useAnalysisStream());
     act(() => result.current.start(makeForm()));
-    act(() => emit("outlier_detected", { session_id: "sess-1", valor_atipico: 245.7 }));
+    act(() => emit("outlier_detected", { session_id: "sess-1", valor_atipico: 245.7, atipicos: [ATIPICO] }));
 
     expect(result.current.state.fase).toBe("waiting_outlier");
     expect(result.current.state.outlier).toEqual({
       session_id: "sess-1",
       valor_atipico: 245.7,
+      atipicos: [ATIPICO],
     });
 
     await act(async () => {
-      await result.current.resolveOutlier("rechazar");
+      await result.current.resolveOutlier({ 7: "rechazar" });
     });
 
+    // DECISIÓN 079 — una decisión por atípico de la pausa.
     expect(postSpy).toHaveBeenCalledWith({
       session_id: "sess-1",
-      decision: "rechazar",
-      dato_atipico: 245.7,
+      decisiones: [{ indice: 7, decision: "rechazar" }],
     });
     expect(result.current.state.fase).toBe("streaming");
     expect(result.current.state.outlier).toBeNull();
@@ -216,11 +219,11 @@ describe("useAnalysisStream", () => {
 
     const { result } = renderHook(() => useAnalysisStream());
     act(() => result.current.start(makeForm()));
-    act(() => emit("outlier_detected", { session_id: "sess-1", valor_atipico: 245.7 }));
+    act(() => emit("outlier_detected", { session_id: "sess-1", valor_atipico: 245.7, atipicos: [ATIPICO] }));
 
     let resolveOutlierPromise!: Promise<void>;
     act(() => {
-      resolveOutlierPromise = result.current.resolveOutlier("rechazar");
+      resolveOutlierPromise = result.current.resolveOutlier({ 7: "rechazar" });
     });
     expect(postSpy).toHaveBeenCalled();
 
