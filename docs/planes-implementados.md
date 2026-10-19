@@ -303,8 +303,8 @@ revirtió la pasada 5 (DECISIÓN 051).
 ## 18. Nivel de significancia configurable, Chow con todos los atípicos y fixes de resultados
 
 - **Fechas y PRs:** 18 y 19/10. Cuatro PRs al `staging` del fork `Kevinmass/PI_METIS`, uno por bloque y
-  mergeados el 19/10: **#5** (A), **#6** (B), **#7** (C) y **#8** (D). Falta llevarlos al repo original (Octavio
-  todavía no dio permisos).
+  mergeados el 19/10: **#5** (A), **#6** (B), **#7** (C) y **#8** (D). Llegaron al repo original en el **#131**,
+  junto con B13.
 - **Qué pedía:** dos cosas. La respuesta de Facundo del 18/10 sobre Chow: el 5 % es el estándar en hidrología, y
   dar a elegir 1 % y 10 % sería un plus. Y tres problemas que Kevin encontró al usar el sistema: la exploración de
   otra distribución ignoraba la simulación de exclusión, Chow no decía por qué no marcaba nada con negativos, y en
