@@ -18,7 +18,9 @@
 - auth/ implementado: usuario/contraseña + bcrypt + JWT HttpOnly Cookie con verificación @ucc.edu.ar (DECISIÓN 001). Parte 2 (envío real de mail con `aiosmtplib`): credenciales de IT recibidas 10/06, implementación pendiente de iniciar (DECISIÓN 004).
 
 ### Lógica de negocio
-- α = 5% fijo — no es configurable por el usuario en V1.0
+- α configurable en la Etapa 1: 1 %, 5 % (por defecto, estándar en hidrología) o 10 % — DECISIÓN 078
+  (18/10/2026). Reemplaza el "α = 5 % fijo" anterior. Helmert y la tolerancia de Anderson no dependen de α;
+  la Etapa 2 no tiene nivel de significancia.
 - El pipeline siempre arranca por Etapa 1 — nunca se puede ejecutar Etapa 2 directamente
 - METIS no sugiere distribución ganadora — presenta el ranking, el usuario decide
 - METIS no corrige datos — detecta, advierte, y continúa (excepto CU-03 con auto_clean=true)

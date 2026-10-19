@@ -1,15 +1,15 @@
 import numpy as np
 from scipy.stats import t as t_dist
 
+from metis.core.etapa1.significancia import ALFA_DEFECTO, validar_alfa
 from metis.core.types import Explicacion, TestResult, WarningItem
-
-ALPHA = 0.05
 
 
 # ── Helmert ───────────────────────────────────────────────────────────────────
 
 
 def calcular_helmert(serie: list[float]) -> TestResult:
+    # Ec. III-7: |S − C| ≤ √(n − 1) no depende de α (DECISIÓN 078).
     arr = np.array(serie, dtype=float)
     n = len(arr)
     media = np.mean(arr)
@@ -49,6 +49,7 @@ def calcular_t_student(
     serie: list[float],
     n1: int,
     n2: int,
+    alfa: float = ALFA_DEFECTO,
 ) -> TestResult:
     arr = np.array(serie, dtype=float)
     s1 = arr[:n1]
@@ -64,7 +65,8 @@ def calcular_t_student(
     estadistico = (
         (media1 - media2) / (sp * np.sqrt(1 / n1 + 1 / n2)) if sp != 0 else 0.0
     )
-    valor_critico = float(t_dist.ppf(1 - ALPHA / 2, df=nu))
+    # Ec. III-8: t_{1−α/2, ν} (DECISIÓN 078).
+    valor_critico = float(t_dist.ppf(1 - validar_alfa(alfa) / 2, df=nu))
 
     aprobada = abs(estadistico) <= valor_critico
     veredicto = "aprobada" if aprobada else "rechazada"
@@ -78,6 +80,8 @@ def calcular_t_student(
             "n1": n1,
             "n2": n2,
             "nu": nu,
+            "alfa": alfa,
+            "t_critico": valor_critico,
         },
     )
 
@@ -116,7 +120,9 @@ def _cramer_bloque(
 def calcular_cramer(
     serie: list[float],
     particion: dict | str = "default",
+    alfa: float = ALFA_DEFECTO,
 ) -> TestResult:
+    validar_alfa(alfa)
     arr = np.array(serie, dtype=float)
     n = len(arr)
 
@@ -187,7 +193,8 @@ def calcular_cramer(
 
     # ν = n - 2, confirmado Facundo — mismo GL que t de Student
     nu = n - 2
-    vc_w1 = float(t_dist.ppf(1 - ALPHA / 2, df=nu))
+    # Ec. III-15: t_{1−α/2, n−2} para los dos bloques (DECISIÓN 078).
+    vc_w1 = float(t_dist.ppf(1 - alfa / 2, df=nu))
     vc_w2 = vc_w1
 
     aprobada = (t_w1 <= vc_w1) and (t_w2 <= vc_w2)
@@ -219,6 +226,7 @@ def calcular_cramer(
             "vc_w1": vc_w1,
             "vc_w2": vc_w2,
             "nu": nu,
+            "alfa": alfa,
         },
     )
 

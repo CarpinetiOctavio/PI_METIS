@@ -1,16 +1,19 @@
 import numpy as np
 from scipy.stats import t as t_dist
 
+from metis.core.etapa1.significancia import ALFA_DEFECTO, validar_alfa
 from metis.core.types import Explicacion, TestResult
 
-# Grubbs-Beck (Chow, Bulletin 17B Apéndice 4) usa 10% de significancia —
-# distinto del 5% global de Etapa 1 (Anderson, Wald, Helmert, etc.).
-# Decisión provisoria mientras se confirma con Facundo/Carlos — ver
-# DECISIÓN 018, docs/decisiones/decision018.md.
-ALPHA_CHOW = 0.10
+# Chow usa el mismo α que el resto de la Etapa 1, aplicado a CADA extremo
+# (DECISIÓN 078; respuesta de Facundo del 18/10/2026 a la DECISIÓN 018: 5 %,
+# el estándar en hidrología). Antes se escribía como α = 0,10 repartido en las
+# dos colas, t_{1−0,10/(2n)}: es el mismo cuantil que t_{1−0,05/n}.
 
 
-def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
+def calcular_chow(
+    serie: list[float], tipo_variable: str, alfa: float = ALFA_DEFECTO
+) -> TestResult:
+    validar_alfa(alfa)
     arr = np.array(serie, dtype=float)
 
     # Negativos → no ejecutar, con motivo propio (DECISIÓN 073). Va primero,
@@ -62,10 +65,10 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
     # Valor crítico K_N — Grubbs-Beck, Bulletin 17B Apéndice 4 (DECISIÓN 018).
     # El estadístico (desvío estandarizado máximo) es el de Grubbs; K_N
     # requiere la transformación geométrica completa, no el cuantil t crudo:
-    #   K_N = (n-1)/√n · √(t² / (n-2+t²)),  t = t_{n-2, 1-α/(2n)}
-    # (Bonferroni de dos colas corregido por n comparaciones simultáneas)
+    #   K_N = (n-1)/√n · √(t² / (n-2+t²)),  t = t_{n-2, 1-α/n}
+    # (Bonferroni por las n comparaciones, α en cada extremo — DECISIÓN 078)
     nu = n - 2
-    t_val = t_dist.ppf(1 - ALPHA_CHOW / (2 * n), df=nu)
+    t_val = t_dist.ppf(1 - alfa / n, df=nu)
     valor_critico = float(
         ((n - 1) / np.sqrt(n)) * np.sqrt(t_val**2 / (n - 2 + t_val**2))
     )
@@ -95,6 +98,7 @@ def calcular_chow(serie: list[float], tipo_variable: str) -> TestResult:
             "s_log": float(s),
             "nu": nu,
             "t_bonferroni": float(t_val),
+            "alfa": alfa,
         },
         # Addendum 01/10/2026 a la DECISIÓN 064 — una fila por observación, con
         # los z que ya se calcularon para el estadístico (max(z_i)). `i` es la

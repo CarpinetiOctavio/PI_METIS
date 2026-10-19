@@ -103,6 +103,7 @@ function buildFormData(form: AnalysisStreamForm): FormData {
   body.append("etapas", form.etapas ?? "1");
   body.append("mes_inicio_anio", String(form.mes_inicio_anio ?? 7));
   body.append("variable_diaria", form.variable_diaria ?? "pico");
+  body.append("alfa", String(form.alfa ?? 0.05));
   return body;
 }
 

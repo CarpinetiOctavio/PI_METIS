@@ -612,6 +612,18 @@ def _texto_particion(particion) -> str:
     return "Por defecto (60 % / 30 %)"
 
 
+def _texto_alfa(config: dict) -> str:
+    """DECISIÓN 078. Un análisis anterior a que α fuera configurable corrió con
+    5 % sin registrarlo (`alfa_implicito`)."""
+    alfa = config.get("alfa", 0.05)
+    texto = f"{alfa * 100:g} %".replace(".", ",")
+    if config.get("alfa_implicito"):
+        return f"{texto} (el único disponible cuando se corrió el análisis)"
+    if alfa == 0.05:
+        return f"{texto} (estándar en hidrología)"
+    return texto
+
+
 def _seccion_datos(detalle: dict, autor: str | None, est) -> list:
     config = detalle.get("configuracion") or {}
     etapa1 = detalle.get("etapa1") or {}
@@ -644,6 +656,7 @@ def _seccion_datos(detalle: dict, autor: str | None, est) -> list:
         filas.append(
             ["Partición de Cramer", _texto_particion(config["cramer_particion"])]
         )
+    filas.append(["Nivel de significancia (Etapa 1)", _texto_alfa(config)])
     filas.append(
         ["Nivel de confianza", _rotulo(_NIVELES, etapa1.get("nivel_confianza"))]
     )
@@ -766,6 +779,14 @@ def _seccion_etapa1(detalle: dict, est) -> list:
             )
         )
 
+    story.append(
+        _p(
+            "Valores críticos con un nivel de significancia de "
+            f"{_texto_alfa(detalle.get('configuracion') or {})}. Chow lo aplica a "
+            "cada extremo; Helmert y la tolerancia de rezagos de Anderson no dependen de él.",
+            est["nota_previa"],
+        )
+    )
     grupos = [
         ("Independencia", "independencia", etapa1.get("nivel_independencia")),
         ("Homogeneidad", "homogeneidad", etapa1.get("nivel_homogeneidad")),

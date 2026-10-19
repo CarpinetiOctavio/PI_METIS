@@ -178,6 +178,16 @@ por qué no hay una corrección válida en software). Se persiste en
 que registrar bajo qué supuesto se construyó la serie. Pendiente de
 confirmación de dominio con Facundo (R0.2 en `pendientes-facundo.md`).
 
+**Agregado 18/10/2026 (DECISIÓN 078) — `alfa: str = Form("0.05")`.** Nivel de
+significancia de las ocho pruebas de la Etapa 1: `0.01`, `0.05` (por defecto,
+estándar en hidrología) o `0.10`. Llega como texto y se valida en el borde → 400
+`CONTRACT_ALFA_INVALID` para cualquier otro valor, también uno no numérico. Se
+pasa a la segunda pasada de la Etapa 1 tras rechazar un atípico, viaja en
+`result_etapa1.alfa` y se persiste en `analyses.configuracion.alfa`. Al leer un
+análisis anterior que no lo tiene, `GET /history/{id}` devuelve `alfa: 0.05` con
+`alfa_implicito: true` (sin backfill). Helmert y la tolerancia de rezagos de
+Anderson no dependen de α; la Etapa 2 no tiene nivel de significancia.
+
 **Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
 050. Excepción a la regla general de esta sección: como el archivo se lee
 completo (en chunks, con corte temprano) **antes** de construir el
@@ -283,10 +293,14 @@ caso, no oculta la fila ni la rompe.
     "created_at": "2026-07-31T01:19:27.556471",
     "archivado_at": null,
     "nombre_archivo": "estacion_04.csv",
-    "serie_preview": [94.71, 89.83, 105.13]
+    "serie_preview": [94.71, 89.83, 105.13],
+    "alfa": 0.05
   }
 ]
 ```
+
+`alfa` (DECISIÓN 078): nivel de significancia de la Etapa 1 del análisis; `0.05` para los guardados antes de
+que fuera configurable.
 
 ---
 
@@ -589,9 +603,13 @@ por la media quedó postergado (`tratamiento` es el punto de extensión).
   "indices_excluidos": [1],
   "etapas": [1, 2],
   "tratamiento": "eliminar",
-  "seleccion": {"distribucion": "gumbel", "metodo": "momentos", "periodos_retorno": [2, 10, 100]}
+  "seleccion": {"distribucion": "gumbel", "metodo": "momentos", "periodos_retorno": [2, 10, 100]},
+  "alfa": 0.05
 }
 ```
+`alfa` (DECISIÓN 078, opcional, `0.05` por defecto): el nivel de significancia del análisis original, que el
+frontend repite para que la simulación compare contra lo mismo. Fuera de `{0.01, 0.05, 0.10}` → 400
+`CONTRACT_ALFA_INVALID`.
 `serie`/`anios` son `datos.serie_efectiva` y los años de `datos.timestamps_efectivos`: la serie
 **ya agregada**; los índices son posiciones en ella, no en la serie cruda subida.
 `cramer_particion` llega como texto, igual que en `/analysis/stream`. `tratamiento` es opcional.
@@ -628,7 +646,7 @@ serie resultante, para que el frontend arme el CSV desde lo que devolvió `core/
 **Errores:** 400 `CONTRACT_SERIES_INVALID` (serie vacía, con más de 500 valores o con valores no
 finitos), 400 `CONTRACT_EXCLUSION_INVALID` (índices fuera de rango o repetidos, `anios` de otro
 largo que `serie`, `tratamiento` inexistente), 400 `CONTRACT_ETAPAS_INVALID` (`etapas` distinto
-de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 400 `DIST_SELECTION_INVALID` /
+de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 400 `CONTRACT_ALFA_INVALID`, 400 `DIST_SELECTION_INVALID` /
 `DIST_PENDING_VALIDATION` (`seleccion` mal formada o pendiente de validación), 422 validación Pydantic (por
 ejemplo, `tipo_variable` fuera de las dos opciones).
 
@@ -838,6 +856,8 @@ CONTRACT_CRAMER_PARTICION_INVALID      cramer_particion mal formado, fuera de ra
 CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
 CONTRACT_MES_INICIO_INVALID            mes_inicio_anio fuera de [1..12] (DECISIÓN 057)
 CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media"} (DECISIÓN 065, PR 2.5 / R0.2)
+CONTRACT_ALFA_INVALID                  alfa fuera de {0.01, 0.05, 0.10} en POST /analysis/stream o en
+                                        POST /analysis/simulate-exclusion (DECISIÓN 078)
 CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusion vacía, con más de 500 valores o con
                                         valores no finitos (DECISIÓN 071)
 CONTRACT_EXCLUSION_INVALID             indices_excluidos fuera de rango o repetidos, anios de otro largo que serie, o

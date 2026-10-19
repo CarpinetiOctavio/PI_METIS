@@ -39,6 +39,7 @@ async def test_etapas_uno_dos_no_lanza():
         cramer_particion="default",
         mes_inicio_anio=7,
         variable_diaria="pico",
+        alfa="0.05",
         db=None,
         current_user=None,
     )
@@ -60,6 +61,7 @@ async def test_etapas_invalida_da_400_no_500():
             cramer_particion="default",
             mes_inicio_anio=7,
             variable_diaria="pico",
+            alfa="0.05",
             db=None,
             current_user=None,
         )
@@ -81,6 +83,7 @@ async def test_etapas_vacia_da_400():
             cramer_particion="default",
             mes_inicio_anio=7,
             variable_diaria="pico",
+            alfa="0.05",
             db=None,
             current_user=None,
         )
@@ -108,6 +111,7 @@ async def test_etapas_invalida_se_valida_antes_de_leer_el_archivo():
             cramer_particion="default",
             mes_inicio_anio=7,
             variable_diaria="pico",
+            alfa="0.05",
             db=None,
             current_user=None,
         )

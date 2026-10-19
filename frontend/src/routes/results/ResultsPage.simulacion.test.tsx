@@ -150,7 +150,45 @@ describe("ResultsPage — what-if de atípicos", () => {
       cramer_particion: cramer,
       indices_excluidos: [3],
       etapas,
+      alfa: 0.05,
     });
+  });
+
+  it("repite el α con que corrió el análisis (DECISIÓN 078)", async () => {
+    const fetchMock = stubFetchRouted([
+      { match: (url) => url.includes("/auth/me"), status: 401, body: {} },
+      {
+        match: (url, init) => init?.method === "POST" && url.includes("/simulate-exclusion"),
+        status: 200,
+        body: makeSimulacion(),
+      },
+    ]);
+    renderPage(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/results",
+            state: {
+              result: makeEtapa1Result({ datos: makeEtapa1Datos(), alfa: 0.1 }),
+              tipoVariable: "otro",
+            },
+          },
+        ]}
+      >
+        <AuthProvider>
+          <Routes>
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+    const user = userEvent.setup();
+    const grilla = await screen.findByRole("group", { name: /Años de la serie/ });
+    await user.click(within(grilla).getAllByRole("button")[3]);
+    await user.click(screen.getByRole("button", { name: RECALCULAR }));
+    await screen.findByText("Resultados sin los puntos excluidos");
+
+    expect(pedidoDeSimulacion(fetchMock).alfa).toBe(0.1);
   });
 
   describe("eventos de diseño sin los puntos excluidos", () => {

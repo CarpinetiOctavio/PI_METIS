@@ -168,3 +168,6 @@ class SimulateExclusionRequest(BaseModel):
     etapas: list[int]
     tratamiento: str = "eliminar"
     seleccion: SeleccionSimulada | None = None
+    # DECISIÓN 078 — el α del análisis original; se valida en el borde
+    # (CONTRACT_ALFA_INVALID), no con restricciones de Pydantic.
+    alfa: float = 0.05

@@ -42,6 +42,7 @@ async def _llamar(cramer_particion: str):
         cramer_particion=cramer_particion,
         mes_inicio_anio=7,
         variable_diaria="pico",
+        alfa="0.05",
         db=None,
         current_user=None,
     )

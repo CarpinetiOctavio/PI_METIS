@@ -72,6 +72,7 @@ function makeItems(n: number): HistoryItem[] {
     archivado_at: null,
     nombre_archivo: null,
     serie_preview: [],
+    alfa: 0.05,
   }));
 }
 
@@ -108,6 +109,17 @@ describe("HistoryPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Email o contraseña incorrectos.",
     );
+  });
+
+  it("DECISIÓN 078 — muestra el α de cada análisis y destaca el que no es 5 %", async () => {
+    const [cinco, diez] = makeItems(2);
+    stubFetch(200, [cinco, { ...diez, alfa: 0.1 }]);
+    renderHistoryPage();
+
+    const enlaces = await screen.findAllByRole("link");
+    expect(enlaces[0]).toHaveTextContent("α = 5 %");
+    expect(enlaces[0].querySelector(".pill.warn")).toBeNull();
+    expect(enlaces[1].querySelector(".pill.warn")).toHaveTextContent("α = 10 %");
   });
 
   it("renders items and paginates client-side (10 per page)", async () => {

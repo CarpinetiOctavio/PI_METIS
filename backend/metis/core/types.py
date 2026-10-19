@@ -112,6 +112,8 @@ class Etapa1Result:
     serie_original: list = field(default_factory=list)
     timestamps_originales: list | None = None
     resolucion_original: str | None = None
+    # Nivel de significancia con el que corrió la batería (DECISIÓN 078).
+    alfa: float = 0.05
 
 
 @dataclass

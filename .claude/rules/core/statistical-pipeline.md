@@ -22,7 +22,7 @@ Services/ orquesta el pipeline y emite eventos SSE. Core/ solo calcula.
 6. Atípicos: Chow                          ← pausa para decisión del usuario en CU-01/CU-02
 ```
 
-**α = 5% fijo en toda la V1.0. No es configurable.**
+**α configurable: 1 %, 5 % (por defecto) o 10 %, el mismo para las ocho pruebas — DECISIÓN 078.**
 
 ### Paso 0a — Orden cronológico (DECISIÓN 030, Bloque H3 del plan post-avance)
 
@@ -146,7 +146,7 @@ if tipo_variable == "caudal_precipitacion" and any(v < 0 for v in serie):
 - Produce correlograma como output gráfico
 
 **Wald-Wolfowitz (verificación)**
-- Para n > 40: valor crítico de distribución normal estándar (Z = ±1.96 para α=5%)
+- Valor crítico de la normal estándar, z_{1−α/2} (±1.96 con α = 5 %)
 - Para n ≤ 40: ejecutar CON advertencia explícita `TEST_WARNING_SMALL_SAMPLE` — no omitir
 - Si Anderson acepta y Wald-Wolfowitz rechaza: resultado = INDEPENDIENTE con nota de Wald
 
@@ -158,7 +158,7 @@ if tipo_variable == "caudal_precipitacion" and any(v < 0 for v in serie):
 - Resultado directo, sin tabla
 
 **t de Student**
-- Tabla con ν = n₁ + n₂ − 2 grados de libertad, α = 5%
+- t_{1−α/2} con ν = n₁ + n₂ − 2 grados de libertad
 
 **Cramer (principal de homogeneidad)**
 - Distribución t de Student
@@ -181,7 +181,7 @@ homogeneidad_critica  → Cramer rechazó → WARNING CRÍTICO
 - n ≤ 10: Tabla A.4
 
 **Kolmogorov-Smirnov (tendencia)**
-- Z_crit = 1.358 para α = 0.05 (Tabla A.5)
+- Z_crit = 1.358 para α = 0.05 (Tabla A.5); 1.628 y 1.224 para 1 % y 10 % (DECISIÓN 078)
 
 ### Detección de atípicos: Chow
 

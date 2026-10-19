@@ -263,6 +263,32 @@ def test_datos_del_analisis(detalle_completo, est):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [
+        ({"alfa": 0.05}, "5 % (estándar en hidrología)"),
+        ({"alfa": 0.1}, "10 %"),
+        (
+            {"alfa": 0.05, "alfa_implicito": True},
+            "5 % (el único disponible cuando se corrió el análisis)",
+        ),
+    ],
+)
+def test_nivel_de_significancia_en_datos_y_pruebas(
+    detalle_completo, est, config, esperado
+):
+    # DECISIÓN 078 — α en la configuración y sobre las tablas de pruebas.
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["configuracion"].update(config)
+
+    datos = _textos(_seccion_datos(detalle, None, est))
+    pruebas = " ".join(_textos(_seccion_etapa1(detalle, est)))
+
+    assert f"Nivel de significancia (Etapa 1) | {esperado}" in datos
+    assert f"nivel de significancia de {esperado}" in pruebas
+
+
+@pytest.mark.unit
 def test_nombre_archivo_pdf_ascii():
     detalle = {
         "created_at": "2026-10-06T12:00:00",

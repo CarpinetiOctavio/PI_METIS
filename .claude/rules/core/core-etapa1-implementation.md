@@ -23,8 +23,10 @@ Ver architecture.md — "core/ completamente aislado" para la restricción de im
 ## Criterio de convergencia
 1×10⁻⁷ — aplica a métodos iterativos de Etapa 2
 
-## α fijo
-0.05 — no es parámetro configurable en V1.0
+## α configurable — DECISIÓN 078
+0.01, 0.05 (por defecto) o 0.10, en `core/etapa1/significancia.py` (`NIVELES_ALFA`, `z_bilateral`,
+`KS_Z_CRIT`). Cada prueba recibe `alfa` desde `ejecutar_etapa1(..., alfa=)`; con 0.05 los resultados son
+idénticos a los de antes (test_no_regresion_alfa.py). Chow usa el mismo α en cada extremo (t_{1−α/n}).
 
 ## Separación de responsabilidades — flujo de datos
 Ver architecture.md — "Separación de responsabilidades — flujo de datos".

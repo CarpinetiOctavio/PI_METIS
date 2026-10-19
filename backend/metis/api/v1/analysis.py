@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.api.deps import get_current_user, get_db, get_optional_user
+from metis.core.etapa1.significancia import NIVELES_ALFA
 from metis.core.etapa2.distributions import PENDIENTES_VALIDACION
 from metis.core.pipeline.exclusiones import ExclusionInvalidaError
 from metis.core.validacion.parser import leer_columnas_preview
@@ -101,6 +102,30 @@ def _validar_variable_diaria(variable_diaria: str) -> str:
     if variable_diaria not in _VARIABLE_DIARIA_VALIDAS:
         raise _VARIABLE_DIARIA_INVALIDA
     return variable_diaria
+
+
+_ALFA_INVALIDO = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "CONTRACT_ALFA_INVALID",
+            "mensaje": "alfa debe ser 0.01, 0.05 o 0.10.",
+        }
+    },
+)
+
+
+def _validar_alfa(alfa: str | float) -> float:
+    """DECISIÓN 078 — nivel de significancia de la Etapa 1, validado en el borde
+    contra {0.01, 0.05, 0.10}. Llega como texto en el multipart del stream: un
+    valor no numérico también es CONTRACT_ALFA_INVALID, no un 422 genérico."""
+    try:
+        valor = float(alfa)
+    except (TypeError, ValueError):
+        raise _ALFA_INVALIDO from None
+    if valor not in NIVELES_ALFA:
+        raise _ALFA_INVALIDO
+    return valor
 
 
 def _cramer_particion_invalida(mensaje: str) -> HTTPException:
@@ -216,6 +241,7 @@ async def stream_analysis(
     cramer_particion: str = Form("default"),
     mes_inicio_anio: int = Form(7),
     variable_diaria: str = Form("pico"),
+    alfa: str = Form("0.05"),
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
@@ -229,6 +255,7 @@ async def stream_analysis(
     etapas_parseadas = _parsear_etapas(etapas)
     mes_inicio_valido = _validar_mes_inicio(mes_inicio_anio)
     variable_diaria_valida = _validar_variable_diaria(variable_diaria)
+    alfa_valido = _validar_alfa(alfa)
     content = await _leer_archivo_limitado(archivo)
     session_id = str(uuid.uuid4())
 
@@ -247,6 +274,7 @@ async def stream_analysis(
             db=db,
             mes_inicio_anio=mes_inicio_valido,
             variable_diaria=variable_diaria_valida,
+            alfa=alfa_valido,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
@@ -457,6 +485,7 @@ async def simulate_exclusion(body: SimulateExclusionRequest):
     if body.etapas not in ([1], [1, 2]):
         raise _ETAPAS_INVALIDAS
     cramer_particion = _parsear_cramer_particion(body.cramer_particion)
+    alfa = _validar_alfa(body.alfa)
     if body.seleccion is not None:
         _validar_seleccion_distribucion(
             body.seleccion.distribucion,
@@ -475,6 +504,7 @@ async def simulate_exclusion(body: SimulateExclusionRequest):
             etapas=body.etapas,
             tratamiento=body.tratamiento,
             seleccion=body.seleccion.model_dump() if body.seleccion else None,
+            alfa=alfa,
         )
     except ExclusionInvalidaError as error:
         raise _exclusion_invalida(str(error)) from None

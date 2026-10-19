@@ -11,6 +11,7 @@ from metis.core.etapa1.independence import (
     determinar_nivel_independencia,
 )
 from metis.core.etapa1.outliers import calcular_chow
+from metis.core.etapa1.significancia import ALFA_DEFECTO, validar_alfa
 from metis.core.etapa1.trend import (
     calcular_ks_tendencia,
     calcular_mann_kendall,
@@ -178,7 +179,11 @@ def ejecutar_etapa1(
     cramer_particion: dict | str = "default",
     mes_inicio_anio: int = 7,
     variable_diaria: str = "pico",
+    alfa: float = ALFA_DEFECTO,
 ) -> Etapa1Result:
+    # Nivel de significancia de las ocho pruebas (DECISIÓN 078). Se valida acá
+    # también, aunque el borde de la API ya lo hizo: core/ no confía en el borde.
+    validar_alfa(alfa)
 
     # Capturados ANTES del paso 0 — PR 3 del plan de cierre de pendientes
     # no-test (DECISIÓN 058). serie/timestamps/resolucion_temporal se
@@ -242,6 +247,7 @@ def ejecutar_etapa1(
             serie_original=serie_original,
             timestamps_originales=timestamps_originales,
             resolucion_original=resolucion_original,
+            alfa=alfa,
         )
 
     # ── 0. Agregación temporal (Bloque F4 / R2-R3) ───────────────────────────
@@ -295,6 +301,7 @@ def ejecutar_etapa1(
             serie_original=serie_original,
             timestamps_originales=timestamps_originales,
             resolucion_original=resolucion_original,
+            alfa=alfa,
         )
 
     # Serie filtrada — solo valores numéricos para todas las pruebas. Los
@@ -309,8 +316,8 @@ def ejecutar_etapa1(
     descriptive = calcular_descriptiva(valores_numericos)
 
     # ── 3. Independencia ──────────────────────────────────────────────────────
-    anderson = calcular_anderson(valores_numericos)
-    wald = calcular_wald_wolfowitz(valores_numericos)
+    anderson = calcular_anderson(valores_numericos, alfa=alfa)
+    wald = calcular_wald_wolfowitz(valores_numericos, alfa=alfa)
     nivel_independencia, w_independencia = determinar_nivel_independencia(
         anderson, wald
     )
@@ -325,20 +332,20 @@ def ejecutar_etapa1(
     n2_t = n_total - n1_t
 
     helmert = calcular_helmert(valores_numericos)
-    t_student = calcular_t_student(valores_numericos, n1=n1_t, n2=n2_t)
-    cramer = calcular_cramer(valores_numericos, particion=cramer_particion)
+    t_student = calcular_t_student(valores_numericos, n1=n1_t, n2=n2_t, alfa=alfa)
+    cramer = calcular_cramer(valores_numericos, particion=cramer_particion, alfa=alfa)
     nivel_homogeneidad, w_homogeneidad = determinar_nivel_homogeneidad(
         helmert, t_student, cramer
     )
     warnings.extend(w_homogeneidad)
 
     # ── 5. Tendencia ──────────────────────────────────────────────────────────
-    mann_kendall = calcular_mann_kendall(valores_numericos)
-    ks = calcular_ks_tendencia(valores_numericos)
+    mann_kendall = calcular_mann_kendall(valores_numericos, alfa=alfa)
+    ks = calcular_ks_tendencia(valores_numericos, alfa=alfa)
     warnings.extend(determinar_warnings_tendencia(mann_kendall, ks))
 
     # ── 6. Atípicos (Chow) ────────────────────────────────────────────────────
-    chow = calcular_chow(valores_numericos, tipo_variable=tipo_variable)
+    chow = calcular_chow(valores_numericos, tipo_variable=tipo_variable, alfa=alfa)
     if chow.warning_codigo == "TEST_WARNING_OUTLIER_DETECTED":
         warnings.append(
             WarningItem(
@@ -374,4 +381,5 @@ def ejecutar_etapa1(
         serie_original=serie_original,
         timestamps_originales=timestamps_originales,
         resolucion_original=resolucion_original,
+        alfa=alfa,
     )

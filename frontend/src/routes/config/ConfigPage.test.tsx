@@ -684,4 +684,37 @@ describe("ConfigPage", () => {
     const form = JSON.parse(screen.getByTestId("stream-state").textContent ?? "null");
     expect(form.cramer_particion).toBe("default");
   });
+
+  it("DECISIÓN 078 — 5 % viene marcado como estándar y se manda si no se cambia", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+    await llenarCamposMinimos();
+
+    const cinco = screen.getByRole("button", { name: /5 % · estándar en hidrología/ });
+    expect(cinco).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "1 %" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText(/Con 10 % las pruebas rechazan con más facilidad/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    const form = JSON.parse((await screen.findByTestId("stream-state")).textContent ?? "null");
+    expect(form.alfa).toBe(0.05);
+  });
+
+  it.each([
+    ["1 %", 0.01],
+    ["10 %", 0.1],
+  ])("DECISIÓN 078 — manda el nivel de significancia elegido (%s)", async (rotulo, valor) => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+    await llenarCamposMinimos();
+
+    fireEvent.click(screen.getByRole("button", { name: rotulo }));
+    expect(screen.getByRole("button", { name: rotulo })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    const form = JSON.parse((await screen.findByTestId("stream-state")).textContent ?? "null");
+    expect(form.alfa).toBe(valor);
+  });
 });

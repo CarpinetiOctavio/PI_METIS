@@ -1,4 +1,5 @@
 import type { TestResultDetail } from "../api/types";
+import { ALFA_DEFECTO, formatAlfa } from "./alfa";
 import { formatInt, formatNum } from "./format";
 
 /**
@@ -31,6 +32,28 @@ function subscript(n: number): string {
 
 function fmt(v: number | null | undefined): string {
   return formatNum(v);
+}
+
+// DECISIÓN 078 — α y los cuantiles que usó la prueba vienen en `terminos`; acá
+// no se escribe ninguno a mano. Los análisis guardados antes de que α fuera
+// configurable no los traen: corrieron con 5 %, y el cuantil se muestra con su
+// símbolo en vez de un número que no mandó el servidor.
+function alfaDe(t: Record<string, number | null>): number {
+  return t.alfa ?? ALFA_DEFECTO;
+}
+
+// "95 %" → "95%": nivel de confianza de las bandas de Anderson.
+function confianzaPct(t: Record<string, number | null>): string {
+  return formatAlfa(1 - alfaDe(t)).replace(" ", "");
+}
+
+function conAlfa(t: Record<string, number | null>): string {
+  return ` con α = ${formatAlfa(alfaDe(t))}`;
+}
+
+// Porcentaje para LaTeX ("5 %", "95%"): coma escapada y % escapado, una vez.
+function pctLatex(texto: string): string {
+  return texto.replace(",", "{,}").replace(/ ?%/, "\\,\\%");
 }
 
 type FormulaFn = (tr: TestResultDetail) => string[];
@@ -88,7 +111,7 @@ const FORMULAS: Record<string, FormulaFn> = {
   chow: (tr) => {
     const t = tr.explicacion!.terminos;
     return [
-      `K_N = (n−1)/√n · √(t²/(n−2+t²)) = ${fmt(tr.valor_critico)}  (t = t_{n−2,1−α/(2n)} = ${fmt(t.t_bonferroni)}, n=${t.n}, α = 0,10)`,
+      `K_N = (n−1)/√n · √(t²/(n−2+t²)) = ${fmt(tr.valor_critico)}  (t = t_{n−2,1−α/n} = ${fmt(t.t_bonferroni)}, n=${t.n}, α = ${formatAlfa(alfaDe(t))})`,
     ];
   },
 };
@@ -117,6 +140,15 @@ function ltx(v: number | null | undefined): string {
   return formatNum(v).replace(/\./g, "").replace(",", "{,}");
 }
 
+// z_{1−α/2} de las bandas de Anderson: el que mandó el servidor, o su símbolo.
+function zLatex(t: Record<string, number | null>): string {
+  return t.z_critico == null ? "z_{1-\\alpha/2}" : ltx(t.z_critico);
+}
+
+function zTexto(t: Record<string, number | null>): string {
+  return t.z_critico == null ? "z_{1−α/2}" : fmt(t.z_critico);
+}
+
 // Conteos (n, k, n1, n2, ...): enteros, sin `.00000`.
 function ltxInt(v: number | null | undefined): string {
   if (v === null || v === undefined || Number.isNaN(v)) return "\\text{—}";
@@ -137,15 +169,15 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
   anderson: (tr) => {
     const t = tr.explicacion!.terminos;
     const k = ltxInt(t.k ?? 0);
+    const conf = confianzaPct(t);
     return [
       {
         latex: lineas(
           `r_{k} = \\dfrac{\\sum_{i=1}^{n-k}(x_i-\\bar{x})(x_{i+k}-\\bar{x})}{\\sum_{i=1}^{n}(x_i-\\bar{x})^{2}}`,
-          `r_{k}(95\\%) = \\dfrac{-1 \\pm 1{,}96\\sqrt{n-k-1}}{n-k}`,
+          `r_{k}(${pctLatex(conf)}) = \\dfrac{-1 \\pm ${zLatex(t)}\\sqrt{n-k-1}}{n-k}`,
           `\\text{La serie es independiente si no más del 10\\% de los } r_k \\text{ salen de esas bandas}`,
         ),
-        fallback:
-          "r_k = Σ(xi−x̄)(x_{i+k}−x̄) / Σ(xi−x̄)²; bandas al 95%: r_k = (−1 ± 1,96·√(n−k−1)) / (n−k); independiente si no más del 10% de los r_k salen de las bandas",
+        fallback: `r_k = Σ(xi−x̄)(x_{i+k}−x̄) / Σ(xi−x̄)²; bandas al ${conf}: r_k = (−1 ± ${zTexto(t)}·√(n−k−1)) / (n−k); independiente si no más del 10% de los r_k salen de las bandas`,
       },
       {
         latex: lineas(
@@ -315,15 +347,14 @@ const FORMULAS_LATEX: Record<string, FormulaLatexFn> = {
         fallback: "K_N = (n−1)/√n · √(t²/(n−2+t²))",
       },
       {
-        // α = 0,10 es la constante `ALPHA_CHOW` de `core/etapa1/outliers.py`
-        // (Bulletin 17B, Ap. 4): NO es el 0,05 del resto de Etapa 1. Sin
-        // rotularlo, el alumno no puede reproducir `t_Bonferroni`. Si esa
-        // constante cambia, cambiar también acá (no viaja en `terminos`).
+        // DECISIÓN 078 — el mismo α que el resto de la Etapa 1, aplicado a cada
+        // extremo: t_{1−α/n}. Llega en `terminos.alfa`; sin rotularlo, el
+        // alumno no puede reproducir `t_Bonferroni`.
         latex: lineas(
-          `\\alpha = 0{,}10 \\quad\\text{(no el } 0{,}05 \\text{ del resto de Etapa 1)}`,
-          `t = t_{\\,n-2,\\;1-\\alpha/(2n)} = ${ltx(t.t_bonferroni)},\\qquad n = ${ltxInt(t.n)}`,
+          `\\alpha = ${pctLatex(formatAlfa(alfaDe(t)))} \\quad\\text{(en cada extremo, el mismo que el resto de la Etapa 1)}`,
+          `t = t_{\\,n-2,\\;1-\\alpha/n} = ${ltx(t.t_bonferroni)},\\qquad n = ${ltxInt(t.n)}`,
         ),
-        fallback: `α = 0,10 (no el 0,05 del resto de Etapa 1); t = t_{n−2,1−α/(2n)} = ${fmt(t.t_bonferroni)}, n=${t.n}`,
+        fallback: `α = ${formatAlfa(alfaDe(t))} (en cada extremo, el mismo que el resto de la Etapa 1); t = t_{n−2,1−α/n} = ${fmt(t.t_bonferroni)}, n=${t.n}`,
       },
       {
         latex: `K_N = ${ltx(tr.valor_critico)}`,
@@ -354,10 +385,10 @@ export function formatearFormulaAndersonLag(
     {
       latex: lineas(
         `r_{${kTxt}} = \\dfrac{${ltx(num)}}{${ltx(terminos.denominador)}} = ${ltx(r)}`,
-        `\\text{Bandas (95\\%): } \\dfrac{-1 \\pm 1{,}96\\sqrt{${ltxInt(terminos.n)}-${kTxt}-1}}{${ltxInt(terminos.n)}-${kTxt}} \\;\\Rightarrow\\; [${ltx(inf)};\\, ${ltx(sup)}]`,
+        `\\text{Bandas (${pctLatex(confianzaPct(terminos))}): } \\dfrac{-1 \\pm ${zLatex(terminos)}\\sqrt{${ltxInt(terminos.n)}-${kTxt}-1}}{${ltxInt(terminos.n)}-${kTxt}} \\;\\Rightarrow\\; [${ltx(inf)};\\, ${ltx(sup)}]`,
         `r_{${kTxt}} = ${ltx(r)}${estado}`,
       ),
-      fallback: `r${subscript(k ?? 0)} = ${fmt(num)} / ${fmt(terminos.denominador)} = ${fmt(r)}; bandas (95%): [${fmt(inf)}; ${fmt(sup)}] — ${dentro ? "dentro" : "fuera"} de las bandas`,
+      fallback: `r${subscript(k ?? 0)} = ${fmt(num)} / ${fmt(terminos.denominador)} = ${fmt(r)}; bandas (${confianzaPct(terminos)}): [${fmt(inf)}; ${fmt(sup)}] — ${dentro ? "dentro" : "fuera"} de las bandas`,
     },
   ];
 }
@@ -380,7 +411,7 @@ const INTERPRETACIONES: Record<string, InterpretadorFn> = {
   },
   wald_wolfowitz: (tr) => {
     const dentro = tr.veredicto === "aprobada";
-    return `El estadístico (${fmt(tr.estadistico)}) está ${dentro ? "dentro" : "fuera"} del rango crítico (±${fmt(tr.valor_critico)}) — ${dentro ? "consistente con independencia" : "sugiere dependencia en el orden de los datos"}. Wald-Wolfowitz es una verificación: Anderson manda en el veredicto final, aunque los dos discrepen.`;
+    return `El estadístico (${fmt(tr.estadistico)}) está ${dentro ? "dentro" : "fuera"} del rango crítico (±${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}) — ${dentro ? "consistente con independencia" : "sugiere dependencia en el orden de los datos"}. Wald-Wolfowitz es una verificación: Anderson manda en el veredicto final, aunque los dos discrepen.`;
   },
   helmert: (tr) => {
     const dentro = tr.veredicto === "aprobada";
@@ -388,30 +419,30 @@ const INTERPRETACIONES: Record<string, InterpretadorFn> = {
   },
   t_student: (tr) => {
     const dentro = tr.veredicto === "aprobada";
-    return `El estadístico (${fmt(tr.estadistico)}) está ${dentro ? "dentro" : "fuera"} del rango crítico (±${fmt(tr.valor_critico)}), así que ${dentro ? "no hay evidencia de" : "hay evidencia de"} un cambio de media entre las dos mitades del registro.`;
+    return `El estadístico (${fmt(tr.estadistico)}) está ${dentro ? "dentro" : "fuera"} del rango crítico (±${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}), así que ${dentro ? "no hay evidencia de" : "hay evidencia de"} un cambio de media entre las dos mitades del registro.`;
   },
   cramer: (tr) => {
     const t = tr.explicacion!.terminos;
     const b1 = (t.t_w1 ?? 0) <= (t.vc_w1 ?? 0);
     const b2 = (t.t_w2 ?? 0) <= (t.vc_w2 ?? 0);
     if (b1 && b2) {
-      return `Los dos bloques aprueban — ninguno supera el valor crítico (${fmt(t.vc_w1)}) — sin evidencia de cambio de media en ningún tramo reciente del registro.`;
+      return `Los dos bloques aprueban — ninguno supera el valor crítico (${fmt(t.vc_w1)}${conAlfa(t)}) — sin evidencia de cambio de media en ningún tramo reciente del registro.`;
     }
-    return `Al menos uno de los dos bloques supera el valor crítico (${fmt(t.vc_w1)}) — alcanza con que uno falle para que Cramer rechace homogeneidad, y Cramer manda sobre Helmert y t de Student.`;
+    return `Al menos uno de los dos bloques supera el valor crítico (${fmt(t.vc_w1)}${conAlfa(t)}) — alcanza con que uno falle para que Cramer rechace homogeneidad, y Cramer manda sobre Helmert y t de Student.`;
   },
   mann_kendall: (tr) => {
     const dentro = tr.veredicto === "aprobada";
-    return `El estadístico Z (${fmt(tr.estadistico)}) está ${dentro ? "dentro" : "fuera"} del rango crítico (±${fmt(tr.valor_critico)}), así que ${dentro ? "no se detecta" : "se detecta"} tendencia monotónica en la serie.`;
+    return `El estadístico Z (${fmt(tr.estadistico)}) está ${dentro ? "dentro" : "fuera"} del rango crítico (±${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}), así que ${dentro ? "no se detecta" : "se detecta"} tendencia monotónica en la serie.`;
   },
   kolmogorov_smirnov: (tr) => {
     const dentro = tr.veredicto === "aprobada";
-    return `Z (${fmt(tr.estadistico)}) está ${dentro ? "por debajo" : "por encima"} del valor crítico de tabla (${fmt(tr.valor_critico)}), así que ${dentro ? "no hay evidencia de" : "hay evidencia de"} tendencia al comparar las dos mitades del registro.`;
+    return `Z (${fmt(tr.estadistico)}) está ${dentro ? "por debajo" : "por encima"} del valor crítico de tabla (${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}), así que ${dentro ? "no hay evidencia de" : "hay evidencia de"} tendencia al comparar las dos mitades del registro.`;
   },
   chow: (tr) => {
     if (tr.veredicto === "aprobada") {
-      return `El desvío estandarizado máximo (${fmt(tr.estadistico)}) no supera K_N (${fmt(tr.valor_critico)}) — ningún dato se marca como atípico.`;
+      return `El desvío estandarizado máximo (${fmt(tr.estadistico)}) no supera K_N (${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}) — ningún dato se marca como atípico.`;
     }
-    return `El desvío estandarizado máximo (${fmt(tr.estadistico)}) supera K_N (${fmt(tr.valor_critico)}) — el dato ${fmt(tr.valor_atipico)} queda marcado como atípico, a la espera de tu decisión.`;
+    return `El desvío estandarizado máximo (${fmt(tr.estadistico)}) supera K_N (${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}) — el dato ${fmt(tr.valor_atipico)} queda marcado como atípico, a la espera de tu decisión.`;
   },
 };
 
