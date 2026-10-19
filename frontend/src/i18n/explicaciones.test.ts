@@ -443,6 +443,44 @@ describe("interpretar", () => {
     expect(interpretar(sinAtipico)).not.toContain("950");
     expect(interpretar(conAtipico)).toContain("950,00000");
   });
+
+  it("chow (DECISIÓN 079) — con los umbrales del servidor, enuncia la regla y cuenta los valores por lado", () => {
+    const umbrales = { limite_inferior: 20, limite_superior: 900, alfa: 0.05 };
+    const conTres = caso(
+      "chow",
+      {
+        veredicto: "rechazada",
+        valores_atipicos: [
+          { indice: 4, valor: 5, z: -3.4, lado: "bajo" },
+          { indice: 9, valor: 950, z: 3.1, lado: "alto" },
+          { indice: 2, valor: 12, z: -2.9, lado: "bajo" },
+        ],
+      },
+      umbrales,
+    );
+    const texto = interpretar(conTres)!;
+    expect(texto).toContain("Bulletin 17B: todo valor fuera de los umbrales es atípico");
+    expect(texto).toContain("entre 20,00000 y 900,00000");
+    expect(texto).toContain("Quedan fuera 3 valores (1 por encima y 2 por debajo)");
+    // no habla de una decisión pendiente: la misma interpretación se lee en Resultados, después de la pausa
+    expect(texto).not.toContain("espera");
+
+    const ninguno = caso("chow", { veredicto: "aprobada", valores_atipicos: [] }, umbrales);
+    expect(interpretar(ninguno)).toContain("Ningún valor queda fuera.");
+
+    const unoAlto = caso(
+      "chow",
+      { veredicto: "rechazada", valores_atipicos: [{ indice: 9, valor: 950, z: 3.1, lado: "alto" }] },
+      umbrales,
+    );
+    expect(interpretar(unoAlto)).toContain("Quedan fuera 1 valor (1 por encima).");
+  });
+
+  it("chow — un análisis anterior a la DECISIÓN 079 (sin umbrales ni lista) conserva el texto de max|z| contra K_N", () => {
+    const viejo = caso("chow", { veredicto: "rechazada", valor_atipico: 950.0 });
+    expect(interpretar(viejo)).toContain("supera K_N");
+    expect(interpretar(viejo)).not.toContain("Bulletin 17B: todo valor");
+  });
 });
 
 describe("REGLA_GRUPO", () => {

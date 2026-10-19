@@ -39,10 +39,16 @@ export async function cargarSerie(page: Page, nombre: string) {
   await expect(page.locator("#config-columna-y option:checked")).toContainText("caudal");
 }
 
-/** En el stream: el modal de Chow no se cierra con Escape (M3.2); hay que elegir por nombre. */
+/** En el stream: el modal de Chow no se cierra con Escape (M3.2); hay que elegir por nombre.
+ * DECISIÓN 079 — una fila por atípico: se rechazan todos y se confirma con "Continuar". */
 export async function rechazarAtipico(page: Page) {
-  const modal = page.getByRole("dialog", { name: "Dato atípico detectado" });
+  const modal = page.getByRole("dialog", { name: /^Datos? atípicos? detectados?$/ });
   await expect(modal).toBeVisible();
-  await modal.getByRole("button", { name: "Rechazar" }).click();
+  const continuar = modal.getByRole("button", { name: "Continuar con estas decisiones" });
+  await expect(continuar).toBeDisabled();
+  for (const rechazar of await modal.getByRole("button", { name: "Rechazar" }).all()) {
+    await rechazar.click();
+  }
+  await continuar.click();
   await expect(modal).toBeHidden();
 }

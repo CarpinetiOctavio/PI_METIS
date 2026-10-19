@@ -453,7 +453,7 @@ const INTERPRETACIONES: Record<string, InterpretadorFn> = {
         altos ? `${altos} por encima` : null,
         bajos ? `${bajos} por debajo` : null,
       ].filter(Boolean).join(" y ");
-      return `${regla} Quedan fuera ${atipicos.length} valor${atipicos.length === 1 ? "" : "es"} (${lados}), a la espera de tu decisión.`;
+      return `${regla} Quedan fuera ${atipicos.length} valor${atipicos.length === 1 ? "" : "es"} (${lados}).`;
     }
     if (tr.veredicto === "aprobada") {
       return `El desvío estandarizado máximo (${fmt(tr.estadistico)}) no supera K_N (${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}) — ningún dato se marca como atípico.`;

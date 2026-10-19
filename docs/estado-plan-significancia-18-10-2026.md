@@ -26,7 +26,7 @@ Para el agente que siga. Plan: `docs/plan-significancia-y-fixes-18-10-2026.md`. 
 |---|---|---|
 | `feature/exploracion-simulada` | `origin/staging` | **Bloque A completo**, 2 commits (plan + bloque A) |
 | `feature/significancia-configurable` | `origin/staging` | **Bloque B completo**, 1 commit (`a3ce5c0` o el amend siguiente) |
-| `feature/chow-todos-los-atipicos` | `feature/significancia-configurable` | **Bloque C a medias**, commit WIP |
+| `feature/chow-todos-los-atipicos` | `feature/significancia-configurable` | **Bloque C completo**, commit WIP + cierre |
 | (sin crear) bloque D | saldría de la rama de C | sin empezar |
 
 A y B son independientes; C depende de B. Hay que hacer push y abrir un PR por bloque hacia `staging` del fork
@@ -54,7 +54,7 @@ revisión de la DECISIÓN 071 y está documentado en `api-contracts.md`. Tests: 
 - **Falta:** el recorrido en el navegador. La consulta opcional a Facundo sobre la tolerancia de Anderson queda
   anotada en la DECISIÓN 078.
 
-## Bloque C — hecho hasta acá (DECISIÓN 079, el archivo todavía no existe)
+## Bloque C — hecho (DECISIÓN 079)
 
 Backend completo y probado (893 tests unitarios y de integración + 8 de BD en verde):
 - `calcular_chow`: `TestResult.valores_atipicos` `[{indice, valor, z, lado}]` ordenados por |z|;
@@ -80,19 +80,19 @@ Frontend, hecho y en verde (512 tests, tsc y eslint limpios):
 - Panel de exclusión: `sugeridos: number[]`. Desglose de Chow con `data-fuera`. Interpretación de Chow con los
   umbrales y la regla de Bulletin 17B.
 
-**Falta del bloque C:**
-1. Escribir `docs/decisiones/decision079.md` y sumarla al `README.md` del índice. El contenido está en la
-   sección C del plan: problema, regla de Bulletin 17B, una sola pasada, enmascaramiento declarado, una sola
-   pausa, compatibilidad y códigos.
-2. `formulas-etapa1.md` §9: reemplazar el veredicto de `max(Z_i)` por la regla de los dos umbrales y la lista.
-3. Tests de frontend que faltan: la interpretación de Chow con `valores_atipicos` en `explicaciones.test.ts`,
-   la fila `data-fuera` en `Etapa1Desglose.test.tsx` y `sugeridos` múltiples en el panel de exclusión.
-4. Opcional, del plan: el gráfico de Chow dentro del diálogo de la pausa. Si no entra, anotarlo como pendiente
-   en la 079.
-5. E2E (`frontend/e2e/`): revisar si algún escenario pasa por la pausa de Chow y adaptar los clicks (ahora hay
-   que hacer clic en "Continuar con estas decisiones").
-6. Revisar `git diff` por cambios que sean solo de formato de `ruff format` en archivos ajenos, y revertirlos
-   (ya pasó en B).
+**Cierre del bloque C (19/10/2026):**
+- `docs/decisiones/decision079.md` escrita y sumada al índice. `formulas-etapa1.md` §9 con la regla de los dos
+  umbrales, la lista y las condiciones previas en el orden real (negativos primero, DECISIÓN 073).
+- La interpretación de Chow con umbrales ya no dice "a la espera de tu decisión": se lee en Resultados, después
+  de la pausa.
+- Tests de frontend nuevos: interpretación con `valores_atipicos` (y análisis viejo), filas `data-fuera` del
+  desglose y varios `sugeridos` en el panel de exclusión.
+- E2E: `rechazarAtipico` (`e2e/helpers/flujo.ts`) rechaza todas las filas y confirma con "Continuar con estas
+  decisiones". No se corrió Playwright (necesita el despliegue).
+- Revisado el diff del WIP: sin cambios de solo formato en archivos ajenos.
+- Corrida: backend 896 unitarios + integración, 8 de BD (1 skip de Mailpit), frontend 517, tsc/eslint/ruff de
+  `metis/` limpios, catálogo de errores sincronizado.
+- **Queda pendiente:** el gráfico de Chow dentro del diálogo (anotado en la 079) y el recorrido en el navegador.
 
 ## Bloque D — sin empezar
 
