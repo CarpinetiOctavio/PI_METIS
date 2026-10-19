@@ -154,6 +154,27 @@
   right: 4px;
 }
 
+/* No válido para Chow (revisión 19/10/2026 de la DECISIÓN 073): borde --crit y
+   una marca cuadrada, para distinguirlo de "sugerido" también sin color. */
+.etapa1-exclusion__celda--no-valida {
+  border-color: var(--crit);
+}
+
+.etapa1-exclusion__celda--no-valida::after,
+.etapa1-exclusion__marca--no-valida {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  background: var(--crit);
+}
+
+.etapa1-exclusion__celda--no-valida::after {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
 .etapa1-exclusion__leyenda {
   display: flex;
   align-items: center;

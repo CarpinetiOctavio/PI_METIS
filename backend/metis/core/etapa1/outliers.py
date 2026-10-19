@@ -4,6 +4,13 @@ from scipy.stats import t as t_dist
 from metis.core.etapa1.significancia import ALFA_DEFECTO, validar_alfa
 from metis.core.types import Explicacion, TestResult
 
+
+def _no_validos(arr: np.ndarray, mascara: np.ndarray) -> list[dict]:
+    """Los valores que impidieron la prueba, {indice, valor} (revisión del
+    19/10/2026 de la DECISIÓN 073)."""
+    return [{"indice": int(i), "valor": float(arr[i])} for i in np.flatnonzero(mascara)]
+
+
 # Chow usa el mismo α que el resto de la Etapa 1, aplicado a CADA extremo
 # (DECISIÓN 078; respuesta de Facundo del 18/10/2026 a la DECISIÓN 018: 5 %,
 # el estándar en hidrología). Antes se escribía como α = 0,10 repartido en las
@@ -29,6 +36,7 @@ def calcular_chow(
             veredicto="no_ejecutada",
             warning_codigo="TEST_NOT_EXECUTED_NEGATIVES",
             warning_nivel="normal",
+            valores_no_validos=_no_validos(arr, arr < 0),
         )
 
     # Ceros en caudal_precipitacion → no ejecutar
@@ -40,6 +48,7 @@ def calcular_chow(
             veredicto="no_ejecutada",
             warning_codigo="TEST_NOT_EXECUTED_ZEROS",
             warning_nivel="normal",
+            valores_no_validos=_no_validos(arr, arr == 0),
         )
 
     # Ceros con tipo "otro" → log no definido
@@ -51,6 +60,7 @@ def calcular_chow(
             veredicto="no_ejecutada",
             warning_codigo="TEST_NOT_EXECUTED_CONDITION",
             warning_nivel="normal",
+            valores_no_validos=_no_validos(arr, arr <= 0),
         )
 
     # Chow aplica sobre logaritmos

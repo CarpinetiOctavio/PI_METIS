@@ -163,6 +163,15 @@ export interface TestResultDetail {
   // DECISIÓN 079 — Chow: todos los valores fuera de los umbrales, ordenados por
   // |z|. Ausente en las demás pruebas y en los análisis anteriores.
   valores_atipicos?: AtipicoChow[] | null;
+  // Revisión 19/10/2026 de la DECISIÓN 073 — Chow no ejecutada: los valores
+  // (negativos o ceros) que impidieron la prueba. Ausente en las demás pruebas
+  // y en los análisis anteriores.
+  valores_no_validos?: ValorNoValido[] | null;
+}
+
+export interface ValorNoValido {
+  indice: number;
+  valor: number;
 }
 
 // Timestamp normalizado — PR 3 (DECISIÓN 058 §4.4): siempre ISO-8601 str +
