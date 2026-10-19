@@ -21,14 +21,20 @@ export function formatConfianza(alfa: number | null | undefined): string {
   return formatAlfa(1 - (alfa ?? ALFA_DEFECTO));
 }
 
+/** α llega como float de un conjunto cerrado (0,01 / 0,05 / 0,10): se compara
+ * con tolerancia, no con ===. */
+function esAlfaDefecto(alfa: number): boolean {
+  return Math.abs(alfa - ALFA_DEFECTO) < 1e-9;
+}
+
 /** α de un análisis ya corrido. Sin α registrado (anterior a la DECISIÓN 078),
  * el análisis corrió con 5 %, el único nivel disponible entonces. */
 export function textoAlfaAnalisis(alfa: number | null | undefined): string {
   if (alfa == null) return `${formatAlfa(ALFA_DEFECTO)} (el único disponible cuando se corrió)`;
-  return alfa === ALFA_DEFECTO ? `${formatAlfa(alfa)} (estándar en hidrología)` : formatAlfa(alfa);
+  return esAlfaDefecto(alfa) ? `${formatAlfa(alfa)} (estándar en hidrología)` : formatAlfa(alfa);
 }
 
 /** Un α distinto del 5 % se muestra destacado: cambia qué rechaza cada prueba. */
 export function alfaDestacado(alfa: number | null | undefined): boolean {
-  return alfa != null && alfa !== ALFA_DEFECTO;
+  return alfa != null && !esAlfaDefecto(alfa);
 }
