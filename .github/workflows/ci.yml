@@ -233,7 +233,8 @@ jobs:
       # coverage.xml trae <source> absoluto del job test (mismo path en este runner). El lcov de
       # Vitest trae SF relativo a frontend/: se reescribe a la raíz del repo, igual que en quality-gate.
       - run: sed -E 's#^SF:src/#SF:frontend/src/#' reportes/frontend/coverage/lcov.info > reportes/frontend/lcov-repo.info
-      - uses: SonarSource/sonarqube-scan-action@v8.3.0
+      # Action de terceros fijada por SHA y no por tag (Sonar S7637: un tag se puede mover). v8.3.0.
+      - uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
