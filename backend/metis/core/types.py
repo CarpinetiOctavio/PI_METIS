@@ -42,6 +42,11 @@ class TestResult:
     valor_atipico: float | None = None
     indice_atipico: int | None = None
     explicacion: Explicacion | None = None
+    # Chow (DECISIÓN 079): TODOS los valores fuera de los umbrales, altos y bajos,
+    # {indice, valor, z, lado}, ordenados por |z| descendente. valor_atipico e
+    # indice_atipico siguen siendo el más extremo, por compatibilidad. None en
+    # las demás pruebas.
+    valores_atipicos: list[dict] | None = None
 
 
 @dataclass

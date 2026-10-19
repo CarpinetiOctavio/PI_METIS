@@ -51,3 +51,9 @@
 .results-desglose__formula {
   overflow-x: auto;
 }
+
+/* DECISIÓN 079 — observación de Chow fuera de los umbrales (atípica). */
+.results-desglose tr[data-fuera] td {
+  color: var(--crit);
+  font-weight: 600;
+}

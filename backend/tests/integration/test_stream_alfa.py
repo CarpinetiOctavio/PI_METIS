@@ -9,7 +9,7 @@ import pytest
 
 from metis.core.etapa1.significancia import z_bilateral
 from metis.services.analysis_service import registrar_outlier_decision
-from tests.integration._sse_helpers import parse_sse, run_stream
+from tests.integration._sse_helpers import decidir_todos, parse_sse, run_stream
 
 GRUPOS = ("independencia", "homogeneidad", "tendencia", "atipicos")
 
@@ -30,7 +30,7 @@ async def _final(alfa: float, decision: str) -> tuple[dict, list[str]]:
         tipos.append(tipo)
         if tipo == "outlier_detected":
             await registrar_outlier_decision(
-                session_id=session_id, decision=decision, dato_atipico=0, db=None
+                session_id=session_id, decisiones=decidir_todos(data, decision), db=None
             )
         elif tipo == "result_etapa1":
             final = data

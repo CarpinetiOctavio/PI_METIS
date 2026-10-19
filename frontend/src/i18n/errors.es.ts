@@ -111,6 +111,8 @@ export const ERROR_TEXT: Record<string, string> = {
   SESSION_TIMEOUT:
     "Se agotó el tiempo de espera para decidir sobre el dato atípico.",
   SESSION_NOT_FOUND: "La sesión de análisis no existe o ya expiró.",
+  OUTLIER_DECISION_INVALID:
+    "Falta decidir algún atípico, o la decisión no corresponde a los atípicos detectados.",
   ANALYSIS_NOT_FOUND:
     "El análisis no existe, no te pertenece, o no tiene los resultados que pide esta operación.",
   STREAM_CONNECTION_ERROR:

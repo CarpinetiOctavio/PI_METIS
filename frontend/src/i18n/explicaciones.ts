@@ -439,6 +439,22 @@ const INTERPRETACIONES: Record<string, InterpretadorFn> = {
     return `Z (${fmt(tr.estadistico)}) está ${dentro ? "por debajo" : "por encima"} del valor crítico de tabla (${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}), así que ${dentro ? "no hay evidencia de" : "hay evidencia de"} tendencia al comparar las dos mitades del registro.`;
   },
   chow: (tr) => {
+    const t = tr.explicacion!.terminos;
+    const atipicos = tr.valores_atipicos;
+    // DECISIÓN 079 — con los umbrales del servidor, la regla de Bulletin 17B:
+    // todo valor fuera de ellos es atípico, no solo el más extremo.
+    if (atipicos && typeof t.limite_inferior === "number" && typeof t.limite_superior === "number") {
+      const umbrales = `entre ${fmt(t.limite_inferior)} y ${fmt(t.limite_superior)}`;
+      const regla = `Bulletin 17B: todo valor fuera de los umbrales es atípico (${umbrales}${conAlfa(t)} en cada extremo).`;
+      if (atipicos.length === 0) return `${regla} Ningún valor queda fuera.`;
+      const altos = atipicos.filter((a) => a.lado === "alto").length;
+      const bajos = atipicos.length - altos;
+      const lados = [
+        altos ? `${altos} por encima` : null,
+        bajos ? `${bajos} por debajo` : null,
+      ].filter(Boolean).join(" y ");
+      return `${regla} Quedan fuera ${atipicos.length} valor${atipicos.length === 1 ? "" : "es"} (${lados}).`;
+    }
     if (tr.veredicto === "aprobada") {
       return `El desvío estandarizado máximo (${fmt(tr.estadistico)}) no supera K_N (${fmt(tr.valor_critico)}${conAlfa(tr.explicacion!.terminos)}) — ningún dato se marca como atípico.`;
     }

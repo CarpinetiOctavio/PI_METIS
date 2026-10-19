@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StrictMode } from "react";
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { renderPage } from "../../test/renderPage";
 import { StreamPage } from "./StreamPage";
@@ -117,6 +117,21 @@ function renderStreamPage(
   return { start, resolveOutlier, resolveDistribution, abort, unmount, rerenderWithState };
 }
 
+const OUTLIER_UNO = {
+  session_id: "sess-1",
+  valor_atipico: 245.7,
+  atipicos: [{ indice: 7, periodo: 1987, valor: 245.7, z: 3.1, lado: "alto" as const }],
+};
+
+const OUTLIER_DOS = {
+  session_id: "sess-1",
+  valor_atipico: 296.93,
+  atipicos: [
+    { indice: 14, periodo: 1994, valor: 296.93, z: -3.52, lado: "bajo" as const },
+    { indice: 25, periodo: 2005, valor: 296.99, z: -3.44, lado: "bajo" as const },
+  ],
+};
+
 describe("StreamPage", () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -208,13 +223,54 @@ describe("StreamPage", () => {
   it("shows the outlier modal and calls resolveOutlier when Rechazar is clicked", async () => {
     const { resolveOutlier } = renderStreamPage({
       fase: "waiting_outlier",
-      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+      outlier: OUTLIER_UNO,
     });
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Rechazar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continuar con estas decisiones" }));
 
-    await waitFor(() => expect(resolveOutlier).toHaveBeenCalledWith("rechazar"));
+    await waitFor(() => expect(resolveOutlier).toHaveBeenCalledWith({ 7: "rechazar" }));
+  });
+
+  // DECISIÓN 079 — una pausa con varios atípicos, una decisión por fila.
+  it("lists every outlier and only lets you continue once each row has a decision", async () => {
+    const { resolveOutlier } = renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: OUTLIER_DOS,
+    });
+
+    expect(screen.getByRole("heading", { name: "Datos atípicos detectados" })).toBeInTheDocument();
+    const fila1994 = screen.getByRole("group", { name: /Decisión para 1994/ });
+    const fila2005 = screen.getByRole("group", { name: /Decisión para 2005/ });
+    const continuar = screen.getByRole("button", { name: "Continuar con estas decisiones" });
+    expect(continuar).toBeDisabled();
+
+    fireEvent.click(within(fila1994).getByRole("button", { name: "Rechazar" }));
+    expect(continuar).toBeDisabled();
+    expect(within(fila1994).getByRole("button", { name: "Rechazar" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(within(fila2005).getByRole("button", { name: "Aceptar" }));
+    expect(continuar).toBeEnabled();
+    fireEvent.click(continuar);
+
+    await waitFor(() =>
+      expect(resolveOutlier).toHaveBeenCalledWith({ 14: "rechazar", 25: "aceptar" }),
+    );
+  });
+
+  it("no row comes pre-selected and both buttons of a row look the same", () => {
+    renderStreamPage({ fase: "waiting_outlier", outlier: OUTLIER_DOS });
+
+    for (const fila of screen.getAllByRole("group", { name: /Decisión para/ })) {
+      const [rechazar, aceptar] = within(fila).getAllByRole("button");
+      expect(rechazar).toHaveAttribute("aria-pressed", "false");
+      expect(aceptar).toHaveAttribute("aria-pressed", "false");
+      expect(aceptar.className).toBe(rechazar.className);
+    }
   });
 
   // METIS no decide por el usuario: ninguno de los dos botones puede verse
@@ -222,7 +278,7 @@ describe("StreamPage", () => {
   it("renders Rechazar and Aceptar with identical styling — no visual bias toward either decision", () => {
     renderStreamPage({
       fase: "waiting_outlier",
-      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+      outlier: OUTLIER_UNO,
     });
 
     const rechazar = screen.getByRole("button", { name: "Rechazar" });
@@ -235,7 +291,7 @@ describe("StreamPage", () => {
   it("auto-focuses the dialog container (not either button) when the outlier modal opens", async () => {
     renderStreamPage({
       fase: "waiting_outlier",
-      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+      outlier: OUTLIER_UNO,
     });
 
     await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
@@ -244,7 +300,7 @@ describe("StreamPage", () => {
   it("Escape does not close the modal or resolve a decision — the backend is blocked waiting for a real choice", async () => {
     const { resolveOutlier } = renderStreamPage({
       fase: "waiting_outlier",
-      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+      outlier: OUTLIER_UNO,
     });
 
     const dialog = screen.getByRole("dialog");
@@ -268,7 +324,7 @@ describe("StreamPage", () => {
 
     rerenderWithState({
       fase: "waiting_outlier",
-      outlier: { session_id: "sess-1", valor_atipico: 245.7 },
+      outlier: OUTLIER_UNO,
     });
     await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
 

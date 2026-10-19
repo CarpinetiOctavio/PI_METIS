@@ -87,7 +87,13 @@ export function Etapa1GraficosView({
           excluidos={excluidos}
           onToggle={alternar}
           onLimpiar={limpiar}
-          sugerido={datos.indice_atipico}
+          sugeridos={
+            chow?.valores_atipicos
+              ? chow.valores_atipicos.map((a) => a.indice)
+              : datos.indice_atipico !== null
+                ? [datos.indice_atipico]
+                : []
+          }
           resolucionOriginal={datos.resolucion_original}
           nombreArchivo={nombreArchivo}
           onRecalcular={simular && resultado ? () => calcular(excluidos) : undefined}

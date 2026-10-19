@@ -26,6 +26,7 @@ from metis.schemas.analysis import (
     SimulateExclusionRequest,
 )
 from metis.services.analysis_service import (
+    DecisionAtipicoInvalidaError,
     MetodoNoAjustadoError,
     get_analysis_by_id,
     recalcular_eventos_diseno,
@@ -287,12 +288,21 @@ async def outlier_decision(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
-    result = await registrar_outlier_decision(
-        session_id=str(body.session_id),
-        decision=body.decision,
-        dato_atipico=body.dato_atipico,
-        db=db,
-    )
+    try:
+        result = await registrar_outlier_decision(
+            session_id=str(body.session_id),
+            decisiones=[d.model_dump() for d in body.decisiones],
+            db=db,
+        )
+    except DecisionAtipicoInvalidaError as error:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {"codigo": "OUTLIER_DECISION_INVALID", "mensaje": str(error)}
+            },
+        ) from None
+    if result is None:
+        raise _SESSION_NOT_FOUND
     return OutlierDecisionResponse(**result)
 
 

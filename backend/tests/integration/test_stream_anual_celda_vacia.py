@@ -12,7 +12,7 @@ posteriores al faltante quedaban corridas un año.
 import pytest
 
 from metis.services.analysis_service import registrar_outlier_decision
-from tests.integration._sse_helpers import parse_sse, run_stream
+from tests.integration._sse_helpers import decidir_todos, parse_sse, run_stream
 
 
 def _csv_anual_con_celda_vacia() -> bytes:
@@ -40,8 +40,7 @@ async def test_rechazar_atipico_con_celda_vacia_borra_el_anio_correcto():
         if tipo == "outlier_detected":
             await registrar_outlier_decision(
                 session_id=session_id,
-                decision="rechazar",
-                dato_atipico=data["valor_atipico"],
+                decisiones=decidir_todos(data, "rechazar"),
                 db=None,
             )
         elif tipo == "result_etapa1":

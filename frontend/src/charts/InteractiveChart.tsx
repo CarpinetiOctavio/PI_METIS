@@ -57,6 +57,19 @@ export interface ChartSeries {
   // finas de r_k contra el cero). Solo aplica a kind === "points"; el valor
   // también entra al dominio de Y para que el tallo nunca quede recortado.
   stemFrom?: number;
+  // DECISIÓN 079 — forma del marcador (kind === "points"). Distinguir una
+  // serie también por la forma, no solo por el color (WCAG 1.4.1). Default
+  // "circle", el render histórico.
+  shape?: "circle" | "diamond" | "square";
+}
+
+// Rombo o cuadrado de "radio" r centrado en (cx, cy), como path SVG.
+function pathMarcador(shape: "diamond" | "square", cx: number, cy: number, r: number): string {
+  if (shape === "diamond") {
+    const d = r * 1.35;
+    return `M ${cx} ${cy - d} L ${cx + d} ${cy} L ${cx} ${cy + d} L ${cx - d} ${cy} Z`;
+  }
+  return `M ${cx - r} ${cy - r} H ${cx + r} V ${cy + r} H ${cx - r} Z`;
 }
 
 interface InteractiveChartProps {
@@ -448,19 +461,39 @@ export function InteractiveChart({
                           style={{ stroke: `var(${s.colorVar})` }}
                         />
                       )}
-                      <circle
-                        cx={xScale(p.x)}
-                        cy={yScale(p.y)}
-                        r={radius}
-                        className="interactive-chart__point"
-                        data-highlighted={isHighlighted || undefined}
-                        data-marked={isMarked || undefined}
-                        style={{
-                          fill: rellenoDelPunto(s.colorVar, isMarked, isHighlighted && !isFocused),
-                          stroke: isMarked ? `var(${s.colorVar})` : undefined,
-                          strokeWidth: isMarked ? 2 : undefined,
-                        }}
-                      />
+                      {(s.shape ?? "circle") === "circle" ? (
+                        <circle
+                          cx={xScale(p.x)}
+                          cy={yScale(p.y)}
+                          r={radius}
+                          className="interactive-chart__point"
+                          data-highlighted={isHighlighted || undefined}
+                          data-marked={isMarked || undefined}
+                          style={{
+                            fill: rellenoDelPunto(s.colorVar, isMarked, isHighlighted && !isFocused),
+                            stroke: isMarked ? `var(${s.colorVar})` : undefined,
+                            strokeWidth: isMarked ? 2 : undefined,
+                          }}
+                        />
+                      ) : (
+                        <path
+                          d={pathMarcador(
+                            s.shape as "diamond" | "square",
+                            xScale(p.x),
+                            yScale(p.y),
+                            radius,
+                          )}
+                          className="interactive-chart__point"
+                          data-shape={s.shape}
+                          data-highlighted={isHighlighted || undefined}
+                          data-marked={isMarked || undefined}
+                          style={{
+                            fill: rellenoDelPunto(s.colorVar, isMarked, isHighlighted && !isFocused),
+                            stroke: isMarked ? `var(${s.colorVar})` : undefined,
+                            strokeWidth: isMarked ? 2 : undefined,
+                          }}
+                        />
+                      )}
                     </Fragment>
                   );
                 })}

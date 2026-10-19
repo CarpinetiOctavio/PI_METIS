@@ -827,7 +827,32 @@ def _seccion_etapa1(detalle: dict, est) -> list:
                 ]
 
     chow = (detalle.get("decisiones") or {}).get("chow")
-    if chow:
+    if chow and "atipicos" in chow:
+        # DECISIÓN 079 — una decisión por atípico.
+        filas = [["Año", "Valor", "Lado", "z", "Decisión"]]
+        for a in chow["atipicos"]:
+            filas.append(
+                [
+                    str(a.get("periodo") or "—"),
+                    _num(a.get("valor")),
+                    "Alto" if a.get("lado") == "alto" else "Bajo",
+                    _num(a.get("z")),
+                    "Rechazado: excluido del análisis"
+                    if a.get("decision") == "rechazar"
+                    else "Aceptado como parte de la población",
+                ]
+            )
+        anchos = [2.0 * cm, 3.0 * cm, 1.8 * cm, 2.4 * cm]
+        story += [
+            _p("Decisión ante los atípicos", est["h2"]),
+            _p(
+                "Chow marcó todos los valores fuera de los umbrales (Bulletin 17B). Los "
+                "resultados de este informe corresponden a la serie sin los rechazados.",
+                est["nota_previa"],
+            ),
+            _tabla(filas, anchos + [_ANCHO_UTIL - sum(anchos)], est),
+        ]
+    elif chow:
         accion = (
             "rechazó el dato atípico y se excluyó del análisis. Los resultados de "
             "este informe corresponden a la serie sin ese dato"

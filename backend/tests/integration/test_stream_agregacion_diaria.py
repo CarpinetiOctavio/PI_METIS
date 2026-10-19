@@ -17,7 +17,7 @@ import pandas as pd
 import pytest
 
 from metis.services.analysis_service import registrar_outlier_decision
-from tests.integration._sse_helpers import parse_sse, run_stream
+from tests.integration._sse_helpers import decidir_todos, parse_sse, run_stream
 
 
 def _csv_diario(
@@ -88,8 +88,7 @@ async def test_rechazar_atipico_sobre_serie_diaria_agregada_no_rompe_el_indice()
             valor_atipico = data["valor_atipico"]
             await registrar_outlier_decision(
                 session_id=session_id,
-                decision="rechazar",
-                dato_atipico=valor_atipico,
+                decisiones=decidir_todos(data, "rechazar"),
                 db=None,
             )
         elif tipo == "result_etapa1":
@@ -139,8 +138,7 @@ async def test_variable_diaria_media_advierte_sesgo_en_el_warning():
             # aceptar para no filtrar ningún año y llegar a result_etapa1
             await registrar_outlier_decision(
                 session_id=data["session_id"],
-                decision="aceptar",
-                dato_atipico=data["valor_atipico"],
+                decisiones=decidir_todos(data, "aceptar"),
                 db=None,
             )
         elif tipo == "result_etapa1":

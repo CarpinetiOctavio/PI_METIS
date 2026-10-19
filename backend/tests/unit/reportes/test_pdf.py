@@ -239,6 +239,44 @@ def test_decision_ante_atipico(detalle_completo, est):
 
 
 @pytest.mark.unit
+def test_decision_ante_varios_atipicos(detalle_completo, est):
+    # DECISIÓN 079 — una fila por atípico, con su lado y su decisión.
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["decisiones"] = {
+        "chow": {
+            "atipicos": [
+                {
+                    "indice": 14,
+                    "periodo": 1994,
+                    "valor": 296.93,
+                    "z": -3.52,
+                    "lado": "bajo",
+                    "decision": "rechazar",
+                    "codigo": "TEST_OUTLIER_REJECTED_BY_USER",
+                },
+                {
+                    "indice": 25,
+                    "periodo": 2005,
+                    "valor": 296.99,
+                    "z": -3.44,
+                    "lado": "bajo",
+                    "decision": "aceptar",
+                    "codigo": "TEST_OUTLIER_ACCEPTED_BY_USER",
+                },
+            ]
+        }
+    }
+
+    textos = _textos(_seccion_etapa1(detalle, est))
+
+    assert "Decisión ante los atípicos" in textos
+    assert any(
+        t.startswith("1994 |") and "Bajo" in t and "Rechazado" in t for t in textos
+    )
+    assert any(t.startswith("2005 |") and "Aceptado" in t for t in textos)
+
+
+@pytest.mark.unit
 def test_analisis_anterior_sin_datos_ni_desglose(detalle_completo):
     # Registros previos a DECISIÓN 058 / addendum de la 064: sin `datos`,
     # sin `desglose` y sin `timestamps` — se exporta igual, sin gráficos.

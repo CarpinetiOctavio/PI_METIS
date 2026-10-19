@@ -389,7 +389,10 @@ Fuente: Chow (Bulletin 17B) — Sección 9, Apéndice 4 (test de Grubbs-Beck,
         (2005) — citada en statistical-pipeline.md/core-implementation.md
         como fuente alternativa, con fórmula distinta no verificada acá.
 
-### Condiciones previas
+### Condiciones previas (en este orden)
+any(xi < 0)                                            # DECISIÓN 073, cualquier tipo_variable
+  → no_ejecutada, TEST_NOT_EXECUTED_NEGATIVES
+
 tipo_variable == "caudal_precipitacion" AND any(xi == 0)
   → no_ejecutada, TEST_NOT_EXECUTED_ZEROS
 
@@ -401,7 +404,8 @@ any(xi ≤ 0)
 yi  = ln(xi)          para todos los xi
 ȳ   = media(yi)
 S_y = std(yi, ddof=1)
-Z_i = |yi - ȳ| / S_y  para cada i       # Estadístico de Grubbs por observación
+z_i = (yi - ȳ) / S_y  para cada i       # con signo: > 0 por encima de la media (DECISIÓN 079)
+Z_i = |z_i|                              # Estadístico de Grubbs por observación
 
 ### Estadístico y valor crítico — K_N (Grubbs-Beck), no cuantil t crudo
 estadístico   = max(Z_i)                              # desvío estandarizado máximo
@@ -425,10 +429,31 @@ No verificado contra la tabla impresa real ni contra Escalante Sandoval
 & Reyes Chávez (2005) — ver DECISIÓN 018 para el detalle completo y la
 limitación explícita de esta implementación.
 
-### Veredicto
-atipico_detectado = estadístico > valor_critico
+### Umbrales y veredicto — todos los valores fuera, altos y bajos (DECISIÓN 079)
+Fuente: Bulletin 17B, Apéndice 4 — umbral alto y umbral bajo, cada lado como
+prueba de un extremo; todo valor más allá de su umbral es atípico.
+```
+y_H = ȳ + K_N · S_y                     # umbral alto (logaritmos)
+y_L = ȳ − K_N · S_y                     # umbral bajo (logaritmos)
+X_H = exp(y_H)                          # limite_superior, escala original
+X_L = exp(y_L)                          # limite_inferior, escala original
+
+valores_atipicos = { i : z_i > K_N  (lado "alto")  o  z_i < −K_N  (lado "bajo") }
+                   ordenados por |z_i| descendente
+```
+Una sola pasada: ȳ, S_y y K_N se calculan sobre la serie completa y no se
+vuelve a probar después de quitar un valor (el enmascaramiento queda
+declarado en la DECISIÓN 079). El gráfico de Chow dibuja exactamente X_L y X_H,
+que viajan en `explicacion.terminos.limite_inferior/limite_superior`: un punto
+está fuera de la franja si y solo si está en `valores_atipicos`.
+
+```
+atipico_detectado = valores_atipicos no vacía     # equivale a max(Z_i) > K_N, el criterio anterior
 veredicto         = "rechazada" si atípico detectado, "aprobada" si no
 warning_nivel     = siempre "normal" (Chow nunca genera warning CRÍTICO)
-valor_atipico     = xi original (no el logaritmo) con mayor Z_i
+valor_atipico     = xi original (no el logaritmo) con mayor Z_i   # compatibilidad: el más extremo
+indice_atipico    = posición de ese xi
+desglose[i].fuera = Z_i > K_N
+```
 
 ---

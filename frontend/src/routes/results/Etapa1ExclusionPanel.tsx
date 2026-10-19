@@ -62,15 +62,16 @@ function altura(valor: number, min: number, max: number): string {
  * atípico sin leer números, que es para lo que existe el panel. Entra entera,
  * sin scroll propio.
  *
- * `sugerido` es el atípico que marcó Chow: se señala pero NO viene seleccionado —
- * quitarlo es una decisión del usuario, no un valor por defecto.
+ * `sugeridos` son los atípicos que marcó Chow (todos los valores fuera de los
+ * umbrales, DECISIÓN 079): se señalan pero NINGUNO viene seleccionado —
+ * quitarlos es una decisión del usuario, no un valor por defecto.
  */
 export function Etapa1ExclusionPanel({
   puntos,
   excluidos,
   onToggle,
   onLimpiar,
-  sugerido,
+  sugeridos,
   resolucionOriginal,
   nombreArchivo,
   onRecalcular,
@@ -82,7 +83,7 @@ export function Etapa1ExclusionPanel({
   excluidos: ReadonlySet<number>;
   onToggle: (indice: number) => void;
   onLimpiar: () => void;
-  sugerido: number | null;
+  sugeridos: readonly number[];
   resolucionOriginal: Etapa1Datos["resolucion_original"];
   nombreArchivo?: string | null;
   // A2 — recalcular Etapa 1 (y 2) sin los puntos seleccionados. Sin este prop
@@ -101,7 +102,8 @@ export function Etapa1ExclusionPanel({
   const filas = filasPorDecada(puntos);
   const min = Math.min(...puntos.map((p) => p.valor));
   const max = Math.max(...puntos.map((p) => p.valor));
-  const haySugerido = sugerido !== null && puntos.some((p) => p.indice === sugerido);
+  const setSugeridos = new Set(sugeridos);
+  const haySugerido = puntos.some((p) => setSugeridos.has(p.indice));
 
   const avisos: string[] = [];
   if (hayExcluidoInterior(excluidos, puntos.length)) {
@@ -135,7 +137,7 @@ export function Etapa1ExclusionPanel({
 
   function celda(p: PuntoSerie) {
     const excluido = excluidos.has(p.indice);
-    const esSugerido = p.indice === sugerido;
+    const esSugerido = setSugeridos.has(p.indice);
     const etiqueta =
       `${p.anio}, ${formatAxis(p.valor)}, ${excluido ? "excluido" : "incluido"}` +
       (esSugerido ? ", sugerido por Chow" : "");

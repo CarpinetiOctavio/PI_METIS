@@ -100,4 +100,22 @@ describe("Etapa1Desglose — Chow", () => {
     expect(filas[2]).toHaveAttribute("data-activa");
     expect(filas[0]).not.toHaveAttribute("data-activa");
   });
+
+  it("DECISIÓN 079 — marca las filas que core/ dio como fuera de los umbrales, no solo el máximo", () => {
+    const base = makeChowConDesglose();
+    const desglose = base.explicacion!.desglose!.map((fila, i) => ({ ...fila, fuera: i === 0 || i === 2 }));
+    render(<Etapa1Desglose test={conDesglose(base, desglose)} />);
+
+    const filas = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+    const fuera = filas.filter((f) => f.hasAttribute("data-fuera"));
+    expect(fuera).toEqual([filas[0], filas[2]]);
+    expect(within(filas[0]).getByText(/fuera de los umbrales/)).toBeInTheDocument();
+    expect(within(filas[1]).queryByText(/fuera de los umbrales/)).not.toBeInTheDocument();
+  });
+
+  it("un análisis anterior a la DECISIÓN 079 (sin `fuera`) no marca ninguna fila", () => {
+    render(<Etapa1Desglose test={makeChowConDesglose()} />);
+    const filas = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+    expect(filas.some((f) => f.hasAttribute("data-fuera"))).toBe(false);
+  });
 });

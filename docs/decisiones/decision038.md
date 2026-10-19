@@ -199,6 +199,11 @@ de la limitación de arriba: sin este agregado, el script no habría fallado
 no genera un `FAIL` falso ni verdadero) — hay que acordarse de sumar el
 prefijo a mano cada vez, el chequeo no se autodetecta a sí mismo.
 
+**Actualización 18/10/2026 (DECISIÓN 079):** `OUTLIER_DECISION_INVALID`
+(`POST /analysis/outlier-decision` con decisiones que no cubren exactamente los
+atípicos de la pausa) suma el prefijo `OUTLIER`, backend-emitido, por el mismo
+motivo que `ANALYSIS`.
+
 **Automatización — ver M2 del plan de pasada 3
 (`docs/historico/planes/frontend/plan-mejora-frontend-pasada3.md`).** Esta verificación deja
 de depender de que alguien la corra a mano: se agrega como step de CI en

@@ -191,7 +191,12 @@ homogeneidad_critica  → Cramer rechazó → WARNING CRÍTICO
   provisorio. Escalante Sandoval & Reyes Chávez (2005) citado previamente
   acá pero con fórmula distinta no verificada — pendiente confirmación.
 - Chow **nunca** genera warning Crítico — siempre es warning normal
-- Si detecta atípico: emitir `TEST_WARNING_OUTLIER_DETECTED` y pausar stream
+- **Todos los valores fuera de los umbrales** (DECISIÓN 079, Bulletin 17B): umbral alto ȳ + K_N·S y bajo
+  ȳ − K_N·S sobre los logaritmos, cada lado como prueba de un extremo, una sola pasada.
+  `TestResult.valores_atipicos` = `[{indice, valor, z, lado}]` ordenados por |z|; `valor_atipico`/`indice_atipico`
+  siguen siendo el más extremo. `explicacion.terminos` trae `limite_inferior`/`limite_superior` en la escala
+  original (el gráfico de Chow dibuja esos) y cada fila del `desglose` lleva `fuera`.
+- Si detecta atípicos: emitir `TEST_WARNING_OUTLIER_DETECTED` y pausar stream UNA vez, con la lista completa
   - CU-01/CU-02: esperar decisión del usuario via POST /analysis/outlier-decision
   - CU-03: registrar warning y continuar automáticamente (sin pausa)
 
@@ -259,7 +264,8 @@ f"event: {tipo}\ndata: {json.dumps(payload)}\n\n"
 "descriptive_stats"       # estadística descriptiva calculada
 "progress"                # avance del pipeline
 "test_result"             # resultado de una prueba individual
-"outlier_detected"        # pausa para decisión del usuario (CU-01/CU-02)
+"outlier_detected"        # pausa para decisión del usuario (CU-01/CU-02): {session_id, atipicos:
+                          # [{indice, periodo, valor, z, lado}], valor_atipico} — DECISIÓN 079
 "result_etapa1"           # resultados completos de Etapa 1
 "result_etapa2_ranking"   # ranking EEA completo (pausa para selección de distribución+método)
 "result_etapa2_eventos"   # eventos de diseño de la distribución elegida

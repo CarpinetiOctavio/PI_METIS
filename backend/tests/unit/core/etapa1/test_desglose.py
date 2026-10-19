@@ -71,11 +71,14 @@ def test_chow_desglose_una_fila_por_observacion(serie):
     filas = resultado.explicacion.desglose
 
     # mismas claves que lee frontend/src/routes/results/Etapa1Desglose.tsx
-    assert set(filas[0]) == {"i", "x_i", "ln_x_i", "z_i"}
+    assert set(filas[0]) == {"i", "x_i", "ln_x_i", "z_i", "fuera"}
     assert [f["i"] for f in filas] == list(range(1, len(serie) + 1))
     assert [f["x_i"] for f in filas] == serie
     assert all(f["ln_x_i"] == pytest.approx(np.log(f["x_i"])) for f in filas)
     assert max(f["z_i"] for f in filas) == resultado.estadistico
+    # DECISIÓN 079 — "fuera" marca exactamente las observaciones de valores_atipicos.
+    fuera = {f["i"] - 1 for f in filas if f["fuera"]}
+    assert fuera == {a["indice"] for a in resultado.valores_atipicos}
 
 
 @pytest.mark.unit
