@@ -187,6 +187,10 @@ homogeneidad_critica  → Cramer rechazó → WARNING CRÍTICO
 
 - Aplica sobre **logaritmos** de la serie — CRÍTICO
 - Si hay ceros en caudal_precipitacion: marcar como `TEST_NOT_EXECUTED_ZEROS`, continuar
+- No ejecutada (negativos, ceros): `TestResult.valores_no_validos` = `[{indice, valor}]` con los valores que lo
+  impidieron, en el espacio de `serie_efectiva` (revisión 19/10/2026 de la DECISIÓN 073). Campo propio, no dentro
+  de `explicacion`, que sigue en `null`. El gráfico de Chow los marca y el panel de exclusión los señala; no son
+  atípicos. `null` en Chow ejecutada y en las demás pruebas
 - Fuente primaria: Grubbs-Beck / Bulletin 17B — DECISIÓN 018 (docs/decisiones/decision018.md),
   provisorio. Escalante Sandoval & Reyes Chávez (2005) citado previamente
   acá pero con fórmula distinta no verificada — pendiente confirmación.

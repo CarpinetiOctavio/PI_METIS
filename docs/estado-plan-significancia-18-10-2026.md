@@ -27,7 +27,7 @@ Para el agente que siga. Plan: `docs/plan-significancia-y-fixes-18-10-2026.md`. 
 | `feature/exploracion-simulada` | `origin/staging` | **Bloque A completo**, 2 commits (plan + bloque A) |
 | `feature/significancia-configurable` | `origin/staging` | **Bloque B completo**, 1 commit (`a3ce5c0` o el amend siguiente) |
 | `feature/chow-todos-los-atipicos` | `feature/significancia-configurable` | **Bloque C completo**, commit WIP + cierre |
-| (sin crear) bloque D | saldría de la rama de C | sin empezar |
+| `fix/chow-no-ejecutado-valores-no-validos` | `feature/chow-todos-los-atipicos` | **Bloque D completo**, 1 commit |
 
 A y B son independientes; C depende de B. Hay que hacer push y abrir un PR por bloque hacia `staging` del fork
 (el de C recién después de mergear B, o apuntado a la rama de B).
@@ -94,12 +94,21 @@ Frontend, hecho y en verde (512 tests, tsc y eslint limpios):
   `metis/` limpios, catálogo de errores sincronizado.
 - **Queda pendiente:** el gráfico de Chow dentro del diálogo (anotado en la 079) y el recorrido en el navegador.
 
-## Bloque D — sin empezar
+## Bloque D — hecho (revisión 19/10/2026 de la DECISIÓN 073)
 
-Ver la sección D del plan (Chow no ejecutado por negativos o ceros: mensaje, marcas y revisión de la DECISIÓN
-073). Sugerencia: no poner `valores_no_validos` dentro de `explicacion`, porque el frontend usa
-`explicacion === null` como señal de "no ejecutada". Mejor un campo propio de `TestResult` (como
-`valores_atipicos`), y en el panel de exclusión una prop `noValidos` con una marca distinta de "sugerido".
+- `TestResult.valores_no_validos` = `[{indice, valor}]` en Chow no ejecutada (negativos; ceros con ZEROS o
+  CONDITION). Campo propio, `explicacion` sigue en `null`. Serializado en `result_etapa1`.
+- Gráfico de Chow: aviso arriba, sin franjas, los valores con un cuadrado `--warn` y leyenda propia.
+  `tipoVariable` llega desde `ResultsPage` y `HistoryDetailPage` por `Etapa1ResultView` → `Etapa1GraficosView`.
+- Texto: "físicamente imposible" solo para **negativos en caudal**. Un cero en caudal es un dato posible, así que
+  no se lo llama imposible: esto se aparta del texto del plan, que decía "negativos (o ceros)". Con "Otro", sin
+  sugerencia de excluir.
+- Panel de exclusión: prop `noValidos`, marca cuadrada `--crit` y leyenda "valor no válido para Chow".
+- Tests: `tests/unit/core/etapa1/test_chow_valores_no_validos.py`,
+  `tests/unit/services/test_simular_exclusion_sin_negativos.py` (excluidos los negativos, Chow corre), 4 de
+  `Etapa1ChowChart.test.tsx` y 1 de `Etapa1GraficosView.test.tsx`.
+- Docs: revisión en `decision073.md` y su fila del índice, y nota en `statistical-pipeline.md`.
+- Corrida: backend 903, BD 8 (1 skip de Mailpit), frontend 522, tsc/eslint/ruff limpios, catálogo OK.
 
 ## Verificación final pendiente (de todo el plan)
 

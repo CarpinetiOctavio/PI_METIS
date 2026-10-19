@@ -199,7 +199,7 @@ situ.
 | [070](decision070.md) | Umbral de DIST_HIGH_EEA: se mantiene en 5 %, configurabilidad diferida a v2 | 09/09/2026 | Confirmado — sin cambios de código funcional |
 | [071](decision071.md) | Exclusión de puntos: eliminar en cualquier posición y `POST /analysis/simulate-exclusion` sin estado (reemplazo por la media postergado) | 01/10/2026 | Decidida y aplicada (backend + frontend) |
 | 072 | *(reservado — exploración de distribuciones sin id para CU-02, bloque B del plan de backend del feedback de directores; no entra en el plan del 01/10)* | — | Pendiente |
-| [073](decision073.md) | Valores negativos: estado propio `disabled_negatives` en Etapa 2 y código propio `TEST_NOT_EXECUTED_NEGATIVES` para Chow | 01/10/2026 | Decidida y aplicada (backend) |
+| [073](decision073.md) | Valores negativos: estado propio `disabled_negatives` en Etapa 2 y código propio `TEST_NOT_EXECUTED_NEGATIVES` para Chow | 01/10/2026 | Decidida y aplicada (backend); revisión 19/10/2026: presentación de Chow no ejecutada (backend + frontend) |
 | [074](decision074.md) | Generalizada de Pareto "pendiente de validación" en V1.0: se calcula y se muestra, pero no se puede elegir y va al final del ranking | 01/10/2026 | Decidida y aplicada (backend + frontend) — se cierra con el addendum de la V2 |
 | [075](decision075.md) | Exportación PDF de CU-01: ReportLab + matplotlib en el backend, siempre formato Experto, módulo `metis/reportes/` | 06/10/2026 | Decidida y aplicada (backend + frontend) |
 | [076](decision076.md) | El período de retorno se rotula según la serie que se ajustó: T sigue en años, el texto dice qué se cargó y qué representa el valor de diseño | 08/10/2026 | Decidida y aplicada (frontend + informe PDF) |

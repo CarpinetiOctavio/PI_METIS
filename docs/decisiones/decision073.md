@@ -59,9 +59,42 @@ motivo eran los negativos de su serie. Lo mismo pasaba con Chow, que trabaja sob
 mínimo (estiajes, temperaturas mínimas), es otra funcionalidad, no esta (pregunta abierta en
 `pendientes-facundo.md`, "Función de agregación para tipo_variable == otro").
 
+### Revisión 19/10/2026 — presentación de Chow no ejecutada
+
+Bloque D de `docs/plan-significancia-y-fixes-18-10-2026.md`. Con `serie_con_negativos_otro.csv` cargada como
+caudal/precipitación, Chow no se ejecutaba (como corresponde), pero el gráfico de Chow se dibujaba igual que la
+serie temporal, sin franjas ni aviso, y los cinco negativos no tenían marca. El usuario esperaba verlos como
+atípicos.
+
+**No se marcan como atípicos.** Un atípico es un valor demasiado alejado del resto según la dispersión de la
+serie: −0,74 está a unos 1,9 desvíos de la media en esa serie. Un caudal negativo es otra cosa, un valor
+físicamente imposible que delata un error de carga o de medición, y eso ya lo advierte el contrato
+(`CONTRACT_NEGATIVE_VALUES`). Además Chow no se puede calcular con él: no tiene logaritmo. La prueba no cambia;
+cambia cómo se muestra lo que ya se sabe.
+
+- **Servidor.** `TestResult.valores_no_validos` = `[{indice, valor}]`: los negativos con
+  `TEST_NOT_EXECUTED_NEGATIVES` y los ceros con `TEST_NOT_EXECUTED_ZEROS`/`TEST_NOT_EXECUTED_CONDITION`, en el
+  espacio de `serie_efectiva`. Es un campo propio y no va dentro de `explicacion`, porque el frontend usa
+  `explicacion === null` como señal de "no ejecutada". El año lo pone el cliente desde `timestamps_efectivos`,
+  igual que con `valores_atipicos` (DECISIÓN 079).
+- **Gráfico de Chow.** Sin franjas, con un aviso arriba que dice por qué no corrió y cuántos valores lo
+  impidieron. Esos puntos van con un cuadrado (`--warn`) y una leyenda propia, distinta del rombo de atípico.
+- **Texto.** "Físicamente imposible" se dice solo de un **negativo en caudal o precipitación**, con la sugerencia
+  de excluirlos y recalcular. Con tipo "Otro" un negativo puede ser válido: "Chow no se ejecutó porque la serie
+  tiene valores negativos y la prueba trabaja sobre logaritmos", sin sugerencia. Para los ceros se explica el
+  logaritmo de cero y no se los llama imposibles: un caudal o una precipitación nula es un dato posible. Esto
+  corrige el texto del plan, que decía "negativos (o ceros) físicamente imposibles".
+- **Panel de exclusión.** Esos años llevan la marca "valor no válido para Chow" (borde y marca cuadrada
+  `--crit`), distinta de "sugerido por Chow", y ninguno viene seleccionado.
+- **Recálculo.** Excluidos los negativos, la simulación (DECISIÓN 071) ejecuta Chow y muestra su resultado
+  normal (`test_al_excluir_los_negativos_la_simulacion_ejecuta_chow`).
+- **Análisis anteriores.** No traen el campo: el gráfico avisa que Chow no corrió, sin marcas.
+
 ### Relación con otras decisiones
 
 - **DECISIÓN 060** — chequeo `x0 >= min(serie)` de las distribuciones de 3 parámetros.
 - **DECISIÓN 061** — ceros en las distribuciones de 3 parámetros; `disabled_zeros` sigue como antes.
+- **DECISIÓN 071** — exclusión de puntos; el recálculo sin los negativos.
+- **DECISIÓN 079** — Chow con todos los atípicos; misma forma de lista y mismo gráfico.
 - **DECISIÓN 070** — umbral de `DIST_HIGH_EEA`. Con "Otro" y una media cerca de cero, el 5 % de la media deja de
   significar algo; anotado en `pendientes-tecnicos.md`, sin cambiar el umbral.

@@ -129,6 +129,9 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
             "indice_atipico": tr.indice_atipico,
             # DECISIÓN 079 — Chow: todos los valores fuera de los umbrales.
             "valores_atipicos": tr.valores_atipicos,
+            # Revisión 19/10/2026 de la DECISIÓN 073 — Chow no ejecutada: los
+            # valores (negativos o ceros) que impidieron la prueba.
+            "valores_no_validos": tr.valores_no_validos,
             # Bloque D (plan post-avance, DECISIÓN 064) — piezas para la
             # fórmula sustituida en modo paso a paso. None para pruebas
             # "no_ejecutada" (nada que sustituir).

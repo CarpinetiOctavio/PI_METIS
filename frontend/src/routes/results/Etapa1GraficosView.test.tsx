@@ -86,6 +86,28 @@ describe("Etapa1GraficosView — exclusión de puntos", () => {
     expect(casillas().every((c) => c.getAttribute("aria-pressed") === "false")).toBe(true);
   });
 
+  it("Chow no ejecutada: los valores que lo impidieron llevan su propia marca, no la de sugerido, y ninguno viene seleccionado", () => {
+    const chow = makeTestResult({
+      prueba: "chow",
+      veredicto: "no_ejecutada",
+      warning_codigo: "TEST_NOT_EXECUTED_NEGATIVES",
+      valores_no_validos: [
+        { indice: 2, valor: -1 },
+        { indice: 7, valor: -3 },
+      ],
+    });
+    const { casillas } = montar({ indice_atipico: null }, undefined, chow);
+
+    const marcadas = casillas().filter((c) => /no válido para Chow/.test(c.getAttribute("aria-label") ?? ""));
+    expect(marcadas.map((c) => c.getAttribute("aria-label"))).toEqual([
+      "2002, 106, incluido, valor no válido para Chow",
+      "2007, 121, incluido, valor no válido para Chow",
+    ]);
+    expect(casillas().some((c) => /sugerido por Chow/.test(c.getAttribute("aria-label") ?? ""))).toBe(false);
+    expect(casillas().every((c) => c.getAttribute("aria-pressed") === "false")).toBe(true);
+    expect(screen.getByText(/valor no válido para Chow \(no viene seleccionado\)/)).toBeInTheDocument();
+  });
+
   it("marcar un año en la lista lo dibuja hueco en los DOS gráficos; Limpiar lo deshace", async () => {
     const { casillas, huecos, user } = montar();
 

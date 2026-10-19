@@ -34,17 +34,25 @@ import type { SeleccionPuntos } from "./exclusiones";
  * `media_log`/`s_log` y K_N, la cuenta que este gráfico hacía antes, y se
  * marca solo `indice_atipico`. Si Chow no se ejecutó (serie con ceros o
  * valores ≤ 0) `explicacion` es null y las fajas no se dibujan.
+ *
+ * Revisión 19/10/2026 de la DECISIÓN 073: cuando no se ejecutó, el gráfico lo
+ * dice arriba y marca con un cuadrado los valores que lo impidieron
+ * (`chow.valores_no_validos`, del servidor). No son atípicos: un negativo o un
+ * cero no tiene logaritmo. "Físicamente imposible" solo se dice de un negativo
+ * en caudal o precipitación (`tipoVariable`); un cero en caudal es posible.
  */
 export function Etapa1ChowChart({
   datos,
   chow,
   mesInicioAnio,
   seleccion,
+  tipoVariable,
 }: Readonly<{
   datos: Etapa1Datos;
   chow?: TestResultDetail;
   mesInicioAnio?: number;
   seleccion?: SeleccionPuntos;
+  tipoVariable?: string;
 }>) {
   if (!datos.timestamps_efectivos) return null;
   const timestamps = datos.timestamps_efectivos;
@@ -64,8 +72,15 @@ export function Etapa1ChowChart({
         ? [datos.indice_atipico]
         : [],
   );
-  const puntosSinAtipico = todosLosPuntos.filter((_, i) => !indicesAtipicos.has(i));
+  const noEjecutada = chow?.veredicto === "no_ejecutada";
+  const indicesNoValidos = new Set(
+    noEjecutada ? (chow?.valores_no_validos ?? []).map((v) => v.indice) : [],
+  );
+  const puntosSinAtipico = todosLosPuntos.filter(
+    (_, i) => !indicesAtipicos.has(i) && !indicesNoValidos.has(i),
+  );
   const puntosAtipicos = todosLosPuntos.filter((_, i) => indicesAtipicos.has(i));
+  const puntosNoValidos = todosLosPuntos.filter((_, i) => indicesNoValidos.has(i));
 
   const series: ChartSeries[] = [
     { id: "linea", kind: "line", label: "Serie analizada", colorVar: "--acc", data: todosLosPuntos },
@@ -127,6 +142,18 @@ export function Etapa1ChowChart({
       marked,
     });
   }
+  if (puntosNoValidos.length > 0) {
+    series.push({
+      id: "no-validos",
+      kind: "points",
+      label: "Valor no válido para Chow",
+      colorVar: "--warn",
+      shape: "square",
+      pointRadius: 4.5,
+      data: puntosNoValidos,
+      marked,
+    });
+  }
 
   return (
     <div className="card">
@@ -134,15 +161,28 @@ export function Etapa1ChowChart({
       {mesInicioAnio !== undefined && (
         <p className="fn">{notaCriterioAnio(mesInicioAnio)}</p>
       )}
+      {noEjecutada && chow && (
+        <div className="banner warn results-chow-no-ejecutada">
+          <span className="ic">▲</span> {motivoNoEjecutada(chow, tipoVariable)}
+        </div>
+      )}
       <InteractiveChart
         series={series}
         xScale="linear"
         onPointActivate={onPointActivate}
-        ariaLabel={`Gráfico de Chow: serie analizada, fajas de máximos y mínimos, y ${
-          puntosAtipicos.length === 1
-            ? "el atípico marcado"
-            : `${puntosAtipicos.length} atípicos marcados`
-        }`}
+        ariaLabel={
+          noEjecutada
+            ? `Gráfico de Chow: serie analizada, sin umbrales porque la prueba no se ejecutó${
+                puntosNoValidos.length > 0
+                  ? `, con ${plural(puntosNoValidos.length, "valor no válido marcado", "valores no válidos marcados")}`
+                  : ""
+              }`
+            : `Gráfico de Chow: serie analizada, fajas de máximos y mínimos, y ${
+                puntosAtipicos.length === 1
+                  ? "el atípico marcado"
+                  : `${puntosAtipicos.length} atípicos marcados`
+              }`
+        }
         xLabel="Año"
         yLabel="Valor"
         xTickFormat={(v) => String(Math.round(v))}
@@ -162,8 +202,48 @@ export function Etapa1ChowChart({
           .
         </p>
       )}
+      {puntosNoValidos.length > 0 && (
+        <p className="fn results-chow-leyenda">
+          <span aria-hidden="true">■</span>{" "}
+          {plural(puntosNoValidos.length, "valor no válido para Chow", "valores no válidos para Chow")}{" "}
+          (no son atípicos: la prueba no puede calcularse con ellos).
+        </p>
+      )}
     </div>
   );
+}
+
+function plural(n: number, singular: string, varios: string): string {
+  return n === 1 ? `1 ${singular}` : `${n} ${varios}`;
+}
+
+/** Por qué Chow no se ejecutó, con los valores que lo impidieron. Un negativo es
+ * físicamente imposible solo en caudal o precipitación; con tipo "Otro" puede ser
+ * un dato válido, y no se sugiere excluirlo. */
+function motivoNoEjecutada(chow: TestResultDetail, tipoVariable?: string): string {
+  const n = chow.valores_no_validos?.length ?? 0;
+  const caudal = tipoVariable === "caudal_precipitacion";
+  if (chow.warning_codigo === "TEST_NOT_EXECUTED_NEGATIVES" && n > 0) {
+    const negativos = plural(n, "valor negativo", "valores negativos");
+    return caudal
+      ? `La prueba de Chow no se ejecutó: hay ${negativos}, y la prueba trabaja sobre logaritmos. ` +
+          "Un valor negativo es físicamente imposible en una serie de caudal o precipitación; " +
+          "podés excluirlos abajo y recalcular."
+      : `Chow no se ejecutó porque la serie tiene ${negativos} y la prueba trabaja sobre logaritmos.`;
+  }
+  if (
+    (chow.warning_codigo === "TEST_NOT_EXECUTED_ZEROS" ||
+      chow.warning_codigo === "TEST_NOT_EXECUTED_CONDITION") &&
+    n > 0
+  ) {
+    const ceros = plural(n, "cero", "ceros");
+    return (
+      `La prueba de Chow no se ejecutó: hay ${ceros} en la serie, y la prueba trabaja sobre ` +
+      "logaritmos (el logaritmo de cero no existe)." +
+      (caudal ? " Podés excluirlos abajo y recalcular." : "")
+    );
+  }
+  return "La prueba de Chow no se ejecutó en este análisis: no hay umbrales que dibujar.";
 }
 
 /** Umbrales de Chow en la escala de la serie: los del servidor (DECISIÓN

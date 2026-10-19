@@ -195,8 +195,10 @@ export function Etapa1ResultView({
   nombreArchivo,
   simular,
   onSimulacionVigente,
+  tipoVariable,
 }: Readonly<{
   result: Etapa1Result;
+  tipoVariable?: string;
   modo: Modo;
   mesInicioAnio?: number;
   nombreArchivo?: string | null;
@@ -317,6 +319,7 @@ export function Etapa1ResultView({
           resultado={result}
           simular={simular}
           onSimulacionVigente={onSimulacionVigente}
+          tipoVariable={tipoVariable}
         />
       )}
 

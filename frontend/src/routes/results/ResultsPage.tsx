@@ -211,6 +211,7 @@ export function ResultsPage() {
         modo={modoEfectivo}
         mesInicioAnio={locationState?.mesInicioAnio}
         nombreArchivo={locationState?.nombreArchivo}
+        tipoVariable={tipoVariable}
         simular={simular}
         onSimulacionVigente={alCambiarSimulacion}
       />

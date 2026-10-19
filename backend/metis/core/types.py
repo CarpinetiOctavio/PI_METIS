@@ -47,6 +47,12 @@ class TestResult:
     # indice_atipico siguen siendo el más extremo, por compatibilidad. None en
     # las demás pruebas.
     valores_atipicos: list[dict] | None = None
+    # Chow no ejecutada (revisión 19/10/2026 de la DECISIÓN 073): los valores que
+    # impidieron la prueba — negativos, o ceros — como {indice, valor}, en el
+    # espacio de la serie analizada. Es dato, no cálculo: el gráfico y el panel
+    # de exclusión los señalan sin inferirlos. Campo propio y no dentro de
+    # `explicacion`, que sigue siendo None en toda prueba no ejecutada.
+    valores_no_validos: list[dict] | None = None
 
 
 @dataclass
