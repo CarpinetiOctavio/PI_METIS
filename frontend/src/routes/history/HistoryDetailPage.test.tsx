@@ -367,4 +367,37 @@ describe("HistoryDetailPage", () => {
     await screen.findByText("validado");
     expect(screen.queryByRole("region", { name: /Chow/ })).not.toBeInTheDocument();
   });
+
+  it("D-18 — informa la partición de Cramer persistida en configuracion", async () => {
+    const base = makeDetail();
+    stubFetch(
+      200,
+      makeDetail({
+        etapa1: {
+          ...base.etapa1!,
+          homogeneidad: [
+            {
+              prueba: "cramer",
+              estadistico: 1.1,
+              valor_critico: 2.07,
+              veredicto: "aprobada",
+              warning_codigo: null,
+              warning_nivel: null,
+              n1: 28,
+              n2: 14,
+              valor_atipico: null,
+              indice_atipico: null,
+              explicacion: null,
+            },
+          ],
+        },
+        configuracion: { cramer_particion: { n1_pct: 70, n2_pct: 35 }, mes_inicio_anio: 7 },
+      }),
+    );
+    renderDetail();
+
+    expect(await screen.findByText(/Partición de Cramer/)).toHaveTextContent(
+      "personalizada: últimos 70 % y 35 % (n₁ = 28, n₂ = 14)",
+    );
+  });
 });

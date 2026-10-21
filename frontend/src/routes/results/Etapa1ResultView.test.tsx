@@ -191,3 +191,33 @@ describe("Etapa1ResultView — nivel de significancia (DECISIÓN 078)", () => {
   });
 });
 
+
+describe("Etapa1ResultView — partición de Cramer (D-18, revisión manual 21/10/2026)", () => {
+  const conCramer = (n1: number, n2: number) =>
+    makeResult({ homogeneidad: [testResult({ prueba: "cramer", n1, n2 })] });
+
+  it("con la partición por defecto informa 60 % / 30 % y los tamaños del resultado", () => {
+    render(<Etapa1ResultView result={conCramer(24, 12)} modo="experto" cramerParticion="default" />);
+    expect(screen.getByText(/Partición de Cramer/)).toHaveTextContent(
+      "Partición de Cramer: últimos 60 % y 30 % (n₁ = 24, n₂ = 12)",
+    );
+  });
+
+  it("con una partición personalizada lo dice", () => {
+    render(
+      <Etapa1ResultView
+        result={conCramer(28, 14)}
+        modo="paso_a_paso"
+        cramerParticion={{ n1_pct: 70, n2_pct: 35 }}
+      />,
+    );
+    expect(screen.getByText(/Partición de Cramer/)).toHaveTextContent(
+      "Partición de Cramer: personalizada: últimos 70 % y 35 % (n₁ = 28, n₂ = 14)",
+    );
+  });
+
+  it("sin partición registrada (análisis viejo) no muestra nada en vez de inventarla", () => {
+    render(<Etapa1ResultView result={conCramer(24, 12)} modo="experto" />);
+    expect(screen.queryByText(/Partición de Cramer/)).not.toBeInTheDocument();
+  });
+});

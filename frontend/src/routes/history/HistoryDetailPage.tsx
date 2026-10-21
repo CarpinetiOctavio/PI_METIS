@@ -97,6 +97,7 @@ export function HistoryDetailPage() {
             mesInicioAnio={detail.configuracion?.mes_inicio_anio}
             nombreArchivo={detail.configuracion?.nombre_archivo}
             tipoVariable={detail.tipo_variable}
+            cramerParticion={detail.configuracion?.cramer_particion}
           />
           {/* PR 5 del plan de cierre de pendientes no-test (DECISIÓN 058
               §4) — sin backfill, `timestamps` es null para cualquier

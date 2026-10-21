@@ -1,4 +1,5 @@
 import type {
+  CramerParticion,
   Etapa1Result,
   Modo,
   SimulateExclusionResponse,
@@ -8,6 +9,7 @@ import type {
 import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import { alfaDestacado, textoAlfaAnalisis } from "../../i18n/alfa";
+import { textoParticionCramer } from "../../i18n/cramer";
 import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
 import { errorText } from "../../i18n/errors.es";
 import { BlockMath } from "../../components/BlockMath";
@@ -196,9 +198,13 @@ export function Etapa1ResultView({
   simular,
   onSimulacionVigente,
   tipoVariable,
+  cramerParticion,
 }: Readonly<{
   result: Etapa1Result;
   tipoVariable?: string;
+  // D-18 (revisión manual 21/10/2026) — la partición con que corrió Cramer.
+  // ResultsPage la trae del router state; HistoryDetailPage, de configuracion.
+  cramerParticion?: CramerParticion | null;
   modo: Modo;
   mesInicioAnio?: number;
   nombreArchivo?: string | null;
@@ -210,6 +216,8 @@ export function Etapa1ResultView({
   onSimulacionVigente?: (simulacion: SimulateExclusionResponse | null) => void;
 }>) {
   const pasoAPaso = modo === "paso_a_paso";
+  const cramer = result.homogeneidad.find((t) => t.prueba === "cramer");
+  const particionCramer = textoParticionCramer(cramerParticion, cramer?.n1, cramer?.n2);
 
   const groups: Group[] = [
     { key: "independencia", label: "Independencia", items: result.independencia },
@@ -231,6 +239,9 @@ export function Etapa1ResultView({
           α = {textoAlfaAnalisis(result.alfa)}
         </span>
       </p>
+      {particionCramer && (
+        <p className="fn results-particion">Partición de Cramer: {particionCramer}</p>
+      )}
 
       <div className="results-kpis">
         <div className="kpi">

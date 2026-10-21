@@ -408,7 +408,8 @@ export interface HistoryItem {
 // forma real de analyses.configuracion tal como GET /history/{id} la
 // devuelve.
 export interface AnalysisConfiguracion {
-  cramer_particion: string;
+  // "default" o el objeto {n1_pct, n2_pct} tal como se persistió (D-18).
+  cramer_particion: CramerParticion;
   mes_inicio_anio: number;
   // Nombre del archivo subido (F7, plan de fixes pre-reunión); null/ausente en
   // análisis anteriores a ese cambio. Lo usa la descarga de la serie sin

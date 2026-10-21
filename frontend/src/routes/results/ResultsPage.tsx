@@ -264,6 +264,7 @@ export function ResultsPage() {
         mesInicioAnio={locationState?.mesInicioAnio}
         nombreArchivo={locationState?.nombreArchivo}
         tipoVariable={tipoVariable}
+        cramerParticion={locationState?.cramerParticion}
         simular={simular}
         onSimulacionVigente={alCambiarSimulacion}
       />
