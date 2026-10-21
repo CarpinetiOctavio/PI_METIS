@@ -13,7 +13,7 @@ Un solo procedimiento, `scripts/deploy-local.sh`, para la demo local y para el j
 | 2 | `docker compose up -d --build --wait` con `docker-compose.yml` + `docker-compose.ci.yml` |
 | 3 | `alembic upgrade head` dentro del contenedor `backend` (nada lo hace al arrancar: incidente del 05/08/2026) |
 | 4 | espera que nginx responda `/ping` |
-| 5 | siembra un usuario verificado (`scripts/seed-dev-user.sh`) para el smoke y los E2E |
+| 5 | siembra dos usuarios verificados (`scripts/seed-dev-user.sh`): `SMOKE_EMAIL` para el smoke y los E2E, y `SMOKE_EMAIL_2` (por defecto `smoke2@ucc.edu.ar`) para el smoke de aislamiento |
 | 6 | corre el smoke (`scripts/test.sh smoke`); si falla, el script sale con error y el job falla |
 
 `docker-compose.ci.yml` es el override con la configuración de producción. Respecto del compose de desarrollo:
@@ -50,8 +50,25 @@ nginx con httpx, como un cliente cualquiera.
 | `test_login_y_me` | base migrada, usuario sembrado, cookie HttpOnly |
 | `test_stream_etapa1_hasta_complete` | SSE a través de nginx (`proxy_buffering off`) y el motor de Etapa 1 hasta `complete` |
 | `test_historial_registra_el_analisis` | persistencia de CU-01 en la base del despliegue |
+| `test_aislamiento.py` (revisión manual 21/10/2026, bloque K) | aislamiento entre perfiles: el usuario 1 corre Etapas 1 y 2 y guarda una exclusión; el usuario 2 no lo ve en `GET /history/` y recibe 404 en el detalle, el PDF, `design-events`, archivar, y guardar o quitar exclusiones (DECISIÓN 080) |
 
 Sin stack alcanzable los tests se saltean; con `METIS_REQUIRE_SMOKE=1` (lo setea `scripts/test.sh smoke`) fallan.
+
+### Dos usuarios de prueba (aislamiento entre perfiles)
+
+En el stack de desarrollo (`docker compose up -d backend postgres`), los dos usuarios de prueba se crean con el mismo
+script; el segundo, pasándole el email:
+
+```bash
+./scripts/seed-dev-user.sh                        # 2200001@ucc.edu.ar / test1234
+./scripts/seed-dev-user.sh 2200002@ucc.edu.ar     # 2200002@ucc.edu.ar / test1234
+```
+
+Con los dos logueados en navegadores distintos (o uno en una ventana privada), ninguno ve ni abre los análisis del
+otro: la lista no los trae y la dirección directa (`/history/<id>`) responde 404.
+
+**En el servidor de la UCC** (paso manual al desplegar, nada lo hace solo): correr `alembic upgrade head` y crear los
+dos usuarios con el mismo script, con las contraseñas que se definan para la demo (no las de arriba).
 
 ## 3. E2E (`frontend/e2e/`, Playwright)
 
