@@ -1,7 +1,7 @@
 import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartSeries } from "../../charts/InteractiveChart";
 import { formatAxis } from "../../i18n/format";
-import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
+import { notaCriterioAnio, rotuloAnio } from "../../i18n/mesInicioAnio";
 import type { Etapa1Datos, TestResultDetail } from "../../api/types";
 import { interaccionDeSeleccion } from "./exclusiones";
 import type { SeleccionPuntos } from "./exclusiones";
@@ -56,6 +56,8 @@ export function Etapa1ChowChart({
 }>) {
   if (!datos.timestamps_efectivos) return null;
   const timestamps = datos.timestamps_efectivos;
+  const cargaConAgregacion =
+    datos.resolucion_original === "mensual" || datos.resolucion_original === "diaria";
 
   // `id` = posición en serie_efectiva, el espacio de índices de la selección
   // (y de `indice_atipico`).
@@ -185,7 +187,11 @@ export function Etapa1ChowChart({
         }
         xLabel="Año"
         yLabel="Valor"
+        xName="Año"
         xTickFormat={(v) => String(Math.round(v))}
+        // Chow corrió sobre serie_efectiva: el año del mes de inicio configurado,
+        // si METIS agregó la serie (bloque G).
+        xTooltipFormat={(v) => rotuloAnio(Math.round(v), cargaConAgregacion ? mesInicioAnio : 1)}
         yTickFormat={(v) => formatAxis(v)}
       />
       {limites && (

@@ -106,3 +106,38 @@ describe("Etapa1SerieTemporalChart", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+// Bloque G (revisión manual 21/10/2026, D-19): el tooltip rotula el año, no "T"
+// (período de retorno), y con un mes de inicio distinto de enero muestra el año
+// hidrológico completo en la vista configurada.
+function tooltip(container: HTMLElement): string {
+  fireEvent.keyDown(screen.getByRole("img", { name: /Serie temporal/ }), { key: "ArrowRight" });
+  return container.querySelector(".interactive-chart__tooltip-box")?.textContent ?? "";
+}
+
+describe("Etapa1SerieTemporalChart — tooltip del año (D-19)", () => {
+  it("con carga anual rotula 'Año = 1980', aunque el mes de inicio configurado no sea enero", () => {
+    const { container } = render(<Etapa1SerieTemporalChart datos={datosAnual()} mesInicioAnio={7} />);
+    expect(tooltip(container)).toMatch(/^Año = 1980valor = /);
+  });
+
+  it("vista configurada con julio: 'Año = 2000-01'; vista calendario: 'Año = 2001'", () => {
+    const { container } = render(
+      <Etapa1SerieTemporalChart datos={datosMensualConCalendario()} mesInicioAnio={7} />,
+    );
+    expect(tooltip(container)).toMatch(/^Año = 2000-01valor = /);
+
+    // El foco de teclado sigue al punto siguiente (2001): en calendario, sin sufijo.
+    fireEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    expect(tooltip(container)).toMatch(/^Año = 2001valor = /);
+  });
+
+  it("aclara bajo el selector por qué las dos vistas dan valores distintos", () => {
+    render(<Etapa1SerieTemporalChart datos={datosMensualConCalendario()} mesInicioAnio={7} />);
+    expect(
+      screen.getByText(
+        "Cada vista toma el máximo de doce meses distintos, así que un mismo año puede tener valores distintos en una y otra.",
+      ),
+    ).toBeInTheDocument();
+  });
+});

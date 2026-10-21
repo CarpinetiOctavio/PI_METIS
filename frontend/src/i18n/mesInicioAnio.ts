@@ -40,3 +40,17 @@ export function etiquetaSelectorMes(mes: number): string {
 export function notaCriterioAnio(mes: number): string {
   return `Criterio de año: ${nombreMes(mes)} — el año va ${formatRangoAnio(mes)}.`;
 }
+
+// Bloque G (revisión manual 21/10/2026). Un año que arranca en julio de 1994
+// corre hasta junio de 1995: "1994-95". Con enero es el año calendario: "1994".
+// Solo vale si METIS agregó la serie (carga mensual o diaria): con carga anual
+// los años los fijó el usuario y mes_inicio_anio no se aplicó.
+export function rotuloAnio(anio: number, mesInicio: number | undefined): string {
+  if (mesInicio === undefined || mesInicio === 1) return String(anio);
+  return `${anio}-${String((anio + 1) % 100).padStart(2, "0")}`;
+}
+
+// La diferencia entre "Configurado" y "Calendario" no es un error de cálculo:
+// cada vista toma el máximo de una ventana de doce meses distinta.
+export const NOTA_VISTAS_CRITERIO_ANIO =
+  "Cada vista toma el máximo de doce meses distintos, así que un mismo año puede tener valores distintos en una y otra.";

@@ -77,7 +77,7 @@ export function Etapa1GraficosView({
 
   return (
     <div className="stack" style={{ marginTop: 14 }}>
-      <Etapa1SerieTemporalChart datos={datos} seleccion={seleccion} />
+      <Etapa1SerieTemporalChart datos={datos} seleccion={seleccion} mesInicioAnio={mesInicioAnio} />
       <Etapa1ChowChart
         datos={datos}
         chow={chow}

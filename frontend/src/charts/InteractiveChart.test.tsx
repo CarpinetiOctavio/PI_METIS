@@ -187,6 +187,24 @@ describe("InteractiveChart", () => {
     expect(container.querySelector(".interactive-chart__tooltip-box")).toHaveTextContent(/T = .*valor = /);
   });
 
+  it("xTooltipFormat escribe x en el tooltip sin tocar los ticks del eje (bloque G)", () => {
+    const { container } = render(
+      <InteractiveChart
+        series={series()}
+        ariaLabel="Gráfico de prueba"
+        xLabel="Año"
+        yLabel="Valor"
+        xName="Año"
+        xTickFormat={(v) => `eje ${v}`}
+        xTooltipFormat={(v) => `tooltip ${v}`}
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole("img", { name: "Gráfico de prueba" }), { key: "ArrowRight" });
+
+    expect(container.querySelector(".interactive-chart__tooltip-box")).toHaveTextContent(/^Año = tooltip /);
+    expect(container.querySelector("svg")?.textContent).not.toMatch(/tooltip .*tooltip /);
+  });
+
   it("shows a tooltip with the exact (x, y) of the nearest point on hover", () => {
     const { container } = render(
       <InteractiveChart
