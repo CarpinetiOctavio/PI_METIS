@@ -10,6 +10,13 @@ import { ALFA_DEFECTO, alfaDestacado, formatAlfa } from "../../i18n/alfa";
 import "./HistoryPage.css";
 
 const PAGE_SIZE = 10;
+
+/** D-15 (#137) — `GET /history/?archivados=true` *incluye* los archivados
+ * además de los activos (DECISIÓN 048), no los selecciona. Cada vista se
+ * queda con lo suyo, así un análisis aparece en una sola de las dos. */
+function deLaVista(items: HistoryItem[], archivados: boolean): HistoryItem[] {
+  return items.filter((i) => (i.archivado_at !== null) === archivados);
+}
 const UNDO_TIMEOUT_MS = 6000;
 
 export function HistoryPage() {
@@ -25,7 +32,7 @@ export function HistoryPage() {
     setPage(0);
     listHistory(viewArchived)
       .then((data) => {
-        if (!cancelled) setItems(data);
+        if (!cancelled) setItems(deLaVista(data, viewArchived));
       })
       .catch((err) => {
         if (!cancelled) {

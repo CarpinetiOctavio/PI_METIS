@@ -30,10 +30,13 @@ function stubFetchRouted({
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/history/") && url.includes("archivados=true")) {
+        // Como el backend real (DECISIÓN 048): ?archivados=true INCLUYE los
+        // archivados además de los activos. El mock anterior devolvía solo
+        // los archivados y escondía D-15 (#137).
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(archivados),
+          json: () => Promise.resolve([...activos, ...archivados]),
         });
       }
       if (url.match(/\/history\/[^/]+\/archive$/)) {
@@ -200,6 +203,27 @@ describe("HistoryPage", () => {
 
     expect(await screen.findByRole("link")).toHaveAttribute("href", "/history/id-0");
     expect(screen.getByRole("button", { name: "Desarchivar" })).toBeInTheDocument();
+  });
+
+  it("D-15 — cada vista muestra solo lo suyo aunque ?archivados=true traiga también los activos", async () => {
+    const activos = makeItems(2).map((i, n) => ({ ...i, id: `activo-${n}` }));
+    const archivados = makeItems(1).map((i) => ({
+      ...i,
+      id: "archivado-0",
+      archivado_at: "2026-07-31T00:00:00",
+    }));
+    stubFetchRouted({ activos, archivados });
+    renderHistoryPage();
+
+    await waitFor(() => expect(screen.getAllByRole("link")).toHaveLength(2));
+    expect(screen.getAllByRole("button", { name: "Archivar" })).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver archivados" }));
+
+    await waitFor(() => expect(screen.getAllByRole("link")).toHaveLength(1));
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/history/archivado-0");
+    expect(screen.getByRole("button", { name: "Desarchivar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archivar" })).not.toBeInTheDocument();
   });
 
   // ── F7a/F7b (plan de fixes pre-reunión) ─────────────────────────────────
