@@ -2,3 +2,8 @@
   max-width: 760px;
   margin: 0 auto;
 }
+
+/* Bloque C1 (revisión manual 21/10/2026) — decisiones ante Chow. */
+.decisiones-chow {
+  margin-bottom: 14px;
+}

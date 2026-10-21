@@ -76,6 +76,7 @@ function makeItems(n: number): HistoryItem[] {
     nombre_archivo: null,
     serie_preview: [],
     alfa: 0.05,
+    chow_rechazados: 0,
   }));
 }
 
@@ -224,6 +225,22 @@ describe("HistoryPage", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "/history/archivado-0");
     expect(screen.getByRole("button", { name: "Desarchivar" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Archivar" })).not.toBeInTheDocument();
+  });
+
+  it("C1 — etiqueta los análisis con puntos rechazados ante Chow, en singular y plural", async () => {
+    const [uno, dos, ninguno] = makeItems(3);
+    stubFetchRouted({
+      activos: [
+        { ...uno, chow_rechazados: 1 },
+        { ...dos, chow_rechazados: 2 },
+        ninguno,
+      ],
+    });
+    renderHistoryPage();
+
+    expect(await screen.findByText("1 punto rechazado ante Chow")).toBeInTheDocument();
+    expect(screen.getByText("2 puntos rechazados ante Chow")).toBeInTheDocument();
+    expect(screen.getAllByText(/rechazados? ante Chow/)).toHaveLength(2);
   });
 
   // ── F7a/F7b (plan de fixes pre-reunión) ─────────────────────────────────

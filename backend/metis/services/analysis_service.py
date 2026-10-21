@@ -1220,11 +1220,17 @@ async def get_history(
     db: AsyncSession,
     incluir_archivados: bool = False,
 ) -> list[dict]:
-    stmt = select(Analysis).where(Analysis.user_id == user_id)
+    # Revisión manual 21/10/2026 (bloque C1) — outer join con analysis_results
+    # para el contador de rechazos ante Chow, sin traer el registro completo.
+    stmt = (
+        select(Analysis, AnalysisResult.decisiones)
+        .outerjoin(AnalysisResult, AnalysisResult.analysis_id == Analysis.id)
+        .where(Analysis.user_id == user_id)
+    )
     if not incluir_archivados:
         stmt = stmt.where(Analysis.archivado_at.is_(None))
     stmt = stmt.order_by(Analysis.created_at.desc())
-    rows = (await db.execute(stmt)).scalars().all()
+    rows = (await db.execute(stmt)).all()
     return [
         {
             "id": str(a.id),
@@ -1245,9 +1251,22 @@ async def get_history(
             "serie_preview": a.serie,
             # DECISIÓN 078 — 0.05 para los análisis anteriores (sin backfill).
             "alfa": _configuracion_con_alfa(a.configuracion)["alfa"],
+            "chow_rechazados": chow_rechazados(decisiones),
         }
-        for a in rows
+        for a, decisiones in rows
     ]
+
+
+def chow_rechazados(decisiones: dict | None) -> int:
+    """Cuántos puntos rechazó el usuario en la pausa de Chow. Lee las dos formas
+    de `decisiones.chow`: la de DECISIÓN 079 (`{"atipicos": [...]}`, una
+    decisión por punto) y la anterior (`{"accion", "dato"}`, un solo dato)."""
+    chow = (decisiones or {}).get("chow")
+    if not chow:
+        return 0
+    if "atipicos" in chow:
+        return sum(1 for a in chow["atipicos"] if a.get("decision") == "rechazar")
+    return 1 if chow.get("accion") == "rechazar" else 0
 
 
 async def archive_analysis(

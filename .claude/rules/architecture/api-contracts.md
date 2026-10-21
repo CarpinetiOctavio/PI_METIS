@@ -311,13 +311,19 @@ caso, no oculta la fila ni la rompe.
     "archivado_at": null,
     "nombre_archivo": "estacion_04.csv",
     "serie_preview": [94.71, 89.83, 105.13],
-    "alfa": 0.05
+    "alfa": 0.05,
+    "chow_rechazados": 1
   }
 ]
 ```
 
 `alfa` (DECISIÓN 078): nivel de significancia de la Etapa 1 del análisis; `0.05` para los guardados antes de
 que fuera configurable.
+
+`chow_rechazados` (revisión manual del 21/10/2026, bloque C1): cuántos puntos rechazó el usuario en la pausa de
+Chow, contados en el backend sobre `analysis_results.decisiones.chow` (las dos formas del registro) sin mandar el
+registro completo. `0` si no hubo pausa o se aceptaron todos. La lista lo muestra como etiqueta; el detalle
+(`GET /history/{id}`) ya trae `decisiones`.
 
 ---
 

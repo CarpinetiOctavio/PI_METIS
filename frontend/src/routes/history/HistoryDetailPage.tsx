@@ -8,6 +8,7 @@ import { Etapa1ResultView } from "../results/Etapa1ResultView";
 import { Etapa2Explorador } from "../results/Etapa2Explorador";
 import { Etapa2EventosView } from "../results/Etapa2EventosView";
 import { ExportarPdfButton } from "../results/ExportarPdfButton";
+import { DecisionesChowView } from "./DecisionesChowView";
 import type { AnalysisDetail, Modo } from "../../api/types";
 import type { ContextoSerie } from "../../i18n/periodoRetorno";
 import "./HistoryDetailPage.css";
@@ -87,6 +88,7 @@ export function HistoryDetailPage() {
       <p className="sub">
         {detail.tipo_variable} · {new Date(detail.created_at).toLocaleString("es-AR")}
       </p>
+      <DecisionesChowView chow={detail.decisiones?.chow} />
       {detail.etapa1 ? (
         <>
           <Etapa1ResultView

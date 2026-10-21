@@ -257,6 +257,17 @@ function HistoryRow({
             α = {formatAlfa(item.alfa ?? ALFA_DEFECTO)}
           </span>
         </p>
+        {/* Bloque C1 (revisión manual 21/10/2026) — la serie guardada es la
+            de sin los rechazados: que se note ya desde la lista. */}
+        {item.chow_rechazados > 0 && (
+          <p className="history-etiquetas">
+            <span className="pill acc">
+              {item.chow_rechazados === 1
+                ? "1 punto rechazado ante Chow"
+                : `${item.chow_rechazados} puntos rechazados ante Chow`}
+            </span>
+          </p>
+        )}
       </Link>
       <div className="row history-item-actions">
         {viewArchived ? (

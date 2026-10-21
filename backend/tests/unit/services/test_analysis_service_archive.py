@@ -14,6 +14,7 @@ import pytest
 from metis.db.models.analysis import Analysis
 from metis.services.analysis_service import (
     archive_analysis,
+    chow_rechazados,
     get_history,
     unarchive_analysis,
 )
@@ -28,10 +29,13 @@ def _mock_db_scalar_one_or_none(value):
     return db
 
 
-def _mock_db_scalars_all(values):
+def _mock_db_historial(values):
+    """get_history consulta `(Analysis, AnalysisResult.decisiones)` con un outer
+    join (bloque C1, revisión manual 21/10/2026). Cada valor es un Analysis
+    (sin decisiones) o un par `(Analysis, decisiones)`."""
     db = MagicMock()
     result = MagicMock()
-    result.scalars.return_value.all.return_value = values
+    result.all.return_value = [v if isinstance(v, tuple) else (v, None) for v in values]
     db.execute = AsyncMock(return_value=result)
     return db
 
@@ -105,7 +109,7 @@ async def test_unarchive_analysis_retorna_false_si_no_existe_o_no_pertenece():
 async def test_get_history_expone_archivado_at_en_cada_item():
     user_id = uuid.uuid4()
     activo = _analysis(user_id=user_id, archivado_at=None)
-    db = _mock_db_scalars_all([activo])
+    db = _mock_db_historial([activo])
 
     items = await get_history(user_id=user_id, db=db)
 
@@ -121,7 +125,7 @@ async def test_get_history_default_no_filtra_en_memoria_delega_al_query():
     archivados — el filtrado real lo prueba un test de integración con BD
     real, fuera de alcance de esta suite unitaria (ver testing.md)."""
     user_id = uuid.uuid4()
-    db = _mock_db_scalars_all([])
+    db = _mock_db_historial([])
 
     await get_history(user_id=user_id, db=db)
 
@@ -133,7 +137,7 @@ async def test_get_history_incluir_archivados_true_pasa_por_el_mismo_camino():
     user_id = uuid.uuid4()
     archivado = _analysis(user_id=user_id)
     archivado.archivado_at = __import__("datetime").datetime(2026, 7, 31)
-    db = _mock_db_scalars_all([archivado])
+    db = _mock_db_historial([archivado])
 
     items = await get_history(user_id=user_id, db=db, incluir_archivados=True)
 
@@ -154,7 +158,7 @@ async def test_get_history_expone_nombre_archivo_y_serie_preview():
         },
         serie=[94.71, 89.83, 105.13],
     )
-    db = _mock_db_scalars_all([analysis])
+    db = _mock_db_historial([analysis])
 
     items = await get_history(user_id=user_id, db=db)
 
@@ -173,9 +177,69 @@ async def test_get_history_degrada_nombre_archivo_a_null_sin_backfill():
         user_id=user_id, configuracion={"cramer_particion": "default"}
     )
     sin_configuracion = _analysis(user_id=user_id, configuracion=None)
-    db = _mock_db_scalars_all([sin_clave, sin_configuracion])
+    db = _mock_db_historial([sin_clave, sin_configuracion])
 
     items = await get_history(user_id=user_id, db=db)
 
     assert items[0]["nombre_archivo"] is None
     assert items[1]["nombre_archivo"] is None
+
+
+# ── Bloque C1 (revisión manual 21/10/2026, D-16) — rechazos ante Chow en la lista ──
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("decisiones", "esperado"),
+    [
+        (None, 0),
+        ({}, 0),
+        ({"distribucion": {"distribucion": "gve"}}, 0),
+        (
+            {
+                "chow": {
+                    "atipicos": [
+                        {"indice": 14, "decision": "rechazar"},
+                        {"indice": 25, "decision": "aceptar"},
+                        {"indice": 3, "decision": "rechazar"},
+                    ]
+                }
+            },
+            2,
+        ),
+        ({"chow": {"atipicos": [{"indice": 25, "decision": "aceptar"}]}}, 0),
+        ({"chow": {"accion": "rechazar", "dato": 950.0}}, 1),
+        ({"chow": {"accion": "aceptar", "dato": 950.0}}, 0),
+    ],
+    ids=[
+        "sin registro",
+        "decisiones vacías",
+        "sin chow",
+        "forma DECISIÓN 079 con dos rechazos",
+        "forma 079 solo aceptado",
+        "forma vieja rechazada",
+        "forma vieja aceptada",
+    ],
+)
+def test_chow_rechazados_lee_las_dos_formas(decisiones, esperado):
+    assert chow_rechazados(decisiones) == esperado
+
+
+@pytest.mark.unit
+async def test_get_history_expone_chow_rechazados_de_cada_analisis():
+    user_id = uuid.uuid4()
+    con_rechazo = _analysis(user_id=user_id)
+    sin_resultado = _analysis(user_id=user_id)
+    db = _mock_db_historial(
+        [
+            (
+                con_rechazo,
+                {"chow": {"atipicos": [{"indice": 1, "decision": "rechazar"}]}},
+            ),
+            sin_resultado,
+        ]
+    )
+
+    items = await get_history(user_id=user_id, db=db)
+
+    assert [i["chow_rechazados"] for i in items] == [1, 0]

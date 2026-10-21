@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { renderPage } from "../../test/renderPage";
@@ -297,5 +297,74 @@ describe("HistoryDetailPage", () => {
         /no tiene parámetros ajustados/,
       ),
     );
+  });
+
+  // ── Bloque C1 (revisión manual 21/10/2026, D-16) — decisiones ante Chow ──
+
+  it("C1 — muestra una fila por punto decidido en la pausa de Chow y aclara que la serie es sin los rechazados", async () => {
+    stubFetch(
+      200,
+      makeDetail({
+        decisiones: {
+          chow: {
+            atipicos: [
+              { indice: 14, periodo: 1994, valor: 296.93, z: 2.91, lado: "alto", decision: "rechazar", codigo: "TEST_OUTLIER_REJECTED_BY_USER" },
+              { indice: 25, periodo: 2005, valor: 296.99, z: -2.88, lado: "bajo", decision: "aceptar", codigo: "TEST_OUTLIER_ACCEPTED_BY_USER" },
+            ],
+          },
+        },
+      }),
+    );
+    renderDetail();
+
+    const seccion = await screen.findByRole("region", { name: "Decisiones ante Chow" });
+    const filas = within(seccion).getAllByRole("row").slice(1);
+    expect(filas.map((f) => f.textContent)).toEqual([
+      expect.stringMatching(/1994.*296,93.*Alto.*2,91.*Rechazado: excluido del análisis/),
+      expect.stringMatching(/2005.*296,99.*Bajo.*2,88.*Aceptado como parte de la población/),
+    ]);
+    expect(
+      within(seccion).getByText("Los resultados guardados corresponden a la serie sin el punto rechazado."),
+    ).toBeInTheDocument();
+  });
+
+  it("C1 — sin rechazados no dice que la serie se recortó", async () => {
+    stubFetch(
+      200,
+      makeDetail({
+        decisiones: {
+          chow: {
+            atipicos: [
+              { indice: 25, periodo: 2005, valor: 296.99, z: 2.88, lado: "alto", decision: "aceptar", codigo: "TEST_OUTLIER_ACCEPTED_BY_USER" },
+            ],
+          },
+        },
+      }),
+    );
+    renderDetail();
+
+    const seccion = await screen.findByRole("region", { name: "Decisiones ante Chow" });
+    expect(within(seccion).queryByText(/serie sin/)).not.toBeInTheDocument();
+  });
+
+  it("C1 — lee la forma vieja del registro ({accion, dato})", async () => {
+    stubFetch(200, makeDetail({ decisiones: { chow: { accion: "rechazar", dato: 950 } } }));
+    renderDetail();
+
+    const seccion = await screen.findByRole("region", { name: "Decisión ante el atípico de Chow" });
+    expect(seccion).toHaveTextContent(
+      "Dato 950,00000: rechazado y excluido del análisis. Los resultados guardados corresponden a la serie sin ese dato.",
+    );
+  });
+
+  it.each([
+    ["decisiones vacías", {}],
+    ["sin decisiones (análisis viejo)", undefined],
+  ])("C1 — %s: no muestra ningún bloque de Chow", async (_, decisiones) => {
+    stubFetch(200, makeDetail({ decisiones }));
+    renderDetail();
+
+    await screen.findByText("validado");
+    expect(screen.queryByRole("region", { name: /Chow/ })).not.toBeInTheDocument();
   });
 });
