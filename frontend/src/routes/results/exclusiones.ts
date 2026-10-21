@@ -110,3 +110,18 @@ export function descargarCsv(nombre: string, contenido: string): void {
   enlace.remove();
   URL.revokeObjectURL(url);
 }
+
+/** DECISIÓN 080 — clave de una selección de puntos, sin importar el orden en que
+ * se marcaron: "3,13". Sirve para saber si esa selección ya está guardada. */
+export function claveSeleccion(indices: Iterable<number>): string {
+  return [...indices].sort((a, b) => a - b).join(",");
+}
+
+/** DECISIÓN 080 — cómo guarda la página una exclusión, qué selecciones ya están
+ * guardadas y, desde "Ver", qué selección cargar. `pedido` cambia en cada "Ver"
+ * para que repetir el mismo vuelva a cargarla. */
+export interface ExclusionesGuardables {
+  guardar: (indices: number[]) => Promise<void>;
+  guardadas: ReadonlySet<string>;
+  cargar?: { indices: number[]; pedido: number } | null;
+}

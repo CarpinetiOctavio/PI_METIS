@@ -51,6 +51,14 @@ Cada borde se prueba de los dos lados: el último valor válido y el primero inv
 | VL-08b | | n = 10 | Ejecuta con `TEST_WARNING_SMALL_SAMPLE` | ídem | `…::test_mann_kendall_umbrales_de_n[VL-08b n=10]` |
 | VL-08c | | n = 30 | Ejecuta con `TEST_WARNING_SMALL_SAMPLE` | ídem | `…::test_mann_kendall_umbrales_de_n[VL-08c n=30]` |
 | VL-08d | | n = 31 | Ejecuta sin warning | ídem | `…::test_mann_kendall_umbrales_de_n[VL-08d n=31]` |
+| VL-09a | Índice de una exclusión guardada (serie de n = 50) | −1 | 400 `CONTRACT_EXCLUSION_INVALID` | DECISIÓN 080 | `tests/integration/db/test_exclusiones_guardadas.py::test_indices_invalidos[VL-09a índice -1]` |
+| VL-09b | | 0 | Se guarda | ídem | `…::test_indices_en_el_borde_validos[VL-09b índice 0]` |
+| VL-09c | | n − 1 = 49 | Se guarda | ídem | `…::test_indices_en_el_borde_validos[VL-09c índice n-1]` |
+| VL-09d | | n = 50 | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-09d índice n]` |
+| VL-09e | | Repetido `[3, 3]` | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-09e repetido]` |
+| VL-10a | Cantidad de puntos excluidos | 0 | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-10a ninguno]` |
+| VL-10b | | n − 1 (queda un dato) | Se guarda | ídem | `…::test_indices_en_el_borde_validos[VL-10b n-1 puntos (queda uno)]` |
+| VL-10c | | n (vacía la serie) | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-10c los n (vacía la serie)]` |
 
 ---
 
@@ -170,7 +178,9 @@ Las que toleran ceros con advertencia (`DIST_ZEROS_TOLERATED`, DECISIÓN 061) se
 - **74 casos:** 28 de valores límite, 22 de clases de equivalencia y 24 columnas de cinco tablas de decisión. 45 tests
   nuevos en `tests/unit/casos_dinamicos/` (contando cada id de `parametrize`); el resto ya existía.
 - **Agregados después de B8:** CE-07a–c (revisión manual del 21/10/2026, bloque H del
-  `docs/plan-revision-manual-21-10-2026.md`): tres casos y tres tests más en `casos_dinamicos/`.
+  `docs/plan-revision-manual-21-10-2026.md`): tres casos y tres tests más en `casos_dinamicos/`. VL-09a–e y
+  VL-10a–c (bloque C2, DECISIÓN 080): ocho casos en `tests/integration/db/test_exclusiones_guardadas.py`, contra
+  PostgreSQL, porque la validación necesita el análisis persistido.
 - **Ningún caso encontró un defecto.** Si uno lo hubiera encontrado, se registraría con la plantilla de
   `registro-defectos.md`.
 - **Bordes que no se probaban en el borde:** antes de este bloque, la longitud se probaba con n = 8, 15 y 30 (no con

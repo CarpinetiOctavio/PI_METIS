@@ -77,6 +77,7 @@ function makeItems(n: number): HistoryItem[] {
     serie_preview: [],
     alfa: 0.05,
     chow_rechazados: 0,
+    exclusiones_guardadas: 0,
   }));
 }
 
@@ -225,6 +226,21 @@ describe("HistoryPage", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "/history/archivado-0");
     expect(screen.getByRole("button", { name: "Desarchivar" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Archivar" })).not.toBeInTheDocument();
+  });
+
+  it("DECISIÓN 080 — etiqueta los análisis con exclusiones guardadas", async () => {
+    const [una, tres] = makeItems(2);
+    stubFetchRouted({
+      activos: [
+        { ...una, exclusiones_guardadas: 1 },
+        { ...tres, exclusiones_guardadas: 3, chow_rechazados: 1 },
+      ],
+    });
+    renderHistoryPage();
+
+    expect(await screen.findByText("1 exclusión guardada")).toBeInTheDocument();
+    expect(screen.getByText("3 exclusiones guardadas")).toBeInTheDocument();
+    expect(screen.getByText("1 punto rechazado ante Chow")).toBeInTheDocument();
   });
 
   it("C1 — etiqueta los análisis con puntos rechazados ante Chow, en singular y plural", async () => {

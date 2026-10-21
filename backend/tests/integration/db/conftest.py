@@ -41,6 +41,10 @@ async def db():
             await conexion.execute(
                 text("SELECT archivado_at, timestamps FROM analyses LIMIT 0")
             )
+            # Migración 006 (DECISIÓN 080).
+            await conexion.execute(
+                text("SELECT exclusiones FROM analysis_results LIMIT 0")
+            )
     except Exception as exc:  # noqa: BLE001 — cualquier falla de conexión o de esquema
         await engine.dispose()
         mensaje = f"Sin PostgreSQL de test con las migraciones aplicadas: {exc!r}"

@@ -259,13 +259,23 @@ function HistoryRow({
         </p>
         {/* Bloque C1 (revisión manual 21/10/2026) — la serie guardada es la
             de sin los rechazados: que se note ya desde la lista. */}
-        {item.chow_rechazados > 0 && (
+        {(item.chow_rechazados > 0 || item.exclusiones_guardadas > 0) && (
           <p className="history-etiquetas">
-            <span className="pill acc">
-              {item.chow_rechazados === 1
-                ? "1 punto rechazado ante Chow"
-                : `${item.chow_rechazados} puntos rechazados ante Chow`}
-            </span>
+            {item.chow_rechazados > 0 && (
+              <span className="pill acc">
+                {item.chow_rechazados === 1
+                  ? "1 punto rechazado ante Chow"
+                  : `${item.chow_rechazados} puntos rechazados ante Chow`}
+              </span>
+            )}
+            {/* DECISIÓN 080 */}
+            {item.exclusiones_guardadas > 0 && (
+              <span className="pill acc">
+                {item.exclusiones_guardadas === 1
+                  ? "1 exclusión guardada"
+                  : `${item.exclusiones_guardadas} exclusiones guardadas`}
+              </span>
+            )}
           </p>
         )}
       </Link>

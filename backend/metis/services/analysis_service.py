@@ -1122,6 +1122,8 @@ async def get_analysis_by_id(
         "serie": analysis.serie,
         "timestamps": analysis.timestamps,
         "configuracion": _configuracion_con_alfa(analysis.configuracion),
+        # DECISIÓN 080 — exclusiones guardadas a pedido; [] sin backfill.
+        "exclusiones": result.exclusiones or [],
     }
 
 
@@ -1220,10 +1222,11 @@ async def get_history(
     db: AsyncSession,
     incluir_archivados: bool = False,
 ) -> list[dict]:
-    # Revisión manual 21/10/2026 (bloque C1) — outer join con analysis_results
-    # para el contador de rechazos ante Chow, sin traer el registro completo.
+    # Revisión manual 21/10/2026 (bloques C1 y C2) — outer join con
+    # analysis_results para los contadores de rechazos ante Chow y de exclusiones
+    # guardadas, sin traer los resultados.
     stmt = (
-        select(Analysis, AnalysisResult.decisiones)
+        select(Analysis, AnalysisResult.decisiones, AnalysisResult.exclusiones)
         .outerjoin(AnalysisResult, AnalysisResult.analysis_id == Analysis.id)
         .where(Analysis.user_id == user_id)
     )
@@ -1252,8 +1255,10 @@ async def get_history(
             # DECISIÓN 078 — 0.05 para los análisis anteriores (sin backfill).
             "alfa": _configuracion_con_alfa(a.configuracion)["alfa"],
             "chow_rechazados": chow_rechazados(decisiones),
+            # DECISIÓN 080 — solo la cantidad; las exclusiones viajan en el detalle.
+            "exclusiones_guardadas": len(exclusiones or []),
         }
-        for a, decisiones in rows
+        for a, decisiones, exclusiones in rows
     ]
 
 

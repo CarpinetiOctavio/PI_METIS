@@ -17,6 +17,8 @@ import type {
   TipoVariable,
 } from "../../api/types";
 import { crearPedirSimulacion, crearSimular } from "./simulacion";
+import { claveSeleccion, type ExclusionesGuardables } from "./exclusiones";
+import { guardarExclusion } from "../../api/history";
 import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
 import "./ResultsPage.css";
 
@@ -55,6 +57,8 @@ export function ResultsPage() {
   // nueva se pasa a esa vista; la elección registrada no cambia (DECISIÓN 062).
   const [simulacion, setSimulacion] = useState<SimulateExclusionResponse | null>(null);
   const [vistaEventos, setVistaEventos] = useState<"original" | "simulada">("original");
+  // DECISIÓN 080 — selecciones ya guardadas en el historial en esta sesión.
+  const [guardadas, setGuardadas] = useState<ReadonlySet<string>>(new Set());
   const alCambiarSimulacion = useCallback((nueva: SimulateExclusionResponse | null) => {
     setSimulacion(nueva);
     setVistaEventos(nueva ? "simulada" : "original");
@@ -203,6 +207,18 @@ export function ResultsPage() {
       periodos_retorno: eventosDiseno.eventos_diseno.map((e) => e.periodo_retorno),
     },
   );
+  // DECISIÓN 080 — guardar la exclusión en el historial: solo CU-01, con el
+  // análisis persistido. CU-02 no tiene historial y el botón no aparece.
+  const exclusiones: ExclusionesGuardables | undefined =
+    isAuthed && analysisId && simular
+      ? {
+          guardar: async (indices) => {
+            await guardarExclusion(analysisId, indices);
+            setGuardadas((previas) => new Set(previas).add(claveSeleccion(indices)));
+          },
+          guardadas,
+        }
+      : undefined;
   // Explorar otra distribución bajo la simulación vigente: el mismo endpoint, con
   // los mismos puntos excluidos y la combinación explorada como `seleccion`.
   const indicesSimulados = simulacionConEtapa2?.excluidos.map((e) => e.indice) ?? [];
@@ -245,6 +261,7 @@ export function ResultsPage() {
         tipoVariable={tipoVariable}
         cramerParticion={locationState?.cramerParticion}
         simular={simular}
+        exclusiones={exclusiones}
         onSimulacionVigente={alCambiarSimulacion}
       />
       {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la

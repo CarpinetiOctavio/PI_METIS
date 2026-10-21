@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getHistoryItem } from "../../api/history";
+import { getHistoryItem, guardarExclusion, quitarExclusion } from "../../api/history";
 import { postRecalcularDesignEvents } from "../../api/analysis";
 import { ApiError } from "../../api/client";
 import { errorText } from "../../i18n/errors.es";
@@ -11,11 +11,14 @@ import { ExportarPdfButton } from "../results/ExportarPdfButton";
 import { DecisionesChowView } from "./DecisionesChowView";
 import type {
   AnalysisDetail,
+  ExclusionGuardada,
   Modo,
   SimulateExclusionResponse,
   TipoVariable,
 } from "../../api/types";
 import { crearPedirSimulacion, crearSimular } from "../results/simulacion";
+import { claveSeleccion, type ExclusionesGuardables } from "../results/exclusiones";
+import { ExclusionesGuardadasView } from "./ExclusionesGuardadasView";
 import type { ContextoSerie } from "../../i18n/periodoRetorno";
 import "./HistoryDetailPage.css";
 
@@ -30,13 +33,22 @@ export function HistoryDetailPage() {
     (nueva: SimulateExclusionResponse | null) => setSimulacion(nueva),
     [],
   );
+  // DECISIÓN 080 — exclusiones guardadas: la lista, la que "Ver" pide cargar y
+  // el estado de "Quitar".
+  const [guardadas, setGuardadas] = useState<ExclusionGuardada[]>([]);
+  const [cargar, setCargar] = useState<{ indices: number[]; pedido: number } | null>(null);
+  const [quitando, setQuitando] = useState<string | null>(null);
+  const [errorExclusiones, setErrorExclusiones] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
     getHistoryItem(id)
       .then((data) => {
-        if (!cancelled) setDetail(data);
+        if (!cancelled) {
+          setDetail(data);
+          setGuardadas(data.exclusiones ?? []);
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -93,6 +105,31 @@ export function HistoryDetailPage() {
     },
   );
 
+  const analysisId = detail.id;
+  const exclusiones: ExclusionesGuardables | undefined = simular && {
+    guardar: async (indices) => {
+      const entrada = await guardarExclusion(analysisId, indices);
+      setGuardadas((previas) =>
+        previas.some((e) => e.id === entrada.id) ? previas : [...previas, entrada],
+      );
+    },
+    guardadas: new Set(guardadas.map((e) => claveSeleccion(e.indices))),
+    cargar,
+  };
+
+  async function quitar(exclusion: ExclusionGuardada) {
+    setQuitando(exclusion.id);
+    setErrorExclusiones(null);
+    try {
+      await quitarExclusion(analysisId, exclusion.id);
+      setGuardadas((previas) => previas.filter((e) => e.id !== exclusion.id));
+    } catch (err) {
+      setErrorExclusiones(err instanceof ApiError ? errorText(err.codigo) : errorText(""));
+    } finally {
+      setQuitando(null);
+    }
+  }
+
   const eleccionRegistrada = seleccion && detail.etapa2 && (
     <>
       <h3 className="h" style={{ fontSize: 14, marginBottom: 4 }}>
@@ -129,6 +166,17 @@ export function HistoryDetailPage() {
         {detail.tipo_variable} · {new Date(detail.created_at).toLocaleString("es-AR")}
       </p>
       <DecisionesChowView chow={detail.decisiones?.chow} />
+      {exclusiones && (
+        <ExclusionesGuardadasView
+          exclusiones={guardadas}
+          onVer={(e) =>
+            setCargar((previo) => ({ indices: e.indices, pedido: (previo?.pedido ?? 0) + 1 }))
+          }
+          onQuitar={quitar}
+          quitando={quitando}
+          error={errorExclusiones}
+        />
+      )}
       {detail.etapa1 ? (
         <>
           <Etapa1ResultView
@@ -140,6 +188,7 @@ export function HistoryDetailPage() {
             cramerParticion={detail.configuracion?.cramer_particion}
             simular={simular}
             onSimulacionVigente={alCambiarSimulacion}
+            exclusiones={exclusiones}
           />
           {/* PR 5 del plan de cierre de pendientes no-test (DECISIÓN 058
               §4) — sin backfill, `timestamps` es null para cualquier

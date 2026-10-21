@@ -10,6 +10,7 @@ import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import { alfaDestacado, textoAlfaAnalisis } from "../../i18n/alfa";
 import { textoParticionCramer } from "../../i18n/cramer";
+import type { ExclusionesGuardables } from "./exclusiones";
 import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
 import { errorText } from "../../i18n/errors.es";
 import { BlockMath } from "../../components/BlockMath";
@@ -199,12 +200,15 @@ export function Etapa1ResultView({
   onSimulacionVigente,
   tipoVariable,
   cramerParticion,
+  exclusiones,
 }: Readonly<{
   result: Etapa1Result;
   tipoVariable?: string;
   // D-18 (revisión manual 21/10/2026) — la partición con que corrió Cramer.
   // ResultsPage la trae del router state; HistoryDetailPage, de configuracion.
   cramerParticion?: CramerParticion | null;
+  // DECISIÓN 080 — guardar la exclusión vigente y cargar una guardada (solo CU-01).
+  exclusiones?: ExclusionesGuardables;
   modo: Modo;
   mesInicioAnio?: number;
   nombreArchivo?: string | null;
@@ -332,6 +336,7 @@ export function Etapa1ResultView({
           simular={simular}
           onSimulacionVigente={onSimulacionVigente}
           tipoVariable={tipoVariable}
+          exclusiones={exclusiones}
         />
       )}
 

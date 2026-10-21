@@ -154,3 +154,9 @@ elección registrada (`etapa2.seleccion`). Las dos páginas construyen el pedido
 - Fuera de este bloque: en el historial, la vista simulada de los eventos de diseño y de la exploración de Etapa 2 (el
   selector "Original | Sin los puntos excluidos" de Resultados). La comparación de Etapa 1 y el PDF sí están.
 - Tests: `HistoryDetailPage.simulacion.test.tsx`.
+
+### Revisión 21/10/2026 — la simulación se puede guardar (DECISIÓN 080)
+
+Desde la vista comparativa (Resultados con `analysisId`, o el historial), "Guardar esta exclusión en el historial"
+registra los índices, con su año y su valor, en `analysis_results.exclusiones`. No guarda el resultado de la
+simulación: "Ver" vuelve a pedirlo a este mismo endpoint, que es determinístico. Ver la [DECISIÓN 080](decision080.md).

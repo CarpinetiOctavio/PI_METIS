@@ -30,12 +30,14 @@ def _mock_db_scalar_one_or_none(value):
 
 
 def _mock_db_historial(values):
-    """get_history consulta `(Analysis, AnalysisResult.decisiones)` con un outer
-    join (bloque C1, revisión manual 21/10/2026). Cada valor es un Analysis
-    (sin decisiones) o un par `(Analysis, decisiones)`."""
+    """get_history consulta `(Analysis, decisiones, exclusiones)` con un outer
+    join (bloques C1 y C2, revisión manual 21/10/2026). Cada valor es un
+    Analysis solo o una tupla `(Analysis, decisiones[, exclusiones])`."""
     db = MagicMock()
     result = MagicMock()
-    result.all.return_value = [v if isinstance(v, tuple) else (v, None) for v in values]
+    result.all.return_value = [
+        (*(v if isinstance(v, tuple) else (v,)), None, None)[:3] for v in values
+    ]
     db.execute = AsyncMock(return_value=result)
     return db
 
@@ -243,3 +245,16 @@ async def test_get_history_expone_chow_rechazados_de_cada_analisis():
     items = await get_history(user_id=user_id, db=db)
 
     assert [i["chow_rechazados"] for i in items] == [1, 0]
+
+
+@pytest.mark.unit
+async def test_get_history_expone_la_cantidad_de_exclusiones_guardadas():
+    # DECISIÓN 080 — la lista lleva solo la cantidad; las exclusiones, el detalle.
+    user_id = uuid.uuid4()
+    con_dos = _analysis(user_id=user_id)
+    sin_resultado = _analysis(user_id=user_id)
+    db = _mock_db_historial([(con_dos, {}, [{"id": "a"}, {"id": "b"}]), sin_resultado])
+
+    items = await get_history(user_id=user_id, db=db)
+
+    assert [i["exclusiones_guardadas"] for i in items] == [2, 0]

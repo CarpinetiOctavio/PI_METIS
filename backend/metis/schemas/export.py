@@ -8,3 +8,10 @@ class ExportSimulacionRequest(BaseModel):
     POST /analysis/simulate-exclusion (DECISIÓN 071)."""
 
     indices_excluidos: list[int]
+
+
+class GuardarExclusionRequest(BaseModel):
+    """POST /history/{id}/exclusiones (DECISIÓN 080). Solo los índices, como en
+    `ExportSimulacionRequest`: los años y los valores salen del análisis persistido."""
+
+    indices_excluidos: list[int]

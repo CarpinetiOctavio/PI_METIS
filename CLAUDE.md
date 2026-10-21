@@ -44,7 +44,7 @@ backend/metis/
 ├── api/v1/               # Controllers: endpoints, contratos request/response. Sin lógica de negocio.
 │   ├── analysis.py       # /analysis/stream (SSE), /outlier-decision, /preview-columns, /distribution-decision,
 │   │                     # /{id}, /{id}/design-events (DECISIÓN 062), /simulate-exclusion (DECISIÓN 071)
-│   ├── history.py        # /history/, /history/{id}, /history/{id}/archive|unarchive
+│   ├── history.py        # /history/, /history/{id}, /history/{id}/archive|unarchive, /history/{id}/exclusiones (DECISIÓN 080)
 │   └── export.py         # GET /export/{id}, POST /export/{id}/simulacion — PDF de CU-01 (DECISIÓN 075)
 ├── core/                 # Motor estadístico. SIN conocimiento de HTTP, BD, ni sesiones.
 │   ├── estadistica_descriptiva/   # descriptive.py
@@ -56,7 +56,7 @@ backend/metis/
 │   │                      # aggregation.py (mensual/diaria → máximos anuales — DECISIÓN 057/065)
 │   ├── types.py, utils.py
 ├── services/              # Orquestación: analysis_service.py (pipeline + SSE + persistencia), session_store.py,
-│                          # export_service.py
+│                          # export_service.py, exclusiones_service.py (exclusiones guardadas — DECISIÓN 080)
 ├── reportes/              # pdf.py — informe PDF (ReportLab + matplotlib). Presentación pura: recibe el dict de
 │                          # get_analysis_by_id(), no importa api/services/db/core (DECISIÓN 075)
 ├── db/                    # models/ (user, analysis, result, api_client) + base.py, session.py
@@ -256,6 +256,8 @@ GET    /api/v1/history/                   # ?archivados=true incluye archivados 
 GET    /api/v1/history/{id}
 POST   /api/v1/history/{id}/archive       # soft-delete — DECISIÓN 048
 POST   /api/v1/history/{id}/unarchive
+POST   /api/v1/history/{id}/exclusiones                  # Guardar una exclusión de puntos aparte del resultado — DECISIÓN 080
+DELETE /api/v1/history/{id}/exclusiones/{exclusion_id}   # Quitarla
 GET    /api/v1/export/{id}                # PDF on-demand, siempre formato Experto — CU-01 (DECISIÓN 075)
 POST   /api/v1/export/{id}/simulacion     # El mismo PDF + resultados sin los puntos excluidos (DECISIÓN 071/075)
 POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1 — SIN IMPLEMENTAR

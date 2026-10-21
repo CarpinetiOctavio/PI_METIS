@@ -115,6 +115,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "Falta decidir algún atípico, o la decisión no corresponde a los atípicos detectados.",
   ANALYSIS_NOT_FOUND:
     "El análisis no existe, no te pertenece, o no tiene los resultados que pide esta operación.",
+  // DECISIÓN 080 — quitar una exclusión guardada que ya no existe.
+  ANALYSIS_EXCLUSION_NOT_FOUND: "Esa exclusión ya no está guardada en este análisis.",
   STREAM_CONNECTION_ERROR:
     "Se perdió la conexión con el servidor durante el análisis.",
   STREAM_CLOSED_EARLY:

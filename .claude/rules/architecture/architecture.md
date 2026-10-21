@@ -218,6 +218,8 @@ analysis_id  UUID REFERENCES analyses(id) ON DELETE CASCADE
 etapa1       JSONB    -- estadísticos, valores críticos, veredictos, warnings
 etapa2       JSONB    -- ranking EEA, distribución seleccionada, eventos de diseño. NULL si no ejecutó.
 decisiones   JSONB    -- registro de auditoría: qué decidió el usuario ante cada warning
+exclusiones  JSONB NOT NULL DEFAULT '[]'  -- migración 006 (DECISIÓN 080) — exclusiones de puntos guardadas a
+                                          -- pedido; índices, años y valores, no resultados (se recalculan)
 ```
 
 ### Tabla: api_clients

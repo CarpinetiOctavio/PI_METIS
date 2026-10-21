@@ -401,6 +401,20 @@ export interface HistoryItem {
   // Revisión manual 21/10/2026 (bloque C1) — puntos rechazados en la pausa de
   // Chow, contados en el backend sin traer el registro completo.
   chow_rechazados: number;
+  // DECISIÓN 080 — cuántas exclusiones guardadas tiene (las exclusiones, en el detalle).
+  exclusiones_guardadas: number;
+}
+
+// DECISIÓN 080 — una exclusión de puntos guardada a pedido sobre un análisis.
+// `indices` son posiciones en etapa1.datos.serie_efectiva, ordenadas; `puntos`
+// trae el año y el valor de cada uno, tomados del análisis persistido.
+export interface ExclusionGuardada {
+  id: string;
+  creado_at: string;
+  indices: number[];
+  puntos: { indice: number; periodo: number | null; valor: number }[];
+  alfa: Alfa;
+  cramer_particion: CramerParticion;
 }
 
 // PR 3/5 del plan de cierre de pendientes no-test (DECISIÓN 058) —
@@ -443,6 +457,8 @@ export interface AnalysisDetail {
   // Registro de auditoría de CU-01 (C2b del plan post-avance). Bloque C1 de la
   // revisión manual del 21/10/2026: el detalle muestra las decisiones ante Chow.
   decisiones?: DecisionesRegistradas | null;
+  // DECISIÓN 080 — `[]` si no hay ninguna (sin backfill).
+  exclusiones?: ExclusionGuardada[];
 }
 
 // --- Etapa 2 — shapes reales, cableada de punta a punta (Bloque A del plan

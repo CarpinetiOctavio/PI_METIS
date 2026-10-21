@@ -29,6 +29,17 @@ const SELECCION = {
   curva_ajuste: [{ periodo_retorno: 1.05, valor: 61.2 }],
 };
 
+function exclusion(id: string, indices: number[]) {
+  return {
+    id,
+    creado_at: "2026-10-21T10:00:00",
+    indices,
+    puntos: indices.map((i) => ({ indice: i, periodo: 2000 + i, valor: 100 + i * 3 })),
+    alfa: 0.1 as const,
+    cramer_particion: "default" as const,
+  };
+}
+
 function detalle(overrides: Partial<AnalysisDetail> = {}): AnalysisDetail {
   const datos = makeEtapa1Datos();
   return {
@@ -53,6 +64,20 @@ function detalle(overrides: Partial<AnalysisDetail> = {}): AnalysisDetail {
 
 function montar(analisis: AnalysisDetail) {
   const fetchMock = stubFetchRouted([
+    // DECISIÓN 080 — antes que el GET del detalle, que también contiene "/history/an-1".
+    {
+      match: (url, init) => init?.method === "POST" && url.includes("/exclusiones"),
+      status: 200,
+      responder: (_url, init) => {
+        const { indices_excluidos } = JSON.parse(String(init?.body));
+        return exclusion("ex-nueva", indices_excluidos);
+      },
+    },
+    {
+      match: (url, init) => init?.method === "DELETE" && url.includes("/exclusiones/"),
+      status: 200,
+      body: { ok: true },
+    },
     {
       match: (url, init) => init?.method === "POST" && url.includes("/simulate-exclusion"),
       status: 200,
@@ -133,5 +158,51 @@ describe("HistoryDetailPage — what-if de atípicos (bloque B)", () => {
 
     expect(await screen.findByText(/tampoco la simulación sin puntos excluidos/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: RECALCULAR })).not.toBeInTheDocument();
+  });
+
+  // ── DECISIÓN 080 — exclusiones guardadas (bloque C2) ──────────────────────
+
+  it("guarda la exclusión de la comparación y la suma a 'Exclusiones guardadas'", async () => {
+    const { fetchMock, user } = montar(detalle());
+
+    await simularExcluyendo(user, 3);
+    await user.click(screen.getByRole("button", { name: "Guardar esta exclusión en el historial" }));
+
+    const seccion = await screen.findByRole("region", { name: "Exclusiones guardadas" });
+    expect(seccion).toHaveTextContent("Sin 2003");
+    expect(screen.getByText(/Guardada: esta exclusión figura en el historial/)).toBeInTheDocument();
+    const posts = fetchMock.mock.calls
+      .filter(([, init]) => (init as RequestInit | undefined)?.method === "POST")
+      .map(([url]) => String(url));
+    expect(posts).toEqual([
+      expect.stringContaining("/analysis/simulate-exclusion"),
+      expect.stringContaining("/history/an-1/exclusiones"),
+    ]);
+  });
+
+  it("'Ver' carga la selección guardada y recalcula la comparación", async () => {
+    const { fetchMock, user } = montar(detalle({ exclusiones: [exclusion("ex-1", [3, 7])] }));
+
+    await user.click(await screen.findByRole("button", { name: "Ver la exclusión sin 2003, 2007" }));
+
+    await screen.findByText("Resultados sin los puntos excluidos");
+    const llamada = fetchMock.mock.calls.find(([url]) => String(url).includes("/simulate-exclusion"));
+    expect(JSON.parse(String((llamada![1] as RequestInit).body)).indices_excluidos).toEqual([3, 7]);
+    // Ya está guardada: no se vuelve a ofrecer guardarla.
+    expect(
+      screen.queryByRole("button", { name: "Guardar esta exclusión en el historial" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("'Quitar' la borra del historial", async () => {
+    const { fetchMock, user } = montar(detalle({ exclusiones: [exclusion("ex-1", [3, 7])] }));
+
+    await user.click(await screen.findByRole("button", { name: "Quitar la exclusión sin 2003, 2007" }));
+
+    expect(screen.queryByRole("region", { name: "Exclusiones guardadas" })).not.toBeInTheDocument();
+    const borrado = fetchMock.mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === "DELETE",
+    );
+    expect(String(borrado![0])).toContain("/api/v1/history/an-1/exclusiones/ex-1");
   });
 });
