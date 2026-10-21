@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { instrumentoTokens } from "./tokens";
 import { contrastRatio, mixOver } from "./contrast";
 
@@ -41,5 +44,47 @@ describe.each(["light", "dark"] as const)("contraste WCAG AA — modo %s", (modo
   ])("%s sobre su propio fondo al %d%% de mezcla (peor caso)", (token, pct) => {
     const fondoCompuesto = mixOver(t[token], pct, t.surf);
     expect(contrastRatio(t[token], fondoCompuesto)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+});
+
+/**
+ * Revisión manual 21/10/2026 (D-13, #135) — el diálogo de la pausa de Chow es
+ * una tarjeta semitransparente (`color-mix(var(--surf) N%, transparent)`)
+ * sobre un scrim oscuro. Medir `--mut` contra `--surf` puro no veía esa
+ * composición: con 55% el texto secundario quedaba en 2,9:1 con el tema
+ * claro. Se compone el fondo real leyendo el % y el scrim de StreamPage.css
+ * (así una baja de la opacidad rompe este test) y se toma el peor caso de lo
+ * que puede haber detrás: `--bg` o `--ink` (el blur lo promedia, nunca es
+ * más extremo que eso).
+ */
+const streamCss = readFileSync(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "../routes/stream/StreamPage.css"),
+  "utf-8",
+);
+
+function modalCard(): { surfPct: number; scrim: { rgb: [number, number, number]; alpha: number } } {
+  const card = /^\.modal-backdrop \.card\s*\{([\s\S]*?)^\}/m.exec(streamCss)?.[1] ?? "";
+  const pct = /background:\s*color-mix\(in srgb, var\(--surf\) (\d+)%, transparent\)/.exec(card);
+  const backdrop = /^\.modal-backdrop\s*\{([\s\S]*?)^\}/m.exec(streamCss)?.[1] ?? "";
+  const scrim = /background:\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(backdrop);
+  if (!pct || !scrim) throw new Error("No se encontró el fondo del modal en StreamPage.css");
+  return {
+    surfPct: Number(pct[1]),
+    scrim: { rgb: [Number(scrim[1]), Number(scrim[2]), Number(scrim[3])], alpha: Number(scrim[4]) },
+  };
+}
+
+function rgbToHex(rgb: [number, number, number]): string {
+  return "#" + rgb.map((c) => c.toString(16).padStart(2, "0")).join("");
+}
+
+describe.each(["light", "dark"] as const)("contraste del diálogo de pausa de Chow — modo %s", (modo) => {
+  const t = instrumentoTokens[modo];
+  const { surfPct, scrim } = modalCard();
+
+  it.each(["bg", "ink"] as const)("mut sobre la tarjeta con %s detrás del scrim", (detras) => {
+    const bajoScrim = mixOver(rgbToHex(scrim.rgb), scrim.alpha * 100, t[detras]);
+    const fondoTarjeta = mixOver(t.surf, surfPct, bajoScrim);
+    expect(contrastRatio(t.mut, fondoTarjeta)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
   });
 });
