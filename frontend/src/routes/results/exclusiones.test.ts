@@ -3,7 +3,7 @@ import {
   csvSinExcluidos,
   descargarCsv,
   hayExcluidoInterior,
-  nombreCsvSinAtipicos,
+  nombreCsvSinExcluidos,
   puntosDeSerie,
 } from "./exclusiones";
 import { makeEtapa1Datos } from "../../test/etapa1Fixtures";
@@ -53,17 +53,17 @@ describe("csvSinExcluidos", () => {
   });
 });
 
-describe("nombreCsvSinAtipicos", () => {
+describe("nombreCsvSinExcluidos", () => {
   it.each([
-    ["estacion_04.csv", "estacion_04_sin_atipicos.csv"],
-    ["Serie.mensual.xlsx", "Serie.mensual_sin_atipicos.csv"],
-    ["C:\\datos\\rio.csv", "rio_sin_atipicos.csv"],
-    ["sin_extension", "sin_extension_sin_atipicos.csv"],
-    [undefined, "serie_sin_atipicos.csv"],
-    [null, "serie_sin_atipicos.csv"],
-    ["", "serie_sin_atipicos.csv"],
+    ["estacion_04.csv", "estacion_04_sin_puntos_excluidos.csv"],
+    ["Serie.mensual.xlsx", "Serie.mensual_sin_puntos_excluidos.csv"],
+    ["C:\\datos\\rio.csv", "rio_sin_puntos_excluidos.csv"],
+    ["sin_extension", "sin_extension_sin_puntos_excluidos.csv"],
+    [undefined, "serie_sin_puntos_excluidos.csv"],
+    [null, "serie_sin_puntos_excluidos.csv"],
+    ["", "serie_sin_puntos_excluidos.csv"],
   ])("%j → %s", (entrada, esperado) => {
-    expect(nombreCsvSinAtipicos(entrada)).toBe(esperado);
+    expect(nombreCsvSinExcluidos(entrada)).toBe(esperado);
   });
 });
 
@@ -87,7 +87,7 @@ describe("descargarCsv", () => {
     vi.stubGlobal("URL", { createObjectURL: crear, revokeObjectURL: liberar });
     const clic = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
-    descargarCsv("rio_sin_atipicos.csv", "periodo,valor\n2000,1\n");
+    descargarCsv("rio_sin_puntos_excluidos.csv", "periodo,valor\n2000,1\n");
 
     const blob = (crear.mock.calls[0] as unknown as [Blob])[0];
     expect(blob.type).toContain("text/csv");

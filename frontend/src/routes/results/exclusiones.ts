@@ -74,14 +74,15 @@ export function csvDeSerie(anios: readonly number[], serie: readonly number[]): 
   return ["periodo,valor", ...filas].join("\n") + "\n";
 }
 
-/** `<archivo original>_sin_atipicos.csv`; sin nombre conocido, `serie_sin_atipicos.csv`. */
-export function nombreCsvSinAtipicos(nombreArchivo?: string | null): string {
+/** `<archivo original>_sin_puntos_excluidos.csv`; sin nombre conocido, `serie_sin_puntos_excluidos.csv`.
+ * No `_sin_atipicos`: el panel deja quitar cualquier punto, atípico o no (D-14, #136). */
+export function nombreCsvSinExcluidos(nombreArchivo?: string | null): string {
   const base = (nombreArchivo ?? "")
     .split(/[\\/]/)
     .pop()
     ?.replace(/\.[^.]+$/, "")
     .trim();
-  return `${base || "serie"}_sin_atipicos.csv`;
+  return `${base || "serie"}_sin_puntos_excluidos.csv`;
 }
 
 /** ¿Algún excluido no es el primero ni el último dato? Ahí el hueco queda en

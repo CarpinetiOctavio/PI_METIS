@@ -7,7 +7,7 @@ import {
   descargarCsv,
   hayExcluidoInterior,
   MIN_DATOS,
-  nombreCsvSinAtipicos,
+  nombreCsvSinExcluidos,
 } from "./exclusiones";
 import type { PuntoSerie } from "./exclusiones";
 import "./Etapa1ExclusionPanel.css";
@@ -139,7 +139,7 @@ export function Etapa1ExclusionPanel({
     const csv = serieResultante
       ? csvDeSerie(serieResultante.anios, serieResultante.serie)
       : csvSinExcluidos(puntos, excluidos);
-    descargarCsv(nombreCsvSinAtipicos(nombreArchivo), csv);
+    descargarCsv(nombreCsvSinExcluidos(nombreArchivo), csv);
   }
 
   function celda(p: PuntoSerie) {
