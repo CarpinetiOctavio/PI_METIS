@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getHistoryItem } from "../../api/history";
 import { postRecalcularDesignEvents } from "../../api/analysis";
@@ -9,7 +9,13 @@ import { Etapa2Explorador } from "../results/Etapa2Explorador";
 import { Etapa2EventosView } from "../results/Etapa2EventosView";
 import { ExportarPdfButton } from "../results/ExportarPdfButton";
 import { DecisionesChowView } from "./DecisionesChowView";
-import type { AnalysisDetail, Modo } from "../../api/types";
+import type {
+  AnalysisDetail,
+  Modo,
+  SimulateExclusionResponse,
+  TipoVariable,
+} from "../../api/types";
+import { crearPedirSimulacion, crearSimular } from "../results/simulacion";
 import type { ContextoSerie } from "../../i18n/periodoRetorno";
 import "./HistoryDetailPage.css";
 
@@ -17,6 +23,13 @@ export function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [detail, setDetail] = useState<AnalysisDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bloque B (revisión manual 21/10/2026): la simulación vigente, para ofrecer el
+  // PDF con los resultados sin esos puntos. No se guarda (DECISIÓN 062).
+  const [simulacion, setSimulacion] = useState<SimulateExclusionResponse | null>(null);
+  const alCambiarSimulacion = useCallback(
+    (nueva: SimulateExclusionResponse | null) => setSimulacion(nueva),
+    [],
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -56,6 +69,30 @@ export function HistoryDetailPage() {
     mesInicioAnio: detail.configuracion?.mes_inicio_anio,
     variableDiaria: detail.configuracion?.variable_diaria,
   };
+  // Bloque B (revisión manual 21/10/2026) — el what-if de atípicos con los datos
+  // persistidos: la serie analizada, el tipo de variable, la partición, el α y la
+  // elección registrada. Un análisis anterior a la DECISIÓN 058 no tiene los años
+  // de la serie (`timestamps === null`): ahí no hay simulación (ver el aviso).
+  const pedirSimulacion = crearPedirSimulacion(
+    detail.timestamps === null ? undefined : detail.etapa1?.datos,
+    esTipoVariable(detail.tipo_variable)
+      ? {
+          tipoVariable: detail.tipo_variable,
+          cramerParticion: detail.configuracion?.cramer_particion,
+          conEtapa2: detail.etapas?.includes("2") ?? false,
+          alfa: detail.configuracion?.alfa ?? detail.etapa1?.alfa ?? 0.05,
+        }
+      : null,
+  );
+  const simular = crearSimular(
+    pedirSimulacion,
+    seleccion && {
+      distribucion: seleccion.distribucion,
+      metodo: seleccion.metodo,
+      periodos_retorno: seleccion.periodos_retorno,
+    },
+  );
+
   const eleccionRegistrada = seleccion && detail.etapa2 && (
     <>
       <h3 className="h" style={{ fontSize: 14, marginBottom: 4 }}>
@@ -83,7 +120,10 @@ export function HistoryDetailPage() {
     <div className="history-detail-page">
       <div className="encabezado-exportable">
         <h1 className="h">Detalle del análisis</h1>
-        <ExportarPdfButton analysisId={detail.id} />
+        <ExportarPdfButton
+          analysisId={detail.id}
+          indicesExcluidos={simulacion?.excluidos.map((e) => e.indice)}
+        />
       </div>
       <p className="sub">
         {detail.tipo_variable} · {new Date(detail.created_at).toLocaleString("es-AR")}
@@ -98,6 +138,8 @@ export function HistoryDetailPage() {
             nombreArchivo={detail.configuracion?.nombre_archivo}
             tipoVariable={detail.tipo_variable}
             cramerParticion={detail.configuracion?.cramer_particion}
+            simular={simular}
+            onSimulacionVigente={alCambiarSimulacion}
           />
           {/* PR 5 del plan de cierre de pendientes no-test (DECISIÓN 058
               §4) — sin backfill, `timestamps` es null para cualquier
@@ -110,7 +152,8 @@ export function HistoryDetailPage() {
               <span className="ic">▲</span> Este análisis es anterior a esta
               versión de METIS — los gráficos de serie temporal, Chow y
               boxplot mensual no están disponibles para registros de esta
-              antigüedad.
+              antigüedad, y tampoco la simulación sin puntos excluidos: no
+              quedaron registrados los años de la serie analizada.
             </div>
           )}
         </>
@@ -157,4 +200,8 @@ export function HistoryDetailPage() {
       )}
     </div>
   );
+}
+
+function esTipoVariable(valor: string): valor is TipoVariable {
+  return valor === "caudal_precipitacion" || valor === "otro";
 }

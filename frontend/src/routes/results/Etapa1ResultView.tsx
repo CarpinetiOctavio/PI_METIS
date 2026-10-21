@@ -208,8 +208,9 @@ export function Etapa1ResultView({
   modo: Modo;
   mesInicioAnio?: number;
   nombreArchivo?: string | null;
-  // Ítem A (A2): cómo recalcular sin los puntos excluidos. Opcional — solo la
-  // sesión interactiva de ResultsPage lo provee.
+  // Ítem A (A2): cómo recalcular sin los puntos excluidos. Opcional — lo proveen
+  // ResultsPage y, desde el bloque B de la revisión manual del 21/10/2026,
+  // HistoryDetailPage con los datos persistidos (routes/results/simulacion.ts).
   simular?: SimularFn;
   // Avisa qué simulación vale para la selección actual (o null), para que la
   // página muestre los eventos de diseño recalculados.

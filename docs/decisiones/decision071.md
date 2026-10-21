@@ -137,3 +137,20 @@ quitado, y no había forma de verla sin él. Bloque A de `docs/historico/planes/
   simulación vieja. Si la combinación no ajusta sin los puntos, la vista lo explica con el status.
 - Tests: `test_simulate_exclusion.py` (combinación que ajusta con el atípico y no sin él), `Etapa2Explorador.test.tsx`
   y `ResultsPage.simulacion.test.tsx`.
+
+### Revisión 21/10/2026 — la simulación también desde el historial
+
+Bloque B de `docs/plan-revision-manual-21-10-2026.md`. El detalle del historial dejaba marcar puntos y descargar el
+CSV, pero no recalculaba: `HistoryDetailPage` montaba `Etapa1ResultView` sin la función `simular`. Ahora la arma con
+los datos **persistidos**, sin cambios en el servidor: `etapa1.datos.serie_efectiva` y los años de
+`timestamps_efectivos`, `tipo_variable`, `etapas`, `configuracion.cramer_particion`, `configuracion.alfa` y la
+elección registrada (`etapa2.seleccion`). Las dos páginas construyen el pedido con la misma función,
+`frontend/src/routes/results/simulacion.ts` (`crearPedirSimulacion`, `crearSimular`).
+
+- Con una simulación vigente, el historial también ofrece el PDF con ella (`POST /export/{id}/simulacion`).
+- Un análisis anterior a la DECISIÓN 058 (`timestamps === null`) no tiene los años de la serie analizada: no se ofrece
+  la simulación y el aviso de ese caso lo dice.
+- Sigue valiendo "explorar no es decidir" (DECISIÓN 062): la simulación no se guarda ni toca el registro.
+- Fuera de este bloque: en el historial, la vista simulada de los eventos de diseño y de la exploración de Etapa 2 (el
+  selector "Original | Sin los puntos excluidos" de Resultados). La comparación de Etapa 1 y el PDF sí están.
+- Tests: `HistoryDetailPage.simulacion.test.tsx`.
