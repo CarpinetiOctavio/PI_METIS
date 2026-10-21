@@ -85,6 +85,9 @@ Un representante por clase, válida o inválida.
 | CE-06a | `alfa` (nivel de significancia) | Uno de los tres niveles | `0.01`, `0.05`, `0.10` | Válido | DECISIÓN 078 | `casos_dinamicos/test_clases_equivalencia.py::test_alfa_de_los_tres_niveles_es_valido` (3 ids) |
 | CE-06b | | Numérico fuera del conjunto | `0.2`, `0.025` | 400 `CONTRACT_ALFA_INVALID` | ídem | `…::test_alfa_fuera_del_conjunto_da_400[CE-06b …]` |
 | CE-06c | | No numérico | `abc`, vacío | 400 `CONTRACT_ALFA_INVALID` (no un 422 genérico) | ídem | `…::test_alfa_fuera_del_conjunto_da_400[CE-06c …]` |
+| CE-07a | Celda de la serie | Vacía | `None`, `NaN` | Solo `CONTRACT_MISSING_VALUES`, con su conteo | `api-contracts.md`; revisión manual 21/10/2026 (bloque H) | `casos_dinamicos/test_clases_equivalencia.py::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07a …]` |
+| CE-07b | | No numérica | `"x"` | Solo `CONTRACT_NON_NUMERIC_VALUES`, con su conteo | ídem | `…::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07b …]` |
+| CE-07c | | Las dos | `None`, `"x"`, `"y"` | Las dos advertencias, cada una con su conteo (1 y 2) | ídem | `…::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07c …]` |
 
 ---
 
@@ -166,6 +169,8 @@ Las que toleran ceros con advertencia (`DIST_ZEROS_TOLERATED`, DECISIÓN 061) se
 
 - **74 casos:** 28 de valores límite, 22 de clases de equivalencia y 24 columnas de cinco tablas de decisión. 45 tests
   nuevos en `tests/unit/casos_dinamicos/` (contando cada id de `parametrize`); el resto ya existía.
+- **Agregados después de B8:** CE-07a–c (revisión manual del 21/10/2026, bloque H del
+  `docs/plan-revision-manual-21-10-2026.md`): tres casos y tres tests más en `casos_dinamicos/`.
 - **Ningún caso encontró un defecto.** Si uno lo hubiera encontrado, se registraría con la plantilla de
   `registro-defectos.md`.
 - **Bordes que no se probaban en el borde:** antes de este bloque, la longitud se probaba con n = 8, 15 y 30 (no con
