@@ -454,7 +454,7 @@ def _grafico_correlograma(anderson: dict, config: dict) -> Figure | None:
         label=f"Límites de confianza ({_texto_confianza(config)})",
     )
     ax.axhline(0, color="#5f6b76", linewidth=0.6)
-    ax.set_xlabel("Rezago k", fontsize=8)
+    ax.set_xlabel("Lag k", fontsize=8)
     ax.set_ylabel("r_k", fontsize=8)
     ax.legend(fontsize=7, frameon=False, loc="lower left", bbox_to_anchor=(0, 1.0))
     return fig
@@ -792,7 +792,8 @@ def _seccion_etapa1(detalle: dict, est) -> list:
         _p(
             "Valores críticos con un nivel de significancia de "
             f"{_texto_alfa(detalle.get('configuracion') or {})}. Chow lo aplica a "
-            "cada extremo; Helmert y la tolerancia de rezagos de Anderson no dependen de él.",
+            "cada extremo; Helmert y la tolerancia de Anderson (10 % de los coeficientes fuera "
+            "de banda) no dependen de él.",
             est["nota_previa"],
         )
     )

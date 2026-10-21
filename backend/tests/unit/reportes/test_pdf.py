@@ -369,6 +369,23 @@ def test_correlograma_rotula_la_confianza_del_analisis(
 
 
 @pytest.mark.unit
+def test_pdf_dice_lag_y_nombra_la_tolerancia_de_anderson(detalle_completo, est):
+    # Bloque J del plan de revisión manual (21/10/2026): Facundo confirmó que en
+    # hidrología se dice "lag" y que el 10 % de Anderson es una regla fija.
+    anderson = next(
+        t
+        for t in detalle_completo["etapa1"]["independencia"]
+        if t["prueba"] == "anderson"
+    )
+    fig = _grafico_correlograma(anderson, {})
+    pruebas = " ".join(_textos(_seccion_etapa1(detalle_completo, est)))
+
+    assert fig.axes[0].get_xlabel() == "Lag k"
+    assert "tolerancia de Anderson (10 % de los coeficientes fuera de banda)" in pruebas
+    assert "rezago" not in pruebas.lower()
+
+
+@pytest.mark.unit
 def test_nombre_archivo_pdf_ascii():
     detalle = {
         "created_at": "2026-10-06T12:00:00",

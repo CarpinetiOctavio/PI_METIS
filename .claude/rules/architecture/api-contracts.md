@@ -185,8 +185,9 @@ estándar en hidrología) o `0.10`. Llega como texto y se valida en el borde →
 pasa a la segunda pasada de la Etapa 1 tras rechazar un atípico, viaja en
 `result_etapa1.alfa` y se persiste en `analyses.configuracion.alfa`. Al leer un
 análisis anterior que no lo tiene, `GET /history/{id}` devuelve `alfa: 0.05` con
-`alfa_implicito: true` (sin backfill). Helmert y la tolerancia de rezagos de
-Anderson no dependen de α; la Etapa 2 no tiene nivel de significancia.
+`alfa_implicito: true` (sin backfill). Helmert y la tolerancia de Anderson
+(10 % de los coeficientes fuera de banda, regla fija confirmada por Facundo el
+21/10/2026) no dependen de α; la Etapa 2 no tiene nivel de significancia.
 
 **Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
 050. Excepción a la regla general de esta sección: como el archivo se lee
