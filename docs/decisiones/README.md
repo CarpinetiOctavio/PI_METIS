@@ -1,6 +1,6 @@
 # Registro de Decisiones — METIS
 
-Un archivo por decisión (`decision001.md` a `decision081.md`). No es un
+Un archivo por decisión (`decision001.md` a `decision082.md`). No es un
 ADR estándar en sentido estricto: mezcla decisiones de arquitectura de
 software (auth, base de datos, migraciones, gobernanza de ramas) con
 hallazgos de fidelidad estadística del motor de METIS contra la tesis de
@@ -208,3 +208,4 @@ situ.
 | [079](decision079.md) | Chow marca todos los valores fuera de los umbrales (altos y bajos, Bulletin 17B), una sola pausa con una decisión por punto y `OUTLIER_DECISION_INVALID` | 18/10/2026 | Decidida y aplicada (backend + frontend + PDF) |
 | [080](decision080.md) | Las exclusiones de puntos hechas después del análisis se pueden guardar en el historial, aparte del resultado: se guardan índices, años y valores, no resultados (se recalculan), y solo a pedido — convive con "explorar no es decidir" (DECISIÓN 062) | 21/10/2026 | Decidida y aplicada (backend + frontend) |
 | [081](decision081.md) | La cobertura mínima de los años interiores al agregar una carga mensual o diaria la elige el usuario, de 50 % a 100 % (100 por defecto, el criterio anterior); los extremos siguen exigiendo 100 % y `CONTRACT_COBERTURA_INVALID` en el borde — cierra R0.1 de la DECISIÓN 065 con la respuesta de Facundo del 22/10/2026 | 22/10/2026 | Decidida y aplicada (backend + frontend + PDF) |
+| [082](decision082.md) | Las dependencias del backend se instalan desde `requirements.lock` (versiones y hashes de las 80 dependencias, solo wheels) en CI y en la imagen Docker; `scripts/check_requirements_lock.py` verifica en CI que el lock esté al día con `requirements.txt` | 22/10/2026 | Decidida y aplicada (CI + imagen del backend) |
