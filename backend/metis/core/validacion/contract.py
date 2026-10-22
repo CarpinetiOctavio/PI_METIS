@@ -66,7 +66,12 @@ def validar_contrato(
             WarningItem(
                 codigo="CONTRACT_LENGTH_WARNING",
                 nivel="normal",
-                descripcion=f"Serie con {len(valores_numericos)} datos — resultados no certificables",
+                # Redacción de Facundo Ganancias Martínez (respuesta del 22/10/2026).
+                descripcion=(
+                    f"Serie con {len(valores_numericos)} datos. La longitud mínima recomendable "
+                    "para que la serie sea representativa es de 30 valores; con menos, "
+                    "los resultados no son certificables."
+                ),
             )
         )
 

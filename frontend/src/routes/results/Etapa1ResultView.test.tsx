@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { Etapa1ResultView } from "./Etapa1ResultView";
 import type { Etapa1Result, TestResultDetail } from "../../api/types";
-import { makeAndersonConDesglose, makeChowConDesglose } from "../../test/etapa1Fixtures";
+import {
+  makeAndersonConDesglose,
+  makeChowConDesglose,
+  makeEtapa1Datos,
+} from "../../test/etapa1Fixtures";
 
 function testResult(overrides: Partial<TestResultDetail> = {}): TestResultDetail {
   return {
@@ -219,5 +223,32 @@ describe("Etapa1ResultView — partición de Cramer (D-18, revisión manual 21/1
   it("sin partición registrada (análisis viejo) no muestra nada en vez de inventarla", () => {
     render(<Etapa1ResultView result={conCramer(24, 12)} modo="experto" />);
     expect(screen.queryByText(/Partición de Cramer/)).not.toBeInTheDocument();
+  });
+});
+
+
+describe("Etapa1ResultView — cobertura mínima de los años interiores (DECISIÓN 081)", () => {
+  it("con carga mensual informa la cobertura usada", () => {
+    render(
+      <Etapa1ResultView
+        result={makeResult({
+          datos: makeEtapa1Datos({ resolucion_original: "mensual", cobertura_minima_interior: 90 }),
+        })}
+        modo="experto"
+      />,
+    );
+    expect(screen.getByText(/Cobertura mínima de los años interiores/)).toHaveTextContent(
+      "Cobertura mínima de los años interiores: 90 %",
+    );
+  });
+
+  it("con carga anual no la menciona", () => {
+    render(
+      <Etapa1ResultView
+        result={makeResult({ datos: makeEtapa1Datos({ resolucion_original: "anual" }) })}
+        modo="experto"
+      />,
+    );
+    expect(screen.queryByText(/Cobertura mínima de los años interiores/)).not.toBeInTheDocument();
   });
 });

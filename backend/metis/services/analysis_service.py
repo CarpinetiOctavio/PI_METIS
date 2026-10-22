@@ -17,7 +17,7 @@ from metis.core.pipeline.pipeline_etapa2 import _DISTRIBUCIONES
 from metis.core.types import Etapa1Result
 from metis.core.utils import es_numerico, filtrar_numericos
 from metis.core.validacion.aggregation import (
-    COBERTURA_MINIMA_INTERIOR,
+    COBERTURA_MINIMA_INTERIOR_DEFECTO,
     agregar_a_maximos_anuales,
     agregar_a_maximos_mensuales,
 )
@@ -60,7 +60,9 @@ def _serializar_timestamps(
 
 
 def _calcular_serie_calendario(
-    result: Etapa1Result, mes_inicio_anio: int
+    result: Etapa1Result,
+    mes_inicio_anio: int,
+    cobertura_minima_interior: int = COBERTURA_MINIMA_INTERIOR_DEFECTO,
 ) -> dict | None:
     """Segunda agregación, mes_inicio=1, SOLO para presentación — DECISIÓN
     058 §3. No toca Etapa1Result ni ninguna prueba estadística, corre aparte
@@ -95,7 +97,9 @@ def _calcular_serie_calendario(
         result.timestamps_originales,
         mes_inicio=1,
         resolucion=result.resolucion_original,
-        cobertura_minima_interior=COBERTURA_MINIMA_INTERIOR[result.resolucion_original],
+        # DECISIÓN 081 — el mismo umbral que la serie analizada: la vista
+        # comparativa no puede armar el año calendario con otro criterio.
+        cobertura_minima_interior=cobertura_minima_interior / 100,
     )
     return {
         "serie": agregacion.serie,
@@ -103,7 +107,11 @@ def _calcular_serie_calendario(
     }
 
 
-def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
+def _serializar_etapa1(
+    result: Etapa1Result,
+    mes_inicio_anio: int,
+    cobertura_minima_interior: int = COBERTURA_MINIMA_INTERIOR_DEFECTO,
+) -> dict:
     """mes_inicio_anio como segundo argumento, no `parsed: ParsedData`
     completo (alternativa evaluada y descartada — PR 3 del plan de cierre
     de pendientes no-test): _persistir() también llama a esta función, y
@@ -112,7 +120,8 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
     timestamps_originales/resolucion_original SÍ viajan enteros dentro de
     `result` (Etapa1Result los expone desde DECISIÓN 058) — mes_inicio_anio
     es la única pieza que Etapa1Result no tiene motivo para cargar (es un
-    parámetro del request, no del análisis en sí).
+    parámetro del request, no del análisis en sí). Lo mismo
+    `cobertura_minima_interior` (DECISIÓN 081, porcentaje entero).
     """
 
     def test_result_dict(tr) -> dict:
@@ -200,7 +209,14 @@ def _serializar_etapa1(result: Etapa1Result, mes_inicio_anio: int) -> dict:
             else None
         ),
         "indice_atipico": indice_atipico,
-        "serie_calendario": _calcular_serie_calendario(result, mes_inicio_anio),
+        "serie_calendario": _calcular_serie_calendario(
+            result, mes_inicio_anio, cobertura_minima_interior
+        ),
+        # DECISIÓN 081 — con qué cobertura mínima de los años interiores se
+        # agregó (porcentaje). None con carga anual: no hubo agregación.
+        "cobertura_minima_interior": (
+            cobertura_minima_interior if hubo_agregacion else None
+        ),
     }
 
     return {
@@ -595,6 +611,7 @@ async def stream_analysis(
     mes_inicio_anio: int = 7,
     variable_diaria: str = "pico",
     alfa: float = ALFA_DEFECTO,
+    cobertura_minima_interior: int = COBERTURA_MINIMA_INTERIOR_DEFECTO,
 ) -> AsyncGenerator[str, None]:
     # DECISIÓN 054 — etapas ya llega validado y parseado desde el borde del
     # endpoint. Con etapas == [1] todo lo de abajo se comporta exactamente
@@ -622,6 +639,10 @@ async def stream_analysis(
             mes_inicio_anio=mes_inicio_anio,
             variable_diaria=variable_diaria,
             alfa=alfa,
+            # DECISIÓN 081 — porcentaje en el borde, fracción en core/. La
+            # segunda pasada (tras rechazar atípicos) no lo necesita: no vuelve
+            # a agregar, y los avisos del paso 0 se arrastran de esta.
+            cobertura_minima_interior=cobertura_minima_interior / 100,
         )
 
         for evento in _emitir_resultado(result, iteracion=1):
@@ -777,7 +798,12 @@ async def stream_analysis(
             )
 
         # Emitir resultado final completo
-        yield _sse("result_etapa1", _serializar_etapa1(result_final, mes_inicio_anio))
+        yield _sse(
+            "result_etapa1",
+            _serializar_etapa1(
+                result_final, mes_inicio_anio, cobertura_minima_interior
+            ),
+        )
 
         # Etapa 2 — DECISIÓN 052/055. Solo si el usuario la pidió y Etapa 1
         # no fue rechazada; RF-GEN-P-03: ningún nivel de warning bloquea,
@@ -936,6 +962,7 @@ async def stream_analysis(
                 mes_inicio_anio=mes_inicio_anio,
                 variable_diaria=variable_diaria,
                 alfa=alfa,
+                cobertura_minima_interior=cobertura_minima_interior,
                 etapas=etapas,
                 result=result_final,
                 etapa2_result=etapa2_result,
@@ -970,6 +997,7 @@ async def _persistir(
     db: AsyncSession,
     filename: str,
     alfa: float = ALFA_DEFECTO,
+    cobertura_minima_interior: int = COBERTURA_MINIMA_INTERIOR_DEFECTO,
 ) -> uuid.UUID:
     analysis = Analysis(
         user_id=user_id,
@@ -1005,6 +1033,9 @@ async def _persistir(
             "nombre_archivo": filename,
             # DECISIÓN 078 — mismo criterio: con otro α cambian los veredictos.
             "alfa": alfa,
+            # DECISIÓN 081 — con otra cobertura cambia qué años entran a la
+            # serie. Se guarda siempre, aunque la carga sea anual.
+            "cobertura_minima_interior": cobertura_minima_interior,
         },
     )
     db.add(analysis)
@@ -1012,7 +1043,7 @@ async def _persistir(
 
     analysis_result = AnalysisResult(
         analysis_id=analysis.id,
-        etapa1=_serializar_etapa1(result, mes_inicio_anio),
+        etapa1=_serializar_etapa1(result, mes_inicio_anio, cobertura_minima_interior),
         etapa2=(
             _serializar_etapa2(etapa2_result, seleccion_etapa2)
             if etapa2_result is not None
@@ -1121,22 +1152,28 @@ async def get_analysis_by_id(
         # resultado — ver DECISIÓN 058 §1 para la partición completa.
         "serie": analysis.serie,
         "timestamps": analysis.timestamps,
-        "configuracion": _configuracion_con_alfa(analysis.configuracion),
+        "configuracion": _configuracion_con_implicitos(analysis.configuracion),
         # DECISIÓN 080 — exclusiones guardadas a pedido; [] sin backfill.
         "exclusiones": result.exclusiones or [],
     }
 
 
-def _configuracion_con_alfa(configuracion: dict | None) -> dict:
+def _configuracion_con_implicitos(configuracion: dict | None) -> dict:
     """DECISIÓN 078 — los análisis guardados antes de que α fuera configurable
     corrieron con 5 %, pero no lo registraron. Se devuelve `alfa = 0.05` con
     `alfa_implicito = True`: la interfaz y el PDF lo muestran como el valor por
     defecto de entonces, no como una elección del usuario. Sin backfill en la
-    BD (mismo criterio que `timestamps`, DECISIÓN 058 §4)."""
+    BD (mismo criterio que `timestamps`, DECISIÓN 058 §4).
+
+    DECISIÓN 081 — lo mismo con la cobertura mínima de los años interiores:
+    antes de que fuera configurable era 100 % (estricto), sin registrarlo."""
     configuracion = dict(configuracion or {})
     if "alfa" not in configuracion:
         configuracion["alfa"] = ALFA_DEFECTO
         configuracion["alfa_implicito"] = True
+    if "cobertura_minima_interior" not in configuracion:
+        configuracion["cobertura_minima_interior"] = COBERTURA_MINIMA_INTERIOR_DEFECTO
+        configuracion["cobertura_minima_interior_implicita"] = True
     return configuracion
 
 
@@ -1253,7 +1290,7 @@ async def get_history(
             # real — sin timestamps, sin ejes.
             "serie_preview": a.serie,
             # DECISIÓN 078 — 0.05 para los análisis anteriores (sin backfill).
-            "alfa": _configuracion_con_alfa(a.configuracion)["alfa"],
+            "alfa": _configuracion_con_implicitos(a.configuracion)["alfa"],
             "chow_rechazados": chow_rechazados(decisiones),
             # DECISIÓN 080 — solo la cantidad; las exclusiones viajan en el detalle.
             "exclusiones_guardadas": len(exclusiones or []),

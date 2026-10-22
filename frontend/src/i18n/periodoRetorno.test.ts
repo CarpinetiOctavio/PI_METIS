@@ -41,6 +41,21 @@ describe("rótulos del período de retorno", () => {
     expect(notaPeriodoRetorno(pico)).toContain("T se mide en años y no en días");
   });
 
+  it("carga diaria de acumulados: rótulo de máximo diario anual (respuesta de Facundo, 22/10/2026)", () => {
+    const acumulado = {
+      resolucion: "diaria" as const,
+      mesInicioAnio: 7,
+      variableDiaria: "acumulado" as const,
+    };
+    expect(rotuloValorDiseno(acumulado)).toBe(
+      "Valor de diseño (máximo diario anual, acumulado de 24 h)",
+    );
+    const nota = notaPeriodoRetorno(acumulado);
+    expect(nota).toContain("Se cargó una serie de acumulados diarios.");
+    expect(nota).toContain("toma el acumulado diario máximo de cada año (de julio a junio)");
+    expect(nota).toContain("T se mide en años y no en días");
+  });
+
   it("carga diaria sin variable declarada (análisis viejo) asume picos, como el backend", () => {
     expect(rotuloValorDiseno({ resolucion: "diaria" })).toBe("Valor de diseño (pico diario máximo del año)");
   });

@@ -17,9 +17,11 @@ import type {
   CramerParticion,
   Modo,
   TipoVariable,
+  VariableDiaria,
 } from "../../api/types";
 import { etiquetaSelectorMes } from "../../i18n/mesInicioAnio";
 import { NIVELES_ALFA } from "../../i18n/alfa";
+import { COBERTURA_DEFECTO, COBERTURA_PISO, parseCobertura } from "../../i18n/cobertura";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
 import { ColumnPreviewPanel } from "./ColumnPreviewPanel";
@@ -163,10 +165,12 @@ export function ConfigPage() {
   const [mesInicioAnio, setMesInicioAnio] = useState(7);
   // PR 2.5 (DECISIÓN 065 / R0.2) — default "pico", igual que el backend. Se
   // manda siempre; solo tiene efecto con carga diaria.
-  const [variableDiaria, setVariableDiaria] = useState<"pico" | "media">("pico");
+  const [variableDiaria, setVariableDiaria] = useState<VariableDiaria>("pico");
   // DECISIÓN 078 — 5 % marcado por defecto: es una configuración de la prueba
   // (el estándar en hidrología), no una sugerencia sobre los resultados.
   const [alfa, setAlfa] = useState<Alfa>(0.05);
+  // DECISIÓN 081 — texto del campo, validado al enviar y en línea.
+  const [coberturaInput, setCoberturaInput] = useState(String(COBERTURA_DEFECTO));
   const [error, setError] = useState<string | null>(null);
   // Bloque E3 (pasada 5) — movida por onFocus/onBlur de los <select>, no por
   // su valor: resalta en ColumnPreviewPanel qué columna está eligiendo cada
@@ -195,6 +199,8 @@ export function ConfigPage() {
       ? preview.columnas.find((c) => String(c.indice) === columnaX)
       : undefined;
   const serieYaEsAnual = columnaXInfo ? esAnioPuro(columnaXInfo.muestra) : false;
+  const coberturaParseada = parseCobertura(coberturaInput);
+  const coberturaInvalida = "error" in coberturaParseada ? coberturaParseada.error : null;
   const serieParecediaria = columnaXInfo
     ? pareceDiaria(columnaXInfo.muestra)
     : false;
@@ -254,6 +260,13 @@ export function ConfigPage() {
       setError(cramerParticion.error);
       return;
     }
+    // Con la columna X en años la serie no se agrega: el campo está deshabilitado
+    // y se manda el valor por defecto, que el backend ignora.
+    const cobertura = serieYaEsAnual ? { value: COBERTURA_DEFECTO } : parseCobertura(coberturaInput);
+    if ("error" in cobertura) {
+      setError(cobertura.error);
+      return;
+    }
     setError(null);
 
     const form: AnalysisStreamForm = {
@@ -267,6 +280,7 @@ export function ConfigPage() {
       mes_inicio_anio: mesInicioAnio,
       variable_diaria: variableDiaria,
       alfa,
+      cobertura_minima_interior: cobertura.value,
     };
     // El form (incluido el File) viaja como router state — no persiste a un
     // refresh, pero StreamPage lo consume una sola vez al montar, así que no
@@ -498,6 +512,35 @@ export function ConfigPage() {
                 : "Define cómo se agrupan los datos en años antes de analizar la serie (solo tiene efecto si la serie es mensual o diaria)."}
             </p>
           </div>
+          <div className="field">
+            <label htmlFor="config-cobertura">Cobertura mínima de los años interiores (%)</label>
+            <input
+              id="config-cobertura"
+              className="input"
+              type="number"
+              inputMode="numeric"
+              min={COBERTURA_PISO}
+              max={100}
+              step={1}
+              value={coberturaInput}
+              disabled={serieYaEsAnual}
+              aria-invalid={!serieYaEsAnual && coberturaInvalida ? true : undefined}
+              aria-describedby="config-cobertura-ayuda"
+              onChange={(event) => setCoberturaInput(event.target.value)}
+            />
+            {!serieYaEsAnual && coberturaInvalida && (
+              <p className="fn field-error" role="alert">
+                {coberturaInvalida}
+              </p>
+            )}
+            {/* DECISIÓN 081 — respuesta de Facundo (22/10/2026): a criterio del
+                operador, con la recomendación de completar la serie afuera. */}
+            <p className="fn" id="config-cobertura-ayuda">
+              {serieYaEsAnual
+                ? "Con la columna X en años la serie no se agrega: la cobertura no aplica."
+                : `Porcentaje de meses o días con dato que necesita un año del medio del registro para entrar a la serie (de ${COBERTURA_PISO} a 100; los años de los extremos siempre exigen 100 %). Con menos de 100, el máximo de un año incompleto puede quedar por debajo del real y METIS lo advierte. Si tu serie tiene muchos faltantes, lo recomendable es completarla con un método de relleno por fuera de METIS y cargarla completa.`}
+            </p>
+          </div>
           {serieParecediaria && (
             <fieldset className="field">
               <legend>Tipo de dato diario</legend>
@@ -518,18 +561,31 @@ export function ConfigPage() {
                 >
                   Medias diarias
                 </button>
+                <button
+                  type="button"
+                  className={variableDiaria === "acumulado" ? "on" : ""}
+                  aria-pressed={variableDiaria === "acumulado"}
+                  onClick={() => setVariableDiaria("acumulado")}
+                >
+                  Acumulado del día (por ejemplo, lluvia de 9 a 9)
+                </button>
               </div>
               {/* PR 2.5 (R0.2) — METIS agrega la serie diaria a máximos
-                  anuales con max(): el número es el mismo sea pico o media.
-                  Lo que cambia es la lectura del resultado, así que se
-                  advierte, no se corrige. */}
+                  anuales con max(): el número es el mismo con las tres
+                  opciones. Lo que cambia es la lectura del resultado, así que
+                  se advierte, no se corrige. "Acumulado" sale de la respuesta
+                  de Facundo del 22/10/2026 (revisión de DECISIÓN 065). */}
               <p className="fn">
                 METIS construye los máximos anuales tomando el mayor valor
-                diario de cada año. Con <b>picos diarios</b> eso aproxima el
-                pico anual real. Con <b>medias diarias</b> los máximos
-                anuales (y los eventos de diseño de Etapa 2) pueden quedar
-                por debajo del pico instantáneo real — METIS lo advierte,
-                pero no lo corrige.
+                diario de cada año. Usá <b>picos diarios</b> si cada valor es
+                el máximo instantáneo del día (por ejemplo, un caudal pico):
+                eso aproxima el pico anual real. Usá <b>acumulado del día</b>{" "}
+                si cada valor es lo acumulado en 24 horas (por ejemplo, la
+                lluvia leída a las 9 de la mañana): el resultado es la serie
+                de máximos diarios anuales. Usá <b>medias diarias</b> si cada
+                valor es el promedio del día: los máximos anuales (y los
+                eventos de diseño de Etapa 2) pueden quedar por debajo del
+                pico instantáneo real — METIS lo advierte, pero no lo corrige.
               </p>
             </fieldset>
           )}

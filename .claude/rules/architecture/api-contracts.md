@@ -165,18 +165,21 @@ sobre el mismo archivo dan resultados distintos.
 
 **Agregado 28/08/2026 (DECISIÓN 065, PR 2.5 / R0.2) —
 `variable_diaria: str = Form("pico")`.** Declara qué contiene la columna de
-una serie **diaria**: `"pico"` (picos o máximos diarios) o `"media"`
-(medias diarias). Validado en el borde → 400
+una serie **diaria**: `"pico"` (picos o máximos diarios), `"media"`
+(medias diarias) o `"acumulado"` (acumulados del día, como la lluvia de 9 a 9 —
+revisión 22/10/2026 de la DECISIÓN 065). Validado en el borde → 400
 `CONTRACT_VARIABLE_DIARIA_INVALID` para cualquier otro valor. Solo tiene
 efecto cuando la resolución inferida es `"diaria"`: cambia el texto del
 warning `CONTRACT_DAILY_SERIES_AGGREGATED` (con `"media"` advierte que los
 máximos anuales y los eventos de diseño subestiman el pico instantáneo
-real). **No cambia ningún número** — el `max()` de la agregación es el
+real; con `"acumulado"` dice que cada valor anual es el máximo acumulado
+diario del año, sin advertencia de sesgo). **No cambia ningún número** — el `max()` de la agregación es el
 mismo; METIS no corrige el sesgo (ver `docs/decisiones/decision066.md`,
 por qué no hay una corrección válida en software). Se persiste en
 `analyses.configuracion` igual que `mes_inicio_anio` — el historial tiene
-que registrar bajo qué supuesto se construyó la serie. Pendiente de
-confirmación de dominio con Facundo (R0.2 en `pendientes-facundo.md`).
+que registrar bajo qué supuesto se construyó la serie. R0.2 respondida por
+Facundo el 22/10/2026: la lluvia diaria es un acumulado y se arma la serie de
+máximos diarios anuales (ver la revisión de la DECISIÓN 065).
 
 **Agregado 18/10/2026 (DECISIÓN 078) — `alfa: str = Form("0.05")`.** Nivel de
 significancia de las ocho pruebas de la Etapa 1: `0.01`, `0.05` (por defecto,
@@ -188,6 +191,19 @@ análisis anterior que no lo tiene, `GET /history/{id}` devuelve `alfa: 0.05` co
 `alfa_implicito: true` (sin backfill). Helmert y la tolerancia de Anderson
 (10 % de los coeficientes fuera de banda, regla fija confirmada por Facundo el
 21/10/2026) no dependen de α; la Etapa 2 no tiene nivel de significancia.
+
+**Agregado 22/10/2026 (DECISIÓN 081) — `cobertura_minima_interior: str =
+Form("100")`.** Cobertura mínima de los años **interiores** al agregar una
+carga mensual o diaria a máximos anuales, en porcentaje entero de **50 a
+100** (100 por defecto: el criterio estricto de antes). Llega como texto y se
+valida en el borde → 400 `CONTRACT_COBERTURA_INVALID` fuera de rango o si no
+es entero. Los años de los extremos siempre exigen 100 %. Con carga anual se
+acepta y se ignora. Viaja en `result_etapa1.datos.cobertura_minima_interior`
+(`null` con carga anual) y se persiste en
+`analyses.configuracion.cobertura_minima_interior`; al leer un análisis
+anterior, `GET /history/{id}` devuelve `100` con
+`cobertura_minima_interior_implicita: true` (sin backfill). Un año interior
+aceptado incompleto emite `CONTRACT_INCOMPLETE_YEARS_ACCEPTED`.
 
 **Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
 050. Excepción a la regla general de esta sección: como el archivo se lee
@@ -388,7 +404,7 @@ llegaba a `HistoryDetailPage`).
   },
   "serie": [94.71, 89.83],
   "timestamps": [{"iso": "1980-01-01", "anio": 1980}],
-  "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7},
+  "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7, "alfa": 0.05, "cobertura_minima_interior": 100},
   "exclusiones": []
 }
 ```
@@ -819,7 +835,7 @@ se guarda nada ni se toca `decisiones` (DECISIÓN 062).
       "chow": {"estadistico": null, "valor_critico": null, "veredicto": "no_ejecutada", "codigo": "TEST_NOT_EXECUTED_ZEROS"}
     },
     "warnings": [
-      {"codigo": "CONTRACT_LENGTH_WARNING", "nivel": "normal", "descripcion": "Serie con 28 datos — resultados no certificables"}
+      {"codigo": "CONTRACT_LENGTH_WARNING", "nivel": "normal", "descripcion": "Serie con 28 datos. La longitud mínima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."}
     ]
   }
 }
@@ -859,7 +875,7 @@ lo evalúa.
 
 ### Contrato — warnings
 ```
-CONTRACT_LENGTH_WARNING          Entre 10 y 29 datos
+CONTRACT_LENGTH_WARNING          Entre 10 y 29 datos — el texto nombra los 30 valores recomendables (Facundo, 22/10/2026)
 CONTRACT_NEGATIVE_VALUES         Valores negativos en caudal_precipitacion
 CONTRACT_MISSING_VALUES          Valores faltantes o celdas vacías
 CONTRACT_DUPLICATE_TIMESTAMPS    Duplicados temporales
@@ -868,7 +884,7 @@ CONTRACT_NON_NUMERIC_VALUES      Valores no numéricos mezclados
 CONTRACT_PARTIAL_YEARS_TRIMMED   Agregación mensual/diaria (Bloque F4 / R2): años parciales recortados en los extremos del registro
 CONTRACT_INCOMPLETE_YEARS_DISCARDED  Agregación mensual/diaria (Bloque F4 / R2): año incompleto descartado dentro del registro (no en un extremo)
 CONTRACT_INCOMPLETE_YEARS_ACCEPTED   Agregación mensual/diaria (R2.3): año interior aceptado con cobertura < 100% — su máximo puede estar sesgado a la baja
-CONTRACT_DAILY_SERIES_AGGREGATED     Agregación diaria (PR 2.5 / R0.2): los máximos anuales son un derivado del registro diario. Texto según variable_diaria — si "media", advierte que subestiman el pico instantáneo real
+CONTRACT_DAILY_SERIES_AGGREGATED     Agregación diaria (PR 2.5 / R0.2): los máximos anuales son un derivado del registro diario. Texto según variable_diaria — si "media", advierte que subestiman el pico instantáneo real; si "acumulado", nombra el máximo acumulado diario, sin sesgo
 ```
 `CONTRACT_PARTIAL_YEARS_TRIMMED`, `CONTRACT_INCOMPLETE_YEARS_DISCARDED`,
 `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` y `CONTRACT_DAILY_SERIES_AGGREGATED` los
@@ -887,7 +903,8 @@ estos cuatro — `services/` los arrastra desde la primera ejecución
 `CONTRACT_DAILY_SERIES_AGGREGATED` (DECISIÓN 065, PR 2.5 / R0.2) se emite en
 **toda** agregación desde carga diaria — deja constancia de que los máximos
 anuales son un derivado del registro diario. El texto del warning depende
-del parámetro de request `variable_diaria`: con `"pico"` (default) es
+del parámetro de request `variable_diaria`: con `"pico"` (default) y con
+`"acumulado"` (lluvia de 9 a 9, revisión 22/10/2026 de la DECISIÓN 065) es
 informativo; con `"media"` advierte que los máximos anuales y los eventos
 de diseño de Etapa 2 pueden subestimar el pico instantáneo real, sesgo que
 METIS no corrige (ver `docs/decisiones/decision066.md`). `variable_diaria`
@@ -897,11 +914,9 @@ warning y una lectura distinta de los resultados.
 
 `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (DECISIÓN 065, R2.3) solo se emite
 cuando un año **interior** se acepta con cobertura por debajo del 100% —
-posible únicamente con `cobertura_minima_interior < 1.0`. El valor
-provisorio es `1.0` (estricto, R0.1 pendiente de Facundo), así que hoy este
-código **no se emite nunca**: el código, el catálogo, la traducción y el
-test entran igual para que habilitar el umbral sea cambiar una constante
-(`COBERTURA_MINIMA_INTERIOR` en `core/validacion/aggregation.py`) y nada más.
+posible únicamente con `cobertura_minima_interior < 100`, que el usuario
+elige desde la DECISIÓN 081 (R0.1 respondida por Facundo el 22/10/2026). Con
+el valor por defecto (100) no se emite.
 Los años de los **extremos** siempre exigen 100% (regla asimétrica) y se
 recortan con `CONTRACT_PARTIAL_YEARS_TRIMMED`.
 
@@ -930,9 +945,12 @@ CONTRACT_CRAMER_PARTICION_INVALID      cramer_particion mal formado, fuera de ra
                                         n1_pct ≤ n2_pct (DECISIÓN 036, Bloque H1)
 CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
 CONTRACT_MES_INICIO_INVALID            mes_inicio_anio fuera de [1..12] (DECISIÓN 057)
-CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media"} (DECISIÓN 065, PR 2.5 / R0.2)
+CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media", "acumulado"} (DECISIÓN 065, PR 2.5 / R0.2;
+                                        "acumulado" desde la revisión del 22/10/2026)
 CONTRACT_ALFA_INVALID                  alfa fuera de {0.01, 0.05, 0.10} en POST /analysis/stream o en
                                         POST /analysis/simulate-exclusion (DECISIÓN 078)
+CONTRACT_COBERTURA_INVALID             cobertura_minima_interior de POST /analysis/stream fuera de [50..100] o no
+                                        entera (DECISIÓN 081)
 CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusion vacía, con más de 500 valores o con
                                         valores no finitos (DECISIÓN 071)
 CONTRACT_EXCLUSION_INVALID             indices_excluidos fuera de rango o repetidos, anios de otro largo que serie, o

@@ -21,7 +21,9 @@ from tests.integration._sse_helpers import decidir_todos, parse_sse, run_stream
 _rng = np.random.default_rng(seed=3)
 
 
-def _csv_mensual(anios: int, *, anio_pico: int | None = None) -> bytes:
+def _csv_mensual(
+    anios: int, *, anio_pico: int | None = None, sin: str | None = None
+) -> bytes:
     """`anios` años de datos mensuales desde ene2000, valores moderados
     (50-100). Con `anio_pico`, un único mes (junio) de ese año con un valor
     mucho más grande — garantiza que el máximo anual agregado sea un atípico
@@ -32,7 +34,9 @@ def _csv_mensual(anios: int, *, anio_pico: int | None = None) -> bytes:
         valor = _rng.uniform(50, 100)
         if anio == anio_pico and mes == 6:
             valor = 5000.0
-        filas.append(f"{anio:04d}-{mes:02d}-01,{valor:.4f}")
+        # `sin` ("AAAA-MM"): ese mes falta del archivo — un año interior incompleto.
+        if f"{anio:04d}-{mes:02d}" != sin:
+            filas.append(f"{anio:04d}-{mes:02d}-01,{valor:.4f}")
         mes += 1
         if mes > 12:
             mes = 1
@@ -127,3 +131,61 @@ async def test_rechazar_atipico_sobre_serie_mensual_agregada_no_rompe_el_indice(
     # otro año terminaría faltando o duplicado en su lugar.
     anios_efectivos = [t["anio"] for t in datos["timestamps_efectivos"]]
     assert anios_efectivos == [a for a in range(2000, 2015) if a != 2007]
+
+
+@pytest.mark.integration
+async def test_cobertura_elegida_se_aplica_y_su_aviso_sobrevive_al_rechazo_de_chow():
+    # DECISIÓN 081 — a 2004 le falta marzo (11 de 12 meses, interior). Con 90 % se
+    # conserva con CONTRACT_INCOMPLETE_YEARS_ACCEPTED; rechazar el atípico de 2007
+    # corre una segunda pasada que no vuelve a agregar, y el aviso del paso 0 se
+    # arrastra igual que el resto. La vista calendario (mes_inicio_anio=7) usa el
+    # mismo umbral: con 100 % habría descartado 2004 en el año calendario.
+    gen, session_id = run_stream(
+        _csv_mensual(15, anio_pico=2007, sin="2004-03"),
+        mes_inicio_anio=7,
+        cobertura_minima_interior=90,
+    )
+
+    payload_final = None
+    async for evento_crudo in gen:
+        tipo, data = parse_sse(evento_crudo)
+        if tipo == "outlier_detected":
+            await registrar_outlier_decision(
+                session_id=session_id,
+                decisiones=decidir_todos(data, "rechazar"),
+                db=None,
+            )
+        elif tipo == "result_etapa1":
+            payload_final = data
+
+    assert payload_final is not None
+    codigos = [w["codigo"] for w in payload_final["warnings"]]
+    assert "CONTRACT_INCOMPLETE_YEARS_ACCEPTED" in codigos
+    assert "CONTRACT_INCOMPLETE_YEARS_DISCARDED" not in codigos
+    datos = payload_final["datos"]
+    assert datos["cobertura_minima_interior"] == 90
+    anios_calendario = [t["anio"] for t in datos["serie_calendario"]["timestamps"]]
+    assert 2004 in anios_calendario
+
+
+@pytest.mark.integration
+async def test_con_cobertura_por_defecto_el_anio_interior_incompleto_se_descarta():
+    gen, session_id = run_stream(_csv_mensual(15, sin="2004-03"), mes_inicio_anio=1)
+
+    payload = None
+    async for evento_crudo in gen:
+        tipo, data = parse_sse(evento_crudo)
+        if tipo == "outlier_detected":
+            # Valores aleatorios: si Chow marca alguno, se acepta y la serie no cambia.
+            await registrar_outlier_decision(
+                session_id=session_id,
+                decisiones=decidir_todos(data, "aceptar"),
+                db=None,
+            )
+        elif tipo == "result_etapa1":
+            payload = data
+
+    codigos = [w["codigo"] for w in payload["warnings"]]
+    assert "CONTRACT_INCOMPLETE_YEARS_DISCARDED" in codigos
+    assert payload["descriptive"]["n"] == 14
+    assert payload["datos"]["cobertura_minima_interior"] == 100

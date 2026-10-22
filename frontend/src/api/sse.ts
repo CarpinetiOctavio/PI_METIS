@@ -107,6 +107,7 @@ function buildFormData(form: AnalysisStreamForm): FormData {
   body.append("mes_inicio_anio", String(form.mes_inicio_anio ?? 7));
   body.append("variable_diaria", form.variable_diaria ?? "pico");
   body.append("alfa", String(form.alfa ?? 0.05));
+  body.append("cobertura_minima_interior", String(form.cobertura_minima_interior ?? 100));
   return body;
 }
 

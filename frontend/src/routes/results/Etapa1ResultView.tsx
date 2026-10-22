@@ -9,6 +9,7 @@ import type {
 import { formatInt, formatNum } from "../../i18n/format";
 import { notaCriterioAnio } from "../../i18n/mesInicioAnio";
 import { alfaDestacado, textoAlfaAnalisis } from "../../i18n/alfa";
+import { textoCoberturaAnalisis } from "../../i18n/cobertura";
 import { textoParticionCramer } from "../../i18n/cramer";
 import type { ExclusionesGuardables } from "./exclusiones";
 import { formatearFormulaLatex, interpretar, REGLA_GRUPO } from "../../i18n/explicaciones";
@@ -223,6 +224,7 @@ export function Etapa1ResultView({
   const pasoAPaso = modo === "paso_a_paso";
   const cramer = result.homogeneidad.find((t) => t.prueba === "cramer");
   const particionCramer = textoParticionCramer(cramerParticion, cramer?.n1, cramer?.n2);
+  const cobertura = textoCoberturaAnalisis(result.datos);
 
   const groups: Group[] = [
     { key: "independencia", label: "Independencia", items: result.independencia },
@@ -246,6 +248,13 @@ export function Etapa1ResultView({
       </p>
       {particionCramer && (
         <p className="fn results-particion">Partición de Cramer: {particionCramer}</p>
+      )}
+      {/* DECISIÓN 081 — solo con carga mensual o diaria: con qué cobertura se
+          aceptaron los años interiores al agregar a máximos anuales. */}
+      {cobertura && (
+        <p className="fn results-cobertura">
+          Cobertura mínima de los años interiores: {cobertura}
+        </p>
       )}
 
       <div className="results-kpis">

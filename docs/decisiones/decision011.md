@@ -58,3 +58,16 @@ PENDIENTE: confirmación formal de Facundo sobre la fórmula de ν.
 ### Archivos modificados
 - `metis/core/homogeneity.py` — calcular_cramer: ceil→round para n_w2, nu=n-2
 - `.claude/rules/formulas-etapa1.md` — sección Cramer actualizada con esta decisión
+
+### Revisión 22/10/2026 — respuesta de Facundo sobre el redondeo de la partición
+
+Facundo respondió el 22/10/2026 sobre la función de redondeo de `n_w1`/`n_w2`: "Es indistinto, seguir con el redondeo
+hacia abajo".
+
+**Decidido por Kevin el 22/10/2026: se mantiene la convención actual** (`n_w1 = ceil(n · 0,60)`,
+`n_w2 = round(n · 0,30)`), que reproduce los valores publicados de las estaciones 2 y 4. Pasar todo a redondeo hacia
+abajo no cambia ningún veredicto de Cramer en las nueve estaciones (verificado el 22/10/2026), pero deja de reproducir
+los valores publicados de esas dos, y el autor considera indistinta la elección. **No se toca el código.** Con esto
+queda cerrado el "PENDIENTE: confirmación formal de Facundo sobre la función de redondeo en Excel" de la Divergencia 1,
+y el empate 2 a 2 del addendum del 18/07/2026 deja de ser una pregunta abierta: para el autor las dos convenciones son
+equivalentes. La pregunta sobre ν (Divergencia 2) no formaba parte de esta respuesta y sigue como está.

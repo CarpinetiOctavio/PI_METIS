@@ -1,4 +1,4 @@
-import type { Etapa1Datos } from "../api/types";
+import type { Etapa1Datos, VariableDiaria } from "../api/types";
 
 // Rótulos del período de retorno según la serie que se ajustó (DECISIÓN 076).
 //
@@ -13,28 +13,35 @@ import type { Etapa1Datos } from "../api/types";
 export interface ContextoSerie {
   resolucion?: Etapa1Datos["resolucion_original"];
   mesInicioAnio?: number | null;
-  variableDiaria?: "pico" | "media" | null;
+  variableDiaria?: VariableDiaria | null;
 }
 
-type CargaAgregada = "mensual" | "pico" | "media";
+type CargaAgregada = "mensual" | VariableDiaria;
 
-const MAXIMO: Record<CargaAgregada, string> = {
-  mensual: "valor mensual máximo",
-  pico: "pico diario máximo",
-  media: "media diaria máxima",
+// Lo que se agrega al rótulo del valor de diseño. Con acumulados diarios es la
+// "serie de máximos diarios anuales" de la respuesta de Facundo (22/10/2026).
+const VALOR_DISENO: Record<CargaAgregada, string> = {
+  mensual: "valor mensual máximo del año",
+  pico: "pico diario máximo del año",
+  media: "media diaria máxima del año",
+  acumulado: "máximo diario anual, acumulado de 24 h",
 };
 
 const MAXIMO_CON_ARTICULO: Record<CargaAgregada, string> = {
   mensual: "el valor mensual máximo",
   pico: "el pico diario máximo",
   media: "la media diaria máxima",
+  acumulado: "el acumulado diario máximo",
 };
 
 const CARGA: Record<CargaAgregada, string> = {
   mensual: "una serie mensual",
   pico: "una serie de picos diarios",
   media: "una serie de medias diarias",
+  acumulado: "una serie de acumulados diarios",
 };
+
+const VARIABLES_DIARIAS: readonly VariableDiaria[] = ["pico", "media", "acumulado"];
 
 const MESES = [
   "enero",
@@ -53,7 +60,10 @@ const MESES = [
 
 function cargaAgregada(ctx: ContextoSerie | undefined): CargaAgregada | null {
   if (ctx?.resolucion === "mensual") return "mensual";
-  if (ctx?.resolucion === "diaria") return ctx.variableDiaria === "media" ? "media" : "pico";
+  if (ctx?.resolucion === "diaria") {
+    const declarada = ctx.variableDiaria;
+    return declarada && VARIABLES_DIARIAS.includes(declarada) ? declarada : "pico";
+  }
   return null;
 }
 
@@ -82,7 +92,7 @@ export function rotuloEjePeriodoRetorno(ctx?: ContextoSerie): string {
 
 export function rotuloValorDiseno(ctx?: ContextoSerie): string {
   const carga = cargaAgregada(ctx);
-  return carga === null ? "Valor de diseño" : `Valor de diseño (${MAXIMO[carga]} del año)`;
+  return carga === null ? "Valor de diseño" : `Valor de diseño (${VALOR_DISENO[carga]})`;
 }
 
 export function notaPeriodoRetorno(ctx?: ContextoSerie): string {

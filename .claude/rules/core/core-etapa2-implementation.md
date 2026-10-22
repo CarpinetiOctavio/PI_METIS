@@ -59,7 +59,13 @@ qué combinación cae en qué categoría.
 
 ## Métodos de estimación — estado
 Confirmados: Momentos, MV, ML (Momentos-L Hosking 1990), MPP
-Pendientes de confirmación con Facundo: ME, MC
+ME y MC: solo donde la tesis los desarrolla (ME en Gumbel, MC en Gen. Pareto).
+Respuesta de Facundo (22/10/2026): las variantes "Estándar" y "Corregidos"
+de MC, y ME/MC en otras distribuciones, probablemente existan pero él no las
+usó → versión 2 (`docs/pendientes-tecnicos.md`), no se implementan en V1.0.
+Tampoco Gamma 3p por MPP: no tenía las ecuaciones ni las tablas → versión 2.
+Normal y Log-Normal 2p conservan Momentos y MV aunque den lo mismo: que el
+usuario elija (misma respuesta).
 GVE + ML: usar aproximación de Hosking (1985) para estimar κ.
 
 ## Casos especiales — nunca detienen el pipeline
@@ -69,9 +75,12 @@ GVE + ML: usar aproximación de Hosking (1985) para estimar κ.
 - high_eea: EEA > 5% de la media → warning DIST_HIGH_EEA
 
 ## Preguntas pendientes con Facundo
-Ver `docs/auditoria/pendientes/pendientes-facundo.md`:
-- ME/MC — sección "Etapa 2 — ¿ME y MC = Mínimos Cuadrados Estándar y Corregidos?".
+Ver `docs/auditoria/pendientes/pendientes-facundo.md` (respuestas del
+22/10/2026 resumidas al principio de ese archivo):
+- ME/MC — respondida 22/10/2026, versión 2 (ver "Métodos de estimación" arriba).
 - Comportamiento ante ceros de las 5 distribuciones (listadas arriba) —
   sección "Etapa 2 — comportamiento ante ceros de 5 distribuciones".
 - Fórmula de EEA — ya verificada y superada, sección "Discrepancias en
-  EEA sin explicación (Causa C)" (líneas 194-249) y Causa D (línea 442).
+  EEA sin explicación (Causa C)" y Causa D. Facundo (22/10/2026) no conserva
+  las planillas: la Causa C queda como explicación reconstruida (U_T con F en
+  lugar de 1 − F), que se presenta en la reunión.

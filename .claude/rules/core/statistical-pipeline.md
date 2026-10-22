@@ -67,7 +67,7 @@ exclusivamente sobre el orden temporal, no sobre la completitud.
 Si `resolucion_temporal in ("mensual", "diaria")`, `ejecutar_etapa1()` llama
 a `core/validacion/aggregation.py::agregar_a_maximos_anuales(serie,
 timestamps, mes_inicio_anio, resolucion=resolucion_temporal,
-cobertura_minima_interior=COBERTURA_MINIMA_INTERIOR[resolucion_temporal])`
+cobertura_minima_interior=<el del request, o COBERTURA_MINIMA_INTERIOR[resolucion_temporal]>)`
 **antes** de `validar_contrato()` — no en `services/`. El resto del pipeline
 (contrato, las seis pruebas, Chow, Etapa 2) corre sobre la serie de máximos
 anuales ya agregada, exactamente como si el usuario hubiera subido una serie
@@ -89,10 +89,14 @@ exigen 100 %. Un año **interior** incompleto se descarta con
 `CONTRACT_INCOMPLETE_YEARS_DISCARDED` si su cobertura no alcanza
 `cobertura_minima_interior`; si la alcanza pero está por debajo del 100 %,
 se acepta y se emite `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (nivel normal,
-DECISIÓN 065 R2.3) con cuántas unidades faltaron. Valor provisorio
-`cobertura_minima_interior = 1.0` (estricto) mientras R0.1 espera a Facundo
-— con `1.0`, `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` no se emite todavía y el
-comportamiento es idéntico al mensual pre-DECISIÓN 065. El recorte ocurre
+DECISIÓN 065 R2.3) con cuántas unidades faltaron. `cobertura_minima_interior`
+lo elige el usuario desde la DECISIÓN 081 (respuesta de Facundo del
+22/10/2026 a R0.1): porcentaje de 50 a 100 en el request, fracción en
+`ejecutar_etapa1(..., cobertura_minima_interior=)`; sin indicarlo, 100 %
+(estricto, idéntico al mensual pre-DECISIÓN 065). La segunda pasada tras
+rechazar atípicos no vuelve a agregar, y `serie_calendario` usa el mismo
+umbral. Viaja en `result_etapa1.datos.cobertura_minima_interior` (`null` con
+carga anual). El recorte ocurre
 **antes** del conteo de la regla de n: un registro que queda con menos de
 10 años agregados bloquea con `CONTRACT_SERIES_TOO_SHORT`, igual que
 cualquier otra serie corta.
@@ -551,7 +555,8 @@ El ajuste es **automático y exhaustivo** — sin intervención del usuario.
 
 > **Nota sobre métodos ME y MC:** ME = Máxima Entropía, MC = Mínimos Cuadrados.
 > Confirmados solo para las distribuciones donde aparecen en la tabla.
-> Pendiente confirmar con Facundo si aplican a otras distribuciones.
+> Facundo (22/10/2026): probablemente apliquen a otras, pero no los usó →
+> versión 2 (`docs/pendientes-tecnicos.md`).
 > Fuente: formulas-etapa2.md — Gumbel IV-190/IV-198, Gen. Pareto IV-153/IV-155.
 
 **GVE con Momentos-L:** usar aproximación de Hosking (1985) para estimar κ (IV-234 a IV-242).

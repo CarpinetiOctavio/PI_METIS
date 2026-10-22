@@ -15,7 +15,7 @@ y `.claude/rules/architecture/constraints.md`.
 | Persona | Qué bloquea | Ítems |
 |---|---|---|
 | **Octavio** | **Todo el backend del plan** (regla: se hace al final y se consulta con él): `disabled_negatives`, exploración sin id, desglose paso a paso, what-if. El frontend ya está hecho contra mocks y espera esto. | §2 |
-| **Facundo** | Qué gráficos por prueba hacer (F), el valor crítico de Mann-Kendall, y las preguntas de fidelidad del core que llevan semanas abiertas. **R0.2 bloquea exponer la carga diaria en la UI.** | §3 |
+| **Facundo** | Qué gráficos por prueba hacer (F), el valor crítico de Mann-Kendall, y las preguntas de fidelidad del core. Respondió casi todas el 22/10/2026 (resumen al principio de `pendientes-facundo.md`); cuatro quedan para presentar en la reunión. | §3 |
 | **Catalini** | Feedback sobre la versión implementada del what-if de atípicos (¿reemplazar por la media?), y qué variables tiene en mente para "Otro" con negativos. | §4 |
 | **IT / UCC** | Deploy: registry de imágenes saliente, SSH desde GitHub Actions, verificación del SMTP desde adentro de la red. | §5 |
 | **Kevin + Octavio** | Decisiones de gobernanza (SonarCloud como check obligatorio, decisiones con número reservado sin escribir). | §6 |
@@ -136,18 +136,21 @@ dicho que nada de `backend/` se toca sin que Octavio lo haya visto.
 - [ ] **Gráficos por prueba (ítem F).** ¿Cuáles considera necesarios para decidir y cuáles accesorios? Lista propuesta
       (§7 del plan): correlograma de Anderson *(ya hecho, no depende de su respuesta)*; Cramer con bloques sombreados;
       KS con las dos distribuciones acumuladas y D marcado; Wald-Wolfowitz con las rachas coloreadas; boxplot para t de Student.
-- [ ] **Mann-Kendall, valor crítico.** La Tabla A.4 del apéndice de Caamaño da 1,64 (una cola); METIS usa 1,96 (dos colas,
+- [ ] **Mann-Kendall, valor crítico.** *(a presentar en la reunión)* La Tabla A.4 del apéndice de Caamaño da 1,64 (una cola); METIS usa 1,96 (dos colas,
       lo que decide `pymannkendall`). ¿Se mantiene 1,96 y se documenta la divergencia, o se alinea con la fuente?
       Hasta que conteste no se cambia ningún valor.
 
 ### De la agregación temporal (`pendientes-facundo.md`, sección "Agregación temporal")
 
-- [ ] **R0.2 — media diaria vs. pico instantáneo.** ¿Qué variable se espera en un archivo diario?
-      **Bloquea exponer la carga diaria en la UI**, no la implementación.
-- [ ] **R0.1** — ¿un año incompleto del medio se descarta siempre o hay un umbral? (hoy: estricto, 100%).
-- [ ] **R0.3** — ¿diaria → anual directo (implementado) o encadenado diaria → mensual → anual?
-- [ ] ¿El máximo anual es también la agregación correcta para `tipo_variable == "otro"`?
-- [ ] ¿Con qué `mes_inicio_anio` se armaron los máximos anuales de las 9 estaciones de la tesis?
+- [x] **R0.2 — media diaria vs. pico instantáneo.** ¿Qué variable se espera en un archivo diario? **Respondida 22/10/2026:** la lluvia
+      diaria es un acumulado de 9 a 9 → opción "acumulado" (revisión de la DECISIÓN 065).
+- [x] **R0.1** — ¿un año incompleto del medio se descarta siempre o hay un umbral? **Respondida 22/10/2026:** a criterio del operador →
+      DECISIÓN 081 (50 % a 100 %, 100 por defecto).
+- [x] **R0.3** — ¿diaria → anual directo (implementado) o encadenado diaria → mensual → anual? **Respondida 22/10/2026:** directo.
+- [x] ¿El máximo anual es también la agregación correcta para `tipo_variable == "otro"`? **Respondida 22/10/2026:** podrían ser medias
+      o mínimos → versión 2.
+- [x] ¿Con qué `mes_inicio_anio` se armaron los máximos anuales de las 9 estaciones de la tesis? **Respondida 22/10/2026:** julio a
+      junio.
 
 ### De la fidelidad del core (`pendientes-facundo.md`)
 
@@ -155,16 +158,23 @@ Cada sección puede tener un addendum de cierre: revisar antes de mandar.
 
 - [ ] **Fórmula de asimetría g (DECISIÓN 013):** METIS usa IV-4/IV-5 (ddof=0), Facundo usó `SKEW()` de Excel (ddof=1); ~4% de
       diferencia que se propaga a LP3 Indirecto y LN3p Momentos.
-- [ ] **Partición de Cramer (DECISIÓN 011):** ¿qué función usa en Excel para `n_w1` y `n_w2`? La tesis no explicita el redondeo.
-- [ ] **Mann-Kendall, Tabla A.4, valor crítico de S para n = 7.**
-- [ ] **ME y MC:** ¿son "Mínimos Cuadrados Estándar y Corregidos"? ¿A qué otras distribuciones aplican?
-- [ ] **LP3 Método Directo:** la tesis reporta parámetros y EEA con B fuera de (3, 6] en 3 estaciones; METIS aplica la restricción.
-- [ ] **Log-Normal 2p:** el criterio de `NO_APLICABLE` de la tesis no es uniforme entre estaciones.
-- [ ] **Gamma 3p + MPP:** la fórmula no está en el capítulo IV pese a que la Tabla IV-1 la lista.
-- [ ] **Normal y Log-Normal 2p:** la Tabla IV-1 solo lista MV, no Momentos.
-- [ ] **U_T de la planilla (08/10/2026):** ¿calcula U_T con F en lugar de 1 − F cuando F > 0,5? Explicaría toda
+- [x] **Partición de Cramer (DECISIÓN 011):** ¿qué función usa en Excel para `n_w1` y `n_w2`? La tesis no explicita el redondeo. **Respondida 22/10/2026:** 
+      "es indistinto"; se mantiene la convención actual.
+- [x] **Mann-Kendall, Tabla A.4, valor crítico de S para n = 7.** **Respondida 22/10/2026:** no la tiene; una serie tan corta no debería
+      analizarse → texto nuevo del aviso de longitud.
+- [x] **ME y MC:** ¿son "Mínimos Cuadrados Estándar y Corregidos"? ¿A qué otras distribuciones aplican? **Respondida 22/10/2026:** probablemente
+      existan; no los usó → versión 2.
+- [x] **LP3 Método Directo:** la tesis reporta parámetros y EEA con B fuera de (3, 6] en 3 estaciones; METIS aplica la restricción. **Respondida 22/10/2026:** 
+      pudo usar material que hoy no tiene; se mantiene "no aplicable".
+- [x] **Log-Normal 2p:** el criterio de `NO_APLICABLE` de la tesis no es uniforme entre estaciones. **Respondida 22/10/2026:** probablemente
+      valores negativos (DECISIÓN 073).
+- [x] **Gamma 3p + MPP:** la fórmula no está en el capítulo IV pese a que la Tabla IV-1 la lista. **Respondida 22/10/2026:** no tenía las
+      ecuaciones ni las tablas → versión 2.
+- [x] **Normal y Log-Normal 2p:** la Tabla IV-1 solo lista MV, no Momentos. **Respondida 22/10/2026:** no eliminar ninguno; que elija el
+      usuario.
+- [ ] **U_T de la planilla (08/10/2026):** *(no conserva las planillas, 22/10/2026: se presenta en la reunión)* ¿calcula U_T con F en lugar de 1 − F cuando F > 0,5? Explicaría toda
   la Causa C. Ver `docs/auditoria/hallazgos/hallazgo-ut-planilla-causa-c.md`.
-- [ ] **t de Student con n impar (08/10/2026):** ¿`ceil(n/2)` o `floor(n/2)` para el primer subgrupo? En est_05
+- [ ] **t de Student con n impar (08/10/2026):** *(a presentar en la reunión)* ¿`ceil(n/2)` o `floor(n/2)` para el primer subgrupo? En est_05
   cambia el veredicto individual.
 - [ ] **GVE Momentos — beta** no reproducible (est_02, est_03, est_05); **Gamma 3p MV** (est_06, est_08);
       **una cola vs. dos colas** en est_08 (Cramer/t de Student).

@@ -231,8 +231,11 @@ S_global  = desvío estándar de la serie completa (np.std, ddof=1)
 
 # Lógica de tamaños — verificado numéricamente contra tesis Facundo est_02 (n=24)
 n_w1      = ceil(n · 0.60)   → para n=24: n_w1=15  (reproduce tau_w1=0.18289)
-n_w2      = floor(n · 0.30)  → para n=24: n_w2=7   (reproduce tau_w2=0.35206)
+n_w2      = round(n · 0.30)  → para n=24: n_w2=7   (reproduce tau_w2=0.35206);
+                               para n=36: n_w2=11 (floor daría 10 y no reproduce est_04)
 # ceil para n_w2 da n_w2=8 → tau_w2=0.67071 (incorrecto). Ver DECISIÓN 011.
+# Facundo (22/10/2026): el redondeo "es indistinto"; se mantiene esta convención
+# porque reproduce los valores publicados (revisión del 22/10/2026 de la DECISIÓN 011).
 
 # Slicing: últimos n_w datos cronológicos del registro
 s_w1      = serie[-n_w1:]

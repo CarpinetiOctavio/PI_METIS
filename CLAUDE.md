@@ -48,7 +48,8 @@ backend/metis/
 │   └── export.py         # GET /export/{id}, POST /export/{id}/simulacion — PDF de CU-01 (DECISIÓN 075)
 ├── core/                 # Motor estadístico. SIN conocimiento de HTTP, BD, ni sesiones.
 │   ├── estadistica_descriptiva/   # descriptive.py
-│   ├── etapa1/            # independence.py, homogeneity.py, trend.py, outliers.py (Chow)
+│   ├── etapa1/            # independence.py, homogeneity.py, trend.py, outliers.py (Chow),
+│   │                      # significancia.py (α configurable: NIVELES_ALFA, z_bilateral, KS_Z_CRIT — DECISIÓN 078)
 │   ├── etapa2/            # eea.py, empirical.py, design_events.py, utils.py, types.py, distributions/ (13 archivos)
 │   ├── pipeline/          # pipeline_etapa1.py, pipeline_etapa2.py, full_pipeline.py, types.py,
 │   │                      # exclusiones.py (what-if de atípicos — DECISIÓN 071)
@@ -60,7 +61,7 @@ backend/metis/
 ├── reportes/              # pdf.py — informe PDF (ReportLab + matplotlib). Presentación pura: recibe el dict de
 │                          # get_analysis_by_id(), no importa api/services/db/core (DECISIÓN 075)
 ├── db/                    # models/ (user, analysis, result, api_client) + base.py, session.py
-├── schemas/               # Modelos Pydantic: analysis.py, auth.py, common.py
+├── schemas/               # Modelos Pydantic: analysis.py, auth.py, common.py, export.py
 └── auth/                  # router.py, jwt.py, email.py (aiosmtplib), dependencies.py
 ```
 
@@ -198,7 +199,9 @@ frontend/src/
 ├── i18n/          # errors.es.ts (traducción del catálogo de códigos), mesInicioAnio.ts,
 │                  # periodoRetorno.ts (rótulos de T según la serie ajustada, DECISIÓN 076),
 │                  # explicaciones.ts (textos/LaTeX del modo paso a paso — solo sustituye `explicacion` de core/, DECISIÓN 064),
-│                  # format.ts (formateo numérico único de la UI, 5 decimales como la tesis)
+│                  # format.ts (formateo numérico único de la UI, 5 decimales como la tesis),
+│                  # alfa.ts (niveles de α, DECISIÓN 078), cramer.ts (rótulo de la partición usada),
+│                  # estadoMetodo.ts (rótulos de status de Etapa 2)
 ├── routes/        # entry/, config/, stream/, results/, history/, auth-verify/ — una carpeta por pantalla
 ├── theme/         # tokens.ts + tokens.instrumento.css (paridad verificada por tokenParity.test.ts)
 └── test/          # renderPage.tsx — helper que envuelve toda página en <StrictMode> (regla, no opcional)

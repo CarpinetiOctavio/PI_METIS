@@ -59,6 +59,11 @@ Cada borde se prueba de los dos lados: el último valor válido y el primero inv
 | VL-10a | Cantidad de puntos excluidos | 0 | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-10a ninguno]` |
 | VL-10b | | n − 1 (queda un dato) | Se guarda | ídem | `…::test_indices_en_el_borde_validos[VL-10b n-1 puntos (queda uno)]` |
 | VL-10c | | n (vacía la serie) | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-10c los n (vacía la serie)]` |
+| VL-11a | `cobertura_minima_interior` (%) | 49 | 400 `CONTRACT_COBERTURA_INVALID` | DECISIÓN 081 | `casos_dinamicos/test_cobertura_minima_interior.py::test_cobertura_fuera_del_rango_o_no_entera_da_400[VL-11a 49]` |
+| VL-11b | | 50 | Válido (el piso) | ídem | `…::test_cobertura_en_el_rango[VL-11b 50]` |
+| VL-11c | | 100 | Válido (el valor por defecto) | ídem | `…::test_cobertura_en_el_rango[VL-11c 100]` |
+| VL-11d | | 101 | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…::test_cobertura_fuera_del_rango_o_no_entera_da_400[VL-11d 101]` |
+| VL-11e | | 90 | Válido | ídem | `…::test_cobertura_en_el_rango[VL-11e 90]` |
 
 ---
 
@@ -88,14 +93,18 @@ Un representante por clase, válida o inválida.
 | CE-04a | `etapas` | `"1"` | | Termina en `result_etapa1`, sin pausa de Etapa 2 | DECISIÓN 054 | `tests/integration/test_etapa2_stream_distribution_decision.py::test_etapas_1_solo_no_pausa_en_etapa_2` |
 | CE-04b | | `"1,2"` | | Válido | ídem | `tests/unit/api/test_stream_etapas_validacion.py::test_etapas_uno_dos_no_lanza` |
 | CE-04c | | Inválido | `"3"`, `"2,1"`, … | 400 `CONTRACT_ETAPAS_INVALID` | ídem | `…/test_stream_etapas_validacion.py::test_etapas_invalida_da_400_no_500`, `::test_etapas_vacia_da_400` |
-| CE-05a | `variable_diaria` | `pico`, `media` | | Válido | DECISIÓN 065 | `tests/unit/api/test_stream_variable_diaria_validacion.py::test_valores_validos_no_lanzan` |
-| CE-05b | | Otro valor | | 400 `CONTRACT_VARIABLE_DIARIA_INVALID` | ídem | `…/test_stream_variable_diaria_validacion.py::test_valor_invalido_da_400` |
+| CE-05a | `variable_diaria` | `pico`, `media`, `acumulado` | | Válido | DECISIÓN 065 (revisión 22/10/2026) | `tests/unit/api/test_stream_variable_diaria_validacion.py::test_valores_validos_no_lanzan` (3 ids) |
+| CE-05b | | Otro valor | `acumulada`, `suma`, `PICO`, vacío, … | 400 `CONTRACT_VARIABLE_DIARIA_INVALID` | ídem | `…/test_stream_variable_diaria_validacion.py::test_valor_invalido_da_400` |
+| CE-05c | | `acumulado` con carga diaria | 12 años diarios | Los mismos máximos anuales que `pico`; `CONTRACT_DAILY_SERIES_AGGREGATED` sin advertencia de sesgo; valor de diseño rotulado "máximo diario anual, acumulado de 24 h" | Respuesta de Facundo, 22/10/2026 | `tests/unit/core/pipeline/test_pipeline_etapa1.py::test_carga_diaria_acumulado_no_advierte_sesgo_y_da_los_mismos_numeros`, `tests/unit/reportes/test_pdf.py::test_carga_diaria_nombra_la_variable_diaria[acumulado-…]` |
 | CE-06a | `alfa` (nivel de significancia) | Uno de los tres niveles | `0.01`, `0.05`, `0.10` | Válido | DECISIÓN 078 | `casos_dinamicos/test_clases_equivalencia.py::test_alfa_de_los_tres_niveles_es_valido` (3 ids) |
 | CE-06b | | Numérico fuera del conjunto | `0.2`, `0.025` | 400 `CONTRACT_ALFA_INVALID` | ídem | `…::test_alfa_fuera_del_conjunto_da_400[CE-06b …]` |
 | CE-06c | | No numérico | `abc`, vacío | 400 `CONTRACT_ALFA_INVALID` (no un 422 genérico) | ídem | `…::test_alfa_fuera_del_conjunto_da_400[CE-06c …]` |
 | CE-07a | Celda de la serie | Vacía | `None`, `NaN` | Solo `CONTRACT_MISSING_VALUES`, con su conteo | `api-contracts.md`; revisión manual 21/10/2026 (bloque H) | `casos_dinamicos/test_clases_equivalencia.py::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07a …]` |
 | CE-07b | | No numérica | `"x"` | Solo `CONTRACT_NON_NUMERIC_VALUES`, con su conteo | ídem | `…::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07b …]` |
 | CE-07c | | Las dos | `None`, `"x"`, `"y"` | Las dos advertencias, cada una con su conteo (1 y 2) | ídem | `…::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07c …]` |
+| CE-08a | `cobertura_minima_interior` | No numérico | `abc` | 400 `CONTRACT_COBERTURA_INVALID` (no un 422 genérico) | DECISIÓN 081 | `casos_dinamicos/test_cobertura_minima_interior.py::test_cobertura_fuera_del_rango_o_no_entera_da_400[CE-08a abc]` |
+| CE-08b | | Numérico no entero | `90.5` | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…[CE-08b 90.5]` |
+| CE-08c | | Vacío | `""` | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…[CE-08c vacío]` |
 
 ---
 
@@ -171,6 +180,23 @@ Las que toleran ceros con advertencia (`DIST_ZEROS_TOLERATED`, DECISIÓN 061) se
 `tests/unit/core/etapa2/distributions/` (por ejemplo `test_gen_exponencial.py`, donde el método MV sí queda en
 `disabled_zeros`).
 
+### TD-06. Año incompleto al agregar, según la cobertura elegida (DECISIÓN 081)
+
+Serie de 12 años con un año incompleto. Mensual: falta un mes (11 de 12, 91,7 %). Diaria: faltan 10 días (355 de 365,
+97,3 %).
+
+| | a | b | c | d | e | f | g |
+|---|---|---|---|---|---|---|---|
+| Carga | mensual | mensual | mensual | diaria | diaria | mensual | anual |
+| Año incompleto | interior | interior | interior | interior | interior | extremo | — |
+| Cobertura elegida | sin indicar | 100 % | 90 % | 100 % | 95 % | 50 % | 50 % |
+| **Resultado** | se descarta, `CONTRACT_INCOMPLETE_YEARS_DISCARDED` | ídem | se conserva, `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` ("faltan 1 de 12 meses") | se descarta | se conserva ("faltan 10 de 365 días") | se recorta, `CONTRACT_PARTIAL_YEARS_TRIMMED` (los extremos exigen 100 %) | sin cambios respecto del valor por defecto |
+
+Test: `casos_dinamicos/test_cobertura_minima_interior.py::test_anio_interior_incompleto_segun_la_cobertura[TD-06a … TD-06e]`,
+`::test_td06f_extremo_incompleto_se_recorta_aunque_la_cobertura_sea_baja` y
+`::test_td06g_con_carga_anual_la_cobertura_no_cambia_nada`. De punta a punta por el stream, con el rechazo de un atípico
+de Chow y la vista calendario: `tests/integration/test_stream_agregacion_mensual.py::test_cobertura_elegida_se_aplica_y_su_aviso_sobrevive_al_rechazo_de_chow`.
+
 ---
 
 ## 4. Resultado
@@ -180,7 +206,9 @@ Las que toleran ceros con advertencia (`DIST_ZEROS_TOLERATED`, DECISIÓN 061) se
 - **Agregados después de B8:** CE-07a–c (revisión manual del 21/10/2026, bloque H del
   `docs/historico/planes/plan-revision-manual-21-10-2026.md`): tres casos y tres tests más en `casos_dinamicos/`. VL-09a–e y
   VL-10a–c (bloque C2, DECISIÓN 080): ocho casos en `tests/integration/db/test_exclusiones_guardadas.py`, contra
-  PostgreSQL, porque la validación necesita el análisis persistido.
+  PostgreSQL, porque la validación necesita el análisis persistido. CE-05c, VL-11a–e, CE-08a–c y TD-06a–g (respuestas
+  de Facundo del 22/10/2026, `docs/plan-respuestas-facundo-22-10-2026.md`, bloques B y C): 16 casos; los de la
+  DECISIÓN 081 en `casos_dinamicos/test_cobertura_minima_interior.py`.
 - **Ningún caso encontró un defecto.** Si uno lo hubiera encontrado, se registraría con la plantilla de
   `registro-defectos.md`.
 - **Bordes que no se probaban en el borde:** antes de este bloque, la longitud se probaba con n = 8, 15 y 30 (no con

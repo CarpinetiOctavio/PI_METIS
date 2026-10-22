@@ -266,3 +266,59 @@ errores que rige `CONTRACT_INCOMPLETE_YEARS_ACCEPTED`).
 `docs/auditoria/pendientes/pendientes-facundo.md` — R0.1 (umbral de
 cobertura), R0.2 (media diaria vs. pico, bloqueante de exposición), R0.3
 (directo vs. encadenado).
+
+---
+
+### Revisión 22/10/2026 — R0.2 cerrada: la opción "acumulado"
+
+Facundo Ganancias Martínez respondió R0.2 el 22/10/2026:
+
+> "Depende la serie de datos que estés estudiando. En el caso de registros
+> pluviométricos, los valores corresponden a la lluvia acumulada de un día,
+> desde las 9 de la mañana del día anterior hasta las 9 de la mañana del día
+> que se toma la lectura. Luego el operador debería armar la serie de máximos
+> diarios anuales, por año hidrológico."
+
+La lluvia diaria no es un pico ni una media: es un **acumulado**. Con las dos
+opciones que existían, quien cargaba lluvia diaria y elegía "media" recibía una
+advertencia de sesgo que no aplica, y "pico" la describía mal. El máximo anual
+de los acumulados diarios es exactamente la "serie de máximos diarios anuales"
+que describe Facundo.
+
+**Qué cambia:**
+
+- `variable_diaria` acepta `"acumulado"` además de `"pico"` y `"media"`
+  (`api/v1/analysis.py`); cualquier otro valor sigue en 400
+  `CONTRACT_VARIABLE_DIARIA_INVALID`. Se persiste en `analyses.configuracion`
+  sin cambio de forma.
+- `CONTRACT_DAILY_SERIES_AGGREGATED` con `"acumulado"` dice que cada valor
+  anual es el máximo acumulado diario del año, **sin** advertencia de sesgo.
+- Los rótulos de la DECISIÓN 076 (`frontend/src/i18n/periodoRetorno.ts` y
+  `reportes/pdf.py`) nombran los tres casos de forma explícita: con
+  `"acumulado"`, el valor de diseño es el "máximo diario anual, acumulado de
+  24 h". Antes, todo valor distinto de `"media"` caía en `"pico"`; se mantiene
+  ese repliegue solo para análisis viejos sin la variable o con un valor
+  desconocido.
+- `ConfigPage` suma la opción "Acumulado del día (por ejemplo, lluvia de 9 a 9)"
+  y la ayuda dice cuándo usar cada una. El PDF informa "Acumulados diarios" en
+  la configuración.
+
+**Qué no cambia:** ningún número. La agregación es el mismo `max()` con las
+tres opciones; `"acumulado"` y `"pico"` dan la misma serie de máximos
+anuales y los mismos resultados (`test_pipeline_etapa1.py::test_carga_diaria_acumulado_no_advierte_sesgo_y_da_los_mismos_numeros`).
+
+Con esto la sección "Exposición en la UI — bloqueada por R0.2" queda
+superada: R0.2 está respondida y el selector ya existía desde el PR 2.5.
+Casos de prueba: CE-05a a CE-05c en `docs/calidad/casos-de-prueba.md`.
+
+### Revisión 22/10/2026 — R0.1 cerrada: la cobertura de los años interiores la elige el usuario
+
+Facundo respondió R0.1 el 22/10/2026: "lo dejaría a criterio del operador, porque en general las series de datos
+pueden tener muchos faltantes y no existe otra fuente de información. También existen métodos de relleno de series,
+y el operador podría usarlas por fuera del programa y cargar luego la serie completa."
+
+`cobertura_minima_interior` deja de ser una constante provisoria y pasa a ser un parámetro del análisis, en
+porcentaje entero de 50 a 100 con 100 por defecto. El "valor provisorio 1.0" de la sección 2 queda como el valor por
+defecto; `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` se emite cuando el usuario elige menos de 100 y un año interior queda
+aceptado incompleto. La regla asimétrica no cambia: los extremos siguen exigiendo 100 %. Detalle completo, el piso del
+50 % y su motivo: [DECISIÓN 081](decision081.md).

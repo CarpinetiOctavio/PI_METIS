@@ -1421,6 +1421,19 @@ verde (cobertura del código nuevo 91 % backend y 97 % frontend, duplicación 0,
 #141) cerrados con su test. DECISIÓN 080 (exclusiones guardadas, migración `006`). Recorrido en el navegador de Kevin
 el 21/10 (capturas fuera del repo). Al cierre: backend 947 tests de unidad e integración, frontend 569, smoke 15.
 **Correr `alembic upgrade head`** en cada entorno, incluido el servidor de la UCC.
+
+## Plan de respuestas de Facundo — 22/10/2026, EN PR
+
+`docs/plan-respuestas-facundo-22-10-2026.md`. Rama `feature/respuestas-facundo-22-10`, un commit por bloque: A (aviso
+de longitud con la redacción de Facundo), B (`variable_diaria = "acumulado"`, revisión de la DECISIÓN 065), C
+(cobertura mínima de los años interiores elegible, **DECISIÓN 081**, código `CONTRACT_COBERTURA_INVALID`) y D
+(respuestas registradas en `pendientes-facundo.md`, revisión de la DECISIÓN 011, versión 2 en `pendientes-tecnicos.md`).
+Sin migraciones: la cobertura vive en `analyses.configuracion`. Verificado el 22/10 con un recorrido de Playwright
+contra el despliegue de `scripts/deploy-local.sh` (capturas fuera del repo): serie de 24 datos, diaria de 40 años como
+"acumulado", mensual con un año interior incompleto a 100 % y 90 %, historial y PDF, y 49 % rechazado en la interfaz
+y en el servidor. Al cierre: backend 983 tests de unidad e integración, frontend 588, smoke 15; duplicación 0,52 %.
+Quedan para la reunión con Facundo: U_T, signos de la Generalizada de Pareto, t de Student con n impar y colas de
+Mann-Kendall.
 ---
 
 ## Decisiones pendientes — no implementar hasta confirmar

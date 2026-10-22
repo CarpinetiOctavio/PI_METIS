@@ -1,8 +1,8 @@
 # Hallazgo: la planilla de la tesis calcula U_T con F en lugar de 1 − F (explica la "Causa C")
 
 **Fecha:** 8 de octubre de 2026. **Autores:** Kevin, con Claude.
-**Veredicto:** **CONFIRMADO numéricamente** sobre los valores publicados en la tesis. Falta la confirmación
-de Facundo sobre la celda de su planilla (pregunta en `../pendientes/pendientes-facundo.md`).
+**Veredicto:** **CONFIRMADO numéricamente** sobre los valores publicados en la tesis. **No confirmable contra la
+planilla original** (respuesta de Facundo del 22/10/2026, sección 7): queda como explicación reconstruida.
 **Qué cambia en METIS:** nada. METIS ya aplica la ecuación que escribe la tesis (IV-105). Lo que cambia es
 la clasificación de las discrepancias de la auditoría: dejan de ser una pregunta abierta sobre METIS.
 **Cómo se encontró:** en la comparación con otras herramientas pedida por Carlos Catalini
@@ -108,3 +108,15 @@ python docs/auditoria/comparacion-herramientas/scripts/comparar.py   # sección 
 
 Tablas: `docs/auditoria/comparacion-herramientas/resultados/comparacion_tesis_autoconsistencia.csv` y
 `comparacion_tesis_eea.csv`. Figura: `resultados/figura_ut_planilla.png`.
+
+## 7. Respuesta de Facundo (22/10/2026)
+
+Sobre la Causa C, Facundo respondió que no usaba funciones nativas de Excel, que atribuye la divergencia a un error de
+transcripción o a un valor de la ecuación mal escrito, y que no conserva las planillas.
+
+La explicación de este hallazgo (U_T calculada con F en lugar de 1 − F para F > 0,5) es compatible con esa respuesta
+(un valor de la ecuación mal escrito en la planilla), pero **no se puede confirmar contra la celda original**, porque
+la planilla ya no existe. Queda como **explicación reconstruida** por la comparación del 08/10/2026: reproduce los
+valores publicados hasta la cuarta cifra significativa, y METIS sigue aplicando IV-105 tal como la escribe la tesis.
+La pregunta puntual de la sección 5 se presenta en persona en la reunión de la semana próxima, por si Facundo
+reconoce el cálculo.

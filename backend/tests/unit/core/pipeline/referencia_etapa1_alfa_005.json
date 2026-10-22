@@ -926,7 +926,7 @@
      {
       "codigo": "CONTRACT_LENGTH_WARNING",
       "nivel": "normal",
-      "descripcion": "Serie con 24 datos \u2014 resultados no certificables"
+      "descripcion": "Serie con 24 datos. La longitud m\u00ednima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."
      }
     ]
    },
@@ -1366,7 +1366,7 @@
     {
      "codigo": "CONTRACT_LENGTH_WARNING",
      "nivel": "normal",
-     "descripcion": "Serie con 24 datos \u2014 resultados no certificables"
+     "descripcion": "Serie con 24 datos. La longitud m\u00ednima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."
     },
     {
      "codigo": "TEST_WARNING_SMALL_SAMPLE",
@@ -4827,7 +4827,7 @@
      {
       "codigo": "CONTRACT_LENGTH_WARNING",
       "nivel": "normal",
-      "descripcion": "Serie con 19 datos \u2014 resultados no certificables"
+      "descripcion": "Serie con 19 datos. La longitud m\u00ednima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."
      }
     ]
    },
@@ -5229,7 +5229,7 @@
     {
      "codigo": "CONTRACT_LENGTH_WARNING",
      "nivel": "normal",
-     "descripcion": "Serie con 19 datos \u2014 resultados no certificables"
+     "descripcion": "Serie con 19 datos. La longitud m\u00ednima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."
     },
     {
      "codigo": "TEST_WARNING_SMALL_SAMPLE",
@@ -9201,7 +9201,7 @@
      {
       "codigo": "CONTRACT_LENGTH_WARNING",
       "nivel": "normal",
-      "descripcion": "Serie con 15 datos \u2014 resultados no certificables"
+      "descripcion": "Serie con 15 datos. La longitud m\u00ednima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."
      }
     ]
    },
@@ -9563,7 +9563,7 @@
     {
      "codigo": "CONTRACT_LENGTH_WARNING",
      "nivel": "normal",
-     "descripcion": "Serie con 15 datos \u2014 resultados no certificables"
+     "descripcion": "Serie con 15 datos. La longitud m\u00ednima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."
     },
     {
      "codigo": "TEST_CRITICAL_INDEPENDENCE",

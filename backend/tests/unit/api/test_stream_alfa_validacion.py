@@ -31,6 +31,7 @@ async def _llamar(alfa: str):
         mes_inicio_anio=7,
         variable_diaria="pico",
         alfa=alfa,
+        cobertura_minima_interior="100",
         db=None,
         current_user=None,
     )
