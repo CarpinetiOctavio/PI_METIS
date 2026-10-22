@@ -90,10 +90,12 @@ regla. Un año **interior** incompleto se descarta con
 `cobertura_minima_interior`; si la alcanza pero está por debajo del 100 %,
 se acepta y se emite `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (nivel normal) con
 cuántas unidades le faltaron — su máximo está sesgado a la baja y no puede
-quedar invisible. Valor provisorio `cobertura_minima_interior = 1.0`
-(estricto, `COBERTURA_MINIMA_INTERIOR` en `aggregation.py`) mientras R0.1
-espera respuesta de Facundo — con `1.0` el interior también exige 100 % y
-`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` no se emite todavía.
+quedar invisible. **`cobertura_minima_interior` lo elige el usuario
+(DECISIÓN 081, respuesta de Facundo del 22/10/2026 a R0.1):** porcentaje
+entero de 50 a 100 en `POST /analysis/stream`, 100 por defecto (el criterio
+estricto de antes, `COBERTURA_MINIMA_INTERIOR` en `aggregation.py`). Fuera de
+rango → 400 `CONTRACT_COBERTURA_INVALID`. El piso del 50 % evita un "máximo
+anual" construido con menos de la mitad del año.
 
 **Etiquetado.** Un año que arranca en el mes de inicio del año Y y corre
 hasta el mes anterior de Y+1 se etiqueta con Y — el año calendario en que

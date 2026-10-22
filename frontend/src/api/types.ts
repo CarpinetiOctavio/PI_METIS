@@ -69,6 +69,10 @@ export interface AnalysisStreamForm {
   variable_diaria?: VariableDiaria;
   // DECISIÓN 078 — nivel de significancia de la Etapa 1. Default 0.05.
   alfa?: Alfa;
+  // DECISIÓN 081 — cobertura mínima de los años interiores al agregar, en
+  // porcentaje entero de 50 a 100. Default 100. Solo tiene efecto con carga
+  // mensual o diaria.
+  cobertura_minima_interior?: number;
 }
 
 // DECISIÓN 078 — los tres niveles de significancia que acepta el backend.
@@ -240,6 +244,9 @@ export interface Etapa1Datos {
   // null si no hubo agregación real o si mes_inicio_anio ya era 1
   // (DECISIÓN 058 §3, solo para presentación).
   serie_calendario: SerieCalendario | null;
+  // DECISIÓN 081 — cobertura mínima de los años interiores con que se agregó
+  // (porcentaje). null con carga anual; ausente en análisis anteriores.
+  cobertura_minima_interior?: number | null;
 }
 
 export interface DescriptiveStats {
@@ -441,6 +448,10 @@ export interface AnalysisConfiguracion {
   // llega con 0.05 y `alfa_implicito: true` (corrió con 5 % sin registrarlo).
   alfa?: Alfa;
   alfa_implicito?: boolean;
+  // DECISIÓN 081 — siempre presente en GET /history/{id}: un análisis anterior
+  // llega con 100 y `cobertura_minima_interior_implicita: true`.
+  cobertura_minima_interior?: number;
+  cobertura_minima_interior_implicita?: boolean;
 }
 
 export interface AnalysisDetail {

@@ -234,3 +234,8 @@
   color: var(--mut);
   margin-bottom: 5px;
 }
+
+/* DECISIÓN 081 — validación en línea de la cobertura mínima de los años interiores. */
+.field-error {
+  color: var(--crit);
+}

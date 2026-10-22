@@ -21,6 +21,7 @@ import type {
 } from "../../api/types";
 import { etiquetaSelectorMes } from "../../i18n/mesInicioAnio";
 import { NIVELES_ALFA } from "../../i18n/alfa";
+import { COBERTURA_DEFECTO, COBERTURA_PISO, parseCobertura } from "../../i18n/cobertura";
 import { Magnet } from "../../components/Magnet";
 import { SpecularHighlight } from "../../components/SpecularHighlight";
 import { ColumnPreviewPanel } from "./ColumnPreviewPanel";
@@ -168,6 +169,8 @@ export function ConfigPage() {
   // DECISIÓN 078 — 5 % marcado por defecto: es una configuración de la prueba
   // (el estándar en hidrología), no una sugerencia sobre los resultados.
   const [alfa, setAlfa] = useState<Alfa>(0.05);
+  // DECISIÓN 081 — texto del campo, validado al enviar y en línea.
+  const [coberturaInput, setCoberturaInput] = useState(String(COBERTURA_DEFECTO));
   const [error, setError] = useState<string | null>(null);
   // Bloque E3 (pasada 5) — movida por onFocus/onBlur de los <select>, no por
   // su valor: resalta en ColumnPreviewPanel qué columna está eligiendo cada
@@ -196,6 +199,8 @@ export function ConfigPage() {
       ? preview.columnas.find((c) => String(c.indice) === columnaX)
       : undefined;
   const serieYaEsAnual = columnaXInfo ? esAnioPuro(columnaXInfo.muestra) : false;
+  const coberturaParseada = parseCobertura(coberturaInput);
+  const coberturaInvalida = "error" in coberturaParseada ? coberturaParseada.error : null;
   const serieParecediaria = columnaXInfo
     ? pareceDiaria(columnaXInfo.muestra)
     : false;
@@ -255,6 +260,13 @@ export function ConfigPage() {
       setError(cramerParticion.error);
       return;
     }
+    // Con la columna X en años la serie no se agrega: el campo está deshabilitado
+    // y se manda el valor por defecto, que el backend ignora.
+    const cobertura = serieYaEsAnual ? { value: COBERTURA_DEFECTO } : parseCobertura(coberturaInput);
+    if ("error" in cobertura) {
+      setError(cobertura.error);
+      return;
+    }
     setError(null);
 
     const form: AnalysisStreamForm = {
@@ -268,6 +280,7 @@ export function ConfigPage() {
       mes_inicio_anio: mesInicioAnio,
       variable_diaria: variableDiaria,
       alfa,
+      cobertura_minima_interior: cobertura.value,
     };
     // El form (incluido el File) viaja como router state — no persiste a un
     // refresh, pero StreamPage lo consume una sola vez al montar, así que no
@@ -497,6 +510,35 @@ export function ConfigPage() {
               {serieYaEsAnual
                 ? "La columna X ya son años — este criterio no aplica, la serie no se agrega."
                 : "Define cómo se agrupan los datos en años antes de analizar la serie (solo tiene efecto si la serie es mensual o diaria)."}
+            </p>
+          </div>
+          <div className="field">
+            <label htmlFor="config-cobertura">Cobertura mínima de los años interiores (%)</label>
+            <input
+              id="config-cobertura"
+              className="input"
+              type="number"
+              inputMode="numeric"
+              min={COBERTURA_PISO}
+              max={100}
+              step={1}
+              value={coberturaInput}
+              disabled={serieYaEsAnual}
+              aria-invalid={!serieYaEsAnual && coberturaInvalida ? true : undefined}
+              aria-describedby="config-cobertura-ayuda"
+              onChange={(event) => setCoberturaInput(event.target.value)}
+            />
+            {!serieYaEsAnual && coberturaInvalida && (
+              <p className="fn field-error" role="alert">
+                {coberturaInvalida}
+              </p>
+            )}
+            {/* DECISIÓN 081 — respuesta de Facundo (22/10/2026): a criterio del
+                operador, con la recomendación de completar la serie afuera. */}
+            <p className="fn" id="config-cobertura-ayuda">
+              {serieYaEsAnual
+                ? "Con la columna X en años la serie no se agrega: la cobertura no aplica."
+                : `Porcentaje de meses o días con dato que necesita un año del medio del registro para entrar a la serie (de ${COBERTURA_PISO} a 100; los años de los extremos siempre exigen 100 %). Con menos de 100, el máximo de un año incompleto puede quedar por debajo del real y METIS lo advierte. Si tu serie tiene muchos faltantes, lo recomendable es completarla con un método de relleno por fuera de METIS y cargarla completa.`}
             </p>
           </div>
           {serieParecediaria && (

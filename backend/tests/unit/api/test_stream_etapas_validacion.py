@@ -40,6 +40,7 @@ async def test_etapas_uno_dos_no_lanza():
         mes_inicio_anio=7,
         variable_diaria="pico",
         alfa="0.05",
+        cobertura_minima_interior="100",
         db=None,
         current_user=None,
     )
@@ -62,6 +63,7 @@ async def test_etapas_invalida_da_400_no_500():
             mes_inicio_anio=7,
             variable_diaria="pico",
             alfa="0.05",
+            cobertura_minima_interior="100",
             db=None,
             current_user=None,
         )
@@ -84,6 +86,7 @@ async def test_etapas_vacia_da_400():
             mes_inicio_anio=7,
             variable_diaria="pico",
             alfa="0.05",
+            cobertura_minima_interior="100",
             db=None,
             current_user=None,
         )
@@ -112,6 +115,7 @@ async def test_etapas_invalida_se_valida_antes_de_leer_el_archivo():
             mes_inicio_anio=7,
             variable_diaria="pico",
             alfa="0.05",
+            cobertura_minima_interior="100",
             db=None,
             current_user=None,
         )

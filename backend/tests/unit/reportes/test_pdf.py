@@ -595,6 +595,38 @@ def test_datos_nombran_la_variable_diaria_declarada(
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("resolucion", "config", "esperado"),
+    [
+        ("mensual", {"cobertura_minima_interior": 90}, "90 %"),
+        ("diaria", {"cobertura_minima_interior": 100}, "100 %"),
+        (
+            "mensual",
+            {
+                "cobertura_minima_interior": 100,
+                "cobertura_minima_interior_implicita": True,
+            },
+            "100 % (el único criterio disponible cuando se corrió el análisis)",
+        ),
+        ("anual", {"cobertura_minima_interior": 90}, None),
+    ],
+    ids=["mensual 90", "diaria 100", "análisis anterior", "anual sin fila"],
+)
+def test_datos_informan_la_cobertura_minima_interior(
+    detalle_completo, est, resolucion, config, esperado
+):
+    # DECISIÓN 081 — solo con carga mensual o diaria; con anual no hubo agregación.
+    detalle = _con_carga(detalle_completo, resolucion, **config)
+    textos = _textos(_seccion_datos(detalle, None, est))
+
+    filas = [t for t in textos if t.startswith("Cobertura mínima de los años interiores")]
+    if esperado is None:
+        assert filas == []
+    else:
+        assert filas == [f"Cobertura mínima de los años interiores | {esperado}"]
+
+
+@pytest.mark.unit
 def test_pdf_con_carga_diaria_es_valido(detalle_completo):
     detalle = _con_carga(detalle_completo, "diaria", variable_diaria="media")
     assert _es_pdf(generar_pdf_analisis(detalle))

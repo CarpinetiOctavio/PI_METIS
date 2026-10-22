@@ -37,6 +37,8 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_VARIABLE_DIARIA_INVALID:
     "El tipo de dato de la serie diaria no es válido — debe ser pico, media o acumulado del día.",
   CONTRACT_ALFA_INVALID: "El nivel de significancia debe ser 1 %, 5 % o 10 %.",
+  CONTRACT_COBERTURA_INVALID:
+    "La cobertura mínima de los años interiores tiene que ser un porcentaje entero entre 50 y 100.",
   CONTRACT_SERIES_INVALID:
     "La serie que se mandó a recalcular no es válida: tiene que tener entre 1 y 500 valores numéricos.",
   CONTRACT_EXCLUSION_INVALID:

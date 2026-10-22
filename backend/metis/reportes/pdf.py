@@ -680,6 +680,15 @@ def _texto_alfa(config: dict) -> str:
     return texto
 
 
+def _texto_cobertura(config: dict) -> str:
+    """DECISIÓN 081. Un análisis anterior a que la cobertura fuera configurable
+    se agregó con 100 % sin registrarlo (`cobertura_minima_interior_implicita`)."""
+    texto = f"{config.get('cobertura_minima_interior', 100)} %"
+    if config.get("cobertura_minima_interior_implicita"):
+        return f"{texto} (el único criterio disponible cuando se corrió el análisis)"
+    return texto
+
+
 def _texto_confianza(config: dict) -> str:
     """Nivel de confianza 1 − α de las bandas de Anderson (Ec. III-3), como el
     rótulo de la interfaz (`frontend/src/i18n/alfa.ts`): "95 %", "90 %"."""
@@ -712,6 +721,10 @@ def _seccion_datos(detalle: dict, autor: str | None, est) -> list:
                 "Valores diarios",
                 _VALORES_DIARIOS.get(config["variable_diaria"], "Picos diarios"),
             ]
+        )
+    if resolucion in ("mensual", "diaria"):
+        filas.append(
+            ["Cobertura mínima de los años interiores", _texto_cobertura(config)]
         )
     if "cramer_particion" in config:
         filas.append(

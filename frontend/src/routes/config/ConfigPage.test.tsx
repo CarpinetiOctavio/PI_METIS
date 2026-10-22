@@ -484,6 +484,50 @@ describe("ConfigPage", () => {
     expect(form.variable_diaria).toBe("acumulado");
   });
 
+  // DECISIÓN 081 — cobertura mínima de los años interiores.
+
+  it("manda la cobertura elegida para una serie mensual", async () => {
+    await subirColumnaXCon(["1980-01-15", "1980-02-15"]);
+
+    const campo = screen.getByLabelText("Cobertura mínima de los años interiores (%)");
+    expect(campo).toHaveValue(100);
+    expect(campo).toBeEnabled();
+    expect(screen.getByText(/método de relleno por fuera de METIS/)).toBeInTheDocument();
+    fireEvent.change(campo, { target: { value: "90" } });
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    const form = JSON.parse(
+      (await screen.findByTestId("stream-state")).textContent ?? "null",
+    );
+    expect(form.cobertura_minima_interior).toBe(90);
+  });
+
+  it("valida la cobertura en línea y no manda el pedido fuera de 50 a 100", async () => {
+    await subirColumnaXCon(["1980-01-15", "1980-02-15"]);
+
+    const campo = screen.getByLabelText("Cobertura mínima de los años interiores (%)");
+    fireEvent.change(campo, { target: { value: "49" } });
+    expect(campo).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getAllByText(/entero entre 50 y 100/)).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    expect(screen.queryByTestId("stream-state")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/entero entre 50 y 100/)).toHaveLength(2);
+  });
+
+  it("con la columna X en años deshabilita la cobertura y manda el valor por defecto", async () => {
+    await subirColumnaXCon(["1980", "1981", "1982"]);
+
+    const campo = screen.getByLabelText("Cobertura mínima de los años interiores (%)");
+    expect(campo).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    const form = JSON.parse(
+      (await screen.findByTestId("stream-state")).textContent ?? "null",
+    );
+    expect(form.cobertura_minima_interior).toBe(100);
+  });
+
   // Bloque E (plan post-avance) — panel de columnas acoplable.
 
   function stubFetchConPreview() {

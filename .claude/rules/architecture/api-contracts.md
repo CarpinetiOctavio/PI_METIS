@@ -192,6 +192,19 @@ análisis anterior que no lo tiene, `GET /history/{id}` devuelve `alfa: 0.05` co
 (10 % de los coeficientes fuera de banda, regla fija confirmada por Facundo el
 21/10/2026) no dependen de α; la Etapa 2 no tiene nivel de significancia.
 
+**Agregado 22/10/2026 (DECISIÓN 081) — `cobertura_minima_interior: str =
+Form("100")`.** Cobertura mínima de los años **interiores** al agregar una
+carga mensual o diaria a máximos anuales, en porcentaje entero de **50 a
+100** (100 por defecto: el criterio estricto de antes). Llega como texto y se
+valida en el borde → 400 `CONTRACT_COBERTURA_INVALID` fuera de rango o si no
+es entero. Los años de los extremos siempre exigen 100 %. Con carga anual se
+acepta y se ignora. Viaja en `result_etapa1.datos.cobertura_minima_interior`
+(`null` con carga anual) y se persiste en
+`analyses.configuracion.cobertura_minima_interior`; al leer un análisis
+anterior, `GET /history/{id}` devuelve `100` con
+`cobertura_minima_interior_implicita: true` (sin backfill). Un año interior
+aceptado incompleto emite `CONTRACT_INCOMPLETE_YEARS_ACCEPTED`.
+
 **Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
 050. Excepción a la regla general de esta sección: como el archivo se lee
 completo (en chunks, con corte temprano) **antes** de construir el
@@ -391,7 +404,7 @@ llegaba a `HistoryDetailPage`).
   },
   "serie": [94.71, 89.83],
   "timestamps": [{"iso": "1980-01-01", "anio": 1980}],
-  "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7},
+  "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7, "alfa": 0.05, "cobertura_minima_interior": 100},
   "exclusiones": []
 }
 ```
@@ -901,11 +914,9 @@ warning y una lectura distinta de los resultados.
 
 `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (DECISIÓN 065, R2.3) solo se emite
 cuando un año **interior** se acepta con cobertura por debajo del 100% —
-posible únicamente con `cobertura_minima_interior < 1.0`. El valor
-provisorio es `1.0` (estricto, R0.1 pendiente de Facundo), así que hoy este
-código **no se emite nunca**: el código, el catálogo, la traducción y el
-test entran igual para que habilitar el umbral sea cambiar una constante
-(`COBERTURA_MINIMA_INTERIOR` en `core/validacion/aggregation.py`) y nada más.
+posible únicamente con `cobertura_minima_interior < 100`, que el usuario
+elige desde la DECISIÓN 081 (R0.1 respondida por Facundo el 22/10/2026). Con
+el valor por defecto (100) no se emite.
 Los años de los **extremos** siempre exigen 100% (regla asimétrica) y se
 recortan con `CONTRACT_PARTIAL_YEARS_TRIMMED`.
 
@@ -938,6 +949,8 @@ CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media"
                                         "acumulado" desde la revisión del 22/10/2026)
 CONTRACT_ALFA_INVALID                  alfa fuera de {0.01, 0.05, 0.10} en POST /analysis/stream o en
                                         POST /analysis/simulate-exclusion (DECISIÓN 078)
+CONTRACT_COBERTURA_INVALID             cobertura_minima_interior de POST /analysis/stream fuera de [50..100] o no
+                                        entera (DECISIÓN 081)
 CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusion vacía, con más de 500 valores o con
                                         valores no finitos (DECISIÓN 071)
 CONTRACT_EXCLUSION_INVALID             indices_excluidos fuera de rango o repetidos, anios de otro largo que serie, o

@@ -24,6 +24,7 @@ from metis.core.validacion.aggregation import (
     MOTIVO_HUECO_INTERIOR,
     AgregacionResult,
     agregar_a_maximos_anuales,
+    validar_cobertura_minima_interior,
 )
 from metis.core.validacion.contract import timestamps_desordenados, validar_contrato
 
@@ -120,9 +121,9 @@ def _warnings_de_agregacion(
         )
 
     # R2.3 — años interiores aceptados por debajo del 100 % de cobertura.
-    # Solo posible con cobertura_minima_interior < 1.0 (hoy el default 1.0
-    # deja esta lista siempre vacía); el máximo de esos años está sesgado a
-    # la baja y no puede quedar invisible.
+    # Solo posible con cobertura_minima_interior < 1.0, que el usuario elige
+    # desde la DECISIÓN 081 (el default 1.0 deja esta lista vacía); el máximo
+    # de esos años está sesgado a la baja y no puede quedar invisible.
     aceptados = agregacion.periodos_incompletos_aceptados
     if aceptados:
         detalle = ", ".join(
@@ -189,10 +190,16 @@ def ejecutar_etapa1(
     mes_inicio_anio: int = 7,
     variable_diaria: str = "pico",
     alfa: float = ALFA_DEFECTO,
+    cobertura_minima_interior: float | None = None,
 ) -> Etapa1Result:
     # Nivel de significancia de las ocho pruebas (DECISIÓN 078). Se valida acá
     # también, aunque el borde de la API ya lo hizo: core/ no confía en el borde.
     validar_alfa(alfa)
+    # DECISIÓN 081 — fracción de unidades que hace aceptable un año interior al
+    # agregar. None = el valor por defecto de la resolución (estricto). Solo
+    # tiene efecto con carga mensual o diaria.
+    if cobertura_minima_interior is not None:
+        validar_cobertura_minima_interior(cobertura_minima_interior)
 
     # Capturados ANTES del paso 0 — PR 3 del plan de cierre de pendientes
     # no-test (DECISIÓN 058). serie/timestamps/resolucion_temporal se
@@ -272,7 +279,11 @@ def ejecutar_etapa1(
             timestamps,
             mes_inicio_anio,
             resolucion=resolucion_temporal,
-            cobertura_minima_interior=COBERTURA_MINIMA_INTERIOR[resolucion_temporal],
+            cobertura_minima_interior=(
+                COBERTURA_MINIMA_INTERIOR[resolucion_temporal]
+                if cobertura_minima_interior is None
+                else cobertura_minima_interior
+            ),
         )
         serie = agregacion.serie
         timestamps = agregacion.timestamps

@@ -310,3 +310,15 @@ anuales y los mismos resultados (`test_pipeline_etapa1.py::test_carga_diaria_acu
 Con esto la sección "Exposición en la UI — bloqueada por R0.2" queda
 superada: R0.2 está respondida y el selector ya existía desde el PR 2.5.
 Casos de prueba: CE-05a a CE-05c en `docs/calidad/casos-de-prueba.md`.
+
+### Revisión 22/10/2026 — R0.1 cerrada: la cobertura de los años interiores la elige el usuario
+
+Facundo respondió R0.1 el 22/10/2026: "lo dejaría a criterio del operador, porque en general las series de datos
+pueden tener muchos faltantes y no existe otra fuente de información. También existen métodos de relleno de series,
+y el operador podría usarlas por fuera del programa y cargar luego la serie completa."
+
+`cobertura_minima_interior` deja de ser una constante provisoria y pasa a ser un parámetro del análisis, en
+porcentaje entero de 50 a 100 con 100 por defecto. El "valor provisorio 1.0" de la sección 2 queda como el valor por
+defecto; `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` se emite cuando el usuario elige menos de 100 y un año interior queda
+aceptado incompleto. La regla asimétrica no cambia: los extremos siguen exigiendo 100 %. Detalle completo, el piso del
+50 % y su motivo: [DECISIÓN 081](decision081.md).

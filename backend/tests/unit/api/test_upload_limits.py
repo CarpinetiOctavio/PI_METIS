@@ -84,6 +84,7 @@ async def test_stream_analysis_archivo_sobre_el_limite_da_400_antes_de_tocar_bd(
             mes_inicio_anio=7,
             variable_diaria="pico",
             alfa="0.05",
+            cobertura_minima_interior="100",
             db=None,
             current_user=None,
         )

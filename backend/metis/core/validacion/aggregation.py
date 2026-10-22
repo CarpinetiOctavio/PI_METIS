@@ -16,9 +16,10 @@ exactamente el comportamiento mensual ya auditado:
     aceptable el máximo de un año INTERIOR. Los años de los extremos
     siempre exigen 100 % (regla asimétrica, R2.3 — DECISIÓN 057 descarta
     los extremos parciales por el sesgo a la baja, y en un extremo la
-    parcialidad es la regla). Valor provisorio 1.0 (estricto) mientras
-    R0.1 espera respuesta de Facundo — con 1.0 esto es equivalente a la
-    igualdad de conjuntos del código mensual original.
+    parcialidad es la regla). Desde la DECISIÓN 081 (respuesta de Facundo
+    del 22/10/2026 a R0.1) lo elige el usuario, entre 0.5 y 1.0; el valor por
+    defecto sigue siendo 1.0 (estricto), equivalente a la igualdad de
+    conjuntos del código mensual original.
 
 Función pura, sin conocimiento de HTTP, BD ni sesiones — misma restricción
 de aislamiento que el resto de core/ (ver architecture.md).
@@ -37,14 +38,33 @@ MOTIVO_EXTREMO_FIN = "extremo_fin"
 MOTIVO_HUECO_INTERIOR = "hueco_interior"
 
 # Cobertura mínima de unidades para aceptar el máximo de un año interior,
-# por resolución de entrada (R0.1 / R3.1). Provisorio en 1.0 (estricto) —
-# el parámetro está cableado y probado para aceptar valores menores, pero
-# relajarlo necesita evidencia de registros reales de Facundo (ver el plan
-# §R0.1). Los años de los EXTREMOS ignoran esto: siempre exigen 100 %.
+# por resolución de entrada (R0.1 / R3.1). DECISIÓN 081: la elige el usuario
+# (Facundo, 22/10/2026: "lo dejaría a criterio del operador"); estos son los
+# valores por defecto cuando no la indica, estrictos como antes. Los años de
+# los EXTREMOS ignoran esto: siempre exigen 100 %.
 COBERTURA_MINIMA_INTERIOR: dict[str, float] = {
     "mensual": 1.0,
     "diaria": 1.0,
 }
+
+# Piso de la cobertura elegible (DECISIÓN 081): por debajo de la mitad del
+# período, el máximo de ese año deja de ser un máximo anual con sentido.
+COBERTURA_MINIMA_INTERIOR_PISO = 0.5
+
+# El mismo umbral en porcentaje entero, como lo eligen el usuario y el borde de
+# la API y como se persiste en analyses.configuracion (DECISIÓN 081).
+COBERTURA_MINIMA_INTERIOR_DEFECTO = 100
+COBERTURA_MINIMA_INTERIOR_PISO_PORCENTAJE = 50
+
+
+def validar_cobertura_minima_interior(cobertura: float) -> None:
+    """DECISIÓN 081 — fracción entre el piso (0.5) y 1.0. core/ no confía en el
+    borde de la API, mismo criterio que validar_alfa()."""
+    if not (COBERTURA_MINIMA_INTERIOR_PISO <= cobertura <= 1.0):
+        raise ValueError(
+            f"cobertura_minima_interior debe estar entre "
+            f"{COBERTURA_MINIMA_INTERIOR_PISO} y 1.0, no {cobertura}"
+        )
 
 
 @dataclass

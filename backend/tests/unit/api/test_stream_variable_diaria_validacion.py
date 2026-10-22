@@ -35,6 +35,7 @@ async def _llamar(variable_diaria: str):
         mes_inicio_anio=7,
         variable_diaria=variable_diaria,
         alfa="0.05",
+        cobertura_minima_interior="100",
         db=None,
         current_user=None,
     )

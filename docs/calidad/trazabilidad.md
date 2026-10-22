@@ -29,7 +29,7 @@ define requisitos no funcionales: las características de calidad se trazan en `
 | P-07 | Resultado individual por prueba | Implementado | — | `unit/core/etapa1/test_desglose.py`, `unit/services/test_serializar_etapa1.py`; `routes/results/Etapa1Desglose.test.tsx`, `i18n/explicaciones.test.ts` | — |
 | P-08 | Ejecución de la Etapa 2 | Implementado con salvedad | VL-04a–b, VL-05a–d | `unit/core/etapa2/` (12 archivos), `unit/core/pipeline/test_pipeline_etapa2.py`, `integration/test_etapa2_stream_distribution_decision.py`; `routes/results/Etapa2RankingView.test.tsx` | D-08, D-09 |
 | P-09 | Comportamiento ante casos especiales | Implementado | TD-05 c1–c4, CE-02a–d | `unit/core/pipeline/test_disabled_negatives.py`, `test_pendientes_validacion.py`, `unit/core/etapa2/distributions/test_guards_dominio.py`, `unit/core/etapa1/test_outliers.py` | — |
-| P-10 | Agregación temporal a máximos anuales | Implementado | VL-03a–d, CE-01b–c, CE-05a–b | `unit/core/validacion/test_aggregation.py`, `integration/test_stream_agregacion_mensual.py`, `test_stream_agregacion_diaria.py`, `test_stream_anual_celda_vacia.py`, `unit/api/test_stream_variable_diaria_validacion.py` | D-03, D-04, D-05 |
+| P-10 | Agregación temporal a máximos anuales (cobertura de los años interiores a elección del usuario, DECISIÓN 081) | Implementado | VL-03a–d, CE-01b–c, CE-05a–c, VL-11a–e, CE-08a–c, TD-06a–g | `unit/core/validacion/test_aggregation.py`, `integration/test_stream_agregacion_mensual.py`, `test_stream_agregacion_diaria.py`, `test_stream_anual_celda_vacia.py`, `unit/api/test_stream_variable_diaria_validacion.py`, `unit/casos_dinamicos/test_cobertura_minima_interior.py` | D-03, D-04, D-05 |
 
 ## 2. Requisitos generales de salida (RF-GEN-O)
 

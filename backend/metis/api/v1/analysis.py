@@ -12,6 +12,10 @@ from metis.api.deps import get_current_user, get_db, get_optional_user
 from metis.core.etapa1.significancia import NIVELES_ALFA
 from metis.core.etapa2.distributions import PENDIENTES_VALIDACION
 from metis.core.pipeline.exclusiones import ExclusionInvalidaError
+from metis.core.validacion.aggregation import (
+    COBERTURA_MINIMA_INTERIOR_DEFECTO,
+    COBERTURA_MINIMA_INTERIOR_PISO_PORCENTAJE,
+)
 from metis.core.validacion.parser import leer_columnas_preview
 from metis.db.models.user import User
 from metis.schemas.analysis import (
@@ -131,6 +135,35 @@ def _validar_alfa(alfa: str | float) -> float:
     return valor
 
 
+_COBERTURA_INVALIDA = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "CONTRACT_COBERTURA_INVALID",
+            "mensaje": (
+                "cobertura_minima_interior debe ser un porcentaje entero entre "
+                f"{COBERTURA_MINIMA_INTERIOR_PISO_PORCENTAJE} y 100."
+            ),
+        }
+    },
+)
+
+
+def _validar_cobertura_minima_interior(cobertura: str | int) -> int:
+    """DECISIÓN 081 — cobertura mínima de los años interiores al agregar una
+    carga mensual o diaria, en porcentaje entero de 50 a 100 (100 por defecto,
+    el criterio estricto de antes). Llega como texto en el multipart: un valor
+    no entero también es CONTRACT_COBERTURA_INVALID, no un 422 genérico. Con
+    carga anual se acepta y se ignora, como mes_inicio_anio."""
+    try:
+        valor = int(cobertura)
+    except (TypeError, ValueError):
+        raise _COBERTURA_INVALIDA from None
+    if not (COBERTURA_MINIMA_INTERIOR_PISO_PORCENTAJE <= valor <= 100):
+        raise _COBERTURA_INVALIDA
+    return valor
+
+
 def _cramer_particion_invalida(mensaje: str) -> HTTPException:
     return HTTPException(
         status_code=400,
@@ -245,6 +278,7 @@ async def stream_analysis(
     mes_inicio_anio: int = Form(7),
     variable_diaria: str = Form("pico"),
     alfa: str = Form("0.05"),
+    cobertura_minima_interior: str = Form(str(COBERTURA_MINIMA_INTERIOR_DEFECTO)),
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
@@ -259,6 +293,7 @@ async def stream_analysis(
     mes_inicio_valido = _validar_mes_inicio(mes_inicio_anio)
     variable_diaria_valida = _validar_variable_diaria(variable_diaria)
     alfa_valido = _validar_alfa(alfa)
+    cobertura_valida = _validar_cobertura_minima_interior(cobertura_minima_interior)
     content = await _leer_archivo_limitado(archivo)
     session_id = str(uuid.uuid4())
 
@@ -278,6 +313,7 @@ async def stream_analysis(
             mes_inicio_anio=mes_inicio_valido,
             variable_diaria=variable_diaria_valida,
             alfa=alfa_valido,
+            cobertura_minima_interior=cobertura_valida,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
