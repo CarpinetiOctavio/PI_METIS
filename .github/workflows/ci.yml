@@ -18,9 +18,13 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: pip-${{ hashFiles('backend/requirements.txt') }}
+          key: pip-${{ hashFiles('backend/requirements.lock') }}
           restore-keys: pip-
-      - run: pip install ruff==0.15.12
+      # Solo wheels (SonarCloud S8541): ningún paquete corre scripts de instalación.
+      - run: |
+          pip install --only-binary :all: ruff==0.15.12
+      # El lock con hashes tiene que estar al día con requirements.txt (DECISIÓN 082).
+      - run: python scripts/check_requirements_lock.py
       - run: ruff check metis/
         working-directory: backend
       - run: ruff format --check metis/
@@ -69,9 +73,11 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: pip-${{ hashFiles('backend/requirements.txt') }}
+          key: pip-${{ hashFiles('backend/requirements.lock') }}
           restore-keys: pip-
-      - run: pip install -r requirements.txt
+      # Versiones y hashes fijados, solo wheels (DECISIÓN 082; SonarCloud S8541 y S8544).
+      - run: |
+          pip install --only-binary :all: --require-hashes -r requirements.lock
         working-directory: backend
       # Paso explícito: nada en la app aplica las migraciones al arrancar (incidente del 05/08/2026).
       - run: alembic upgrade head

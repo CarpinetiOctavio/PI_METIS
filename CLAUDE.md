@@ -168,6 +168,7 @@ así que marcar checks como requeridos es un paso manual suyo. Ver [decision077.
 
 ### Reglas de flujo de trabajo que no se deducen del código
 
+- **Dependencia nueva o actualizada del backend:** se cambia en `backend/requirements.txt` y se regenera `backend/requirements.lock` (comando en su encabezado) **en el mismo commit**: CI y la imagen Docker instalan desde el lock con `--require-hashes`, y el job `lint` falla si no coinciden (`scripts/check_requirements_lock.py`, DECISIÓN 082).
 - **Código de error nuevo** (emitido por `core/`/`services/`/`api/`, o inventado por el frontend): se agrega a `api-contracts.md` y a `frontend/src/i18n/errors.es.ts` **en el mismo commit** — si no, falla el job `error-catalog`.
 - **`docs/decisiones/decisionNNN.md` nuevo:** hacer `git fetch` y comparar el número más alto contra `origin/staging` antes de elegir NNN (hay ramas en paralelo). Hay números reservados sin archivo (035, 072) — no reutilizarlos.
 - **PR que toca `frontend/`:** además de lint + test + build, correr el flujo en el navegador después del último commit y dejar evidencia (captura o pestaña Network). Los tests bajo `StrictMode` no reemplazan esto — ver `.claude/rules/testing.md`, "Capa 4".

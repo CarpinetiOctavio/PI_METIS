@@ -2,8 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Versiones y hashes fijados, solo wheels (DECISIÓN 082; SonarCloud S8541 y S8544).
+COPY requirements.lock .
+RUN pip install --no-cache-dir --only-binary :all: --require-hashes -r requirements.lock
 
 # Solo lo que la imagen usa, no el contexto entero (SonarCloud S6470). tests/ entra porque el smoke del
 # despliegue corre pytest dentro de esta imagen (scripts/test.sh smoke).
