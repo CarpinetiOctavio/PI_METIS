@@ -157,7 +157,7 @@ junto (F1, F4, F5, F6, F9 del informe de diagnóstico). Habilitada por
 [DECISIÓN 046](../../docs/decisiones/decision046.md): Playwright en
 `frontend/e2e/`, seis escenarios (E2E-0 a E2E-5) contra el build de
 producción detrás de nginx, con el registro probado contra Mailpit (DECISIÓN
-049). Corren en el job `despliegue` de CI en cada PR, después del smoke, y
+049). Corren en el job `despliegue` de CI en cada push y PR, después del smoke, y
 en local con `scripts/deploy-local.sh` + `npm run test:e2e`. Nunca contra
 `npm run dev` (StrictMode de desarrollo duplica efectos). Escenarios y
 reglas para sumar uno: `docs/calidad/despliegue-y-e2e.md`.

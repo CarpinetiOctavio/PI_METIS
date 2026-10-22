@@ -160,7 +160,7 @@ Los ocho jobs del CI en verde (`.github/workflows/ci.yml`):
 - `error-catalog`: catálogo de errores sincronizado.
 - `frontend`: lint, tests y build.
 - `quality-gate`: cobertura del código nuevo ≥ 80 % (backend y frontend, `diff-cover`) y duplicación ≤ 5 % (`jscpd`).
-- `despliegue`: smoke y, en PR, los seis E2E.
+- `despliegue`: smoke y los seis E2E, en cada push y PR.
 - `carga` (en PR): p95 y tasa de error dentro de los umbrales.
 - `sonarcloud`: quality gate de SonarCloud aprobado, con la cobertura importada (B13).
 

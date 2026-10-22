@@ -19,7 +19,7 @@ cada corrida; los de carga, de `docs/calidad/herramienta-carga.md`.
 | OC-U3 | **Respuesta ágil del análisis** | p95 por endpoint con 15 usuarios concurrentes | `preview-columns` < 150 ms, `stream` (Etapa 1) < 250 ms, `simulate-exclusion` (Etapa 2) < 500 ms | 43, 72 y 147 ms (local); 5, 7 y 45 ms (CI) | Job `carga`, `carga/umbrales.json` | Stress con umbrales en cada PR (DECISIÓN 077) |
 | OC-U4 | **Disponible sin errores bajo uso sostenido** | Tasa de error y crecimiento de memoria con 5 usuarios durante 30 min | Error < 1 %; memoria < 50 MB/h | 0 % y +0,3 MB/h | `carga-sostenida.yml` | Esfuerzo sostenido manual y semanal |
 | OC-U5 | **Los errores se entienden** | Códigos emitidos por el backend sin traducción en el frontend | 0 | 0 | Job `error-catalog` | Catálogo sincronizado en tres lugares (DECISIÓN 038); estructura de error estándar (#106) |
-| OC-U6 | **Los flujos principales funcionan de punta a punta** | Escenarios E2E de CU-01 y CU-02 en verde | 6 de 6 en cada PR | 6 de 6 | Job `despliegue`, `reporte-e2e` | Playwright contra el build de producción (DECISIÓN 046) |
+| OC-U6 | **Los flujos principales funcionan de punta a punta** | Escenarios E2E de CU-01 y CU-02 en verde | 6 de 6 en cada despliegue (push y PR) | 6 de 6 | Job `despliegue`, `reporte-e2e` | Playwright contra el build de producción (DECISIÓN 046) |
 
 ## 2. Para el equipo de desarrollo
 

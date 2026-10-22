@@ -88,7 +88,7 @@ credenciales del usuario sembrado (`E2E_EMAIL`/`E2E_PASSWORD`); los specs no tra
 Las series están copiadas en `frontend/e2e/fixtures/` (no referenciadas desde `docs/series prueba/`): si cambia la
 serie de docs, el E2E no se rompe en silencio. `serie_8_datos.csv` son los primeros 8 años de `serie_con_atipico.csv`.
 
-**En CI** (job `despliegue`): el smoke corre en cada push y PR; los E2E, en cada PR a `staging`/`main`. El reporte
+**En CI** (job `despliegue`): el smoke y los E2E corren en cada push y PR a `staging`/`main` (desde el 22/10/2026; antes los E2E solo en PR). El reporte
 HTML (`reporte-e2e`) se sube siempre, también en verde, con trazas y video de lo que falle.
 
 **Reglas para escribir un escenario nuevo:** llegar a `/stream` y `/results` con clicks (el formulario viaja como

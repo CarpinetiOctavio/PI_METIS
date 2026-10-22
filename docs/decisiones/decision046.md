@@ -88,3 +88,15 @@ hueco. La capa 3 (E2E) quedó pendiente de esta decisión, y la verificación ma
   `reporte-e2e` se sube siempre.
 - Primera corrida local contra el despliegue: 7/7 en verde. El único rojo intermedio fue un selector del propio test
   (`getByText("en vivo")` también encontraba el título "Análisis en vivo"), no un defecto de la aplicación.
+
+### Addendum (22/10/2026): los E2E corren en cada despliegue, no solo en PR
+
+- **Cambio:** el job `despliegue` corre los E2E también en los push a `staging` y `main`, y sube `reporte-e2e`
+  siempre. El punto 4 de esta decisión (solo en PR) queda reemplazado.
+- **Por qué:** la tabla de metas del TP de Calidad pide para el Nivel 3 un flujo E2E automatizado "en cada
+  despliegue", y el job `despliegue` despliega el stack completo en cada push y en cada PR. Con los E2E solo en PR,
+  el despliegue del push a `staging` (el estado que queda integrado) se verificaba con el smoke pero no con los
+  flujos de punta a punta.
+- **Costo:** el paso de E2E suma unos minutos por push (instalación de Chromium y los seis escenarios); el job
+  `despliegue` corre en paralelo con el resto, así que el pipeline completo se alarga menos que eso. El stress
+  (`carga`) sigue solo en PR.
