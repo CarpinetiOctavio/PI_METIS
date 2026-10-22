@@ -555,7 +555,8 @@ El ajuste es **automático y exhaustivo** — sin intervención del usuario.
 
 > **Nota sobre métodos ME y MC:** ME = Máxima Entropía, MC = Mínimos Cuadrados.
 > Confirmados solo para las distribuciones donde aparecen en la tabla.
-> Pendiente confirmar con Facundo si aplican a otras distribuciones.
+> Facundo (22/10/2026): probablemente apliquen a otras, pero no los usó →
+> versión 2 (`docs/pendientes-tecnicos.md`).
 > Fuente: formulas-etapa2.md — Gumbel IV-190/IV-198, Gen. Pareto IV-153/IV-155.
 
 **GVE con Momentos-L:** usar aproximación de Hosking (1985) para estimar κ (IV-234 a IV-242).

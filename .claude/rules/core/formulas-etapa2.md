@@ -463,10 +463,11 @@ MV: sistema iterativo IV-140 a IV-143
     ψ(β) ≈ ln(β) - 1/(2β) - 1/(12β²)
 
 MPP (Momentos de Probabilidad Pesada):
-  PENDIENTE — Tabla IV-1 de la tesis indica "Sí" para este método,
+  VERSIÓN 2 — Tabla IV-1 de la tesis indica "Sí" para este método,
   pero el capítulo IV no desarrolla las ecuaciones correspondientes.
-  Inconsistencia interna de la tesis. Escalar a Facundo antes
-  de implementar.
+  Respuesta de Facundo (22/10/2026): no contaba con las ecuaciones ni
+  con las tablas; "si lo consiguen, estaría bueno que esté incluido".
+  No se implementa en V1.0 (docs/pendientes-tecnicos.md).
 
 Cuantil:
   xT = x̂0 + α̂·β̂·(1 - 1/(9·β̂) + UT·√(1/(9·β̂)))³    (IV-144)
@@ -761,12 +762,12 @@ NOTA: Método Indirecto produce mejores resultados en la práctica (tesis)
 
 ## Pendientes — requieren confirmación de Facundo antes de implementar
 
-1. Gamma 3p + MPP: confirmar qué ecuaciones conectan M0, M1, M2
-   con los parámetros α, β, x0 de esta distribución específica.
+1. ~~Gamma 3p + MPP: confirmar qué ecuaciones conectan M0, M1, M2
+   con los parámetros α, β, x0 de esta distribución específica.~~
+   Respondida 22/10/2026: Facundo no tenía las ecuaciones → versión 2.
 
-2. Gamma 3p + MPP: Tabla IV-1 indica "Sí" para este método pero el
-   capítulo IV no desarrolla las ecuaciones. Inconsistencia interna
-   de la tesis. Escalar a Facundo antes de implementar.
+2. ~~Gamma 3p + MPP: Tabla IV-1 indica "Sí" para este método pero el
+   capítulo IV no desarrolla las ecuaciones.~~ Misma respuesta → versión 2.
 
 3. Comportamiento ante ceros para estas 5 distribuciones:
    Gamma 3p, Exponencial x0β, Generalizada Pareto,
@@ -775,4 +776,6 @@ NOTA: Método Indirecto produce mejores resultados en la práctica (tesis)
 4. ME y MC como métodos generales:
    ME = Máxima Entropía (confirmado para Gumbel, IV-190 a IV-198)
    MC = Mínimos Cuadrados (confirmado para Gen. Pareto, IV-153 a IV-155)
-   Confirmar si aplican a otras distribuciones y cuáles.
+   Respondida 22/10/2026: probablemente apliquen a otras distribuciones
+   (y existan las variantes "Estándar" y "Corregidos" de MC), pero Facundo
+   no las usó → versión 2. En V1.0 quedan solo donde la tesis los desarrolla.

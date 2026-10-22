@@ -1,5 +1,39 @@
 # Pendientes para Facundo — Auditoría de Regresión METIS
 
+## Respuestas del 22/10/2026
+
+Facundo respondió el 22/10/2026 el "Consolidado de pendientes y decisiones de la auditoría del motor estadístico"
+(versión 3, 09/09/2026). Cada sección respondida lleva la marca **RESPONDIDA 22/10/2026** en el título, con la respuesta
+y su destino debajo; las que siguen abiertas, **A PRESENTAR EN REUNIÓN**. Se marcan en su lugar, como la respuesta
+del 21/10/2026 sobre Anderson, para no romper los enlaces que apuntan a cada sección. Las citas entre comillas son
+textuales; el resto es un resumen. Plan de implementación: `docs/plan-respuestas-facundo-22-10-2026.md`.
+
+| Pregunta | Destino |
+|---|---|
+| Cramer, redondeo de la partición | Cerrada: se mantiene la convención actual (revisión de la DECISIÓN 011) |
+| Una o dos colas en Cramer y t de Student | Cerrada: dos colas, sin cambios |
+| Mann-Kendall con n = 7 | Cerrada: no se alcanza; nuevo texto del aviso de longitud |
+| Causa C | Explicación reconstruida, no confirmable (sin planillas) |
+| Log-Pearson III, método directo | Cerrada: se mantiene "no aplicable" |
+| Gamma 3p con el origen por encima del mínimo | Cerrada: bloquear todo el cálculo |
+| Log-Normal 2p no aplicable | Cerrada: valores negativos (DECISIÓN 073) |
+| Log-Pearson III por MV | Cerrada: explica la Causa B |
+| Variantes de Mínimos Cuadrados; ME/MC en otras distribuciones | Versión 2 |
+| Gamma 3p por MPP | Versión 2: no tenía las ecuaciones ni las tablas; "si lo consiguen, estaría bueno que esté incluido" |
+| Momentos y MV en Normal y Log-Normal 2p | Cerrada: no se elimina ninguno, el usuario elige |
+| Cobertura de años interiores (R0.1) | Cerrada: DECISIÓN 081 |
+| Diaria, promedio o pico (R0.2) | Cerrada: opción "acumulado" (revisión de la DECISIÓN 065) |
+| Diaria a anual directo (R0.3) | Cerrada |
+| Agregación para "otro" | Versión 2 |
+| Mes de inicio en las 9 estaciones | Cerrada: julio a junio (DECISIÓN 057) |
+| Caudal y precipitación | Cerrada: no hay diferencia de tratamiento (vale también para viento, evaporación, alturas de río) |
+| Pareto por MC y Gen. Exponencial por Momentos-L (Parte C) | Cerradas: "sigan adelante con la decisión tomada" (DECISIONES 068 y 069) |
+
+**A presentar en reunión:** U_T, convenciones de signo de la Generalizada de Pareto, partición de t de Student con
+n impar, y una o dos colas en Mann-Kendall (`.claude/rules/core/formulas-etapa1.md` §7, hallazgo H-2 de la auditoría
+de fórmulas: METIS usa 1,96 y la Tabla A.4 da 1,64).
+
+
 ## Decisiones implementadas que requieren confirmación
 
 ### Pregunta relacionada a DECISIÓN 013 — Fórmula de asimetría (g)
@@ -10,7 +44,16 @@ y LN3p Momentos. GVE Momentos tiene problema separado — ver sección
 Pregunta: ¿La implementación correcta de METIS debe usar IV-4/IV-5
 o replicar el comportamiento de Excel SKEW()?
 
-### Pregunta relacionada a DECISIÓN 011 — Partición de Cramer (n_w1, n_w2)
+### Pregunta relacionada a DECISIÓN 011 — Partición de Cramer (n_w1, n_w2) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** "Es indistinto, seguir con el redondeo hacia abajo".
+
+**Decidido por Kevin el 22/10/2026: se mantiene la convención actual** (60 % hacia arriba, 30 % al entero más cercano),
+que reproduce los valores publicados de las estaciones 2 y 4. Pasar todo a redondeo hacia abajo no cambia ningún
+veredicto en las nueve estaciones (verificado el 22/10/2026), pero deja de reproducir esos valores, y el autor considera
+indistinta la elección. No se toca el código. Ver la revisión del 22/10/2026 de la
+[DECISIÓN 011](../../decisiones/decision011.md). **Cerrada.**
+
 METIS usa ceil(n×0.60) para n_w1 y round(n×0.30) para n_w2.
 Inferido del comportamiento numérico de la tesis. La tesis no
 explicita la regla de redondeo.
@@ -165,7 +208,11 @@ auditadas). El método (comparar CV teórico de IV-77, vía digamma/trigamma,
 contra el CV real de la serie) es más riguroso que la nota anterior — no
 depende de qué estación es cuál, solo de la serie y el α reportado.
 
-### Gen. Exponencial — Método Momentos L (IV-83/84)
+### Gen. Exponencial — Método Momentos L (IV-83/84) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026, Parte C):** no tiene el material; "sigan adelante con la decisión tomada".
+**Cerrada:** queda la [DECISIÓN 069](../../decisiones/decision069.md).
+
 METIS produce lambda negativo (est_03: -0.013, est_04: -0.00013).
 Tesis reporta lambda negativo también en est_03 (-0.0069) pero con
 magnitud diferente.
@@ -268,7 +315,11 @@ transcripción en la propia tesis, no en METIS. Escalado de forma no
 bloqueante en el documento de escalamiento a Facundo/Carlos (Parte C —
 no requiere respuesta para avanzar).
 
-### LP3 Método Directo — restricción B ∈ (3, 6]
+### LP3 Método Directo — restricción B ∈ (3, 6] — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** pudo haber usado material que hoy no tiene. **Cerrada:** se mantiene
+"no aplicable" fuera de B ∈ (3, 6].
+
 METIS aplica NO_APLICABLE cuando B ∉ (3, 6] (est_03: B=2.63).
 Facundo reporta parámetros y EEA=64.37 para el mismo caso.
 Pregunta: ¿Aplicás algún guard sobre B, o calculás los parámetros
@@ -290,7 +341,11 @@ y0=4.967, EEA=76.4185) contra la ficha real de cada estación puntual —
 coinciden todas, sin cruce entre estaciones. La pregunta original sigue
 abierta — esto solo cierra la duda de numeración de la NOTA 10/07/2026.
 
-### Log-Normal 2p — NO_APLICABLE sin ceros en la serie
+### Log-Normal 2p — NO_APLICABLE sin ceros en la serie — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** probablemente por valores negativos. **Cerrada,** coherente con la
+[DECISIÓN 073](../../decisiones/decision073.md) (`disabled_negatives`).
+
 Facundo reporta NO_APLICABLE para LN2p en est_03 y est_04 aunque
 la serie no tiene ceros. METIS calcula EEA normalmente.
 
@@ -314,7 +369,10 @@ compartir el mismo topónimo de localidad con río distinto — el par que
 más se prestaba a confundirse. La pregunta original sigue abierta —
 esto solo cierra la duda de numeración de la NOTA 10/07/2026.
 
-### Gamma 3p — parámetros calculados con x0 > min(serie)
+### Gamma 3p — parámetros calculados con x0 > min(serie) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** de acuerdo con bloquear todo el cálculo. **Cerrada, sin cambios.**
+
 Facundo reporta parámetros para Gamma 3p Momentos y MPP en est_03
 y est_04 aunque x0 > min(serie), pero marca EEA=NO_APLICABLE.
 METIS marca NO_APLICABLE desde la estimación de parámetros.
@@ -363,7 +421,14 @@ un único criterio de tesis para reconstruir en METIS, ni siquiera
 
 ---
 
-## Discrepancias en EEA sin explicación (Causa C)
+## Discrepancias en EEA sin explicación (Causa C) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** no usaba funciones nativas de Excel, atribuye la divergencia a un error
+de transcripción o a un valor de la ecuación mal escrito, y no conserva las planillas. **Queda como explicación
+reconstruida** por la comparación del 08/10/2026 (U_T con F en lugar de 1 − F,
+[hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md)), no confirmable contra la planilla
+original. La pregunta puntual sobre U_T (más abajo, "Comparación con otras herramientas") se presenta en la reunión.
+
 
 **ACTUALIZADO 08/10/2026: causa identificada.** La planilla calcula U_T (IV-102) con F en lugar de
 1 − F cuando F > 0,5, contra IV-105. Con esa regla se reproducen los cuantiles impresos de la tesis
@@ -570,7 +635,11 @@ Capítulo IV para este caso?
 
 ---
 
-### LP3 MV — est_06, convergencia genuina verificada con función exacta
+### LP3 MV — est_06, convergencia genuina verificada con función exacta — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** buscaba la convergencia con el Solver o a mano, y es esperable que METIS
+converja donde él no lo logró. **Cerrada** (explica la Causa B).
+
 **NUEVO 10/07/2026.** METIS converge (β=3.695, α=0.3225, y0=2.4205,
 EEA=10.9881); tesis reporta NO_CONVERGE.
 
@@ -597,7 +666,12 @@ resuelve este caso puntual, que no es de esa naturaleza.)
 
 ---
 
-### Generalizada Pareto — Mínimos Cuadrados (IV-153), verificación de baja confianza
+### Generalizada Pareto — Mínimos Cuadrados (IV-153), verificación de baja confianza — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026, Parte C):** no tiene el material; "sigan adelante con la decisión tomada".
+**Cerrada:** queda la [DECISIÓN 068](../../decisiones/decision068.md). Las convenciones de signo de la Generalizada de
+Pareto (DECISIÓN 074, más abajo) son otra pregunta y siguen abiertas.
+
 **NUEVO 10/07/2026.** A diferencia del resto del capítulo, la ecuación
 IV-153 no pudo verificarse con la misma confianza que las demás —
 la tipografía de la fuente (fracción con siete cantidades entremezcladas
@@ -682,7 +756,11 @@ Detalle completo, con las tres verificaciones paso a paso, en
 
 ---
 
-### Valor crítico de tabla — una cola vs. dos colas (est_08, Cramer/t-Student)
+### Valor crítico de tabla — una cola vs. dos colas (est_08, Cramer/t-Student) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** dos colas; las dos estaciones con el valor de una cola fueron un error de
+transcripción de la tesis. **Cerrada, sin cambios** (METIS ya usa dos colas).
+
 **NUEVO 15/07/2026.** La tesis imprime 1.6829 como valor crítico de Cramer
 y t-Student para est_08 (GL=41). Verificado (`scipy.stats.t.ppf`) que ese
 valor es el crítico de **una cola** al 5% (`t.ppf(0.95, 41)=1.6829`), no el
@@ -862,14 +940,25 @@ Movidas acá desde `core-etapa1-implementation.md` y
 son preguntas a Facundo, no documentación de comportamiento de código, y
 por eso viven acá en vez de en los archivos de implementación.
 
-### Mann-Kendall — Tabla A.4, valor crítico de S para n=7
+### Mann-Kendall — Tabla A.4, valor crítico de S para n=7 — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** "No lo tengo. De todas maneras, no debiera poder analizarse una serie con tan pocos
+valores. Debería saltar un cartel de alerta indicando que la longitud mínima recomendable de la serie, para ser
+representativa, es de 30 valores." **Cerrada:** en METIS ese caso no se alcanza (menos de 10 datos bloquea), y el
+aviso `CONTRACT_LENGTH_WARNING` usa ahora esa redacción (bloque A de `docs/plan-respuestas-facundo-22-10-2026.md`).
+
 El valor crítico de S para n=7 no está confirmado por Facundo. La prueba
 retorna `no_ejecutada` con `TEST_NOT_EXECUTED_CONDITION` para n=7 hasta
 que se confirme.
 Pregunta: ¿Cuál es el valor crítico de S para n=7 en la Tabla A.4 de
 Mann-Kendall a α=5%?
 
-### Etapa 2 — ¿ME y MC = Mínimos Cuadrados Estándar y Corregidos?
+### Etapa 2 — ¿ME y MC = Mínimos Cuadrados Estándar y Corregidos? — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** las variantes "Estándar" y "Corregidos" de Mínimos Cuadrados, y Máxima
+Entropía o Mínimos Cuadrados en otras distribuciones, probablemente existan; él no los usó. **Pasa a trabajo futuro
+(versión 2),** en `docs/pendientes-tecnicos.md`.
+
 La tabla de métodos por distribución (IV.1) lista ME (Máxima Entropía,
 confirmado para Gumbel, IV-190 a IV-198) y MC (Mínimos Cuadrados,
 confirmado para Generalizada de Pareto, IV-153 a IV-155) sin aclarar si
@@ -892,7 +981,11 @@ tratamiento que Log-Normal 2p, Log-Pearson III, Gamma 2p y Exponencial β),
 o alguna admite un comportamiento distinto (por ejemplo, un método
 alternativo de estimación que sí tolere ceros)?
 
-### Normal y Log-Normal 2p — Tabla IV-1 solo lista MV, no Momentos
+### Normal y Log-Normal 2p — Tabla IV-1 solo lista MV, no Momentos — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** no eliminar ningún método aunque converjan al mismo valor; que el usuario
+elija. **Cerrada, sin cambios.**
+
 Movida acá desde `decisions-log.md` (bloque sin número de decisión,
 migración a archivos individuales, 18/07/2026) — es una pregunta abierta,
 no una decisión cerrada, por eso no correspondía vivir ahí.
@@ -918,7 +1011,13 @@ vs. pico) bloquea la exposición de la carga diaria en la UI**, no su
 implementación. `docs/decisiones/decision066.md` documenta por qué METIS no
 analiza los valores sub-anuales sin agregar (camino B).
 
-### Hueco interior — ¿se descarta siempre, o hay un umbral de meses/días? (R0.1)
+### Hueco interior — ¿se descarta siempre, o hay un umbral de meses/días? (R0.1) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** "En principio, lo dejaría a criterio del operador, porque en general las series de
+datos pueden tener muchos faltantes y no existe otra fuente de información. También existen métodos de relleno de
+series, y el operador podría usarlas por fuera del programa y cargar luego la serie completa." **Cerrada:**
+[DECISIÓN 081](../../decisiones/decision081.md) (cobertura elegible de 50 % a 100 %, 100 por defecto).
+
 Un año del medio al que le faltan meses (una estación fuera de servicio
 seis meses en 2007) no es lo mismo que un extremo parcial — recortarlo
 partiría el registro en dos. Implementado provisoriamente: se descarta
@@ -961,7 +1060,14 @@ respuesta. Para que no queden como código muerto permanente por olvido:
 Cerrar esta pregunta sin ejecutar una de las dos ramas deja el módulo con una
 funcionalidad que no existe y que igual hay que mantener.
 
-### Media diaria vs. pico instantáneo — ¿qué variable trae un archivo diario? (R0.2, BLOQUEANTE DE EXPOSICIÓN)
+### Media diaria vs. pico instantáneo — ¿qué variable trae un archivo diario? (R0.2, BLOQUEANTE DE EXPOSICIÓN) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** "Depende la serie de datos que estés estudiando. En el caso de registros
+pluviométricos, los valores corresponden a la lluvia acumulada de un día, desde las 9 de la mañana del día anterior
+hasta las 9 de la mañana del día que se toma la lectura. Luego el operador debería armar la serie de máximos diarios
+anuales, por año hidrológico." **Cerrada:** `variable_diaria` suma `"acumulado"` (revisión del 22/10/2026 de la
+[DECISIÓN 065](../../decisiones/decision065.md)).
+
 Un limnígrafo diario suele reportar **media diaria**, no el pico
 instantáneo del día. Si la tesis construye sus máximos anuales a partir de
 picos instantáneos, agregar la serie de máximos anuales desde medias
@@ -977,7 +1083,10 @@ auditoría: cambia el resultado, sin él el historial no es reproducible).
 funciona en el backend con tests, pero el frontend no agrega ningún selector
 ni copy que la anuncie hasta tener esta respuesta.
 
-### Diaria → anual directo, o encadenado diaria → mensual → anual (R0.3)
+### Diaria → anual directo, o encadenado diaria → mensual → anual (R0.3) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** confirmado, directo. **Cerrada** ([DECISIÓN 065](../../decisiones/decision065.md)).
+
 Cambia el resultado cuando hay meses parcialmente faltantes: el encadenado
 descarta el mes y evalúa el año sobre 11 meses; el directo evalúa la
 cobertura del año completo de una.
@@ -988,7 +1097,11 @@ nivel. Con carga diaria el sistema calcula además una agregación mensual
 anual.
 Pregunta: ¿se confirma el directo, o la práctica de la tesis encadena?
 
-### Función de agregación para tipo_variable == "otro"
+### Función de agregación para tipo_variable == "otro" — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** podrían analizarse medias o mínimos, aunque lo habitual son los extremos.
+**Pasa a trabajo futuro (versión 2),** en `docs/pendientes-tecnicos.md`.
+
 `core/validacion/aggregation.py::agregar_a_maximos_anuales()` agrega
 siempre por máximo anual — correcto para `caudal_precipitacion` (es lo que
 hace la tesis) y para el análisis de frecuencia de eventos extremos en
@@ -997,7 +1110,12 @@ Pregunta: ¿el máximo anual es también la agregación correcta para
 `tipo_variable == "otro"`, o una variable arbitraria podría necesitar una
 función distinta (mínimo, media, etc.)?
 
-### Las 9 estaciones de la tesis — ¿con qué mes de inicio se armaron?
+### Las 9 estaciones de la tesis — ¿con qué mes de inicio se armaron? — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** julio a junio en Córdoba; en el sur argentino, abril a marzo; en regiones
+muy húmedas, cercano al año calendario. **Cerrada:** confirma el valor por defecto de la
+[DECISIÓN 057](../../decisiones/decision057.md).
+
 No cambia la implementación de `aggregation.py` en sí, pero sí los fixtures
 de los tests de regresión (Bloque D, lo lleva Octavio): si las series de
 `docs/auditoria/regresion/regresion-e2e-coreEstadistico/` se armaron por
@@ -1008,7 +1126,10 @@ las 9 estaciones de la tesis — calendario (enero) u otro?
 
 ---
 
-## Generalizada de Pareto — convenciones de signo (01/10/2026)
+## Generalizada de Pareto — convenciones de signo (01/10/2026) — A PRESENTAR EN REUNIÓN
+
+Sin respuesta escrita: se presenta en persona en la reunión de la semana próxima.
+
 
 Detalle completo, derivaciones y evidencia: `docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md`.
 En V1.0 Pareto se muestra pero no se puede elegir (DECISIÓN 074) hasta tener estas respuestas.
@@ -1040,7 +1161,11 @@ Pregunta: ¿qué ecuaciones usó realmente para Mínimos Cuadrados, y IV-155 lle
 Origen: [comparacion-herramientas/README.md](../comparacion-herramientas/README.md), pedido de Carlos
 Catalini.
 
-### U_T para F > 0,5: ¿la planilla usa F o 1 − F? (resuelve la Causa C)
+### U_T para F > 0,5: ¿la planilla usa F o 1 − F? (resuelve la Causa C) — A PRESENTAR EN REUNIÓN
+
+Facundo no conserva las planillas (respuesta del 22/10/2026 sobre la Causa C, más arriba): se presenta en persona la
+reconstrucción del hallazgo para ver si la reconoce.
+
 
 En su planilla, ¿cómo se calcula U_T para F > 0,5? Si la celda usa F (y no 1 − F) dentro de
 V = √ln(1/F²), los cuantiles y el EEA de Normal, Log-Normal, Gamma y Log-Pearson de la tesis quedan
@@ -1052,7 +1177,10 @@ que IV-105 (usar 1 − F) es lo correcto?
 planilla y METIS no cambia. Si la planilla usara deliberadamente otra convención, habría que documentarla:
 la tesis escrita no la menciona. Detalle: [hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md).
 
-### Partición de t de Student con n impar: sí cambia un veredicto (Q16 de la fase 4)
+### Partición de t de Student con n impar: sí cambia un veredicto (Q16 de la fase 4) — A PRESENTAR EN REUNIÓN
+
+Sin respuesta escrita: se presenta en persona en la reunión.
+
 
 La consolidación de la fase 4 (Q16) registró que la tesis toma `n1 = ceil(n/2)` con n impar, METIS
 `floor(n/2)`, y que "no cambia ningún veredicto". Corriendo la función de METIS con `ceil(n/2)` se
