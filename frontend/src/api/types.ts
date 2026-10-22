@@ -91,6 +91,24 @@ export interface AtipicoDetectado extends AtipicoChow {
   periodo: number | null;
 }
 
+// Lo que queda registrado en analysis_results.decisiones.chow. DECISIÓN 079:
+// una decisión por punto, con su año, valor, lado y desvío. Los análisis
+// anteriores conservan la forma vieja `{accion, dato}` (un solo dato).
+export interface DecisionChowRegistrada extends AtipicoDetectado {
+  decision: DecisionAtipico;
+  codigo: string;
+}
+
+export type DecisionesChow =
+  | { atipicos: DecisionChowRegistrada[] }
+  | { accion: DecisionAtipico; dato: number | null };
+
+// analysis_results.decisiones — `{}` si no hubo ninguna pausa resuelta.
+export interface DecisionesRegistradas {
+  chow?: DecisionesChow;
+  distribucion?: { distribucion: string; metodo: string; periodos_retorno: number[] };
+}
+
 // DECISIÓN 079 — una decisión por cada atípico de la pausa, todas juntas.
 export interface OutlierDecisionRequest {
   session_id: string;
@@ -380,6 +398,23 @@ export interface HistoryItem {
   serie_preview: number[];
   // DECISIÓN 078 — 0.05 para los análisis anteriores.
   alfa: Alfa;
+  // Revisión manual 21/10/2026 (bloque C1) — puntos rechazados en la pausa de
+  // Chow, contados en el backend sin traer el registro completo.
+  chow_rechazados: number;
+  // DECISIÓN 080 — cuántas exclusiones guardadas tiene (las exclusiones, en el detalle).
+  exclusiones_guardadas: number;
+}
+
+// DECISIÓN 080 — una exclusión de puntos guardada a pedido sobre un análisis.
+// `indices` son posiciones en etapa1.datos.serie_efectiva, ordenadas; `puntos`
+// trae el año y el valor de cada uno, tomados del análisis persistido.
+export interface ExclusionGuardada {
+  id: string;
+  creado_at: string;
+  indices: number[];
+  puntos: { indice: number; periodo: number | null; valor: number }[];
+  alfa: Alfa;
+  cramer_particion: CramerParticion;
 }
 
 // PR 3/5 del plan de cierre de pendientes no-test (DECISIÓN 058) —
@@ -387,7 +422,8 @@ export interface HistoryItem {
 // forma real de analyses.configuracion tal como GET /history/{id} la
 // devuelve.
 export interface AnalysisConfiguracion {
-  cramer_particion: string;
+  // "default" o el objeto {n1_pct, n2_pct} tal como se persistió (D-18).
+  cramer_particion: CramerParticion;
   mes_inicio_anio: number;
   // Nombre del archivo subido (F7, plan de fixes pre-reunión); null/ausente en
   // análisis anteriores a ese cambio. Lo usa la descarga de la serie sin
@@ -418,6 +454,11 @@ export interface AnalysisDetail {
   serie: number[] | null;
   timestamps: TimestampNormalizado[] | null;
   configuracion: AnalysisConfiguracion | null;
+  // Registro de auditoría de CU-01 (C2b del plan post-avance). Bloque C1 de la
+  // revisión manual del 21/10/2026: el detalle muestra las decisiones ante Chow.
+  decisiones?: DecisionesRegistradas | null;
+  // DECISIÓN 080 — `[]` si no hay ninguna (sin backfill).
+  exclusiones?: ExclusionGuardada[];
 }
 
 // --- Etapa 2 — shapes reales, cableada de punta a punta (Bloque A del plan

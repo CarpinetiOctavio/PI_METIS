@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
-import {
-  postRecalcularDesignEvents,
-  postSimularExclusion,
-} from "../../api/analysis";
+import { postRecalcularDesignEvents } from "../../api/analysis";
 import { Etapa1ResultView } from "./Etapa1ResultView";
 import { Etapa2Explorador, type SimulacionExplorable } from "./Etapa2Explorador";
 import { Etapa2RankingView } from "./Etapa2RankingView";
@@ -16,11 +13,12 @@ import type {
   CramerParticion,
   Etapa1Result,
   Modo,
-  SimulateExclusionRequest,
   SimulateExclusionResponse,
   TipoVariable,
 } from "../../api/types";
-import type { SimularFn } from "./useSimulacionExclusion";
+import { crearPedirSimulacion, crearSimular } from "./simulacion";
+import { claveSeleccion, type ExclusionesGuardables } from "./exclusiones";
+import { guardarExclusion } from "../../api/history";
 import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
 import "./ResultsPage.css";
 
@@ -45,13 +43,6 @@ interface ResultsLocationState {
   etapas?: "1" | "1,2";
 }
 
-// El backend recibe la partición de Cramer como texto: "default" o el objeto en
-// JSON, igual que en POST /analysis/stream (api/sse.ts::buildFormData).
-function cramerParticionComoTexto(particion: CramerParticion | undefined): string {
-  if (particion === undefined) return "default";
-  return typeof particion === "string" ? particion : JSON.stringify(particion);
-}
-
 export function ResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -66,6 +57,8 @@ export function ResultsPage() {
   // nueva se pasa a esa vista; la elección registrada no cambia (DECISIÓN 062).
   const [simulacion, setSimulacion] = useState<SimulateExclusionResponse | null>(null);
   const [vistaEventos, setVistaEventos] = useState<"original" | "simulada">("original");
+  // DECISIÓN 080 — selecciones ya guardadas en el historial en esta sesión.
+  const [guardadas, setGuardadas] = useState<ReadonlySet<string>>(new Set());
   const alCambiarSimulacion = useCallback((nueva: SimulateExclusionResponse | null) => {
     setSimulacion(nueva);
     setVistaEventos(nueva ? "simulada" : "original");
@@ -192,38 +185,40 @@ export function ResultsPage() {
 
   // What-if de atípicos (ítem A, DECISIÓN 071): solo con la configuración del
   // análisis a mano, que viaja en el router state desde ConfigPage.
-  const datos = result.datos;
   const tipoVariable = locationState?.tipoVariable;
-  const pedirSimulacion =
-    datos?.timestamps_efectivos && tipoVariable
-      ? (indicesExcluidos: number[], seleccion?: SimulateExclusionRequest["seleccion"]) =>
-          postSimularExclusion({
-            serie: datos.serie_efectiva,
-            anios: datos.timestamps_efectivos!.map((t) => t.anio),
-            tipo_variable: tipoVariable,
-            cramer_particion: cramerParticionComoTexto(locationState?.cramerParticion),
-            indices_excluidos: indicesExcluidos,
-            etapas: locationState?.etapas === "1,2" ? [1, 2] : [1],
-            // DECISIÓN 078 — la simulación compara contra el mismo α.
-            alfa: result.alfa ?? 0.05,
-            ...(seleccion && { seleccion }),
-          })
-      : undefined;
+  const pedirSimulacion = crearPedirSimulacion(
+    result.datos,
+    tipoVariable
+      ? {
+          tipoVariable,
+          cramerParticion: locationState?.cramerParticion,
+          conEtapa2: locationState?.etapas === "1,2",
+          alfa: result.alfa ?? 0.05,
+        }
+      : null,
+  );
   // Con la elección del stream, el backend recalcula también sus eventos de
   // diseño sin los puntos excluidos.
-  const simular: SimularFn | undefined =
-    pedirSimulacion &&
-    ((indicesExcluidos) =>
-      pedirSimulacion(
-        indicesExcluidos,
-        eventosDiseno
-          ? {
-              distribucion: eventosDiseno.distribucion,
-              metodo: eventosDiseno.metodo,
-              periodos_retorno: eventosDiseno.eventos_diseno.map((e) => e.periodo_retorno),
-            }
-          : undefined,
-      ));
+  const simular = crearSimular(
+    pedirSimulacion,
+    eventosDiseno && {
+      distribucion: eventosDiseno.distribucion,
+      metodo: eventosDiseno.metodo,
+      periodos_retorno: eventosDiseno.eventos_diseno.map((e) => e.periodo_retorno),
+    },
+  );
+  // DECISIÓN 080 — guardar la exclusión en el historial: solo CU-01, con el
+  // análisis persistido. CU-02 no tiene historial y el botón no aparece.
+  const exclusiones: ExclusionesGuardables | undefined =
+    isAuthed && analysisId && simular
+      ? {
+          guardar: async (indices) => {
+            await guardarExclusion(analysisId, indices);
+            setGuardadas((previas) => new Set(previas).add(claveSeleccion(indices)));
+          },
+          guardadas,
+        }
+      : undefined;
   // Explorar otra distribución bajo la simulación vigente: el mismo endpoint, con
   // los mismos puntos excluidos y la combinación explorada como `seleccion`.
   const indicesSimulados = simulacionConEtapa2?.excluidos.map((e) => e.indice) ?? [];
@@ -264,7 +259,9 @@ export function ResultsPage() {
         mesInicioAnio={locationState?.mesInicioAnio}
         nombreArchivo={locationState?.nombreArchivo}
         tipoVariable={tipoVariable}
+        cramerParticion={locationState?.cramerParticion}
         simular={simular}
+        exclusiones={exclusiones}
         onSimulacionVigente={alCambiarSimulacion}
       />
       {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la

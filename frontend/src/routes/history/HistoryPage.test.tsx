@@ -30,10 +30,13 @@ function stubFetchRouted({
     vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/history/") && url.includes("archivados=true")) {
+        // Como el backend real (DECISIÓN 048): ?archivados=true INCLUYE los
+        // archivados además de los activos. El mock anterior devolvía solo
+        // los archivados y escondía D-15 (#137).
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(archivados),
+          json: () => Promise.resolve([...activos, ...archivados]),
         });
       }
       if (url.match(/\/history\/[^/]+\/archive$/)) {
@@ -73,6 +76,8 @@ function makeItems(n: number): HistoryItem[] {
     nombre_archivo: null,
     serie_preview: [],
     alfa: 0.05,
+    chow_rechazados: 0,
+    exclusiones_guardadas: 0,
   }));
 }
 
@@ -200,6 +205,58 @@ describe("HistoryPage", () => {
 
     expect(await screen.findByRole("link")).toHaveAttribute("href", "/history/id-0");
     expect(screen.getByRole("button", { name: "Desarchivar" })).toBeInTheDocument();
+  });
+
+  it("D-15 — cada vista muestra solo lo suyo aunque ?archivados=true traiga también los activos", async () => {
+    const activos = makeItems(2).map((i, n) => ({ ...i, id: `activo-${n}` }));
+    const archivados = makeItems(1).map((i) => ({
+      ...i,
+      id: "archivado-0",
+      archivado_at: "2026-07-31T00:00:00",
+    }));
+    stubFetchRouted({ activos, archivados });
+    renderHistoryPage();
+
+    await waitFor(() => expect(screen.getAllByRole("link")).toHaveLength(2));
+    expect(screen.getAllByRole("button", { name: "Archivar" })).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver archivados" }));
+
+    await waitFor(() => expect(screen.getAllByRole("link")).toHaveLength(1));
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/history/archivado-0");
+    expect(screen.getByRole("button", { name: "Desarchivar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archivar" })).not.toBeInTheDocument();
+  });
+
+  it("DECISIÓN 080 — etiqueta los análisis con exclusiones guardadas", async () => {
+    const [una, tres] = makeItems(2);
+    stubFetchRouted({
+      activos: [
+        { ...una, exclusiones_guardadas: 1 },
+        { ...tres, exclusiones_guardadas: 3, chow_rechazados: 1 },
+      ],
+    });
+    renderHistoryPage();
+
+    expect(await screen.findByText("1 exclusión guardada")).toBeInTheDocument();
+    expect(screen.getByText("3 exclusiones guardadas")).toBeInTheDocument();
+    expect(screen.getByText("1 punto rechazado ante Chow")).toBeInTheDocument();
+  });
+
+  it("C1 — etiqueta los análisis con puntos rechazados ante Chow, en singular y plural", async () => {
+    const [uno, dos, ninguno] = makeItems(3);
+    stubFetchRouted({
+      activos: [
+        { ...uno, chow_rechazados: 1 },
+        { ...dos, chow_rechazados: 2 },
+        ninguno,
+      ],
+    });
+    renderHistoryPage();
+
+    expect(await screen.findByText("1 punto rechazado ante Chow")).toBeInTheDocument();
+    expect(screen.getByText("2 puntos rechazados ante Chow")).toBeInTheDocument();
+    expect(screen.getAllByText(/rechazados? ante Chow/)).toHaveLength(2);
   });
 
   // ── F7a/F7b (plan de fixes pre-reunión) ─────────────────────────────────

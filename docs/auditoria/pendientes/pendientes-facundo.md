@@ -1069,7 +1069,11 @@ tesis tiene esa diferencia y METIS no cambia.
 
 Origen: [DECISIÓN 078](../../decisiones/decision078.md), a partir de su respuesta del 18/10 sobre Chow.
 
-### ¿La tolerancia de rezagos de Anderson acompaña a α?
+### ¿La tolerancia de rezagos de Anderson acompaña a α? — RESPONDIDA 21/10/2026
+
+**Respuesta de Facundo (21/10/2026):** el 10 % es una regla fija de la prueba de Anderson; no cambia con α. Y el
+término usado en hidrología es *lag*. METIS no cambia (ya lo tenía fijo); se ajustan los textos del PDF. Ver la
+revisión del 21/10/2026 de la [DECISIÓN 078](../../decisiones/decision078.md).
 
 METIS deja elegir α entre 1 %, 5 % y 10 % en toda la Etapa 1. En Anderson eso cambia las bandas de cada rezago
 (Ec. III-3), pero la tolerancia de `⌈0,10 · k_max⌉` rezagos fuera de banda (DECISIONES 012 y 016) queda fija. ¿La

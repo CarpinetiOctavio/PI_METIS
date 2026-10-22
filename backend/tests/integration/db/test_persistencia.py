@@ -151,6 +151,10 @@ async def test_cu01_persiste_una_decision_por_atipico_con_su_codigo(db, crear_us
         (1985, "aceptar", "TEST_OUTLIER_ACCEPTED_BY_USER"),
     ]
     assert len(detalle["etapa1"]["datos"]["serie_efectiva"]) == len(serie) - 1
+    # Bloque C1 (revisión manual 21/10/2026): la lista cuenta solo los rechazados,
+    # con el outer join contra analysis_results.
+    (item,) = await get_history(usuario.id, db)
+    assert item["chow_rechazados"] == 1
 
 
 async def test_cu02_anonimo_no_persiste_nada(db):

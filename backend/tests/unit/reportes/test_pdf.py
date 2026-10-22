@@ -21,6 +21,7 @@ from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
 from metis.reportes.pdf import (
     _estilos,
     _grafico_correlograma,
+    _grafico_serie,
     _registrar_fuentes,
     _seccion_datos,
     _seccion_etapa1,
@@ -369,6 +370,23 @@ def test_correlograma_rotula_la_confianza_del_analisis(
 
 
 @pytest.mark.unit
+def test_pdf_dice_lag_y_nombra_la_tolerancia_de_anderson(detalle_completo, est):
+    # Bloque J del plan de revisión manual (21/10/2026): Facundo confirmó que en
+    # hidrología se dice "lag" y que el 10 % de Anderson es una regla fija.
+    anderson = next(
+        t
+        for t in detalle_completo["etapa1"]["independencia"]
+        if t["prueba"] == "anderson"
+    )
+    fig = _grafico_correlograma(anderson, {})
+    pruebas = " ".join(_textos(_seccion_etapa1(detalle_completo, est)))
+
+    assert fig.axes[0].get_xlabel() == "Lag k"
+    assert "tolerancia de Anderson (10 % de los coeficientes fuera de banda)" in pruebas
+    assert "rezago" not in pruebas.lower()
+
+
+@pytest.mark.unit
 def test_nombre_archivo_pdf_ascii():
     detalle = {
         "created_at": "2026-10-06T12:00:00",
@@ -556,3 +574,71 @@ def test_simulacion_rotula_t_igual_que_el_analisis(detalle_completo, est):
 def test_pdf_con_carga_diaria_es_valido(detalle_completo):
     detalle = _con_carga(detalle_completo, "diaria", variable_diaria="media")
     assert _es_pdf(generar_pdf_analisis(detalle))
+
+
+# --- Varios atípicos de Chow (D-17, #139 — bloque D del plan de revisión manual) ---
+
+
+def _detalle_con_tres_atipicos() -> dict:
+    # Dos atípicos bajos y uno alto (la serie de test_persistencia.py): Chow los
+    # marca a los tres (DECISIÓN 079).
+    base = [
+        round(float(v), 2) for v in np.random.default_rng(3).lognormal(4.6, 0.15, 37)
+    ]
+    serie = base[:5] + [3.0] + base[5:20] + [2.0] + base[20:] + [9000.0]
+    return _detalle(etapas=(1,), serie=serie)
+
+
+def _marcados(fig) -> list[float]:
+    linea = next(ln for ln in fig.axes[0].get_lines() if "Chow" in str(ln.get_label()))
+    return sorted(linea.get_xdata())
+
+
+@pytest.mark.unit
+def test_pdf_marca_todos_los_atipicos_de_chow(est):
+    detalle = _detalle_con_tres_atipicos()
+    chow = detalle["etapa1"]["atipicos"][0]
+    assert len(chow["valores_atipicos"]) == 3
+
+    fig = _grafico_serie(detalle["etapa1"])
+    nota = next(
+        t for t in _textos(_seccion_etapa1(detalle, est)) if t.startswith("Chow")
+    )
+
+    assert _marcados(fig) == [1985, 2001, 2019]
+    etiquetas = [ln.get_label() for ln in fig.axes[0].get_lines()]
+    assert "Atípicos detectados (Chow)" in etiquetas
+    assert "Atípicos: 9000.0000 (2019), 2.0000 (2001), 3.0000 (1985)" in nota
+
+
+@pytest.mark.unit
+def test_pdf_de_un_analisis_anterior_a_la_079_marca_el_unico_atipico(est):
+    # Sin valores_atipicos (análisis persistido antes de la DECISIÓN 079): se
+    # vuelve a indice_atipico / valor_atipico.
+    detalle = _detalle_con_tres_atipicos()
+    del detalle["etapa1"]["atipicos"][0]["valores_atipicos"]
+
+    fig = _grafico_serie(detalle["etapa1"])
+    nota = next(
+        t for t in _textos(_seccion_etapa1(detalle, est)) if t.startswith("Chow")
+    )
+
+    assert _marcados(fig) == [2019]
+    assert "Atípico detectado (Chow)" in [
+        ln.get_label() for ln in fig.axes[0].get_lines()
+    ]
+    assert "Atípico: 9000.0000 (2019)" in nota
+
+
+@pytest.mark.unit
+def test_simulacion_nombra_todos_los_atipicos_que_quedan(est):
+    detalle = _detalle_con_tres_atipicos()
+    indice_alto = detalle["etapa1"]["datos"]["serie_efectiva"].index(9000.0)
+
+    simulacion = _simular_desde_detalle(detalle, [indice_alto])
+    textos = _textos(_seccion_simulacion(detalle, simulacion, est))
+
+    assert any(
+        "Chow marca 2 datos como atípicos: 2.0000 (2001), 3.0000 (1985)" in t
+        for t in textos
+    )

@@ -28,6 +28,11 @@ def timestamps_desordenados(timestamps: list) -> bool:
         return False
 
 
+def _es_faltante(v) -> bool:
+    """Celda vacía: None o NaN. Clase distinta de "no numérico" (texto)."""
+    return v is None or (isinstance(v, float) and np.isnan(v))
+
+
 def validar_contrato(
     serie: list,
     tipo_variable: str,
@@ -65,7 +70,9 @@ def validar_contrato(
             )
         )
 
-    no_numericos = [v for v in serie if not es_numerico(v)]
+    # Una celda vacía (None/NaN) ya la cuenta CONTRACT_MISSING_VALUES: si también entrara acá,
+    # el mismo dato daría dos advertencias. No numérico es texto u otro valor no convertible.
+    no_numericos = [v for v in serie if not es_numerico(v) and not _es_faltante(v)]
     if no_numericos:
         warnings.append(
             WarningItem(
@@ -75,9 +82,7 @@ def validar_contrato(
             )
         )
 
-    faltantes = [
-        v for v in serie if v is None or (isinstance(v, float) and np.isnan(v))
-    ]
+    faltantes = [v for v in serie if _es_faltante(v)]
     if faltantes:
         warnings.append(
             WarningItem(

@@ -185,8 +185,9 @@ estándar en hidrología) o `0.10`. Llega como texto y se valida en el borde →
 pasa a la segunda pasada de la Etapa 1 tras rechazar un atípico, viaja en
 `result_etapa1.alfa` y se persiste en `analyses.configuracion.alfa`. Al leer un
 análisis anterior que no lo tiene, `GET /history/{id}` devuelve `alfa: 0.05` con
-`alfa_implicito: true` (sin backfill). Helmert y la tolerancia de rezagos de
-Anderson no dependen de α; la Etapa 2 no tiene nivel de significancia.
+`alfa_implicito: true` (sin backfill). Helmert y la tolerancia de Anderson
+(10 % de los coeficientes fuera de banda, regla fija confirmada por Facundo el
+21/10/2026) no dependen de α; la Etapa 2 no tiene nivel de significancia.
 
 **Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
 050. Excepción a la regla general de esta sección: como el archivo se lee
@@ -310,13 +311,23 @@ caso, no oculta la fila ni la rompe.
     "archivado_at": null,
     "nombre_archivo": "estacion_04.csv",
     "serie_preview": [94.71, 89.83, 105.13],
-    "alfa": 0.05
+    "alfa": 0.05,
+    "chow_rechazados": 1,
+    "exclusiones_guardadas": 0
   }
 ]
 ```
 
 `alfa` (DECISIÓN 078): nivel de significancia de la Etapa 1 del análisis; `0.05` para los guardados antes de
 que fuera configurable.
+
+`chow_rechazados` (revisión manual del 21/10/2026, bloque C1): cuántos puntos rechazó el usuario en la pausa de
+Chow, contados en el backend sobre `analysis_results.decisiones.chow` (las dos formas del registro) sin mandar el
+registro completo. `0` si no hubo pausa o se aceptaron todos. La lista lo muestra como etiqueta; el detalle
+(`GET /history/{id}`) ya trae `decisiones`.
+
+`exclusiones_guardadas` (DECISIÓN 080): cuántas exclusiones de puntos tiene guardadas el análisis. Las exclusiones en
+sí viajan solo en el detalle.
 
 ---
 
@@ -377,9 +388,13 @@ llegaba a `HistoryDetailPage`).
   },
   "serie": [94.71, 89.83],
   "timestamps": [{"iso": "1980-01-01", "anio": 1980}],
-  "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7}
+  "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7},
+  "exclusiones": []
 }
 ```
+
+`exclusiones` (DECISIÓN 080): las exclusiones de puntos guardadas, con la forma de la respuesta de
+`POST /history/{id}/exclusiones`. `[]` si no hay ninguna (sin backfill para análisis anteriores).
 
 `etapa1` es el mismo payload de `result_etapa1` (`statistical-pipeline.md`), incluido `explicacion.desglose` de Anderson y Chow desde el addendum del 01/10/2026 a la DECISIÓN 064 (ausente en análisis anteriores, sin backfill).
 
@@ -420,6 +435,45 @@ pertenencia que `/archive`.
 
 **Response 200:** `{"ok": true}`
 **Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
+### POST /api/v1/history/{id}/exclusiones (DECISIÓN 080)
+
+**Agregado 21/10/2026** (bloque C2 de `docs/plan-revision-manual-21-10-2026.md`) — guarda una exclusión de puntos
+hecha después del análisis (la simulación de DECISIÓN 071), **aparte** del resultado: no toca `etapa1`, `etapa2` ni
+`decisiones` (DECISIÓN 062). Solo a pedido, desde la vista comparativa.
+
+**Request:** `{"indices_excluidos": [3, 13]}` — posiciones en `etapa1.datos.serie_efectiva`.
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Pertenencia como en `GET /history/{id}`.
+
+**Response 200:** la entrada guardada. Los años y los valores salen del análisis persistido, no del cliente; los
+índices quedan ordenados. Si la misma selección ya estaba guardada, devuelve la existente sin duplicarla.
+```json
+{
+  "id": "uuid",
+  "creado_at": "2026-10-21T13:05:12.481920",
+  "indices": [3, 13],
+  "puntos": [{"indice": 3, "periodo": 1983, "valor": 245.7}, {"indice": 13, "periodo": 1993, "valor": 98.1}],
+  "alfa": 0.05,
+  "cramer_particion": "default"
+}
+```
+No se guardan los resultados de la simulación: se recalculan con `POST /analysis/simulate-exclusion`, que es
+determinístico.
+
+**Errores** (estructura estándar `{"error": {...}}`): 404 `ANALYSIS_NOT_FOUND` (no existe o no es del usuario); 400
+`CONTRACT_EXCLUSION_INVALID` (índices vacíos, fuera de rango, repetidos o que vacían la serie, o un análisis sin la
+serie analizada registrada); 422 validación Pydantic.
+
+### DELETE /api/v1/history/{id}/exclusiones/{exclusion_id} (DECISIÓN 080)
+
+Quita una exclusión guardada. Misma autenticación y pertenencia.
+
+**Response 200:** `{"ok": true}`
+**Errores:** 404 `ANALYSIS_NOT_FOUND` (no existe o no es del usuario); 404 `ANALYSIS_EXCLUSION_NOT_FOUND` (el análisis es del
+usuario pero no tiene esa exclusión).
 
 ---
 
@@ -884,7 +938,9 @@ CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusio
 CONTRACT_EXCLUSION_INVALID             indices_excluidos fuera de rango o repetidos, anios de otro largo que serie, o
                                         tratamiento inexistente, en POST /analysis/simulate-exclusion (DECISIÓN 071).
                                         También POST /export/{id}/simulacion: índices vacíos, fuera de rango o
-                                        repetidos, o análisis sin la serie analizada registrada (DECISIÓN 075)
+                                        repetidos, o análisis sin la serie analizada registrada (DECISIÓN 075).
+                                        También POST /history/{id}/exclusiones: vacíos, fuera de rango,
+                                        repetidos o que vacían la serie (DECISIÓN 080)
 ```
 A diferencia de los dos grupos de arriba (series de datos), estos códigos validan
 un parámetro del request en `POST /analysis/stream` antes de tocar el archivo
@@ -962,7 +1018,10 @@ OUTLIER_DECISION_INVALID         Las decisiones de POST /analysis/outlier-decisi
                                   atípicos de la pausa — respuesta HTTP 400, no evento SSE (DECISIÓN 079)
 ANALYSIS_NOT_FOUND               El análisis de POST /analysis/{id}/design-events no existe, no es del
                                   usuario, o no tiene Etapa 2 — respuesta HTTP 404, sin sesión de por medio (DECISIÓN 062).
-                                  También GET /export/{id}: no existe o no es del usuario (DECISIÓN 075)
+                                  También GET /export/{id}: no existe o no es del usuario (DECISIÓN 075), y
+                                  POST/DELETE /history/{id}/exclusiones (DECISIÓN 080)
+ANALYSIS_EXCLUSION_NOT_FOUND     DELETE /history/{id}/exclusiones/{exclusion_id}: el análisis es del usuario pero no
+                                  tiene esa exclusión — respuesta HTTP 404 (DECISIÓN 080)
 ```
 `PARSE_ERROR` y `SESSION_TIMEOUT` son eventos SSE `error`, no respuestas HTTP
 de error — ver nota general al principio de este archivo. Emitidos por

@@ -156,7 +156,7 @@ describe("Etapa1GraficosView — exclusión de puntos", () => {
 
     expect(descargarCsv).toHaveBeenCalledTimes(1);
     const [nombre, contenido] = vi.mocked(descargarCsv).mock.calls[0];
-    expect(nombre).toBe("estacion_04_sin_atipicos.csv");
+    expect(nombre).toBe("estacion_04_sin_puntos_excluidos.csv");
     const filas = contenido.trim().split("\n");
     expect(filas[0]).toBe("periodo,valor");
     expect(filas).toHaveLength(1 + 10); // 12 años - 2 excluidos

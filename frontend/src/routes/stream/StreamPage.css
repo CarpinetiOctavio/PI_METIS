@@ -39,8 +39,12 @@
      atrás. Ahora la tarjeta misma es el panel de vidrio — semitransparente
      con blur propio + borde e inset highlight sutiles para el filo del
      vidrio + sombra para la elevación. `color-mix(var(--surf) ...)` se
-     adapta solo a los dos temas, igual que el resto del sistema de diseño. */
-  background: color-mix(in srgb, var(--surf) 55%, transparent);
+     adapta solo a los dos temas, igual que el resto del sistema de diseño.
+     Revisión manual 21/10/2026 (D-13, #135) — 55% → 90%: con 55% el fondo
+     efectivo de la tarjeta quedaba gris y el texto secundario (--mut) bajaba
+     a 2,9:1 con el tema claro, debajo del 4,5:1 de RNF-07. Con 90% cumple en
+     los dos temas aun con --ink detrás (contrast.test.ts lee este valor). */
+  background: color-mix(in srgb, var(--surf) 90%, transparent);
   /* Bloque F1 (pasada 5) — 20px→10px: ahora compone sobre un scrim ya
      desenfocado (blur(6px) arriba); mantenerlo en 20px vuelve el
      contenido de la tarjeta lechoso sin ganar separación. */

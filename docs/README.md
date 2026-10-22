@@ -1,9 +1,5 @@
 # docs/ — Documentación del Proyecto Integrador METIS
 
-> **Pendiente abierto:** respuesta de Facundo sobre la tolerancia de Anderson ante α — ver
-> [`PENDIENTE-respuesta-facundo-tolerancia-anderson.md`](PENDIENTE-respuesta-facundo-tolerancia-anderson.md).
-> Borrar este aviso junto con ese archivo cuando se resuelva.
-
 Esta carpeta contiene la documentación de trazabilidad y auditoría del
 proyecto — separada de `.claude/rules/`, que es documentación operativa
 para Claude Code (cómo construir y operar el sistema). Acá vive el

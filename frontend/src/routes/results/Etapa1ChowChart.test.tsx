@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { Etapa1ChowChart } from "./Etapa1ChowChart";
 import type { Etapa1Datos, TestResultDetail } from "../../api/types";
 
@@ -257,5 +257,30 @@ describe("Etapa1ChowChart", () => {
     const { container } = render(<Etapa1ChowChart datos={datos} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("Etapa1ChowChart — tooltip del año (D-19)", () => {
+  function tooltip(container: HTMLElement): string {
+    fireEvent.keyDown(screen.getByRole("img", { name: /Gráfico de Chow/ }), { key: "ArrowRight" });
+    return container.querySelector(".interactive-chart__tooltip-box")?.textContent ?? "";
+  }
+
+  it("rotula el año, no T; con carga anual el año queda tal cual", () => {
+    const { container } = render(
+      <Etapa1ChowChart datos={datosSinAtipico()} chow={chowConFajas()} mesInicioAnio={7} />,
+    );
+    expect(tooltip(container)).toMatch(/^Año = 1980valor = /);
+  });
+
+  it("con carga mensual y julio, el año hidrológico de serie_efectiva: 'Año = 1980-81'", () => {
+    const { container } = render(
+      <Etapa1ChowChart
+        datos={{ ...datosSinAtipico(), resolucion_original: "mensual" }}
+        chow={chowConFajas()}
+        mesInicioAnio={7}
+      />,
+    );
+    expect(tooltip(container)).toMatch(/^Año = 1980-81valor = /);
   });
 });

@@ -36,6 +36,8 @@ export METIS_CI_JWT_SECRET="${METIS_CI_JWT_SECRET:-$(aleatorio)}"
 BASE_URL="${SMOKE_BASE_URL:-http://localhost}"
 export SMOKE_EMAIL="${SMOKE_EMAIL:-smoke@ucc.edu.ar}"
 export SMOKE_PASSWORD="${SMOKE_PASSWORD:-smoke-metis-1234}"
+# Segundo usuario: el smoke de aislamiento entre perfiles (backend/tests/smoke/test_aislamiento.py).
+export SMOKE_EMAIL_2="${SMOKE_EMAIL_2:-smoke2@ucc.edu.ar}"
 
 if [[ "${1:-}" == "--bajar" ]]; then
   docker compose down -v --remove-orphans
@@ -64,8 +66,9 @@ curl -fsS "${BASE_URL}/ping" >/dev/null || {
   exit 1
 }
 
-echo "== 5/6 Usuario del smoke"
+echo "== 5/6 Usuarios del smoke"
 bash scripts/seed-dev-user.sh "$SMOKE_EMAIL" "$SMOKE_PASSWORD" "Usuario del smoke"
+bash scripts/seed-dev-user.sh "$SMOKE_EMAIL_2" "$SMOKE_PASSWORD" "Segundo usuario del smoke"
 
 if [[ "${1:-}" == "--sin-smoke" ]]; then
   echo "Desplegado en ${BASE_URL} (smoke salteado)."

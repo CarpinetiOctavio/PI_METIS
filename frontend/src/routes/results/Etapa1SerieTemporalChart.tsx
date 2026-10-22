@@ -2,6 +2,7 @@ import { useState } from "react";
 import { InteractiveChart } from "../../charts/InteractiveChart";
 import type { ChartSeries } from "../../charts/InteractiveChart";
 import { formatAxis } from "../../i18n/format";
+import { NOTA_VISTAS_CRITERIO_ANIO, rotuloAnio } from "../../i18n/mesInicioAnio";
 import type { Etapa1Datos } from "../../api/types";
 import { interaccionDeSeleccion } from "./exclusiones";
 import type { SeleccionPuntos } from "./exclusiones";
@@ -23,7 +24,8 @@ import type { SeleccionPuntos } from "./exclusiones";
 export function Etapa1SerieTemporalChart({
   datos,
   seleccion,
-}: Readonly<{ datos: Etapa1Datos; seleccion?: SeleccionPuntos }>) {
+  mesInicioAnio,
+}: Readonly<{ datos: Etapa1Datos; seleccion?: SeleccionPuntos; mesInicioAnio?: number }>) {
   const [vista, setVista] = useState<"configurada" | "calendario">("configurada");
   const cargaConAgregacion =
     datos.resolucion_original === "mensual" ||
@@ -81,6 +83,7 @@ export function Etapa1SerieTemporalChart({
               Calendario
             </button>
           </div>
+          <p className="fn">{NOTA_VISTAS_CRITERIO_ANIO}</p>
         </fieldset>
       )}
       {usandoCalendario && (
@@ -99,7 +102,12 @@ export function Etapa1SerieTemporalChart({
         ariaLabel="Serie temporal de máximos anuales por año"
         xLabel="Año"
         yLabel="Valor"
+        xName="Año"
         xTickFormat={(v) => String(Math.round(v))}
+        // La vista configurada usa el mes de inicio; la calendario, enero.
+        xTooltipFormat={(v) =>
+          rotuloAnio(Math.round(v), usandoCalendario || !cargaConAgregacion ? 1 : mesInicioAnio)
+        }
         yTickFormat={(v) => formatAxis(v)}
       />
     </div>

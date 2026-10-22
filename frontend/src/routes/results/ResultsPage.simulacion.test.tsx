@@ -52,6 +52,12 @@ function montar(
       status: 200,
       body: respuesta,
     },
+    // DECISIÓN 080 — guardar la exclusión en el historial.
+    {
+      match: (url, init) => init?.method === "POST" && url.includes("/exclusiones"),
+      status: 200,
+      body: { id: "ex-1", creado_at: "2026-10-21T00:00:00", indices: [5], puntos: [] },
+    },
   ]);
   renderPage(
     <MemoryRouter
@@ -440,5 +446,40 @@ describe("ResultsPage — exploración con la simulación de exclusión (CU-01)"
     expect(screen.queryByRole("group", { name: "Ver resultados" })).not.toBeInTheDocument();
     expect(await screen.findByText(formatNum(333.3))).toBeInTheDocument();
     expect(screen.queryByText(/Exploración sin los años/)).not.toBeInTheDocument();
+  });
+
+  describe("guardar la exclusión en el historial (DECISIÓN 080)", () => {
+    const GUARDAR = "Guardar esta exclusión en el historial";
+
+    async function recalcularSin(user: ReturnType<typeof userEvent.setup>, indice: number) {
+      const grilla = await screen.findByRole("group", { name: /Años de la serie/ });
+      await user.click(within(grilla).getAllByRole("button")[indice]);
+      await user.click(screen.getByRole("button", { name: RECALCULAR }));
+      await screen.findByText("Resultados sin los puntos excluidos");
+    }
+
+    it("CU-02 (anónimo, sin historial) no ofrece guardarla", async () => {
+      const { user } = montar({ tipoVariable: "otro" });
+      await recalcularSin(user, 5);
+      expect(screen.queryByRole("button", { name: GUARDAR })).not.toBeInTheDocument();
+    });
+
+    it("CU-01 la guarda con los índices de la comparación y después lo confirma", async () => {
+      const { fetchMock, user } = montar({ tipoVariable: "otro" }, makeSimulacion(), {
+        analysisId: "an-1",
+      });
+      await screen.findByRole("button", { name: "Exportar PDF" }, { timeout: 5000 });
+      await recalcularSin(user, 5);
+
+      await user.click(screen.getByRole("button", { name: GUARDAR }));
+
+      const llamada = fetchMock.mock.calls.find(([url]) => String(url).includes("/exclusiones"));
+      expect(String(llamada![0])).toContain("/api/v1/history/an-1/exclusiones");
+      expect(JSON.parse(String((llamada![1] as RequestInit).body))).toEqual({
+        indices_excluidos: [5],
+      });
+      expect(await screen.findByText(/Guardada: esta exclusión figura en el historial/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: GUARDAR })).not.toBeInTheDocument();
+    });
   });
 });

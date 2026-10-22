@@ -77,7 +77,7 @@ case "${1:-}" in
       echo "Python local sin httpx/pytest: corriendo el smoke en un contenedor." >&2
       COMPOSE_PATH_SEPARATOR=";" COMPOSE_FILE="docker-compose.yml;docker-compose.ci.yml" \
         docker compose -p metis-ci run --rm --no-deps -e METIS_REQUIRE_SMOKE=1 \
-        -e SMOKE_BASE_URL=http://nginx -e SMOKE_EMAIL -e SMOKE_PASSWORD \
+        -e SMOKE_BASE_URL=http://nginx -e SMOKE_EMAIL -e SMOKE_EMAIL_2 -e SMOKE_PASSWORD \
         backend pytest -m smoke tests/smoke -v
     fi
     ;;

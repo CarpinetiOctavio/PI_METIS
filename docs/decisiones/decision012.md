@@ -27,3 +27,9 @@ El ratio flotante era incorrecto para k_max que no son múltiplos de 10.
 
 ### Archivos modificados
 - `metis/core/independence.py` — `calcular_anderson`: import math agregado, condición corregida
+
+### Revisión 21/10/2026 — el 10 % es fijo aunque cambie α
+
+Desde la DECISIÓN 078 el nivel de significancia se elige entre 1 %, 5 % y 10 %, y mueve las bandas de cada lag
+(Ec. III-3). Facundo confirmó el 21/10/2026 que la tolerancia del 10 % de coeficientes fuera de banda es una regla
+fija de la prueba: no acompaña a α. Esta decisión queda igual. Ver la revisión del 21/10/2026 de la DECISIÓN 078.

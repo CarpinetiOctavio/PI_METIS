@@ -103,3 +103,10 @@ Dos códigos nuevos:
 persiste la grilla completa sin aplanar, lo que hace viable este recálculo sin
 reajustar nada. [DECISIÓN 052](decision052.md) — el endpoint que este bloque
 complementa (`distribution-decision`, la decisión real durante el stream).
+
+### Revisión 21/10/2026 — exclusiones guardadas (DECISIÓN 080)
+
+"Explorar no es decidir" sigue en pie, y la [DECISIÓN 080](decision080.md) se apoya en ella: una exclusión de puntos
+hecha después del análisis se puede guardar en el historial, pero **aparte** del resultado (`analysis_results.exclusiones`).
+Guardarla, verla o quitarla no toca `etapa1`, `etapa2` ni `decisiones`; los resultados sin esos puntos se recalculan
+al abrirla.

@@ -46,7 +46,7 @@ define requisitos no funcionales: las características de calidad se trazan en `
 | O-09 | Tabla de eventos de diseño | Implementado | VL-04a–b, VL-05a–d | `unit/core/etapa2/test_design_events.py`, `unit/api/test_distribution_decision.py`; `routes/results/Etapa2EventosView.test.tsx`, `i18n/periodoRetorno.test.ts` | — |
 | O-10 | Gráfico de ajuste | Implementado | — | `routes/results/Etapa2AjusteChart.test.tsx`, `Etapa2EventosChart.test.tsx` | — |
 | O-11 | Bandas de confianza | Fuera de alcance de V1.0 | — | — | — |
-| O-12 | Exclusión interactiva de puntos y recálculo | Implementado | TD-04 c1–c4 | `unit/core/pipeline/test_exclusiones.py`, `unit/api/test_simulate_exclusion.py`, `integration/test_simulate_exclusion_equivale_a_chow.py`; `routes/results/exclusiones.test.ts`, `useSimulacionExclusion.test.ts`, `ResultsPage.simulacion.test.tsx` | — |
+| O-12 | Exclusión interactiva de puntos y recálculo | Implementado | TD-04 c1–c4 | `unit/core/pipeline/test_exclusiones.py`, `unit/api/test_simulate_exclusion.py`, `integration/test_simulate_exclusion_equivale_a_chow.py`; `routes/results/exclusiones.test.ts`, `useSimulacionExclusion.test.ts`, `ResultsPage.simulacion.test.tsx`, `routes/history/HistoryDetailPage.simulacion.test.tsx` (también desde el historial y exclusiones guardadas, DECISIÓN 080); `integration/db/test_exclusiones_guardadas.py` (VL-09, VL-10) | — |
 | O-13 | Exploración de distribuciones | Implementado parcialmente | — | `unit/api/test_analysis_design_events.py`, `unit/services/test_recalcular_eventos_diseno.py`; `routes/results/Etapa2Explorador.test.tsx` | — |
 
 ## 3. CU-03 — API (RF-CU03)
@@ -73,12 +73,12 @@ define requisitos no funcionales: las características de calidad se trazan en `
 | RF | Requisito | Estado | Casos | Tests | Defectos |
 |---|---|---|---|---|---|
 | CU01-01 | Autenticación con mail institucional | Implementado | E2E-0, E2E-1 | `unit/auth/` (5 archivos), `integration/db/test_registro_mailpit.py`; `auth/AuthProvider.test.tsx`, `routes/auth-verify/AuthVerifyPage.test.tsx` | D-02, D-07 |
-| CU01-02 | Persistencia de análisis por usuario | Implementado | E2E-3, E2E-4 | `integration/db/test_persistencia.py`, `unit/api/test_history_archive.py`; `routes/history/HistoryPage.test.tsx`, `HistoryDetailPage.test.tsx` | — |
+| CU01-02 | Persistencia de análisis por usuario | Implementado | E2E-3, E2E-4 | `integration/db/test_persistencia.py`, `integration/db/test_exclusiones_guardadas.py` (exclusiones guardadas, DECISIÓN 080), `unit/api/test_history_archive.py`; `routes/history/HistoryPage.test.tsx`, `HistoryDetailPage.test.tsx` | D-15, D-16 |
 | CU01-03 | Modos de uso internos | Implementado | — | `routes/results/Etapa1ResultView.test.tsx`, `routes/config/ConfigPage.test.tsx` | — |
 | CU01-04 | Elección de alcance del pipeline | Implementado | CE-04a–c, TD-04 | Los de CU02-04, más `integration/db/test_persistencia.py` | — |
 | CU01-05 | Decisiones ante problemas del contrato | **No implementado** | — | — | — |
 | CU01-06 | Configuración de partición de Cramer | Implementado | VL-06a–f | `unit/api/test_stream_cramer_particion.py`, `unit/core/etapa1/test_homogeneity.py`; `routes/config/ConfigPage.test.tsx` | D-06 |
-| CU01-07 | Registro de decisión ante atípicos de Chow | Implementado con desvío | E2E-2, E2E-3 | `unit/services/test_analysis_service.py`, `integration/test_stream_agregacion_mensual.py`, `test_stream_anual_celda_vacia.py`; `routes/stream/StreamPage.test.tsx` | D-03, D-04 |
+| CU01-07 | Registro de decisión ante atípicos de Chow | Implementado con desvío | E2E-2, E2E-3 | `unit/services/test_analysis_service.py`, `integration/test_stream_agregacion_mensual.py`, `test_stream_anual_celda_vacia.py`, `integration/db/test_persistencia.py`; `routes/stream/StreamPage.test.tsx`, `routes/history/HistoryDetailPage.test.tsx` (decisiones en el historial) | D-03, D-04, D-16, D-17 |
 | CU01-08 | Exportación de reporte | Implementado con desvío | E2E-3 | `unit/reportes/test_pdf.py`, `unit/api/test_export.py`, `unit/services/test_export_service.py`; `routes/results/ExportarPdfButton.test.tsx`, `api/export.test.ts` | — |
 
 ## 6. Resumen

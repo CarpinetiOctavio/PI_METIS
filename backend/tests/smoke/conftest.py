@@ -6,6 +6,7 @@ nginx, como lo haría un navegador. Los levanta `scripts/deploy-local.sh` (en lo
 
 - `SMOKE_BASE_URL`: dónde está nginx (default `http://localhost`).
 - `SMOKE_EMAIL`/`SMOKE_PASSWORD`: usuario verificado que siembra `scripts/deploy-local.sh`.
+- `SMOKE_EMAIL_2`: el segundo usuario, para `test_aislamiento.py` (misma contraseña).
 - Sin stack alcanzable los tests se **saltean** (un `pytest` suelto en una máquina sin el stack no
   falla por eso). Con `METIS_REQUIRE_SMOKE=1`, que setea el script, la misma situación **falla**.
 """
@@ -17,6 +18,9 @@ import pytest
 
 BASE_URL = os.environ.get("SMOKE_BASE_URL", "http://localhost").rstrip("/")
 EMAIL = os.environ.get("SMOKE_EMAIL", "smoke@ucc.edu.ar")
+# Segundo usuario, para el smoke de aislamiento entre perfiles (bloque K de la revisión manual
+# del 21/10/2026). Misma contraseña que el primero.
+EMAIL_2 = os.environ.get("SMOKE_EMAIL_2", "smoke2@ucc.edu.ar")
 PASSWORD = os.environ.get("SMOKE_PASSWORD", "smoke-metis-1234")
 
 

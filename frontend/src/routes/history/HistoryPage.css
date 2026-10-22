@@ -42,3 +42,11 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   z-index: 40;
 }
+
+/* Bloque C1 (revisión manual 21/10/2026) — etiquetas del análisis. */
+.history-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+}

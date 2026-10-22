@@ -11,6 +11,7 @@ import pytest
 from fastapi import HTTPException
 
 from metis.api.v1.analysis import _validar_alfa
+from metis.core.validacion.contract import validar_contrato
 from metis.core.validacion.parser import leer_columnas_preview
 
 FILAS = [(1980, 94.71), (1981, 89.83), (1982, 105.13)]
@@ -76,3 +77,37 @@ def test_alfa_fuera_del_conjunto_da_400(entrada):
         _validar_alfa(entrada)
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail["error"]["codigo"] == "CONTRACT_ALFA_INVALID"
+
+
+# ── CE-07: celda vacía frente a valor no numérico (revisión manual 21/10/2026, bloque H) ──
+
+_BASE = [float(i) for i in range(10, 45)]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("extra", "esperados"),
+    [
+        ([None, float("nan")], {"CONTRACT_MISSING_VALUES": "2 valor(es) faltante"}),
+        (["x"], {"CONTRACT_NON_NUMERIC_VALUES": "1 valor(es) no numérico"}),
+        (
+            [None, "x", "y"],
+            {
+                "CONTRACT_MISSING_VALUES": "1 valor(es) faltante",
+                "CONTRACT_NON_NUMERIC_VALUES": "2 valor(es) no numérico",
+            },
+        ),
+    ],
+    ids=["CE-07a solo celdas vacías", "CE-07b solo texto", "CE-07c las dos clases"],
+)
+def test_celda_vacia_y_no_numerico_son_clases_distintas(extra, esperados):
+    resultado = validar_contrato(_BASE + extra, "otro", "anual")
+
+    por_codigo = {
+        w.codigo: w.descripcion
+        for w in resultado.warnings
+        if w.codigo in ("CONTRACT_MISSING_VALUES", "CONTRACT_NON_NUMERIC_VALUES")
+    }
+    assert set(por_codigo) == set(esperados)
+    for codigo, conteo in esperados.items():
+        assert por_codigo[codigo].startswith(conteo)

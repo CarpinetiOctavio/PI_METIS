@@ -7,7 +7,7 @@ import { renderPage } from "../../test/renderPage";
 import { makeEtapa2 } from "../../test/etapa2Fixtures";
 import { stubFetchRouted } from "../../test/fetchStubs";
 import { ResultsPage } from "./ResultsPage";
-import type { Etapa1Result, Modo, TestResultDetail } from "../../api/types";
+import type { CramerParticion, Etapa1Result, Modo, TestResultDetail } from "../../api/types";
 import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
 
 function testResult(overrides: Partial<TestResultDetail> = {}): TestResultDetail {
@@ -83,6 +83,7 @@ function renderResultsPage(
     eventosDiseno?: Etapa2EventosState;
     mesInicioAnio?: number;
     analysisId?: string | null;
+    cramerParticion?: CramerParticion;
   },
 ) {
   if (authed) {
@@ -114,6 +115,14 @@ function renderResultsPage(
 
 describe("ResultsPage", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it("D-18 — informa la partición de Cramer con que se configuró el análisis", async () => {
+    renderResultsPage(false, makeResult(), "experto", { cramerParticion: { n1_pct: 70, n2_pct: 35 } });
+
+    expect(await screen.findByText(/Partición de Cramer/)).toHaveTextContent(
+      "personalizada: últimos 70 % y 35 % (n₁ = 21, n₂ = 11)",
+    );
+  });
 
   it("redirects to /config when there is no result in location.state", async () => {
     renderResultsPage(true, undefined);

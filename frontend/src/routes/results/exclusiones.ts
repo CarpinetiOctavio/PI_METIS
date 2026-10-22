@@ -74,14 +74,15 @@ export function csvDeSerie(anios: readonly number[], serie: readonly number[]): 
   return ["periodo,valor", ...filas].join("\n") + "\n";
 }
 
-/** `<archivo original>_sin_atipicos.csv`; sin nombre conocido, `serie_sin_atipicos.csv`. */
-export function nombreCsvSinAtipicos(nombreArchivo?: string | null): string {
+/** `<archivo original>_sin_puntos_excluidos.csv`; sin nombre conocido, `serie_sin_puntos_excluidos.csv`.
+ * No `_sin_atipicos`: el panel deja quitar cualquier punto, atípico o no (D-14, #136). */
+export function nombreCsvSinExcluidos(nombreArchivo?: string | null): string {
   const base = (nombreArchivo ?? "")
     .split(/[\\/]/)
     .pop()
     ?.replace(/\.[^.]+$/, "")
     .trim();
-  return `${base || "serie"}_sin_atipicos.csv`;
+  return `${base || "serie"}_sin_puntos_excluidos.csv`;
 }
 
 /** ¿Algún excluido no es el primero ni el último dato? Ahí el hueco queda en
@@ -108,4 +109,19 @@ export function descargarCsv(nombre: string, contenido: string): void {
   enlace.click();
   enlace.remove();
   URL.revokeObjectURL(url);
+}
+
+/** DECISIÓN 080 — clave de una selección de puntos, sin importar el orden en que
+ * se marcaron: "3,13". Sirve para saber si esa selección ya está guardada. */
+export function claveSeleccion(indices: Iterable<number>): string {
+  return [...indices].sort((a, b) => a - b).join(",");
+}
+
+/** DECISIÓN 080 — cómo guarda la página una exclusión, qué selecciones ya están
+ * guardadas y, desde "Ver", qué selección cargar. `pedido` cambia en cada "Ver"
+ * para que repetir el mismo vuelva a cargarla. */
+export interface ExclusionesGuardables {
+  guardar: (indices: number[]) => Promise<void>;
+  guardadas: ReadonlySet<string>;
+  cargar?: { indices: number[]; pedido: number } | null;
 }

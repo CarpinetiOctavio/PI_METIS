@@ -395,6 +395,46 @@ def _figura(alto_pulgadas: float = 2.8) -> tuple[Figure, object]:
 # ---------------------------------------------------------------------------
 
 
+def _atipicos_chow(chow: dict | None, indice_respaldo: int | None = None) -> list[dict]:
+    """Todos los atípicos que marcó Chow, como `[{indice, valor}]` en el espacio de
+    `serie_efectiva` (DECISIÓN 079: todos los valores fuera de los umbrales). Un
+    análisis anterior a la 079 no trae `valores_atipicos`: se vuelve al único
+    `indice_atipico`/`valor_atipico` (D-17, #139)."""
+    if not chow or chow.get("veredicto") != "rechazada":
+        return []
+    lista = chow.get("valores_atipicos")
+    if lista:
+        return [{"indice": a.get("indice"), "valor": a.get("valor")} for a in lista]
+    indice = (
+        indice_respaldo if indice_respaldo is not None else chow.get("indice_atipico")
+    )
+    return [{"indice": indice, "valor": chow.get("valor_atipico")}]
+
+
+def _texto_atipicos(atipicos: list[dict], anios: list | None) -> str:
+    """ "296.9300 (1994), 296.9900 (2005)": cada valor con su año si se conoce."""
+    partes = []
+    for a in atipicos:
+        indice = a.get("indice")
+        anio = (
+            anios[indice]
+            if anios and indice is not None and 0 <= indice < len(anios)
+            else None
+        )
+        partes.append(
+            f"{_num(a.get('valor'))} ({anio})" if anio else _num(a.get("valor"))
+        )
+    return ", ".join(partes)
+
+
+def _anios_efectivos(etapa1: dict) -> list | None:
+    datos = etapa1.get("datos") or {}
+    serie, timestamps = datos.get("serie_efectiva"), datos.get("timestamps_efectivos")
+    if not serie or not timestamps or len(timestamps) != len(serie):
+        return None
+    return [t.get("anio") for t in timestamps]
+
+
 def _grafico_serie(etapa1: dict) -> Figure | None:
     datos = etapa1.get("datos") or {}
     serie = datos.get("serie_efectiva")
@@ -412,23 +452,24 @@ def _grafico_serie(etapa1: dict) -> Figure | None:
     if media is not None:
         ax.axhline(media, color="#8a96a3", linewidth=0.8, linestyle="--", label="Media")
     chow = next(iter(etapa1.get("atipicos") or []), None)
-    indice = datos.get("indice_atipico")
-    if (
-        chow is not None
-        and chow.get("veredicto") == "rechazada"
-        and indice is not None
-        and 0 <= indice < len(serie)
-    ):
+    indices = [
+        a["indice"]
+        for a in _atipicos_chow(chow, datos.get("indice_atipico"))
+        if a.get("indice") is not None and 0 <= a["indice"] < len(serie)
+    ]
+    if indices:
         ax.plot(
-            [x[indice]],
-            [serie[indice]],
+            [x[i] for i in indices],
+            [serie[i] for i in indices],
             linestyle="none",
             marker="o",
             markersize=8,
             markerfacecolor="none",
             markeredgecolor="#b4443c",
             markeredgewidth=1.5,
-            label="Atípico detectado (Chow)",
+            label="Atípico detectado (Chow)"
+            if len(indices) == 1
+            else "Atípicos detectados (Chow)",
         )
     ax.set_xlabel("Año" if timestamps else "Orden", fontsize=8)
     ax.set_ylabel("Valor", fontsize=8)
@@ -454,7 +495,7 @@ def _grafico_correlograma(anderson: dict, config: dict) -> Figure | None:
         label=f"Límites de confianza ({_texto_confianza(config)})",
     )
     ax.axhline(0, color="#5f6b76", linewidth=0.6)
-    ax.set_xlabel("Rezago k", fontsize=8)
+    ax.set_xlabel("Lag k", fontsize=8)
     ax.set_ylabel("r_k", fontsize=8)
     ax.legend(fontsize=7, frameon=False, loc="lower left", bbox_to_anchor=(0, 1.0))
     return fig
@@ -697,19 +738,21 @@ def _sin_duplicados(*listas: list[dict]) -> list[dict]:
     return resultado
 
 
-def _nota_prueba(tr: dict) -> str:
+def _nota_prueba(tr: dict, anios: list | None = None) -> str:
     notas = []
     if tr.get("prueba") == "cramer" and tr.get("n1") is not None:
         notas.append(f"n₁ = {tr['n1']}, n₂ = {tr['n2']}")
-    if tr.get("prueba") == "chow" and tr.get("veredicto") == "rechazada":
-        notas.append(f"Atípico: {_num(tr.get('valor_atipico'))}")
+    atipicos = _atipicos_chow(tr) if tr.get("prueba") == "chow" else []
+    if atipicos:
+        rotulo = "Atípico" if len(atipicos) == 1 else "Atípicos"
+        notas.append(f"{rotulo}: {_texto_atipicos(atipicos, anios)}")
     codigo = tr.get("warning_codigo")
     if codigo in _NOTAS_PRUEBA:
         notas.append(_NOTAS_PRUEBA[codigo])
     return " · ".join(notas)
 
 
-def _tabla_pruebas(pruebas: list[dict], est) -> Table:
+def _tabla_pruebas(pruebas: list[dict], est, anios: list | None = None) -> Table:
     filas = [["Prueba", "Estadístico", "Valor crítico", "Veredicto", "Observaciones"]]
     for tr in pruebas:
         filas.append(
@@ -718,7 +761,7 @@ def _tabla_pruebas(pruebas: list[dict], est) -> Table:
                 _num(tr.get("estadistico")),
                 _num(tr.get("valor_critico")),
                 _rotulo(_VEREDICTOS, tr.get("veredicto")),
-                _nota_prueba(tr),
+                _nota_prueba(tr, anios),
             ]
         )
     anchos = [3.4 * cm, 2.4 * cm, 2.4 * cm, 2.3 * cm]
@@ -792,7 +835,8 @@ def _seccion_etapa1(detalle: dict, est) -> list:
         _p(
             "Valores críticos con un nivel de significancia de "
             f"{_texto_alfa(detalle.get('configuracion') or {})}. Chow lo aplica a "
-            "cada extremo; Helmert y la tolerancia de rezagos de Anderson no dependen de él.",
+            "cada extremo; Helmert y la tolerancia de Anderson (10 % de los coeficientes fuera "
+            "de banda) no dependen de él.",
             est["nota_previa"],
         )
     )
@@ -807,7 +851,10 @@ def _seccion_etapa1(detalle: dict, est) -> list:
         if not pruebas:
             continue
         encabezado = f"{titulo} — {_rotulo(_NIVELES, nivel)}" if nivel else titulo
-        story += [_p(encabezado, est["h2"]), _tabla_pruebas(pruebas, est)]
+        story += [
+            _p(encabezado, est["h2"]),
+            _tabla_pruebas(pruebas, est, _anios_efectivos(etapa1)),
+        ]
         if clave == "independencia":
             anderson = next((t for t in pruebas if t.get("prueba") == "anderson"), None)
             fig = (
@@ -1213,18 +1260,17 @@ def _seccion_simulacion(detalle: dict, simulacion: dict, est) -> list:
     chow = next(
         (t for t in simulado.get("atipicos") or [] if t.get("prueba") == "chow"), None
     )
-    if chow and chow.get("veredicto") == "rechazada":
-        indice = (simulado.get("datos") or {}).get("indice_atipico")
-        anios = simulacion.get("anios") or []
-        anio = (
-            f" ({anios[indice]})"
-            if indice is not None and 0 <= indice < len(anios)
-            else ""
+    atipicos = _atipicos_chow(chow, (simulado.get("datos") or {}).get("indice_atipico"))
+    if atipicos:
+        texto = _texto_atipicos(atipicos, simulacion.get("anios"))
+        marca = (
+            f"otro dato como atípico: {texto}"
+            if len(atipicos) == 1
+            else f"{len(atipicos)} datos como atípicos: {texto}"
         )
         story.append(
             _p(
-                f"Sin esos puntos, Chow marca otro dato como atípico{anio}: "
-                f"{_num(chow.get('valor_atipico'))}. En la simulación no se frena nada.",
+                f"Sin esos puntos, Chow marca {marca}. En la simulación no se frena nada.",
                 est["base"],
             )
         )

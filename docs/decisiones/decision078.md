@@ -91,3 +91,12 @@ antes, y `0,10/(2n)` y `0,05/n` son la misma división redondeada.
 - **DECISIÓN 057** — mismo criterio para un parámetro del análisis: se persiste y se repite en la segunda pasada.
 - **DECISIÓN 070** — el umbral de EEA no es un nivel de significancia.
 - **DECISIÓN 079** — Chow con todos los valores fuera de los umbrales, prueba de un extremo por lado.
+
+### Revisión 21/10/2026 — la tolerancia de Anderson queda fija (respuesta de Facundo)
+
+Facundo respondió el 21/10/2026 la consulta abierta en "Lo que no depende de α y queda fijo": el 10 % de
+coeficientes fuera de banda es una **regla fija de la prueba de Anderson** y no cambia con α. METIS ya lo
+implementaba así (`⌈0,10·k_max⌉`, DECISIONES 012 y 016); no cambia código ni resultados. Confirmó además que el
+término usado en hidrología es *lag*: el PDF pasa de "Rezago k" a "Lag k" en el correlograma y nombra la regla como
+"tolerancia de Anderson (10 % de los coeficientes fuera de banda)", como ya hacía la pantalla (bloque J de
+`docs/plan-revision-manual-21-10-2026.md`).

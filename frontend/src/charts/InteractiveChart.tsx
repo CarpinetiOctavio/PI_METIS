@@ -86,6 +86,10 @@ interface InteractiveChartProps {
   // retorno (ej. el lag k del correlograma) los pisa.
   xName?: string;
   yName?: string;
+  // Cómo se escribe x en el tooltip, si no es igual al tick del eje. Los gráficos
+  // con eje de años lo usan para "1994-95" cuando el año no arranca en enero
+  // (bloque G, revisión manual 21/10/2026); el eje sigue con el año de inicio.
+  xTooltipFormat?: (v: number) => string;
   // Se dispara con un clic sobre un marcador (serie `kind: "points"`) o con
   // Enter/Espacio sobre el marcador enfocado con el teclado — la misma acción
   // por las dos vías. Un arrastre para hacer zoom no cuenta como clic.
@@ -122,6 +126,7 @@ export function InteractiveChart({
   xScale: xScaleType = "log",
   xName = "T",
   yName = "valor",
+  xTooltipFormat = xTickFormat,
   onPointActivate,
 }: Readonly<InteractiveChartProps>) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -522,7 +527,7 @@ export function InteractiveChart({
               <foreignObject x={10} y={-28} width={150} height={44}>
                 <div className="interactive-chart__tooltip-box">
                   <div>
-                    {xName} = {xTickFormat(tooltip.point.x)}
+                    {xName} = {xTooltipFormat(tooltip.point.x)}
                   </div>
                   <div>
                     {yName} = {yTickFormat(tooltip.point.y)}

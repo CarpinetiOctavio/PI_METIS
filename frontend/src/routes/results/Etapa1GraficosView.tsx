@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Etapa1Datos,
   Etapa1Result,
@@ -10,7 +10,10 @@ import { Etapa1ChowChart } from "./Etapa1ChowChart";
 import { Etapa1Comparacion } from "./Etapa1Comparacion";
 import { Etapa1ExclusionPanel } from "./Etapa1ExclusionPanel";
 import { Etapa1SerieTemporalChart } from "./Etapa1SerieTemporalChart";
-import { puntosDeSerie } from "./exclusiones";
+import { claveSeleccion, puntosDeSerie } from "./exclusiones";
+import type { ExclusionesGuardables } from "./exclusiones";
+import { ApiError } from "../../api/client";
+import { errorText } from "../../i18n/errors.es";
 import { useSimulacionExclusion } from "./useSimulacionExclusion";
 import type { SimularFn } from "./useSimulacionExclusion";
 
@@ -33,6 +36,7 @@ export function Etapa1GraficosView({
   simular,
   onSimulacionVigente,
   tipoVariable,
+  exclusiones,
 }: Readonly<{
   datos: Etapa1Datos;
   chow?: TestResultDetail;
@@ -47,6 +51,9 @@ export function Etapa1GraficosView({
   // La simulación que corresponde a la selección actual, o null si no hay o
   // quedó desactualizada. La página la usa para los eventos de diseño del fondo.
   onSimulacionVigente?: (simulacion: SimulateExclusionResponse | null) => void;
+  // DECISIÓN 080 — solo CU-01 (análisis persistido): guardar la exclusión de la
+  // comparación vigente y, desde el historial, cargar una guardada.
+  exclusiones?: ExclusionesGuardables;
 }>) {
   const [excluidos, setExcluidos] = useState<ReadonlySet<number>>(new Set());
   const puntos = useMemo(() => puntosDeSerie(datos), [datos]);
@@ -65,6 +72,19 @@ export function Etapa1GraficosView({
     reiniciar();
   }, [reiniciar]);
 
+  // "Ver" una exclusión guardada (DECISIÓN 080): carga la selección y simula.
+  // Una sola vez por pedido — `calcular` cambia de identidad en cada render de
+  // la página (simular se arma ahí), así que no puede gatillar el efecto solo.
+  const cargar = exclusiones?.cargar;
+  const ultimoCargado = useRef<number | null>(null);
+  useEffect(() => {
+    if (!cargar || cargar.pedido === ultimoCargado.current) return;
+    ultimoCargado.current = cargar.pedido;
+    const indices = new Set(cargar.indices);
+    setExcluidos(indices);
+    void calcular(indices);
+  }, [cargar, calcular]);
+
   const seleccion = { excluidos, onToggle: alternar };
   const simulacionVigente =
     simulacion.fase === "lista" && mismaSeleccion(simulacion.indices, excluidos)
@@ -77,7 +97,7 @@ export function Etapa1GraficosView({
 
   return (
     <div className="stack" style={{ marginTop: 14 }}>
-      <Etapa1SerieTemporalChart datos={datos} seleccion={seleccion} />
+      <Etapa1SerieTemporalChart datos={datos} seleccion={seleccion} mesInicioAnio={mesInicioAnio} />
       <Etapa1ChowChart
         datos={datos}
         chow={chow}
@@ -118,6 +138,9 @@ export function Etapa1GraficosView({
           desactualizada={!mismaSeleccion(simulacion.indices, excluidos)}
         />
       )}
+      {exclusiones && simulacionVigente && simulacion.fase === "lista" && (
+        <GuardarExclusion indices={simulacion.indices} exclusiones={exclusiones} />
+      )}
       <Etapa1BoxplotMensualChart datos={datos} mesInicioAnio={mesInicioAnio} />
     </div>
   );
@@ -125,4 +148,51 @@ export function Etapa1GraficosView({
 
 function mismaSeleccion(indices: readonly number[], excluidos: ReadonlySet<number>): boolean {
   return indices.length === excluidos.size && indices.every((i) => excluidos.has(i));
+}
+
+/**
+ * DECISIÓN 080 — guarda la exclusión de la comparación vigente en el historial,
+ * aparte del resultado (no lo modifica: DECISIÓN 062). Solo a pedido: una
+ * exclusión probada y descartada no queda registrada. Ya guardada, lo dice y no
+ * vuelve a ofrecerse para la misma selección.
+ */
+function GuardarExclusion({
+  indices,
+  exclusiones,
+}: Readonly<{ indices: readonly number[]; exclusiones: ExclusionesGuardables }>) {
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (exclusiones.guardadas.has(claveSeleccion(indices))) {
+    return (
+      <p className="fn" role="status">
+        Guardada: esta exclusión figura en el historial del análisis.
+      </p>
+    );
+  }
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await exclusiones.guardar([...indices]);
+    } catch (err) {
+      setError(err instanceof ApiError ? errorText(err.codigo) : errorText(""));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div className="row" style={{ alignItems: "center", gap: 10 }}>
+      <button type="button" className="b b-sec" disabled={guardando} onClick={guardar}>
+        Guardar esta exclusión en el historial
+      </button>
+      {error && (
+        <span className="fn" role="alert">
+          {error}
+        </span>
+      )}
+    </div>
+  );
 }
