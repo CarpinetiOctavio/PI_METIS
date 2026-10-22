@@ -463,6 +463,27 @@ describe("ConfigPage", () => {
     expect(form.variable_diaria).toBe("media");
   });
 
+  it("manda variable_diaria='acumulado' con la opción de lluvia de 9 a 9", async () => {
+    // Respuesta de Facundo (22/10/2026): la lluvia diaria es un acumulado, ni pico ni media.
+    await subirColumnaXCon(["1980-01-01", "1980-01-02", "1980-01-03"]);
+
+    const acumulado = screen.getByRole("button", { name: /Acumulado del día/ });
+    expect(acumulado).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(acumulado);
+    expect(acumulado).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Picos diarios" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByText(/la serie\s+de máximos diarios anuales/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    const form = JSON.parse(
+      (await screen.findByTestId("stream-state")).textContent ?? "null",
+    );
+    expect(form.variable_diaria).toBe("acumulado");
+  });
+
   // Bloque E (plan post-avance) — panel de columnas acoplable.
 
   function stubFetchConPreview() {

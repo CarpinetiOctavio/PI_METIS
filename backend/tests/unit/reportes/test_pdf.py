@@ -539,8 +539,14 @@ def test_carga_mensual_explica_que_t_sigue_en_anios(detalle_completo, est):
 @pytest.mark.parametrize(
     ("variable", "valor", "articulado"),
     [
-        ("pico", "pico diario máximo", "el pico diario máximo"),
-        ("media", "media diaria máxima", "la media diaria máxima"),
+        ("pico", "pico diario máximo del año", "el pico diario máximo"),
+        ("media", "media diaria máxima del año", "la media diaria máxima"),
+        # Respuesta de Facundo (22/10/2026): lluvia acumulada de 9 a 9.
+        (
+            "acumulado",
+            "máximo diario anual, acumulado de 24 h",
+            "el acumulado diario máximo",
+        ),
     ],
 )
 def test_carga_diaria_nombra_la_variable_diaria(
@@ -551,7 +557,7 @@ def test_carga_diaria_nombra_la_variable_diaria(
     )
     textos = _textos(_seccion_etapa2(detalle, est))
 
-    assert _fila_cabecera_eventos(textos).endswith(f"Valor de diseño ({valor} del año)")
+    assert _fila_cabecera_eventos(textos).endswith(f"Valor de diseño ({valor})")
     assert "T [años, de enero a diciembre]" in _fila_cabecera_eventos(textos)
     nota = next(t for t in textos if t.startswith("Se cargó una serie de"))
     assert f"toma {articulado} de cada año (de enero a diciembre)" in nota
@@ -568,6 +574,24 @@ def test_simulacion_rotula_t_igual_que_el_analisis(detalle_completo, est):
         t.startswith("Período de retorno T [años, de julio a junio] | Original")
         for t in textos
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("variable", "esperado"),
+    [
+        ("pico", "Picos diarios"),
+        ("media", "Medias diarias"),
+        ("acumulado", "Acumulados diarios"),
+    ],
+)
+def test_datos_nombran_la_variable_diaria_declarada(
+    detalle_completo, est, variable, esperado
+):
+    detalle = _con_carga(detalle_completo, "diaria", variable_diaria=variable)
+    textos = _textos(_seccion_datos(detalle, None, est))
+
+    assert f"Valores diarios | {esperado}" in textos
 
 
 @pytest.mark.unit

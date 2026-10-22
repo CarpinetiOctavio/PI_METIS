@@ -82,13 +82,13 @@ def _validar_mes_inicio(mes_inicio_anio: int) -> int:
     return mes_inicio_anio
 
 
-_VARIABLE_DIARIA_VALIDAS = ("pico", "media")
+_VARIABLE_DIARIA_VALIDAS = ("pico", "media", "acumulado")
 _VARIABLE_DIARIA_INVALIDA = HTTPException(
     status_code=400,
     detail={
         "error": {
             "codigo": "CONTRACT_VARIABLE_DIARIA_INVALID",
-            "mensaje": "variable_diaria debe ser 'pico' o 'media'.",
+            "mensaje": "variable_diaria debe ser 'pico', 'media' o 'acumulado'.",
         }
     },
 )
@@ -96,8 +96,10 @@ _VARIABLE_DIARIA_INVALIDA = HTTPException(
 
 def _validar_variable_diaria(variable_diaria: str) -> str:
     """PR 2.5 (docs/historico/planes/plan-resolucion-diaria.md, R0.2) — declara qué contiene
-    la columna de una serie diaria: 'pico' (picos o máximos diarios) o
-    'media' (medias diarias). Solo tiene efecto cuando la resolución
+    la columna de una serie diaria: 'pico' (picos o máximos diarios),
+    'media' (medias diarias) o 'acumulado' (acumulados del día, como la lluvia
+    de 9 a 9 — respuesta de Facundo del 22/10/2026, revisión de DECISIÓN 065).
+    Solo tiene efecto cuando la resolución
     inferida es 'diaria'; para el resto se acepta y se ignora, mismo
     criterio que mes_inicio_anio."""
     if variable_diaria not in _VARIABLE_DIARIA_VALIDAS:

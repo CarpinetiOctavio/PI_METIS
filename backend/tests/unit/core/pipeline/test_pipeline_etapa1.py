@@ -360,6 +360,40 @@ def test_carga_diaria_media_advierte_sesgo_a_la_baja():
 
 
 @pytest.mark.unit
+def test_carga_diaria_acumulado_no_advierte_sesgo_y_da_los_mismos_numeros():
+    # Respuesta de Facundo (22/10/2026): la lluvia diaria es un acumulado de 9 a 9,
+    # y su máximo anual es la "serie de máximos diarios anuales". Mismo max() que
+    # con "pico": los números no cambian, solo el texto del aviso, sin sesgo.
+    timestamps = _fechas_diarias("2000-01-01", "2011-12-31")
+    serie = [float(i % 37) for i in range(len(timestamps))]
+
+    def correr(variable):
+        return ejecutar_etapa1(
+            serie,
+            "otro",
+            resolucion_temporal="diaria",
+            timestamps=timestamps,
+            mes_inicio_anio=1,
+            variable_diaria=variable,
+        )
+
+    acumulado, pico = correr("acumulado"), correr("pico")
+
+    daily = next(
+        w for w in acumulado.warnings if w.codigo == "CONTRACT_DAILY_SERIES_AGGREGATED"
+    )
+    assert daily.nivel == "normal"
+    assert daily.descripcion == (
+        "La serie se agregó a máximos anuales desde valores diarios acumulados "
+        "(por ejemplo, lluvia de 24 horas): cada valor anual es el máximo "
+        "acumulado diario del año."
+    )
+    assert "subestimar" not in daily.descripcion
+    assert acumulado.serie_efectiva == pico.serie_efectiva
+    assert acumulado.nivel_confianza == pico.nivel_confianza
+
+
+@pytest.mark.unit
 def test_carga_mensual_no_emite_daily_series_aggregated():
     timestamps = _fechas_mensuales(2000, 1, 12 * 12)
     serie = [float(i) for i in range(len(timestamps))]

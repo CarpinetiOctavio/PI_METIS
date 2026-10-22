@@ -35,7 +35,7 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_ETAPAS_INVALID: "El alcance del análisis pedido no es válido.",
   CONTRACT_MES_INICIO_INVALID: "El mes de inicio del año debe estar entre 1 y 12.",
   CONTRACT_VARIABLE_DIARIA_INVALID:
-    "El tipo de dato de la serie diaria no es válido — debe ser pico o media diaria.",
+    "El tipo de dato de la serie diaria no es válido — debe ser pico, media o acumulado del día.",
   CONTRACT_ALFA_INVALID: "El nivel de significancia debe ser 1 %, 5 % o 10 %.",
   CONTRACT_SERIES_INVALID:
     "La serie que se mandó a recalcular no es válida: tiene que tener entre 1 y 500 valores numéricos.",
@@ -58,7 +58,7 @@ export const ERROR_TEXT: Record<string, string> = {
   CONTRACT_INCOMPLETE_YEARS_ACCEPTED:
     "Se aceptó al menos un año con cobertura incompleta al agregar a máximos anuales — su máximo puede estar sesgado a la baja.",
   CONTRACT_DAILY_SERIES_AGGREGATED:
-    "La serie diaria se agregó a máximos anuales. Si la columna son medias diarias (no picos), los máximos y los eventos de diseño pueden subestimar el pico instantáneo real.",
+    "La serie diaria se agregó a máximos anuales. Si la columna son medias diarias (no picos ni acumulados del día), los máximos y los eventos de diseño pueden subestimar el pico instantáneo real.",
 
   // Etapa 1 — pruebas
   TEST_CRITICAL_INDEPENDENCE:

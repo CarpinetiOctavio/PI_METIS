@@ -157,22 +157,34 @@ _MESES = [
 # que estos rótulos dejan explícito. Mismo texto que
 # frontend/src/i18n/periodoRetorno.ts: si se cambia uno, cambiar el otro.
 
-_MAXIMO_AGREGADO = {
-    ("mensual", None): "valor mensual máximo",
-    ("diaria", "pico"): "pico diario máximo",
-    ("diaria", "media"): "media diaria máxima",
+# Lo que se agrega al rótulo del valor de diseño. Con acumulados diarios es la
+# "serie de máximos diarios anuales" de la respuesta de Facundo (22/10/2026).
+_VALOR_DISENO_AGREGADO = {
+    ("mensual", None): "valor mensual máximo del año",
+    ("diaria", "pico"): "pico diario máximo del año",
+    ("diaria", "media"): "media diaria máxima del año",
+    ("diaria", "acumulado"): "máximo diario anual, acumulado de 24 h",
 }
 
 _MAXIMO_CON_ARTICULO = {
     ("mensual", None): "el valor mensual máximo",
     ("diaria", "pico"): "el pico diario máximo",
     ("diaria", "media"): "la media diaria máxima",
+    ("diaria", "acumulado"): "el acumulado diario máximo",
 }
 
 _CARGA_AGREGADA = {
     ("mensual", None): "una serie mensual",
     ("diaria", "pico"): "una serie de picos diarios",
     ("diaria", "media"): "una serie de medias diarias",
+    ("diaria", "acumulado"): "una serie de acumulados diarios",
+}
+
+_VARIABLES_DIARIAS = ("pico", "media", "acumulado")
+_VALORES_DIARIOS = {
+    "pico": "Picos diarios",
+    "media": "Medias diarias",
+    "acumulado": "Acumulados diarios",
 }
 
 
@@ -186,7 +198,8 @@ def _contexto_serie(detalle: dict) -> tuple[str | None, int | None, str | None]:
         mes = None
     variable = None
     if resolucion == "diaria":
-        variable = "media" if config.get("variable_diaria") == "media" else "pico"
+        declarada = config.get("variable_diaria")
+        variable = declarada if declarada in _VARIABLES_DIARIAS else "pico"
     return resolucion, mes, variable
 
 
@@ -198,7 +211,7 @@ def _rango_anio(mes: int) -> str:
 def _clave_agregada(detalle: dict) -> tuple[str, str | None] | None:
     resolucion, _, variable = _contexto_serie(detalle)
     clave = (resolucion, variable)
-    return clave if clave in _MAXIMO_AGREGADO else None
+    return clave if clave in _VALOR_DISENO_AGREGADO else None
 
 
 def _unidad_periodo_retorno(detalle: dict) -> str:
@@ -217,7 +230,7 @@ def _rotulo_valor_diseno(detalle: dict) -> str:
     clave = _clave_agregada(detalle)
     if clave is None:
         return "Valor de diseño"
-    return f"Valor de diseño ({_MAXIMO_AGREGADO[clave]} del año)"
+    return f"Valor de diseño ({_VALOR_DISENO_AGREGADO[clave]})"
 
 
 def _nota_periodo_retorno(detalle: dict) -> str:
@@ -697,9 +710,7 @@ def _seccion_datos(detalle: dict, autor: str | None, est) -> list:
         filas.append(
             [
                 "Valores diarios",
-                "Medias diarias"
-                if config["variable_diaria"] == "media"
-                else "Picos diarios",
+                _VALORES_DIARIOS.get(config["variable_diaria"], "Picos diarios"),
             ]
         )
     if "cramer_particion" in config:

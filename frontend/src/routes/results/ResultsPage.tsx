@@ -15,6 +15,7 @@ import type {
   Modo,
   SimulateExclusionResponse,
   TipoVariable,
+  VariableDiaria,
 } from "../../api/types";
 import { crearPedirSimulacion, crearSimular } from "./simulacion";
 import { claveSeleccion, type ExclusionesGuardables } from "./exclusiones";
@@ -33,7 +34,7 @@ interface ResultsLocationState {
   mesInicioAnio?: number;
   // DECISIÓN 076: con mesInicioAnio y la resolución de la carga, nombra qué
   // representa el período de retorno. Solo viaja en la sesión interactiva.
-  variableDiaria?: "pico" | "media";
+  variableDiaria?: VariableDiaria;
   // Nombre del archivo subido — nombra el CSV de la serie sin los puntos excluidos.
   nombreArchivo?: string;
   // Configuración con la que se corrió el análisis — la necesita el what-if de

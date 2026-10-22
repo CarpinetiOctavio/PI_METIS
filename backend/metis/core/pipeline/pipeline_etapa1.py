@@ -146,7 +146,10 @@ def _warnings_de_agregacion(
     # registro. METIS no puede saberlo solo: `variable_diaria` lo declara el
     # usuario. Si son medias diarias, el máximo anual (y los eventos de
     # diseño de Etapa 2) subestiman el pico instantáneo real — sesgo que NO
-    # se corrige en software (ver docs/decisiones/decision066.md).
+    # se corrige en software (ver docs/decisiones/decision066.md). Si son
+    # acumulados del día (lluvia de 9 a 9), el máximo anual es la serie de
+    # máximos diarios anuales que se busca, sin sesgo que advertir
+    # (respuesta de Facundo del 22/10/2026, revisión de DECISIÓN 065).
     if resolucion == "diaria":
         if variable_diaria == "media":
             descripcion = (
@@ -154,6 +157,12 @@ def _warnings_de_agregacion(
                 "declarados como MEDIAS diarias: los máximos anuales y los "
                 "eventos de diseño pueden subestimar el pico instantáneo real. "
                 "METIS no corrige este sesgo — depende de la fuente del registro."
+            )
+        elif variable_diaria == "acumulado":
+            descripcion = (
+                "La serie se agregó a máximos anuales desde valores diarios "
+                "acumulados (por ejemplo, lluvia de 24 horas): cada valor anual "
+                "es el máximo acumulado diario del año."
             )
         else:
             descripcion = (

@@ -17,6 +17,7 @@ import type {
   CramerParticion,
   Modo,
   TipoVariable,
+  VariableDiaria,
 } from "../../api/types";
 import { etiquetaSelectorMes } from "../../i18n/mesInicioAnio";
 import { NIVELES_ALFA } from "../../i18n/alfa";
@@ -163,7 +164,7 @@ export function ConfigPage() {
   const [mesInicioAnio, setMesInicioAnio] = useState(7);
   // PR 2.5 (DECISIÓN 065 / R0.2) — default "pico", igual que el backend. Se
   // manda siempre; solo tiene efecto con carga diaria.
-  const [variableDiaria, setVariableDiaria] = useState<"pico" | "media">("pico");
+  const [variableDiaria, setVariableDiaria] = useState<VariableDiaria>("pico");
   // DECISIÓN 078 — 5 % marcado por defecto: es una configuración de la prueba
   // (el estándar en hidrología), no una sugerencia sobre los resultados.
   const [alfa, setAlfa] = useState<Alfa>(0.05);
@@ -518,18 +519,31 @@ export function ConfigPage() {
                 >
                   Medias diarias
                 </button>
+                <button
+                  type="button"
+                  className={variableDiaria === "acumulado" ? "on" : ""}
+                  aria-pressed={variableDiaria === "acumulado"}
+                  onClick={() => setVariableDiaria("acumulado")}
+                >
+                  Acumulado del día (por ejemplo, lluvia de 9 a 9)
+                </button>
               </div>
               {/* PR 2.5 (R0.2) — METIS agrega la serie diaria a máximos
-                  anuales con max(): el número es el mismo sea pico o media.
-                  Lo que cambia es la lectura del resultado, así que se
-                  advierte, no se corrige. */}
+                  anuales con max(): el número es el mismo con las tres
+                  opciones. Lo que cambia es la lectura del resultado, así que
+                  se advierte, no se corrige. "Acumulado" sale de la respuesta
+                  de Facundo del 22/10/2026 (revisión de DECISIÓN 065). */}
               <p className="fn">
                 METIS construye los máximos anuales tomando el mayor valor
-                diario de cada año. Con <b>picos diarios</b> eso aproxima el
-                pico anual real. Con <b>medias diarias</b> los máximos
-                anuales (y los eventos de diseño de Etapa 2) pueden quedar
-                por debajo del pico instantáneo real — METIS lo advierte,
-                pero no lo corrige.
+                diario de cada año. Usá <b>picos diarios</b> si cada valor es
+                el máximo instantáneo del día (por ejemplo, un caudal pico):
+                eso aproxima el pico anual real. Usá <b>acumulado del día</b>{" "}
+                si cada valor es lo acumulado en 24 horas (por ejemplo, la
+                lluvia leída a las 9 de la mañana): el resultado es la serie
+                de máximos diarios anuales. Usá <b>medias diarias</b> si cada
+                valor es el promedio del día: los máximos anuales (y los
+                eventos de diseño de Etapa 2) pueden quedar por debajo del
+                pico instantáneo real — METIS lo advierte, pero no lo corrige.
               </p>
             </fieldset>
           )}

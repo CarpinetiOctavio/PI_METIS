@@ -63,16 +63,21 @@ export interface AnalysisStreamForm {
   // tiene efecto cuando la serie subida es de resolución mensual o diaria.
   mes_inicio_anio?: number;
   // DECISIÓN 065 (PR 2.5 / R0.2) — qué contiene la columna de una serie
-  // DIARIA: "pico" (picos o máximos diarios) o "media" (medias diarias).
-  // Solo tiene efecto con carga diaria: cambia el texto del warning
-  // CONTRACT_DAILY_SERIES_AGGREGATED, no los números. Default "pico".
-  variable_diaria?: "pico" | "media";
+  // DIARIA (ver VariableDiaria). Solo tiene efecto con carga diaria: cambia el
+  // texto del warning CONTRACT_DAILY_SERIES_AGGREGATED, no los números.
+  // Default "pico".
+  variable_diaria?: VariableDiaria;
   // DECISIÓN 078 — nivel de significancia de la Etapa 1. Default 0.05.
   alfa?: Alfa;
 }
 
 // DECISIÓN 078 — los tres niveles de significancia que acepta el backend.
 export type Alfa = 0.01 | 0.05 | 0.1;
+
+// DECISIÓN 065 — qué contiene la columna de una serie diaria: "pico" (picos o
+// máximos diarios), "media" (medias diarias) o "acumulado" (acumulados del día,
+// como la lluvia de 9 a 9 — respuesta de Facundo del 22/10/2026).
+export type VariableDiaria = "pico" | "media" | "acumulado";
 
 export type DecisionAtipico = "rechazar" | "aceptar";
 
@@ -431,7 +436,7 @@ export interface AnalysisConfiguracion {
   nombre_archivo?: string | null;
   // DECISIÓN 065 (PR 2.5) — presente en análisis persistidos desde esa
   // fecha; opcional para no romper la lectura de análisis anteriores.
-  variable_diaria?: "pico" | "media";
+  variable_diaria?: VariableDiaria;
   // DECISIÓN 078 — siempre presente en GET /history/{id}: un análisis anterior
   // llega con 0.05 y `alfa_implicito: true` (corrió con 5 % sin registrarlo).
   alfa?: Alfa;

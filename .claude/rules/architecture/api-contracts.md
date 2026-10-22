@@ -165,18 +165,21 @@ sobre el mismo archivo dan resultados distintos.
 
 **Agregado 28/08/2026 (DECISIÓN 065, PR 2.5 / R0.2) —
 `variable_diaria: str = Form("pico")`.** Declara qué contiene la columna de
-una serie **diaria**: `"pico"` (picos o máximos diarios) o `"media"`
-(medias diarias). Validado en el borde → 400
+una serie **diaria**: `"pico"` (picos o máximos diarios), `"media"`
+(medias diarias) o `"acumulado"` (acumulados del día, como la lluvia de 9 a 9 —
+revisión 22/10/2026 de la DECISIÓN 065). Validado en el borde → 400
 `CONTRACT_VARIABLE_DIARIA_INVALID` para cualquier otro valor. Solo tiene
 efecto cuando la resolución inferida es `"diaria"`: cambia el texto del
 warning `CONTRACT_DAILY_SERIES_AGGREGATED` (con `"media"` advierte que los
 máximos anuales y los eventos de diseño subestiman el pico instantáneo
-real). **No cambia ningún número** — el `max()` de la agregación es el
+real; con `"acumulado"` dice que cada valor anual es el máximo acumulado
+diario del año, sin advertencia de sesgo). **No cambia ningún número** — el `max()` de la agregación es el
 mismo; METIS no corrige el sesgo (ver `docs/decisiones/decision066.md`,
 por qué no hay una corrección válida en software). Se persiste en
 `analyses.configuracion` igual que `mes_inicio_anio` — el historial tiene
-que registrar bajo qué supuesto se construyó la serie. Pendiente de
-confirmación de dominio con Facundo (R0.2 en `pendientes-facundo.md`).
+que registrar bajo qué supuesto se construyó la serie. R0.2 respondida por
+Facundo el 22/10/2026: la lluvia diaria es un acumulado y se arma la serie de
+máximos diarios anuales (ver la revisión de la DECISIÓN 065).
 
 **Agregado 18/10/2026 (DECISIÓN 078) — `alfa: str = Form("0.05")`.** Nivel de
 significancia de las ocho pruebas de la Etapa 1: `0.01`, `0.05` (por defecto,
@@ -868,7 +871,7 @@ CONTRACT_NON_NUMERIC_VALUES      Valores no numéricos mezclados
 CONTRACT_PARTIAL_YEARS_TRIMMED   Agregación mensual/diaria (Bloque F4 / R2): años parciales recortados en los extremos del registro
 CONTRACT_INCOMPLETE_YEARS_DISCARDED  Agregación mensual/diaria (Bloque F4 / R2): año incompleto descartado dentro del registro (no en un extremo)
 CONTRACT_INCOMPLETE_YEARS_ACCEPTED   Agregación mensual/diaria (R2.3): año interior aceptado con cobertura < 100% — su máximo puede estar sesgado a la baja
-CONTRACT_DAILY_SERIES_AGGREGATED     Agregación diaria (PR 2.5 / R0.2): los máximos anuales son un derivado del registro diario. Texto según variable_diaria — si "media", advierte que subestiman el pico instantáneo real
+CONTRACT_DAILY_SERIES_AGGREGATED     Agregación diaria (PR 2.5 / R0.2): los máximos anuales son un derivado del registro diario. Texto según variable_diaria — si "media", advierte que subestiman el pico instantáneo real; si "acumulado", nombra el máximo acumulado diario, sin sesgo
 ```
 `CONTRACT_PARTIAL_YEARS_TRIMMED`, `CONTRACT_INCOMPLETE_YEARS_DISCARDED`,
 `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` y `CONTRACT_DAILY_SERIES_AGGREGATED` los
@@ -887,7 +890,8 @@ estos cuatro — `services/` los arrastra desde la primera ejecución
 `CONTRACT_DAILY_SERIES_AGGREGATED` (DECISIÓN 065, PR 2.5 / R0.2) se emite en
 **toda** agregación desde carga diaria — deja constancia de que los máximos
 anuales son un derivado del registro diario. El texto del warning depende
-del parámetro de request `variable_diaria`: con `"pico"` (default) es
+del parámetro de request `variable_diaria`: con `"pico"` (default) y con
+`"acumulado"` (lluvia de 9 a 9, revisión 22/10/2026 de la DECISIÓN 065) es
 informativo; con `"media"` advierte que los máximos anuales y los eventos
 de diseño de Etapa 2 pueden subestimar el pico instantáneo real, sesgo que
 METIS no corrige (ver `docs/decisiones/decision066.md`). `variable_diaria`
@@ -930,7 +934,8 @@ CONTRACT_CRAMER_PARTICION_INVALID      cramer_particion mal formado, fuera de ra
                                         n1_pct ≤ n2_pct (DECISIÓN 036, Bloque H1)
 CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
 CONTRACT_MES_INICIO_INVALID            mes_inicio_anio fuera de [1..12] (DECISIÓN 057)
-CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media"} (DECISIÓN 065, PR 2.5 / R0.2)
+CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media", "acumulado"} (DECISIÓN 065, PR 2.5 / R0.2;
+                                        "acumulado" desde la revisión del 22/10/2026)
 CONTRACT_ALFA_INVALID                  alfa fuera de {0.01, 0.05, 0.10} en POST /analysis/stream o en
                                         POST /analysis/simulate-exclusion (DECISIÓN 078)
 CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusion vacía, con más de 500 valores o con
