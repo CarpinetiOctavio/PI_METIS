@@ -95,4 +95,4 @@ editar el ruleset), y Kevin no la tiene: el repo es de Octavio. Por eso:
   requerible. `sonar-project.properties` pasa a ser la única configuración (los tests de `frontend/src` se sacan de
   las fuentes, porque un archivo no puede indexarse dos veces); `.sonarcloud.properties` se borra.
 - **Checks requeridos (punto 4):** los ocho jobs de `ci.yml`, configurados por Octavio en el Ruleset de `staging` y
-  `main`. Un job salteado cuenta como aprobado para GitHub; `carga` y los E2E solo corren en PR, que es donde se exigen.
+  `main`. Un job salteado cuenta como aprobado para GitHub; `carga` solo corre en PR, que es donde se exige; los E2E corren en cada push y PR desde el addendum del 22/10/2026 a la DECISIÓN 046.

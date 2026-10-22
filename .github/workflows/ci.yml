@@ -138,7 +138,8 @@ jobs:
 
   # Despliegue efímero (B5/B6 del plan del TP de Calidad): el stack completo con la configuración de
   # producción (docker-compose.ci.yml) dentro del runner, el mismo procedimiento que la demo local
-  # (scripts/deploy-local.sh). Smoke en cada corrida; E2E con Playwright (DECISIÓN 046) en cada PR.
+  # (scripts/deploy-local.sh). Smoke y E2E con Playwright (DECISIÓN 046) en cada corrida: cada despliegue
+  # se verifica completo, también el de cada push a staging/main (addendum del 22/10/2026 a la DECISIÓN 046).
   despliegue:
     name: Despliegue efímero (smoke + E2E)
     runs-on: ubuntu-latest
@@ -158,27 +159,23 @@ jobs:
       - name: Desplegar y correr el smoke
         run: bash scripts/deploy-local.sh
       - uses: actions/setup-node@v4
-        if: github.event_name == 'pull_request'
         with:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci --ignore-scripts
-        if: github.event_name == 'pull_request'
         working-directory: frontend
       # El binario del lockfile (@playwright/test exacta), no npx: no baja nada fuera de package-lock.json.
       - run: ./node_modules/.bin/playwright install --with-deps chromium
-        if: github.event_name == 'pull_request'
         working-directory: frontend
       - name: E2E (Playwright)
-        if: github.event_name == 'pull_request'
         run: bash scripts/test.sh e2e
       - name: Logs del despliegue
         if: failure()
         run: docker compose -p metis-ci -f docker-compose.yml -f docker-compose.ci.yml logs --tail 200
       # Siempre, no solo al fallar: el reporte en verde es evidencia del TP y de la Capa 4 de testing.md.
       - uses: actions/upload-artifact@v4
-        if: always() && github.event_name == 'pull_request'
+        if: always()
         with:
           name: reporte-e2e
           path: |
