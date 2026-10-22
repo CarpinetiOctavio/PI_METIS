@@ -40,6 +40,21 @@ def test_entre_10_y_29_activa_length_warning(serie_corta_15):
 
 
 @pytest.mark.unit
+def test_length_warning_dice_la_longitud_minima_recomendable():
+    # Redacción pedida por Facundo (respuesta del 22/10/2026): el aviso nombra los 30 valores
+    # recomendables, no solo "resultados no certificables". El análisis sigue.
+    serie = [float(v) for v in range(100, 124)]
+    result = validar_contrato(serie, "otro", "anual")
+    assert result.bloqueante is False
+    aviso = next(w for w in result.warnings if w.codigo == "CONTRACT_LENGTH_WARNING")
+    assert aviso.descripcion == (
+        "Serie con 24 datos. La longitud mínima recomendable para que la serie sea "
+        "representativa es de 30 valores; con menos, los resultados no son certificables."
+    )
+    assert aviso.nivel == "normal"
+
+
+@pytest.mark.unit
 def test_30_o_mas_sin_length_warning():
     serie = [float(i) for i in range(30, 60)]
     result = validar_contrato(serie, "otro", "anual")

@@ -819,7 +819,7 @@ se guarda nada ni se toca `decisiones` (DECISIÓN 062).
       "chow": {"estadistico": null, "valor_critico": null, "veredicto": "no_ejecutada", "codigo": "TEST_NOT_EXECUTED_ZEROS"}
     },
     "warnings": [
-      {"codigo": "CONTRACT_LENGTH_WARNING", "nivel": "normal", "descripcion": "Serie con 28 datos — resultados no certificables"}
+      {"codigo": "CONTRACT_LENGTH_WARNING", "nivel": "normal", "descripcion": "Serie con 28 datos. La longitud mínima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."}
     ]
   }
 }
@@ -859,7 +859,7 @@ lo evalúa.
 
 ### Contrato — warnings
 ```
-CONTRACT_LENGTH_WARNING          Entre 10 y 29 datos
+CONTRACT_LENGTH_WARNING          Entre 10 y 29 datos — el texto nombra los 30 valores recomendables (Facundo, 22/10/2026)
 CONTRACT_NEGATIVE_VALUES         Valores negativos en caudal_precipitacion
 CONTRACT_MISSING_VALUES          Valores faltantes o celdas vacías
 CONTRACT_DUPLICATE_TIMESTAMPS    Duplicados temporales

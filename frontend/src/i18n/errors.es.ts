@@ -44,7 +44,7 @@ export const ERROR_TEXT: Record<string, string> = {
 
   // Contrato — warnings
   CONTRACT_LENGTH_WARNING:
-    "Serie con menos de 30 datos — los resultados no son certificables.",
+    "Serie con menos de 30 datos. La longitud mínima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables.",
   CONTRACT_NEGATIVE_VALUES:
     "Hay valores negativos en una serie de caudal/precipitación.",
   CONTRACT_MISSING_VALUES: "Hay valores faltantes o celdas vacías.",
