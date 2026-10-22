@@ -1,7 +1,7 @@
 # DECISIÓN 080: las exclusiones de puntos hechas después del análisis se pueden guardar en el historial, aparte del resultado
 
 **Fecha:** 21 de octubre de 2026
-**Estado:** Decidida y aplicada (backend + frontend) — bloque C2 de `docs/plan-revision-manual-21-10-2026.md`.
+**Estado:** Decidida y aplicada (backend + frontend) — bloque C2 de `docs/historico/planes/plan-revision-manual-21-10-2026.md`.
 **Decide:** Kevin, a partir de la revisión manual del 21/10/2026.
 **Depende de:** DECISIÓN 062 ("explorar no es decidir") y DECISIÓN 071 (simulación de exclusión de puntos).
 

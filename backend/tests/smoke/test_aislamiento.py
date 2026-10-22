@@ -1,4 +1,4 @@
-"""Smoke de aislamiento entre perfiles (bloque K de docs/plan-revision-manual-21-10-2026.md).
+"""Smoke de aislamiento entre perfiles (bloque K de docs/historico/planes/plan-revision-manual-21-10-2026.md).
 
 Dos usuarios sembrados por `scripts/deploy-local.sh`. El usuario 1 corre un análisis con
 Etapas 1 y 2 y guarda una exclusión de puntos; el usuario 2 no lo ve en su historial y recibe

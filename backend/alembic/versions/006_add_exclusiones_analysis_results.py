@@ -1,4 +1,4 @@
-# DECISIÓN 080 (bloque C2 de docs/plan-revision-manual-21-10-2026.md) —
+# DECISIÓN 080 (bloque C2 de docs/historico/planes/plan-revision-manual-21-10-2026.md) —
 # exclusiones de puntos guardadas a pedido sobre un análisis ya persistido.
 # Lista JSONB con default '[]': aditiva, sin backfill (los análisis anteriores
 # quedan con la lista vacía). No toca etapa1, etapa2 ni decisiones.

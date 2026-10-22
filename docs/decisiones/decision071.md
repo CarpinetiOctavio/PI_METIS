@@ -140,7 +140,7 @@ quitado, y no había forma de verla sin él. Bloque A de `docs/historico/planes/
 
 ### Revisión 21/10/2026 — la simulación también desde el historial
 
-Bloque B de `docs/plan-revision-manual-21-10-2026.md`. El detalle del historial dejaba marcar puntos y descargar el
+Bloque B de `docs/historico/planes/plan-revision-manual-21-10-2026.md`. El detalle del historial dejaba marcar puntos y descargar el
 CSV, pero no recalculaba: `HistoryDetailPage` montaba `Etapa1ResultView` sin la función `simular`. Ahora la arma con
 los datos **persistidos**, sin cambios en el servidor: `etapa1.datos.serie_efectiva` y los años de
 `timestamps_efectivos`, `tipo_variable`, `etapas`, `configuracion.cramer_particion`, `configuracion.alfa` y la

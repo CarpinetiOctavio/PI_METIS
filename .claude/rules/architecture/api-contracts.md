@@ -440,7 +440,7 @@ pertenencia que `/archive`.
 
 ### POST /api/v1/history/{id}/exclusiones (DECISIÓN 080)
 
-**Agregado 21/10/2026** (bloque C2 de `docs/plan-revision-manual-21-10-2026.md`) — guarda una exclusión de puntos
+**Agregado 21/10/2026** (bloque C2 de `docs/historico/planes/plan-revision-manual-21-10-2026.md`) — guarda una exclusión de puntos
 hecha después del análisis (la simulación de DECISIÓN 071), **aparte** del resultado: no toca `etapa1`, `etapa2` ni
 `decisiones` (DECISIÓN 062). Solo a pedido, desde la vista comparativa.
 

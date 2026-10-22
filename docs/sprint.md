@@ -1413,17 +1413,14 @@ la 073). Verificado por Kevin en el navegador el 19/10. Defecto encontrado en la
 α fijo en el subtítulo), corregido en #6. Al cierre: backend 920 tests de unidad e integración, frontend 532, E2E 7.
 Llevado al repo original en el #132.
 
-## Plan de revisión manual — 21/10/2026, EN CURSO
+## Plan de revisión manual — 21/10/2026, CERRADO
 
-`docs/plan-revision-manual-21-10-2026.md`, rama `fix/revision-manual-21-10` (un commit por bloque, un solo PR a
-`staging`). Los once bloques implementados el 21/10: defectos D-12 a D-19 (#134 a #141) con su test, "Lag" en el PDF
-y la tolerancia fija de Anderson según la respuesta de Facundo (se cerró la pregunta y se borró
-`PENDIENTE-respuesta-facundo-tolerancia-anderson.md`), simulación de exclusión desde el historial (revisión de la
-071), exclusiones guardadas (DECISIÓN 080, migración `006`, código `ANALYSIS_EXCLUSION_NOT_FOUND`) y smoke de
-aislamiento con un segundo usuario. Al 21/10: backend 947 tests de unidad e integración (1 salteado, Mailpit),
-frontend 569, smoke 15 contra `deploy-local.sh`. Falta: CI del PR, recorrido en el navegador con evidencia (Capa 4)
-y cerrar los issues al mergear. **Correr `alembic upgrade head`** en cada entorno, incluido el servidor de la UCC.
-
+`docs/historico/planes/plan-revision-manual-21-10-2026.md` (archivado; resumen en `docs/planes-implementados.md` §19).
+Un PR al repo original, **#142**, un commit por bloque, mergeado a `staging` el 22/10 con los nueve checks de CI en
+verde (cobertura del código nuevo 91 % backend y 97 % frontend, duplicación 0,53 %). Defectos D-12 a D-19 (#134 a
+#141) cerrados con su test. DECISIÓN 080 (exclusiones guardadas, migración `006`). Recorrido en el navegador de Kevin
+el 21/10 (capturas fuera del repo). Al cierre: backend 947 tests de unidad e integración, frontend 569, smoke 15.
+**Correr `alembic upgrade head`** en cada entorno, incluido el servidor de la UCC.
 ---
 
 ## Decisiones pendientes — no implementar hasta confirmar

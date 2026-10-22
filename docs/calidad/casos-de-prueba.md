@@ -178,7 +178,7 @@ Las que toleran ceros con advertencia (`DIST_ZEROS_TOLERATED`, DECISIÓN 061) se
 - **74 casos:** 28 de valores límite, 22 de clases de equivalencia y 24 columnas de cinco tablas de decisión. 45 tests
   nuevos en `tests/unit/casos_dinamicos/` (contando cada id de `parametrize`); el resto ya existía.
 - **Agregados después de B8:** CE-07a–c (revisión manual del 21/10/2026, bloque H del
-  `docs/plan-revision-manual-21-10-2026.md`): tres casos y tres tests más en `casos_dinamicos/`. VL-09a–e y
+  `docs/historico/planes/plan-revision-manual-21-10-2026.md`): tres casos y tres tests más en `casos_dinamicos/`. VL-09a–e y
   VL-10a–c (bloque C2, DECISIÓN 080): ocho casos en `tests/integration/db/test_exclusiones_guardadas.py`, contra
   PostgreSQL, porque la validación necesita el análisis persistido.
 - **Ningún caso encontró un defecto.** Si uno lo hubiera encontrado, se registraría con la plantilla de
