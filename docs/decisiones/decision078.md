@@ -99,4 +99,4 @@ coeficientes fuera de banda es una **regla fija de la prueba de Anderson** y no 
 implementaba así (`⌈0,10·k_max⌉`, DECISIONES 012 y 016); no cambia código ni resultados. Confirmó además que el
 término usado en hidrología es *lag*: el PDF pasa de "Rezago k" a "Lag k" en el correlograma y nombra la regla como
 "tolerancia de Anderson (10 % de los coeficientes fuera de banda)", como ya hacía la pantalla (bloque J de
-`docs/plan-revision-manual-21-10-2026.md`).
+`docs/historico/planes/plan-revision-manual-21-10-2026.md`).

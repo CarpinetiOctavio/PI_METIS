@@ -1,6 +1,6 @@
 """
 Exclusiones guardadas en el historial (DECISIÓN 080, bloque C2 de
-docs/plan-revision-manual-21-10-2026.md), contra PostgreSQL real.
+docs/historico/planes/plan-revision-manual-21-10-2026.md), contra PostgreSQL real.
 
 Guardar, listar y quitar; la misma selección no se duplica; índices inválidos;
 pertenencia (404 a otro usuario, también por HTTP); y el resultado original y las

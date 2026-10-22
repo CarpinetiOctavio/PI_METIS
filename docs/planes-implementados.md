@@ -344,3 +344,36 @@ revirtió la pasada 5 (DECISIÓN 051).
   - El PDF de un análisis guardado antes de estos cambios se cubrió solo con tests (`alfa_implicito`), sin captura.
 - **Archivo:** [`plan-significancia-y-fixes-18-10-2026.md`](historico/planes/plan-significancia-y-fixes-18-10-2026.md)
   y su estado de ejecución, [`estado-plan-significancia-18-10-2026.md`](historico/planes/estado-plan-significancia-18-10-2026.md).
+
+## 19. Revisión manual del 21/10/2026
+
+- **Fechas y PR:** 21 y 22/10. Un solo PR al repo original, **#142** (rama `fix/revision-manual-21-10`, un commit por
+  bloque), mergeado a `staging` el 22/10. Nueve checks de CI en verde: cobertura del código nuevo 91 % (backend) y
+  97 % (frontend), duplicación 0,53 %, SonarCloud, smoke y E2E del despliegue efímero y carga con k6.
+- **Qué pedía:** siete problemas que Kevin encontró recorriendo METIS a mano, tres pendientes del prototipo 5 del
+  informe y un segundo usuario de prueba para verificar el aislamiento entre perfiles.
+- **Qué se hizo:**
+  - **Defectos D-12 a D-19 ([#134](https://github.com/CarpinetiOctavio/PI_METIS/issues/134) a
+    [#141](https://github.com/CarpinetiOctavio/PI_METIS/issues/141)),** cada uno cerrado con su test: una celda vacía
+    contaba también como no numérica (H); contraste de la pausa de Chow (I, tarjeta al 90 %; el test compone el fondo
+    real leyendo `StreamPage.css`); el nombre del CSV (E); "Ver archivados" mostraba los activos (A); el historial no
+    mostraba las decisiones ante Chow (C1); el PDF marcaba un solo atípico (D); la partición de Cramer no se informaba
+    en pantalla (F); el tooltip de los gráficos de años decía "T" (G).
+  - **J:** "Lag k" en el PDF y la tolerancia de Anderson como regla fija, según la respuesta de Facundo del 21/10. Se
+    cerró la pregunta en `pendientes-facundo.md`.
+  - **B:** la simulación de exclusión también desde el detalle del historial, con los datos persistidos
+    (`routes/results/simulacion.ts`, compartido con Resultados).
+  - **C2 — DECISIÓN 080:** las exclusiones hechas después del análisis se pueden guardar en el historial, aparte del
+    resultado (migración `006`, `POST`/`DELETE /history/{id}/exclusiones`, código `ANALYSIS_EXCLUSION_NOT_FOUND`). Se
+    guardan índices, años y valores; los resultados se recalculan al abrirlas.
+  - **K:** segundo usuario del smoke y `tests/smoke/test_aislamiento.py`, que verifica el aislamiento detrás de nginx.
+- **Decisiones:** 080. Revisiones de la 012, la 062, la 071 y la 078.
+- **Cifras al cierre:** backend 947 tests de unidad e integración, frontend 569, smoke 15. Casos nuevos: CE-07a–c y
+  VL-09/VL-10.
+- **Quedó abierto:**
+  - **En `pendientes-tecnicos.md`:** la vista simulada de los eventos de diseño y de la exploración de Etapa 2 en el
+    detalle del historial.
+  - **Manual, en el servidor de la UCC:** `alembic upgrade head` (migración `006`) y los dos usuarios de prueba.
+  - **El libro** (Tabla 12, §6.2, Anexo A, figura de la pausa de Chow, conteo de pruebas, Tabla 37, Anexo G): a cargo
+    de Kevin, fuera del repo.
+- **Archivo:** [`plan-revision-manual-21-10-2026.md`](historico/planes/plan-revision-manual-21-10-2026.md)
