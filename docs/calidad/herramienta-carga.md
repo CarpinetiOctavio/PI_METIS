@@ -153,3 +153,25 @@ degradaciones grandes (de un orden de magnitud), no regresiones finas.
 Los umbrales congelados no se cambiaron con esta corrida: siguen sirviendo para la máquina local (donde se corre la
 demo) y para el pipeline. Si se quiere un gate más sensible en CI, la alternativa es separar umbrales por ambiente
 en `carga/umbrales.json`.
+
+## 8. Corridas de cierre (22/10/2026)
+
+Las dos sobre el código final de `staging` (`a26402b` y su PR, #146), en runners de GitHub Actions.
+
+| Medida | Stress (job `carga`, CI #268 del PR #146) | Esfuerzo sostenido (`carga-sostenida.yml`, corrida 3) | Umbral |
+|---|---|---|---|
+| Usuarios y duración | 15, 2 min (más 30 s de rampa) | 5, 30 min | |
+| Requests | 5.994 (36,2 req/s) | 25.224 (14,0 req/s) | |
+| Tasa de error / checks | 0 % / 100 % (9.990) | 0 % / 100 % (42.040) | < 1 % / > 99 % |
+| p95 `preview-columns` | 11,1 ms | 4,1 ms | 150 ms |
+| p95 `stream` (Etapa 1) | 10,4 ms | 8,3 ms | 250 ms |
+| p95 `simulate-exclusion` (Etapa 2) | 62,6 ms | 63,7 ms | 500 ms |
+| Memoria del backend | | 149,7 a 153,5 MiB en 109 muestras | |
+| Pendiente de memoria (después de 5 min) | | **+1,9 MB/h** | 50 MB/h |
+
+**Lectura.** Las dos pasan todos los umbrales con margen amplio, como la primera corrida en el pipeline (§7): en el
+runner, la Etapa 2 (`simulate-exclusion`, el endpoint más pesado) queda un orden de magnitud por debajo de su umbral.
+La memoria del backend no crece de forma sostenida en 30 minutos. El workflow del sostenido corrió además en su
+horario semanal el 11/10 y el 18/10, en verde las dos veces. El punto de quiebre (§6, entre 20 y 40 usuarios) se
+midió en la máquina local y no se volvió a medir en el runner: el pipeline verifica que el sistema se mantenga dentro
+de los umbrales bajo una carga fija, no dónde se quiebra.

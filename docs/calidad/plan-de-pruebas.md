@@ -8,6 +8,7 @@ cronograma.
 |---|---|---|---|
 | 1.0 | 09/10/2026 | Kevin Massholder | Primera versión. Formaliza la estrategia que vivía en `.claude/rules/testing.md` y suma lo construido en B1–B8 |
 | 1.1 | 09/10/2026 | Kevin Massholder | Cronograma: B9 y B11 hechos |
+| 1.2 | 22/10/2026 | Kevin Massholder | Cierre: SonarCloud por CI (B13) y Ruleset activo con los ocho checks requeridos; E2E en cada despliegue; cronograma final |
 
 Este documento se versiona con el repo: un cambio de alcance, criterio o ambiente sube la versión y se anota en la
 tabla de arriba, en el mismo PR que lo introduce.
@@ -58,7 +59,7 @@ Por prioridad de riesgo (`riesgos.md`):
 
 1. **Exactitud del motor estadístico:** los estadísticos, valores críticos y veredictos de la Etapa 1, y los
    parámetros, el EEA y los eventos de diseño de la Etapa 2. Es lo que, si falla, falla en silencio: un número de
-   diseño mal calculado sin advertencia (5 de los 10 defectos registrados fueron así).
+   diseño mal calculado sin advertencia (los 5 defectos críticos de los 19 registrados fueron así).
 2. **Reglas de negocio:** contrato de datos, los dos bloqueantes (menos de 10 datos y orden cronológico), jerarquías
    de independencia y homogeneidad, nivel de confianza, casos especiales de la Etapa 2.
 3. **Flujo interactivo del stream:** las dos pausas (atípico de Chow y elección de distribución), su reanudación y
@@ -88,22 +89,22 @@ Por prioridad de riesgo (`riesgos.md`):
 
 ### 5.1 Mapa de niveles
 
-Cantidades medidas el 09/10/2026 sobre `staging` (`d8d80dc`), con `pytest --collect-only -m <marker>` y los
-archivos de test del frontend.
+Cantidades de la corrida final (CI #269, `staging` en `a26402b`, 22/10/2026): `junit-backend.xml`, `metricas.json` y
+`reporte-e2e`.
 
 | Nivel | Qué verifica | Herramienta | Dónde | Tests | Cuándo corre |
 |---|---|---|---|---|---|
-| **Unidad** | Funciones puras del motor, validadores del borde de la API, servicios con dobles | pytest | `backend/tests/unit/` | 665 | Cada push y PR (job `test`) |
-| | Componentes, hooks, cliente HTTP, páginas bajo `StrictMode` | Vitest + Testing Library | `frontend/src/**/*.test.ts(x)` (59 archivos) | 497 | Cada push y PR (job `frontend`) |
-| **Integración** | El stream de punta a punta con sus pausas, la agregación, la exclusión ≡ rechazo de Chow | pytest | `backend/tests/integration/` | 14 | Cada push y PR (job `test`) |
-| | Persistencia contra PostgreSQL real; registro contra Mailpit | pytest | `backend/tests/integration/db/` | 6 | ídem, con `postgres:15` y `mailpit` como servicios |
-| **Sistema** | Smoke del sistema desplegado detrás de nginx | pytest + httpx | `backend/tests/smoke/` | 7 | Cada push y PR (job `despliegue`) |
-| | Flujos completos de CU-01 y CU-02 desde el navegador | Playwright | `frontend/e2e/` | 6 escenarios (7 tests) | Cada PR a `staging`/`main` (job `despliegue`) |
+| **Unidad** | Funciones puras del motor, validadores del borde de la API, servicios con dobles | pytest | `backend/tests/unit/` (incluye los 74 de `casos_dinamicos/`) | 931 | Cada push y PR (job `test`) |
+| | Componentes, hooks, cliente HTTP, páginas bajo `StrictMode` | Vitest + Testing Library | `frontend/src/**/*.test.ts(x)` (62 archivos) | 588 | Cada push y PR (job `frontend`) |
+| **Integración** | El stream de punta a punta con sus pausas, la agregación, la exclusión ≡ rechazo de Chow | pytest | `backend/tests/integration/` | 30 | Cada push y PR (job `test`) |
+| | Persistencia contra PostgreSQL real; registro contra Mailpit | pytest | `backend/tests/integration/db/` | 23 | ídem, con `postgres:15` y `mailpit` como servicios |
+| **Sistema** | Smoke del sistema desplegado detrás de nginx | pytest + httpx | `backend/tests/smoke/` | 10 | Cada push y PR (job `despliegue`) |
+| | Flujos completos de CU-01 y CU-02 desde el navegador | Playwright | `frontend/e2e/` | 6 escenarios (7 tests) | Cada push y PR a `staging`/`main` (job `despliegue`) |
 | | Carga: stress con umbrales | k6 | `carga/k6/` | 1 escenario | Cada PR (job `carga`) |
 | | Esfuerzo sostenido (30 min) | k6 | `carga/k6/` | 1 escenario | Manual y semanal (`carga-sostenida.yml`) |
 | **Aceptación** | Que el resultado coincida con la tesis y con lo que esperan los directores | Revisión manual contra la tesis; uso por los directores | `docs/auditoria/`, reuniones | — | Por hito (auditoría de 4 fases; revisiones de Facundo y Carlos) |
 
-**Forma de la pirámide.** 1.162 tests de unidad, 20 de integración y 13 de sistema. La base ancha es deliberada:
+**Forma de la pirámide.** 1.519 tests de unidad, 53 de integración y 17 de sistema (más los dos escenarios de carga). La base ancha es deliberada:
 el riesgo principal está en el motor estadístico, que es una librería pura (`core/` no importa nada de HTTP ni de
 la base) y se prueba barato y rápido. Los niveles de arriba cubren lo que la unidad no ve: los defectos F1, F4,
 F5, F6 y F9 del informe de diagnóstico de la UI solo aparecían con el sistema completo corriendo (DECISIÓN 046).
@@ -112,7 +113,7 @@ F5, F6 y F9 del informe de diagnóstico de la UI solo aparecían con el sistema 
 
 | Técnica | Dónde se aplica |
 |---|---|
-| Valores límite, clases de equivalencia y tablas de decisión | `casos-de-prueba.md` (74 casos) |
+| Valores límite, clases de equivalencia y tablas de decisión | `casos-de-prueba.md` (104 casos al 22/10/2026) |
 | Oráculo de referencia externo | Valores publicados en la tesis de Facundo y tablas de la bibliografía: un test de fórmula compara contra el número de la fuente, no contra la salida previa de METIS |
 | Comparación con otras herramientas | R, SciPy, LibreOffice y SAMHIA sobre las 9 series de la tesis (`docs/auditoria/comparacion-herramientas/`, PR #109) |
 | Regresión por defecto | Todo defecto se cierra con un test que lo reproduce, en rojo antes del fix y en verde después (`registro-defectos.md`) |
@@ -165,8 +166,8 @@ Los ocho jobs del CI en verde (`.github/workflows/ci.yml`):
 - `sonarcloud`: quality gate de SonarCloud aprobado, con la cobertura importada (B13).
 
 Y además: si el PR toca `frontend/`, evidencia del flujo en el navegador (Capa 4 de `testing.md`). Si corrige un
-defecto, su issue cerrado con el test que lo cubre. Desde B13 (DECISIÓN 077) el gate de
-SonarCloud bloquea a través del job `sonarcloud`.
+defecto, su issue cerrado con el test que lo cubre. Desde el 22/10/2026 los ocho jobs son checks requeridos del
+Ruleset "staging y main" (PR obligatorio, sin excepciones): ningún PR se mergea con uno en rojo.
 
 ### 6.4 Criterios de suspensión y reanudación
 
@@ -216,7 +217,7 @@ Los datos de prueba son series sintéticas construidas para forzar cada comporta
 | Motor estadístico de Etapa 1, regresión matemática contra la tesis | Octavio Carpineti (antecedente del repo; no es aporte de este TP) |
 | Oráculo de dominio: confirma fórmulas y resultados esperados | Mgter. Ing. Facundo Ganancias |
 | Aceptación de uso y requisitos de CU-03 | Dr. Ing. Carlos Catalini |
-| Admin del repo: secrets, ruleset, checks requeridos (B13) | Octavio Carpineti |
+| Admin del repo: Ruleset y checks requeridos (activados el 22/10/2026) | Octavio Carpineti |
 
 ---
 
@@ -224,12 +225,12 @@ Los datos de prueba son series sintéticas construidas para forzar cada comporta
 
 Del plan del TP (`plan-tp-calidad-software.md` §7), con lo hecho a la fecha de esta versión:
 
-| Semana | Bloques | Estado al 09/10/2026 |
+| Semana | Bloques | Estado al 22/10/2026 |
 |---|---|---|
 | 1 (08/10 a 12/10) | B0, B1a, B10 | Hechos (#110, #111, #124) |
 | 2 (13/10 a 19/10) | B2, B3, B4, B5, B7 | Hechos antes de la fecha (#111 a #113, #126) |
-| 3 (20/10 a 23/10) | B6, B7, B8, B9, B11 | B6 (#113), B8 (#127), B9 (#128) y B11 (`metricas.md`) hechos |
-| Cierre (24/10 a 26/10) | B13, B12 | Pendientes. B13 depende del acceso de admin |
+| 3 (20/10 a 23/10) | B6, B7, B8, B9, B11 | Hechos: B6 (#113), B8 (#127), B9 (#128), B11 (#129) |
+| Cierre (24/10 a 26/10) | B13, B12 | B13: SonarCloud por CI (#132, 19/10) y Ruleset activo (22/10). Cierre de calidad: Security A (#145), E2E en cada despliegue (#146) y corrida final CI #269. B12: informe el 22/10, demo el 26/10 |
 
 ---
 

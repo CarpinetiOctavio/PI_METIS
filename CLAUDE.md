@@ -163,8 +163,10 @@ Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de pu
 **SonarCloud corre por CI desde B13** (job `sonarcloud`, DECISIÓN 077), no por Análisis Automático: los dos son
 excluyentes, y con el automático activado en SonarCloud el job falla en todos los PR. **Toda la configuración de
 Sonar va en `sonar-project.properties`** (fuentes, tests, exclusiones, rutas de cobertura); `.sonarcloud.properties`
-solo lo leía el automático y se borró. El repo es de una cuenta personal: solo el dueño (Octavio) edita el Ruleset,
-así que marcar checks como requeridos es un paso manual suyo. Ver [decision077.md](docs/decisiones/decision077.md).
+solo lo leía el automático y se borró. El repo es de una cuenta personal: solo el dueño (Octavio) edita el Ruleset.
+**Ruleset "staging y main" activo desde el 22/10/2026:** PR obligatorio, sin borrado ni force push, y los ocho jobs de
+`ci.yml` como checks requeridos (atados a la app de GitHub Actions), sin excepciones. Un job nuevo en `ci.yml` no es
+requerido hasta que se lo agregue ahí. Ver [decision077.md](docs/decisiones/decision077.md).
 
 ### Reglas de flujo de trabajo que no se deducen del código
 

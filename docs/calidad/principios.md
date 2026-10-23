@@ -33,8 +33,8 @@ los directores.
 
 ## 4. Agrupación de defectos
 
-**En METIS:** de los 10 defectos registrados, 3 están en la agregación temporal (RF-GEN-P-10) y 2 en Etapa 2
-(RF-GEN-P-08); las fórmulas que más hallazgos tuvieron en la auditoría son GVE, Log-Normal 3p y Generalizada de
+**En METIS:** de los 19 defectos registrados, 5 están en el registro de la decisión ante atípicos de Chow
+(RF-CU01-07), 3 en la agregación temporal (RF-GEN-P-10) y 2 en Etapa 2 (RF-GEN-P-08); las fórmulas que más hallazgos tuvieron en la auditoría son GVE, Log-Normal 3p y Generalizada de
 Pareto (`trazabilidad.md`).
 **Cómo se tiene en cuenta:** esos módulos tienen más tests por línea y sus propios documentos de hallazgos; Pareto,
 donde todavía hay una inconsistencia sin resolver, se calcula pero no se puede elegir (DECISIÓN 074).

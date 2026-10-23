@@ -96,3 +96,16 @@ editar el ruleset), y Kevin no la tiene: el repo es de Octavio. Por eso:
   las fuentes, porque un archivo no puede indexarse dos veces); `.sonarcloud.properties` se borra.
 - **Checks requeridos (punto 4):** los ocho jobs de `ci.yml`, configurados por Octavio en el Ruleset de `staging` y
   `main`. Un job salteado cuenta como aprobado para GitHub; `carga` solo corre en PR, que es donde se exige; los E2E corren en cada push y PR desde el addendum del 22/10/2026 a la DECISIÓN 046.
+
+### Addendum (22/10/2026): Ruleset activo y cierre
+
+- **Ruleset:** el único ruleset que existía ("main") estaba desactivado, apuntaba solo a `main` y no tenía checks
+  requeridos, así que hasta esta fecha el gate bloqueaba de hecho pero no de derecho. Octavio lo reemplazó por
+  "staging y main": activo sobre las dos ramas, sin excepciones (bypass), con PR obligatorio, sin borrado ni force
+  push, y los ocho jobs de `ci.yml` como checks requeridos, atados a la app de GitHub Actions (id 15368) para que
+  ningún otro origen pueda reportar un check con el mismo nombre. El buscador de la interfaz no los sugería porque
+  se buscaban por el id del job y no por su `name:`.
+- **Verificación:** el PR #146 se mergeó con los ocho checks marcados como requeridos y en verde.
+- **Security rating:** pasó de C a A con la DECISIÓN 082 (PR #145). Reliability y Maintainability, en A.
+- **Punto 4 cumplido.** Con esto la decisión queda aplicada completa.
+

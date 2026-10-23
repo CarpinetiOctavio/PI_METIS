@@ -76,12 +76,14 @@ dos (D-08 y D-09): son dos fallas distintas, con tests distintos.
 
 Las rutas de los tests del backend son relativas a `backend/tests/` (`integration/`, `unit/core/…`, `unit/api/`).
 
-**Lectura rápida.** De los diez históricos (D-01 a D-10), 5 son críticos, y los cinco son resultados incorrectos en silencio: el motor siguió
-corriendo y entregó un número o una serie mal armada sin avisar. Ninguno de los críticos lo encontró el uso de la
-app: salieron de auditar contra la tesis (D-08, D-09), de un test escrito al desarrollar (D-03) o de revisar el
-código (D-04, D-05). Los dos de uso real con severidad alta (D-01, D-02) son de la interfaz y motivaron las capas 1 y
-2 de testing del frontend; los que solo son visibles con el sistema completo corriendo son los que hoy cubre el E2E
-(B6).
+**Lectura rápida (22/10/2026).** 19 defectos, todos cerrados y cada uno con su test de regresión. Los 5 críticos son
+resultados incorrectos en silencio: el motor siguió corriendo y entregó un número o una serie mal armada sin avisar.
+Ninguno de los críticos lo encontró el uso de la app: salieron de auditar contra la tesis (D-08, D-09), de un test
+escrito al desarrollar (D-03) o de revisar el código (D-04, D-05). Los diez de uso real son de la interfaz o del
+informe PDF, de severidad media o menor salvo D-01 y D-02 (alta), que motivaron las capas 1 y 2 de testing del
+frontend. D-11 a D-19 aparecieron después de montar el proceso del TP y siguieron el circuito completo: issue con la
+plantilla, test en rojo, fix y cierre con el test nombrado. Los que solo son visibles con el sistema completo
+corriendo son los que hoy cubre el E2E (B6).
 
 ## 4. Contraste rojo/verde: D-07
 
@@ -110,8 +112,7 @@ fixing") antes del fix (`5968713`).
 
 ## 5. Lo que falta
 
-- **Tablero de GitHub Projects** (D5 del plan): el token de `gh` de esta máquina no tiene el scope `project`. Con
-  `gh auth refresh -s project` se puede crear y sumar los issues con el label `defecto`; los issues ya están
-  completos sin él.
+- **Tablero de GitHub Projects** (D5 del plan): no se armó. Los issues están completos con sus labels, que es lo que
+  usa la métrica de defectos por fase (`metricas.md` §3.3); el tablero sería una vista más, no un dato nuevo.
 - Los defectos que encuentren los casos de prueba de B8 y los E2E de B6 se registran con la plantilla, igual que
   estos.

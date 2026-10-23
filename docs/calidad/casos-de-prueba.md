@@ -209,6 +209,8 @@ de Chow y la vista calendario: `tests/integration/test_stream_agregacion_mensual
   PostgreSQL, porque la validación necesita el análisis persistido. CE-05c, VL-11a–e, CE-08a–c y TD-06a–g (respuestas
   de Facundo del 22/10/2026, `docs/plan-respuestas-facundo-22-10-2026.md`, bloques B y C): 16 casos; los de la
   DECISIÓN 081 en `casos_dinamicos/test_cobertura_minima_interior.py`.
+- **Total al 22/10/2026: 104 casos.** 41 de valores límite, 32 de clases de equivalencia (también CE-06a–c, del α
+  configurable de la DECISIÓN 078) y 31 columnas de seis tablas de decisión.
 - **Ningún caso encontró un defecto.** Si uno lo hubiera encontrado, se registraría con la plantilla de
   `registro-defectos.md`.
 - **Bordes que no se probaban en el borde:** antes de este bloque, la longitud se probaba con n = 8, 15 y 30 (no con

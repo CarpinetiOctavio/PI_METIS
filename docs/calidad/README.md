@@ -11,7 +11,7 @@ plan de pruebas, que enlaza a los demás.
 | [matriz-iso25010.md](matriz-iso25010.md) | Las ocho características con evidencia; las tres prioritarias | B9 |
 | [trazabilidad.md](trazabilidad.md) | Requisito → caso → test → defecto, sobre los 40 RF del manual | B9 |
 | [metricas.md](metricas.md) | Métricas de producto, proceso y proyecto interpretadas; mejora antes y después | B11 |
-| [casos-de-prueba.md](casos-de-prueba.md) | 74 casos de caja negra (valores límite, clases, tablas de decisión) | B8 |
+| [casos-de-prueba.md](casos-de-prueba.md) | 104 casos de caja negra (valores límite, clases, tablas de decisión) | B8 |
 | [plantillas.md](plantillas.md) | Plantillas de caso de prueba y de defecto | B9 |
 | [registro-defectos.md](registro-defectos.md) | Defectos registrados, criterios, contraste rojo/verde | B10 |
 | [contingencia.md](contingencia.md) | Qué hacer si cae una dependencia crítica | B9 |

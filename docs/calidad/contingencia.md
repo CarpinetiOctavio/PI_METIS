@@ -6,6 +6,7 @@ detecta y qué se hace. El SMTP tiene su propio plan, más detallado, en `integr
 | Versión | Fecha | Cambios |
 |---|---|---|
 | 1.0 | 09/10/2026 | Primera versión. El comportamiento ante la base caída se verificó ese día (§2) |
+| 1.1 | 22/10/2026 | SonarCloud es un check requerido desde la activación del Ruleset |
 
 ## 1. Dependencias y qué arrastra cada una
 
@@ -16,7 +17,7 @@ detecta y qué se hace. El SMTP tiene su propio plan, más detallado, en `integr
 | SMTP (relay de la UCC) | El registro de usuarios nuevos | Todo lo demás, incluido el login de usuarios ya verificados |
 | Proceso del backend (reinicio) | Los streams en curso y sus pausas; los tokens de verificación pendientes | Lo persistido |
 | GitHub Actions | El pipeline: no hay forma de verificar un PR | La aplicación desplegada |
-| SonarCloud | El análisis consultivo del PR | El pipeline (el gate propio no depende de Sonar) |
+| SonarCloud | El job `sonarcloud`, requerido por el Ruleset: no se puede mergear mientras falle | El resto del pipeline (el gate propio no depende de Sonar) y la aplicación desplegada |
 | Registries (Docker Hub, PyPI, npm) | El build de imágenes y la instalación de dependencias en CI | Un despliegue ya hecho |
 
 ## 2. PostgreSQL caído o sin migrar
