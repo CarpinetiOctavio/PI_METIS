@@ -7,15 +7,17 @@ para encontrar los que igual se produjeron.
 | Versión | Fecha | Cambios |
 |---|---|---|
 | 1.0 | 09/10/2026 | Primera versión |
+| 1.1 | 22/10/2026 | Ruleset activo con los checks requeridos; lock de dependencias (DECISIÓN 082) |
 
 ## 1. Prácticas de aseguramiento (proceso)
 
 | Práctica | Qué previene | Dónde está |
 |---|---|---|
-| **Decisiones registradas** antes del código que las aplica, con contexto, alternativas y consecuencias | Cambios de comportamiento sin justificación; repetir una discusión ya cerrada | `docs/decisiones/` (75 archivos) |
+| **Decisiones registradas** antes del código que las aplica, con contexto, alternativas y consecuencias | Cambios de comportamiento sin justificación; repetir una discusión ya cerrada | `docs/decisiones/` (80 archivos) |
 | **Ninguna fórmula sin referencia** a la ecuación de la tesis | Implementar de memoria o desde otra fuente (el origen de D-08 y D-09) | `formulas-etapa{1,2}.md` |
 | **`core/` aislado** de HTTP, base y sesiones | Que el motor dependa de la infraestructura y deje de ser testeable por separado | Regla de `CLAUDE.md` y `architecture.md` |
-| **GitHub Flow con ruleset**: ramas desde `staging`, PR obligatorio, push directo bloqueado | Código sin revisar ni verificar en las ramas de integración | `constraints.md`, ruleset del repo |
+| **GitHub Flow con ruleset**: ramas desde `staging`, PR obligatorio, push directo bloqueado, los ocho jobs de CI como checks requeridos (activo desde el 22/10/2026) | Código sin revisar ni verificar en las ramas de integración | `constraints.md`, Ruleset "staging y main" |
+| **Dependencias fijadas con hash** e instaladas solo como wheels, con un chequeo en CI de que el lock esté al día | Que una instalación traiga una versión distinta o un paquete alterado | `backend/requirements.lock`, DECISIÓN 082 |
 | **Definition of Done** de un PR: los jobs de CI en verde; evidencia en navegador si toca el frontend; issue cerrado con test si corrige un defecto | Mergear algo que "pasa los tests" pero no funciona (F1) | `CLAUDE.md`, `testing.md` (Capa 4), `plan-de-pruebas.md` §6.3 |
 | **Catálogo de errores sincronizado** en backend, contratos y frontend en el mismo commit | Un error que el usuario ve como texto genérico | Regla de `CLAUDE.md`; job `error-catalog` |
 | **Gate de calidad** sobre el código nuevo (cobertura ≥ 80 %, duplicación ≤ 5 %) | Deuda nueva sin probar | Job `quality-gate` (DECISIÓN 077) |
@@ -31,7 +33,7 @@ para encontrar los que igual se produjeron.
 | **Auditoría de fórmulas en 4 fases** contra las 9 estaciones de la tesis | Errores de transcripción de fórmulas (D-08, D-09) | `docs/auditoria/fases/` |
 | **Comparación con otras herramientas** (R, SciPy, LibreOffice, SAMHIA) | Divergencias de definición y errores de la referencia misma (la U_T de la planilla) | `docs/auditoria/comparacion-herramientas/` |
 | **Hallazgos dirigidos**: revisión de un tema puntual del código | Defectos que ningún test buscaba (D-04, D-05) | `docs/auditoria/hallazgos/` |
-| **Revisión de PR** y análisis de SonarCloud | Bugs, code smells, hotspots de seguridad | Cada PR |
+| **Revisión de PR** y análisis de SonarCloud (job `sonarcloud`, con su quality gate) | Bugs, vulnerabilidades, code smells, hotspots de seguridad (la #254 frenó una action sin fijar por SHA) | Cada PR y cada push |
 | **Casos de caja negra** | Bordes, clases y combinaciones sin probar | `casos-de-prueba.md` |
 | **Verificación en navegador** y E2E | Fallas que solo aparecen con el sistema completo | Capa 4, `frontend/e2e/` |
 | **Revisión de los directores** en uso real | Resultados o rótulos que no tienen sentido para el dominio (DECISIÓN 076) | Reuniones; `docs/checklist-pendientes-feedback-directores.md` |
