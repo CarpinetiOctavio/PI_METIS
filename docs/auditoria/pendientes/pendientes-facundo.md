@@ -29,9 +29,18 @@ textuales; el resto es un resumen. Plan de implementación: `docs/plan-respuesta
 | Caudal y precipitación | Cerrada: no hay diferencia de tratamiento (vale también para viento, evaporación, alturas de río) |
 | Pareto por MC y Gen. Exponencial por Momentos-L (Parte C) | Cerradas: "sigan adelante con la decisión tomada" (DECISIONES 068 y 069) |
 
-**A presentar en reunión:** U_T, convenciones de signo de la Generalizada de Pareto, partición de t de Student con
-n impar, y una o dos colas en Mann-Kendall (`.claude/rules/core/formulas-etapa1.md` §7, hallazgo H-2 de la auditoría
-de fórmulas: METIS usa 1,96 y la Tabla A.4 da 1,64).
+## Respuestas del 29/10/2026
+
+Las cuatro preguntas que quedaban para la reunión, respondidas el 29/10/2026 (bloque C del
+[plan de mejoras post-despliegue](../../Plan%20de%20mejoras%20post-despliegue%20UCC%20y%20respuestas%20de%20Facundo.md)).
+Tres confirman lo que METIS ya hace; la cuarta saca a Pareto de la v1.
+
+| Pregunta | Respuesta | Destino |
+|---|---|---|
+| U_T con F > 0,5 | Se mantiene IV-105 (1 − F); lo más probable es un error de la planilla por arrastre de ecuaciones | Cerrada, sin cambios: [hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md) §8 |
+| Partición de t de Student con n impar | Es indistinto qué subgrupo lleva el dato de más | Cerrada, sin cambios: DECISIÓN 084 |
+| Una o dos colas en Mann-Kendall | Dos colas | Cerrada, sin cambios: `formulas-etapa1.md` §7 |
+| Generalizada de Pareto | No la recuerda; puede quedar fuera hasta conseguir mejor bibliografía | Fuera del cálculo de la v1: addendum del 29/10/2026 a la DECISIÓN 074 |
 
 
 ## Decisiones implementadas que requieren confirmación
@@ -1126,9 +1135,11 @@ las 9 estaciones de la tesis — calendario (enero) u otro?
 
 ---
 
-## Generalizada de Pareto — convenciones de signo (01/10/2026) — A PRESENTAR EN REUNIÓN
+## Generalizada de Pareto — convenciones de signo (01/10/2026) — RESPONDIDA 29/10/2026
 
-Sin respuesta escrita: se presenta en persona en la reunión de la semana próxima.
+**Respuesta de Facundo (29/10/2026):** no recuerda la distribución; puede quedar fuera de la librería hasta conseguir
+mejor bibliografía. **Destino:** sale del cálculo de la v1 (`EXCLUIDAS_V1`, addendum del 29/10/2026 a la DECISIÓN 074);
+la v2 la reincorpora con Hosking y Wallis (1987).
 
 
 Detalle completo, derivaciones y evidencia: `docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md`.
@@ -1161,7 +1172,10 @@ Pregunta: ¿qué ecuaciones usó realmente para Mínimos Cuadrados, y IV-155 lle
 Origen: [comparacion-herramientas/README.md](../comparacion-herramientas/README.md), pedido de Carlos
 Catalini.
 
-### U_T para F > 0,5: ¿la planilla usa F o 1 − F? (resuelve la Causa C) — A PRESENTAR EN REUNIÓN
+### U_T para F > 0,5: ¿la planilla usa F o 1 − F? (resuelve la Causa C) — RESPONDIDA 29/10/2026
+
+**Respuesta de Facundo (29/10/2026):** se mantiene IV-105 (1 − F); lo más probable es que la planilla tenga un error
+por arrastre de ecuaciones. **Cerrada, sin cambios en METIS.** Ver el hallazgo, §8.
 
 Facundo no conserva las planillas (respuesta del 22/10/2026 sobre la Causa C, más arriba): se presenta en persona la
 reconstrucción del hallazgo para ver si la reconoce.
@@ -1177,9 +1191,10 @@ que IV-105 (usar 1 − F) es lo correcto?
 planilla y METIS no cambia. Si la planilla usara deliberadamente otra convención, habría que documentarla:
 la tesis escrita no la menciona. Detalle: [hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md).
 
-### Partición de t de Student con n impar: sí cambia un veredicto (Q16 de la fase 4) — A PRESENTAR EN REUNIÓN
+### Partición de t de Student con n impar: sí cambia un veredicto (Q16 de la fase 4) — RESPONDIDA 29/10/2026
 
-Sin respuesta escrita: se presenta en persona en la reunión.
+**Respuesta de Facundo (29/10/2026):** es indistinto; el subgrupo más grande puede ser el primero o el segundo.
+**Cerrada, sin cambios:** METIS mantiene `floor(n/2)` (DECISIÓN 084, test VL-12).
 
 
 La consolidación de la fase 4 (Q16) registró que la tesis toma `n1 = ceil(n/2)` con n impar, METIS

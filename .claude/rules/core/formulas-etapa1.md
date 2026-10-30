@@ -196,9 +196,12 @@ Fuente: Tesis Facundo — Sección III.4.2, Ecuación III-8.
 
 ### Partición
 ```
+n1 = floor(n/2),  n2 = n - n1   # con n impar, el dato del medio va al segundo subgrupo (DECISIÓN 084)
 s1 = serie[:n1]       (primeros n1 datos)
 s2 = serie[n1:n1+n2]  (siguientes n2 datos)
 ```
+La tesis pone el dato del medio en el primer subgrupo: en est_05 (n = 39) la tesis rechaza (t = 2,082) y METIS
+acepta (t = 1,817, 19 + 20). Facundo (29/10/2026): es indistinto. Convención, no error de ninguna de las dos.
 
 ### Estadístico t
 ```
@@ -306,8 +309,9 @@ DIVERGENCIA CON LA FUENTE (auditoría de fórmulas, 20/09/2026 —
 docs/auditoria/fases/auditoria-formulas-latex.md, H-2): la Tabla A.4 de Caamaño
 da V_crít = 1,64 para α = 0,05 (cuantil de UNA cola); METIS usa 1,96 (DOS colas),
 que es lo que decide pymannkendall. No es un error de cuenta, es otra convención
-de cola. Quien contraste con el libro va a ver 1,64. Se mantiene 1,96 hasta que
-Facundo/Carlos respondan la pregunta 7 de docs/plan-feedback-directores-20-09-2026.md.
+de cola. Quien contraste con el libro va a ver 1,64. Facundo (29/10/2026) confirma dos
+colas: se mantiene 1,96. Caso donde la diferencia pesa: est_02, Z = 1,662 — con 1,64 (una cola) detectaría tendencia,
+con 1,96 no.
 Además, la fórmula A.55 NO tiene corrección por empates (solo el I−1 de
 continuidad): la corrección de Var(S) ante valores repetidos la aplica la librería.
 

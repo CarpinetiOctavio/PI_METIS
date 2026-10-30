@@ -64,6 +64,9 @@ Cada borde se prueba de los dos lados: el último valor válido y el primero inv
 | VL-11c | | 100 | Válido (el valor por defecto) | ídem | `…::test_cobertura_en_el_rango[VL-11c 100]` |
 | VL-11d | | 101 | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…::test_cobertura_fuera_del_rango_o_no_entera_da_400[VL-11d 101]` |
 | VL-11e | | 90 | Válido | ídem | `…::test_cobertura_en_el_rango[VL-11e 90]` |
+| VL-12a | n de la partición de t de Student | 39 (impar, est_05) | 19 + 20: el dato del medio va al segundo subgrupo | DECISIÓN 084 | `casos_dinamicos/test_valores_limite.py::test_t_student_con_n_impar_el_dato_del_medio_va_al_segundo_subgrupo[VL-12a n=39 (est_05)]` |
+| VL-12b | | 40 (par) | 20 + 20 | ídem | `…[VL-12b n=40]` |
+| VL-12c | | 25 (impar) | 12 + 13 | ídem | `…[VL-12c n=25]` |
 
 ---
 
@@ -214,7 +217,8 @@ de Chow y la vista calendario: `tests/integration/test_stream_agregacion_mensual
 - **Total al 22/10/2026: 104 casos.** 41 de valores límite, 32 de clases de equivalencia (también CE-06a–c, del α
   configurable de la DECISIÓN 078) y 31 columnas de seis tablas de decisión.
 - **Agregados el 29/10/2026:** CE-09a–b (Generalizada de Pareto fuera de la v1, addendum a la DECISIÓN 074), con
-  tests que ya existían ajustados al código nuevo. **Total: 106 casos**, 34 de clases de equivalencia.
+  tests que ya existían ajustados al código nuevo, y VL-12a–c (partición de t de Student con n impar, DECISIÓN 084),
+  tres tests nuevos en `casos_dinamicos/`. **Total: 109 casos**, 44 de valores límite y 34 de clases de equivalencia.
 - **Ningún caso encontró un defecto.** Si uno lo hubiera encontrado, se registraría con la plantilla de
   `registro-defectos.md`.
 - **Bordes que no se probaban en el borde:** antes de este bloque, la longitud se probaba con n = 8, 15 y 30 (no con
