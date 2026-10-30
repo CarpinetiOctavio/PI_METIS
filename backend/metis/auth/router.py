@@ -1,5 +1,6 @@
 import logging
 import os
+import ssl
 from datetime import datetime, timezone
 
 import aiosmtplib
@@ -65,7 +66,11 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     # después — se acepta esa ventana residual conscientemente.
     try:
         await send_verification_email(body.email, token)
-    except (aiosmtplib.SMTPException, RuntimeError):
+    # ssl.SSLError y OSError no llegan envueltos en SMTPException: un certificado
+    # que no cubre SMTP_HOST, un timeout o una conexión rechazada salían como 500
+    # sin código (D-UCC-02, despliegue UCC del 29/10/2026). ssl.SSLError ya es un
+    # OSError; se nombra aparte para que el caso de TLS quede a la vista.
+    except (aiosmtplib.SMTPException, ssl.SSLError, OSError, RuntimeError):
         logger.exception("Fallo al enviar mail de verificación a %s", body.email)
         raise HTTPException(
             status_code=500,
