@@ -571,10 +571,12 @@ devolver un 400 legible en vez de un 500). Cualquier violación → 400
 **Errores:** 404 `SESSION_NOT_FOUND` (la sesión no existe o ya expiró — a
 diferencia de `outlier-decision`, que no valida existencia de sesión, este
 endpoint sí lo hace explícitamente por mandato de DECISIÓN 052), 400
-`DIST_SELECTION_INVALID`, 400 `DIST_PENDING_VALIDATION` (la distribución está
-en `PENDIENTES_VALIDACION` de `core/etapa2/distributions/__init__.py` — hoy
-`gen_pareto` — y no se puede elegir en esta versión, DECISIÓN 074; evaluado en
-el borde después de la forma del request y antes de tocar `session_store`).
+`DIST_SELECTION_INVALID`, 400 `DIST_EXCLUDED` (la distribución está en
+`EXCLUIDAS_V1` de `core/etapa2/distributions/__init__.py` — hoy `gen_pareto` —
+y no se calcula en esta versión, addendum del 29/10/2026 a la DECISIÓN 074), 400
+`DIST_PENDING_VALIDATION` (la distribución está en `PENDIENTES_VALIDACION`, hoy
+vacío, DECISIÓN 074). Los dos se evalúan en el borde después de la forma del
+request y antes de tocar `session_store`.
 
 **Estado de implementación (09/08/2026, cierre del Bloque A1-A6 del plan de
 Etapa 2):** cableado de punta a punta y verificado. El stream pausa de
@@ -657,9 +659,11 @@ stream.
   partir. Distinto de `DIST_SELECTION_INVALID`: ese código es sobre la
   forma del request, este es sobre si la combinación bien formada tiene
   algo que recalcular.
-- 400 `DIST_PENDING_VALIDATION` — la distribución está pendiente de
-  validación (DECISIÓN 074, hoy `gen_pareto`): tampoco se puede explorar desde
-  el historial. Evaluado en el borde, antes de tocar la base.
+- 400 `DIST_EXCLUDED` — la distribución no se calcula en esta versión
+  (addendum del 29/10/2026 a la DECISIÓN 074, hoy `gen_pareto`): un análisis
+  guardado antes la trae en su ranking, pero no se puede explorar. 400
+  `DIST_PENDING_VALIDATION` para las pendientes de validación (DECISIÓN 074, hoy
+  ninguna). Evaluados en el borde, antes de tocar la base.
 
 **No toca `session_store`, no persiste nada, no altera
 `analysis_results.decisiones`** — DECISIÓN 062, "explorar no es decidir".
@@ -738,7 +742,8 @@ serie resultante, para que el frontend arme el CSV desde lo que devolvió `core/
 finitos), 400 `CONTRACT_EXCLUSION_INVALID` (índices fuera de rango o repetidos, `anios` de otro
 largo que `serie`, `tratamiento` inexistente), 400 `CONTRACT_ETAPAS_INVALID` (`etapas` distinto
 de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 400 `CONTRACT_ALFA_INVALID`, 400 `DIST_SELECTION_INVALID` /
-`DIST_PENDING_VALIDATION` (`seleccion` mal formada o pendiente de validación), 422 validación Pydantic (por
+`DIST_EXCLUDED` / `DIST_PENDING_VALIDATION` (`seleccion` mal formada, excluida de la versión o pendiente de
+validación), 422 validación Pydantic (por
 ejemplo, `tipo_variable` fuera de las dos opciones).
 
 ---
@@ -1017,9 +1022,13 @@ DIST_SELECTION_INVALID           distribucion/metodo vacíos o periodos_retorno 
 DIST_METHOD_NOT_FITTED           La combinación distribución+método pedida en POST /analysis/{id}/design-events
                                   no aparece en el ranking persistido, o su status != "ok" (DECISIÓN 062)
 DIST_PENDING_VALIDATION          La distribución pedida está pendiente de validación y no se puede elegir ni explorar
-                                  (DECISIÓN 074, hoy gen_pareto) — distribution-decision y POST /analysis/{id}/design-events
+                                  (DECISIÓN 074) — distribution-decision y POST /analysis/{id}/design-events. Hoy
+                                  ninguna: gen_pareto pasó a DIST_EXCLUDED el 29/10/2026
+DIST_EXCLUDED                    La distribución pedida no se calcula en esta versión (addendum del 29/10/2026 a la
+                                  DECISIÓN 074, hoy gen_pareto, EXCLUIDAS_V1) — distribution-decision,
+                                  POST /analysis/{id}/design-events y la seleccion de simulate-exclusion
 ```
-`DIST_SELECTION_INVALID`, `DIST_METHOD_NOT_FITTED` y `DIST_PENDING_VALIDATION` no son estados de
+`DIST_SELECTION_INVALID`, `DIST_METHOD_NOT_FITTED`, `DIST_PENDING_VALIDATION` y `DIST_EXCLUDED` no son estados de
 ajuste de una distribución como los otros cinco — son validaciones de
 request (respuesta HTTP 400, no un campo de `DistResult`). Se agrupan acá
 por prefijo/dominio, igual que `CONTRACT_ETAPAS_INVALID` se agrupa con los

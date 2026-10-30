@@ -9,12 +9,13 @@ import { SpecularHighlight } from "../../components/SpecularHighlight";
 import "./Etapa2RankingView.css";
 
 
-// DECISIÓN 074 — respaldo SOLO para análisis persistidos antes de esa decisión,
-// que no traen `pendiente_validacion` (sin backfill, DECISIÓN 058 §4). La fuente
-// de verdad es `PENDIENTES_VALIDACION` en core/etapa2/distributions/__init__.py;
-// esta copia existe para que un análisis viejo de una serie como est_02 no siga
-// mostrando Generalizada de Pareto con "menor EEA". Se borra cuando ya no quede
-// ningún análisis anterior a la DECISIÓN 074 que la necesite.
+// DECISIÓN 074 y su addendum del 29/10/2026 — respaldo para análisis guardados.
+// Desde el 29/10 gen_pareto no se calcula (EXCLUIDAS_V1 en
+// core/etapa2/distributions/__init__.py): solo aparece en el ranking de un
+// análisis anterior, que la sigue mostrando como no elegible. Los anteriores a la
+// DECISIÓN 074 no traen `pendiente_validacion` (sin backfill, DECISIÓN 058 §4);
+// esta copia evita que uno de una serie como est_02 la muestre con "menor EEA".
+// reportes/pdf.py tiene la misma regla.
 const PENDIENTES_VALIDACION_V1 = new Set(["gen_pareto"]);
 
 function esPendiente(item: DistribucionResult): boolean {

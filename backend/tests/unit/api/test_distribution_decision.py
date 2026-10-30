@@ -151,8 +151,9 @@ async def test_validacion_corre_antes_que_el_chequeo_de_sesion():
 
 
 @pytest.mark.unit
-async def test_distribucion_pendiente_de_validacion_da_400_dist_pending_validation():
-    # DECISIÓN 074 — gen_pareto se muestra pero no se puede elegir.
+async def test_distribucion_excluida_de_la_version_da_400_dist_excluded():
+    # Addendum del 29/10/2026 a la DECISIÓN 074 — gen_pareto no se calcula en la
+    # v1 y no se puede elegir.
     session_id = uuid.uuid4()
     session_store.create_session(str(session_id))
 
@@ -163,6 +164,6 @@ async def test_distribucion_pendiente_de_validacion_da_400_dist_pending_validati
         )
 
     assert exc_info.value.status_code == 400
-    assert exc_info.value.detail["error"]["codigo"] == "DIST_PENDING_VALIDATION"
+    assert exc_info.value.detail["error"]["codigo"] == "DIST_EXCLUDED"
     # la sesión sigue esperando: no se registró ninguna decisión
     assert session_store.get_decision(str(session_id)) is None

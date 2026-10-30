@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.api.deps import get_current_user, get_db, get_optional_user
 from metis.core.etapa1.significancia import NIVELES_ALFA
-from metis.core.etapa2.distributions import PENDIENTES_VALIDACION
+from metis.core.etapa2.distributions import EXCLUIDAS_V1, PENDIENTES_VALIDACION
 from metis.core.pipeline.exclusiones import ExclusionInvalidaError
 from metis.core.validacion.aggregation import (
     COBERTURA_MINIMA_INTERIOR_DEFECTO,
@@ -368,6 +368,20 @@ _DIST_PENDIENTE_VALIDACION = HTTPException(
     },
 )
 
+# Addendum del 29/10/2026 a la DECISIÓN 074 — distribución que no se ajusta en
+# esta versión: no está en el ranking de un análisis nuevo y no se puede elegir ni
+# explorar en uno guardado antes de que saliera.
+_DIST_EXCLUIDA = HTTPException(
+    status_code=400,
+    detail={
+        "error": {
+            "codigo": "DIST_EXCLUDED",
+            "mensaje": "Esa distribución no se calcula en esta versión de METIS:"
+            " queda fuera hasta validar sus fórmulas con otra bibliografía.",
+        }
+    },
+)
+
 _SESSION_NOT_FOUND = HTTPException(
     status_code=404,
     detail={
@@ -396,9 +410,12 @@ def _validar_seleccion_distribucion(
         or any(t <= 1 for t in periodos_retorno)
     ):
         raise _DIST_SELECTION_INVALIDA
-    # DECISIÓN 074 — la lista vive en core/ (fuente de verdad), el borde solo
-    # la consulta. Va después de la validación de forma: un pedido mal formado
-    # sigue respondiendo DIST_SELECTION_INVALID.
+    # DECISIÓN 074 y su addendum del 29/10/2026 — las listas viven en core/
+    # (fuente de verdad), el borde solo las consulta. Va después de la
+    # validación de forma: un pedido mal formado sigue respondiendo
+    # DIST_SELECTION_INVALID.
+    if distribucion in EXCLUIDAS_V1:
+        raise _DIST_EXCLUIDA
     if distribucion in PENDIENTES_VALIDACION:
         raise _DIST_PENDIENTE_VALIDACION
 

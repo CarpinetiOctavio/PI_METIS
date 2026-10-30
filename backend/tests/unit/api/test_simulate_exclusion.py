@@ -47,7 +47,7 @@ async def test_200_sin_el_punto_y_con_lo_excluido():
 async def test_con_etapa_2_devuelve_el_ranking_completo_sin_seleccion():
     r = await simulate_exclusion(_body(etapas=[1, 2]))
 
-    assert len(r["etapa2"]["ranking"]) == 13
+    assert len(r["etapa2"]["ranking"]) == 12
     assert r["etapa2"]["seleccion"] is None
 
 
@@ -141,9 +141,9 @@ async def test_seleccion_sin_etapa_2_no_calcula_nada():
     [
         ({**SELECCION, "periodos_retorno": [1]}, "DIST_SELECTION_INVALID"),
         ({**SELECCION, "distribucion": ""}, "DIST_SELECTION_INVALID"),
-        ({**SELECCION, "distribucion": "gen_pareto"}, "DIST_PENDING_VALIDATION"),
+        ({**SELECCION, "distribucion": "gen_pareto"}, "DIST_EXCLUDED"),
     ],
-    ids=["periodo-invalido", "sin-distribucion", "pendiente-validacion"],
+    ids=["periodo-invalido", "sin-distribucion", "excluida-de-la-version"],
 )
 async def test_seleccion_invalida_400_con_el_codigo_de_distribution_decision(
     seleccion, codigo
