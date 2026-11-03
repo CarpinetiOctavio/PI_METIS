@@ -18,6 +18,7 @@ from metis.api.v1.analysis import (
     _validar_seleccion_distribucion,
 )
 from metis.core.etapa1.trend import calcular_mann_kendall
+from metis.core.pipeline import ejecutar_etapa1
 from metis.core.validacion.contract import validar_contrato
 
 
@@ -170,3 +171,21 @@ def test_mann_kendall_umbrales_de_n(n, veredicto, warning):
 
     assert resultado.veredicto == veredicto
     assert resultado.warning_codigo == warning
+
+
+# ── VL-12: partición de t de Student con n impar (DECISIÓN 084) ─────────────────
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("n", "n1", "n2"),
+    [(39, 19, 20), (40, 20, 20), (25, 12, 13)],
+    ids=["VL-12a n=39 (est_05)", "VL-12b n=40", "VL-12c n=25"],
+)
+def test_t_student_con_n_impar_el_dato_del_medio_va_al_segundo_subgrupo(n, n1, n2):
+    # Facundo (29/10/2026): con n impar es indistinto qué subgrupo lleva el dato de
+    # más. METIS lo deja en el segundo; la tesis lo puso en el primero.
+    resultado = ejecutar_etapa1(_serie_sin_tendencia(n), "otro", "anual")
+    t_student = next(r for r in resultado.homogeneidad if r.prueba == "t_student")
+
+    assert (t_student.n1, t_student.n2) == (n1, n2)

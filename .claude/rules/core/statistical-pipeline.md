@@ -448,16 +448,20 @@ no sobre la original.
 
 **Payload de `result_etapa2_ranking`:** `{"session_id", "ranking", "warnings",
 "puntos_empiricos", "seleccion"}`, donde `ranking` es la grilla completa
-serializada por `_serializar_etapa2()` (las 13 distribuciones, todos sus
+serializada por `_serializar_etapa2()` (las 12 distribuciones de la v1, todos sus
 métodos con `status`/`eea`/`parametros`, `mejor_eea`, `mejor_metodo`,
 `pendiente_validacion`) — sin aplanar a un top-3, ver DECISIÓN 055.
 **`pendiente_validacion`** (DECISIÓN 074, 01/10/2026) — `true` para las
 distribuciones de `PENDIENTES_VALIDACION` (`core/etapa2/distributions/__init__.py`,
-hoy solo `gen_pareto`): se calculan y se muestran, pero van al final del
+hoy vacío): se calculan y se muestran, pero van al final del
 ranking (primer criterio de la clave de orden, antes que `mejor_eea`), nunca
 llevan "menor EEA" y elegirlas o explorarlas responde 400
 `DIST_PENDING_VALIDATION`. Se persiste en `analysis_results.etapa2`; los
-análisis anteriores no lo traen (sin backfill). **`puntos_empiricos`** — agregado en el
+análisis anteriores no lo traen (sin backfill). **`gen_pareto` fuera de la v1**
+(addendum del 29/10/2026 a la DECISIÓN 074): está en `EXCLUIDAS_V1`,
+`ejecutar_etapa2()` no la ajusta y elegirla o explorarla responde 400
+`DIST_EXCLUDED`. Solo aparece en el ranking de análisis guardados antes, donde
+el frontend y el PDF la siguen mostrando como pendiente de validación. **`puntos_empiricos`** — agregado en el
 Bloque C del plan de Etapa 2 (gráficos interactivos, DECISIÓN 056) — es la
 posición de ploteo Weibull de cada dato observado (`{valor, periodo_retorno,
 probabilidad}`, `core/etapa2/types.py::PuntoEmpirico`,
@@ -527,7 +531,7 @@ resolvió antes en el mismo stream.
 
 ### Solo se ejecuta si Etapa 1 fue completada primero — siempre
 
-### 13 distribuciones con hasta 6 métodos de estimación
+### 13 distribuciones en la tesis, 12 en METIS v1, con hasta 6 métodos de estimación
 
 El ajuste es **automático y exhaustivo** — sin intervención del usuario.
 
@@ -544,7 +548,7 @@ El ajuste es **automático y exhaustivo** — sin intervención del usuario.
 | Gamma 3p | Momentos, MV |
 | Exponencial (β) | Momentos, MV |
 | Exponencial (x₀, β) | Momentos, MV |
-| Generalizada de Pareto | Momentos, MV, MC |
+| Generalizada de Pareto | Momentos, MV, MC — **fuera de la v1** (`EXCLUIDAS_V1`, addendum 29/10/2026 a DECISIÓN 074) |
 | Generalizada Exponencial | Momentos, MV, ML |
 
 > **Nota sobre Pearson III:** no existe como distribución independiente en la tesis

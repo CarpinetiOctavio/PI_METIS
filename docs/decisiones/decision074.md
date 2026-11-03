@@ -78,3 +78,33 @@ agregar acá un addendum fechado con qué se corrigió y con qué referencia.
   01/10/2026: la ecuación de la tesis, bien transcrita, no recupera el parámetro.
 - **DECISIÓN 058 §4** — criterio de no hacer backfill de análisis ya persistidos.
 - **DECISIÓN 062** — "explorar no es decidir": acá tampoco se permite explorar Pareto desde el historial.
+
+---
+
+### Addendum 29/10/2026 — Generalizada de Pareto fuera del cálculo de la v1
+
+**Decide:** Kevin, con la respuesta de Facundo del 29/10/2026 (consulta C4 del
+[plan de mejoras post-despliegue](../Plan%20de%20mejoras%20post-despliegue%20UCC%20y%20respuestas%20de%20Facundo.md)):
+no recuerda la distribución y acepta que quede fuera de la librería hasta conseguir mejor bibliografía.
+
+**Qué cambia.** Se elige la alternativa (c), descartada arriba por trazabilidad. Con la respuesta del autor, el
+argumento cambia de signo: la inconsistencia ya no está "en revisión", no tiene quien la resuelva en la v1, y
+mostrar una distribución que nadie puede validar ni elegir agrega ruido a un ranking que el alumno tiene que leer.
+La evidencia de la inconsistencia no se pierde: queda en el hallazgo, en `gen_pareto.py` y en sus tests.
+
+- **`core/`.** `EXCLUIDAS_V1 = frozenset({"gen_pareto"})` en `core/etapa2/distributions/__init__.py`, y
+  `ejecutar_etapa2()` saltea esos nombres: el ranking pasa a **12 distribuciones**. `PENDIENTES_VALIDACION` queda
+  vacío; el mecanismo de esta decisión sigue para futuros casos.
+- **Borde de la API.** Código nuevo `DIST_EXCLUDED` (400) en `_validar_seleccion_distribucion`, evaluado antes que
+  `DIST_PENDING_VALIDATION`: `distribution-decision`, `POST /analysis/{id}/design-events` y la `seleccion` de
+  `simulate-exclusion`.
+- **Análisis guardados.** Los persistidos antes traen a Pareto en su ranking (con `pendiente_validacion` o, los
+  anteriores a esta decisión, sin el campo). El frontend (`Etapa2RankingView`) y el PDF (`reportes/pdf.py`,
+  `_NO_ELEGIBLES_EN_HISTORIAL`) la siguen mostrando como "pendiente de validación, no elegible"; el PDF suma el
+  respaldo por nombre que hasta ahora solo tenía el frontend. Sin backfill (DECISIÓN 058 §4).
+- **Tests.** `tests/unit/core/pipeline/test_excluidas_v1.py` (reemplaza a `test_pendientes_validacion.py`), los
+  conteos de 13 → 12 y `test_pdf.py::test_analisis_guardado_con_pareto_la_sigue_mostrando_no_elegible`.
+
+**Nueva condición de cierre.** La v2 reincorpora la distribución con Hosking y Wallis (1987) verificado en
+`Bibliografia/`, siguiendo la guía de §8 del hallazgo: sacar `gen_pareto` de `EXCLUIDAS_V1` y agregar acá un
+addendum con qué se corrigió y con qué referencia.

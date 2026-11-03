@@ -50,7 +50,8 @@ def test_las_que_admiten_negativos_siguen_ajustando(nombre):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("nombre", ["lognormal3p", "gamma3p", "exponencial_x0_beta", "gen_pareto"])
+# gen_pareto también decide por su cuenta, pero no se calcula en la v1 (EXCLUIDAS_V1).
+@pytest.mark.parametrize("nombre", ["lognormal3p", "gamma3p", "exponencial_x0_beta"])
 def test_las_de_tres_parametros_deciden_por_su_cuenta(nombre):
     # Estiman un parámetro de posición: no reciben el estado nuevo.
     d = _por_nombre(ejecutar_etapa2(CON_NEGATIVOS, tiene_negativos=True).ranking)[nombre]

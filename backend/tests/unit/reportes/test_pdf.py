@@ -172,10 +172,50 @@ def test_ranking_completo_sin_ganadora_y_con_la_elegida_resaltada(
     )
     filas = _textos([tabla])[1:]
 
-    assert len(filas) == 13
+    # 12: la Generalizada de Pareto salió del cálculo en la v1 (addendum del
+    # 29/10/2026 a la DECISIÓN 074).
+    assert len(filas) == 12
     elegidas = [f for f in filas if "Elegida por el usuario" in f]
     assert len(elegidas) == 1 and "Gumbel" in elegidas[0]
     assert not any("recomend" in t.lower() or "ganador" in t.lower() for t in textos)
+    assert not any("Generalizada de Pareto" in f for f in filas)
+
+
+def _filas_ranking(seccion) -> list[str]:
+    tabla = next(
+        f
+        for f in seccion
+        if isinstance(f, Table) and _textos([f])[0].startswith("# | Distribución")
+    )
+    return _textos([tabla])[1:]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "marca",
+    [{"pendiente_validacion": True}, {}],
+    ids=["guardado-con-la-074", "anterior-a-la-074-sin-marca"],
+)
+def test_analisis_guardado_con_pareto_la_sigue_mostrando_no_elegible(
+    detalle_completo, est, marca
+):
+    # Un análisis guardado antes de que Pareto saliera del cálculo la trae en
+    # su ranking; el PDF la sigue mostrando, sin que se pueda leer como elegible.
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["etapa2"]["ranking"].append(
+        {
+            "distribucion": "gen_pareto",
+            "n_parametros": 3,
+            "metodos": [],
+            "mejor_eea": 1.0,
+            "mejor_metodo": "momentos",
+            **marca,
+        }
+    )
+
+    filas = _filas_ranking(_seccion_etapa2(detalle, est))
+
+    assert len(filas) == 13
     pareto = next(f for f in filas if "Generalizada de Pareto" in f)
     assert "Pendiente de validación" in pareto
 
@@ -619,7 +659,9 @@ def test_datos_informan_la_cobertura_minima_interior(
     detalle = _con_carga(detalle_completo, resolucion, **config)
     textos = _textos(_seccion_datos(detalle, None, est))
 
-    filas = [t for t in textos if t.startswith("Cobertura mínima de los años interiores")]
+    filas = [
+        t for t in textos if t.startswith("Cobertura mínima de los años interiores")
+    ]
     if esperado is None:
         assert filas == []
     else:

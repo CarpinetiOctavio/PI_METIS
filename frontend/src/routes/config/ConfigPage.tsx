@@ -10,6 +10,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { postPreviewColumns } from "../../api/analysis";
+import { errorText } from "../../i18n/errors.es";
 import type {
   Alfa,
   AnalysisStreamForm,
@@ -32,6 +33,12 @@ const DOCE_MESES = Array.from({ length: 12 }, (_, i) => i + 1);
 
 // Bloque E1 (pasada 5) — cap real de PARSE_FILE_TOO_LARGE (DECISIÓN 050), el
 // frontend nunca lo mencionaba antes de la dropzone.
+// Mismo tope que MAX_UPLOAD_BYTES del backend (api/v1/analysis.py). Se valida acá
+// antes de subir: un archivo más grande que el client_max_body_size de nginx se
+// cortaba durante la subida y el usuario veía un error de red, no el del contrato
+// (H13 del plan de mejoras post-despliegue UCC, 29/10/2026).
+const MAX_ARCHIVO_BYTES = 10 * 1024 * 1024;
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -217,6 +224,12 @@ export function ConfigPage() {
       setPreview({ status: "idle" });
       return;
     }
+    if (file.size > MAX_ARCHIVO_BYTES) {
+      setPreview({ status: "idle" });
+      setError(errorText("PARSE_FILE_TOO_LARGE"));
+      return;
+    }
+    setError(null);
 
     setPreview({ status: "loading" });
     try {
@@ -249,6 +262,10 @@ export function ConfigPage() {
     event.preventDefault();
     if (!archivo) {
       setError("Seleccioná un archivo CSV o Excel.");
+      return;
+    }
+    if (archivo.size > MAX_ARCHIVO_BYTES) {
+      setError(errorText("PARSE_FILE_TOO_LARGE"));
       return;
     }
     if (!columnaX.trim() || !columnaY.trim()) {

@@ -11,7 +11,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  // Etapa 2 ajusta 13 distribuciones antes de mostrar el ranking.
+  // Etapa 2 ajusta 12 distribuciones antes de mostrar el ranking.
   timeout: 120_000,
   expect: { timeout: 30_000 },
   reporter: [["list"], ["html", { open: "never" }]],

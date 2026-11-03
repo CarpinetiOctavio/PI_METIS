@@ -17,7 +17,7 @@ correcto; la evidencia de exactitud es la auditoría y la comparación con otras
 
 ## 2. El testing exhaustivo es imposible
 
-**En METIS:** 13 distribuciones con hasta 6 métodos, tres resoluciones temporales, 12 meses de inicio de año, dos
+**En METIS:** 12 distribuciones (13 en la tesis; la Generalizada de Pareto queda fuera de la v1) con hasta 6 métodos, tres resoluciones temporales, 12 meses de inicio de año, dos
 tipos de variable, series con ceros, negativos o faltantes y cualquier longitud desde 10. Las combinaciones no se
 pueden recorrer.
 **Cómo se tiene en cuenta:** se eligen casos con técnicas (valores límite, clases de equivalencia, tablas de

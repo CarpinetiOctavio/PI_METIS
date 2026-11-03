@@ -3,6 +3,7 @@
 **Fecha:** 8 de octubre de 2026. **Autores:** Kevin, con Claude.
 **Veredicto:** **CONFIRMADO numéricamente** sobre los valores publicados en la tesis. **No confirmable contra la
 planilla original** (respuesta de Facundo del 22/10/2026, sección 7): queda como explicación reconstruida.
+**Cerrado el 29/10/2026** (sección 8): Facundo confirma IV-105 y atribuye la diferencia a la planilla.
 **Qué cambia en METIS:** nada. METIS ya aplica la ecuación que escribe la tesis (IV-105). Lo que cambia es
 la clasificación de las discrepancias de la auditoría: dejan de ser una pregunta abierta sobre METIS.
 **Cómo se encontró:** en la comparación con otras herramientas pedida por Carlos Catalini
@@ -120,3 +121,14 @@ la planilla ya no existe. Queda como **explicación reconstruida** por la compar
 valores publicados hasta la cuarta cifra significativa, y METIS sigue aplicando IV-105 tal como la escribe la tesis.
 La pregunta puntual de la sección 5 se presenta en persona en la reunión de la semana próxima, por si Facundo
 reconoce el cálculo.
+
+## 8. Respuesta de Facundo (29/10/2026) — cerrado
+
+Se mantiene IV-105 (usar 1 − F para F > 0,5). Lo más probable es que la planilla tenga un error por arrastre de
+ecuaciones: una celda copiada de la rama F ≤ 0,5 sin cambiar F por 1 − F, que es exactamente lo que reconstruye la
+sección 2.
+
+**Qué queda cerrado.** METIS no cambia. En la auditoría y en el libro, las diferencias de cuantiles y de EEA en Normal,
+Log-Normal 2p y 3p, Gamma 2p y 3p y Log-Pearson III (Causa C), y los cambios de orden del ranking en est_05 y est_08
+(Causa D), se atribuyen a la planilla de la tesis, no a METIS.
+
