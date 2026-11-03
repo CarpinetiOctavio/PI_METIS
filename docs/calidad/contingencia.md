@@ -55,6 +55,9 @@ crea el usuario ya verificado directo en la base. Con credenciales vencidas, se 
 actualiza el `.env`, sin redeploy de código. **No se desactiva la verificación** ni se agrega una rama "sin mail":
 toca el camino crítico de autenticación (DECISIÓN 049).
 
+En el servidor de la UCC, un `SMTP_HOST` que el certificado del relay no cubre da el mismo 500: ver
+[despliegue-ucc.md](despliegue-ucc.md) §6, junto con las demás contingencias propias de ese despliegue.
+
 ## 4. Reinicio del backend
 
 | Qué se pierde | Cómo lo ve el usuario | Respuesta |
