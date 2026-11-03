@@ -108,8 +108,14 @@ Un representante por clase, válida o inválida.
 | CE-08a | `cobertura_minima_interior` | No numérico | `abc` | 400 `CONTRACT_COBERTURA_INVALID` (no un 422 genérico) | DECISIÓN 081 | `casos_dinamicos/test_cobertura_minima_interior.py::test_cobertura_fuera_del_rango_o_no_entera_da_400[CE-08a abc]` |
 | CE-08b | | Numérico no entero | `90.5` | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…[CE-08b 90.5]` |
 | CE-08c | | Vacío | `""` | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…[CE-08c vacío]` |
-| CE-09a | Distribución de la selección (`distribution-decision`, `{id}/design-events`, `seleccion` de `simulate-exclusion`) | Calculada en la v1 | `gumbel` | Válida, desbloquea la pausa | DECISIÓN 052 | `tests/unit/api/test_distribution_decision.py::test_sesion_existente_resuelve_y_desbloquea` |
-| CE-09b | | Excluida de la v1 | `gen_pareto` | 400 `DIST_EXCLUDED`; la sesión sigue esperando | Addendum 29/10/2026 a DECISIÓN 074 | `…/test_distribution_decision.py::test_distribucion_excluida_de_la_version_da_400_dist_excluded`, `tests/unit/api/test_analysis_design_events.py::test_recalcular_design_events_400_si_la_distribucion_esta_excluida_de_la_version`, `tests/unit/api/test_simulate_exclusion.py::test_seleccion_invalida_400_con_el_codigo_de_distribution_decision[excluida-de-la-version]` |
+| CE-10a | Token de `reset-password` | Vigente y sin usar | Token emitido hace instantes | 200; la contraseña nueva entra y la vieja no | DECISIÓN 085 | `tests/integration/db/test_recuperacion_contrasena.py::test_flujo_completo_con_mail_real` |
+| CE-10b | | Ya usado | El mismo link por segunda vez | 400 `AUTH_RESET_TOKEN_INVALID` | ídem | `…::test_flujo_completo_con_mail_real` (segundo `reset`), `…::test_un_pedido_nuevo_invalida_el_link_anterior` |
+| CE-10c | | Vencido | `expires_at` un minuto en el pasado | 400 `AUTH_RESET_TOKEN_INVALID`; la contraseña no cambia | ídem | `…::test_token_vencido_no_sirve` |
+| CE-10d | | Inexistente | Texto que nunca se emitió | 400 `AUTH_RESET_TOKEN_INVALID` | ídem | `…::test_token_inexistente_responde_400` |
+| CE-10e | Contraseña nueva | Menos de 8 caracteres | `corta` | 422 de validación, sin gastar el token | ídem | `…::test_clave_corta_responde_422_y_no_gasta_el_token` |
+| CE-10f | Email de `forgot-password` | Con cuenta / sin cuenta | Un mail registrado y uno que no | Misma respuesta 200 y mismo cuerpo; solo la cuenta real guarda un token | ídem | `…::test_forgot_responde_lo_mismo_exista_o_no_la_cuenta_y_sin_cuenta_no_guarda_nada` |
+| CE-10g | Pedidos de `forgot-password` | Dos seguidos para la misma cuenta | Dentro de los 60 s | Misma respuesta; un solo token en la base | ídem | `…::test_dos_pedidos_seguidos_no_crean_un_segundo_token` |
+| CE-10h | Estado de la cuenta | Sin verificar | Registrada y nunca verificada (H8) | Login 403 antes del reseteo; 200 después | DECISIÓN 085 y 034 | `…::test_restablecer_verifica_una_cuenta_que_quedo_sin_verificar` |
 
 ---
 
@@ -214,6 +220,9 @@ de Chow y la vista calendario: `tests/integration/test_stream_agregacion_mensual
   PostgreSQL, porque la validación necesita el análisis persistido. CE-05c, VL-11a–e, CE-08a–c y TD-06a–g (respuestas
   de Facundo del 22/10/2026, `docs/plan-respuestas-facundo-22-10-2026.md`, bloques B y C): 16 casos; los de la
   DECISIÓN 081 en `casos_dinamicos/test_cobertura_minima_interior.py`.
+- **Agregados el 02/11/2026:** CE-10a–h (recuperación de contraseña, DECISIÓN 085): ocho casos contra PostgreSQL real
+  en `tests/integration/db/test_recuperacion_contrasena.py`; los de borde del token y del enfriamiento no necesitan
+  Mailpit, solo CE-10a y CE-10b lo usan para leer el mail.
 - **Total al 22/10/2026: 104 casos.** 41 de valores límite, 32 de clases de equivalencia (también CE-06a–c, del α
   configurable de la DECISIÓN 078) y 31 columnas de seis tablas de decisión.
 - **Agregados el 29/10/2026:** CE-09a–b (Generalizada de Pareto fuera de la v1, addendum a la DECISIÓN 074), con

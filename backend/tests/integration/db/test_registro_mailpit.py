@@ -12,8 +12,6 @@ Requiere en el entorno, además de la base de `conftest.py`:
 Sin `MAILPIT_URL` se saltea; con `METIS_REQUIRE_MAILPIT=1` (CI) falla.
 """
 
-import asyncio
-import os
 import re
 import uuid
 
@@ -24,39 +22,11 @@ from sqlalchemy import delete
 from metis.db import get_db
 from metis.db.models import User
 from metis.main import app
+from tests.integration.db._mailpit import esperar_mail
 
 pytestmark = pytest.mark.integration
 
 _LINK = re.compile(r"/auth/verify\?token=([A-Za-z0-9_\-]+)")
-
-
-@pytest.fixture
-def mailpit_url() -> str:
-    url = os.environ.get("MAILPIT_URL")
-    if not url:
-        mensaje = (
-            "MAILPIT_URL no definido: no hay servidor SMTP de captura (DECISIÓN 049)"
-        )
-        if os.environ.get("METIS_REQUIRE_MAILPIT") == "1":
-            pytest.fail(mensaje)
-        pytest.skip(mensaje)
-    return url.rstrip("/")
-
-
-async def _esperar_mail(mailpit: httpx.AsyncClient, destinatario: str) -> str:
-    """Texto del mail que le llegó a `destinatario`; reintenta mientras Mailpit lo indexa."""
-    for _ in range(20):
-        busqueda = await mailpit.get(
-            "/api/v1/search", params={"query": f'to:"{destinatario}"'}
-        )
-        busqueda.raise_for_status()
-        mensajes = busqueda.json()["messages"]
-        if mensajes:
-            mensaje = await mailpit.get(f"/api/v1/message/{mensajes[0]['ID']}")
-            mensaje.raise_for_status()
-            return mensaje.json()["Text"]
-        await asyncio.sleep(0.25)
-    raise AssertionError(f"Mailpit no recibió ningún mail para {destinatario}")
 
 
 async def test_registro_verificacion_y_login_con_mail_real(db, mailpit_url):
@@ -83,7 +53,7 @@ async def test_registro_verificacion_y_login_con_mail_real(db, mailpit_url):
             login_antes = await api.post(
                 "/api/v1/auth/login", json={"email": email, "password": password}
             )
-            texto = await _esperar_mail(mailpit, email)
+            texto = await esperar_mail(mailpit, email)
             token = _LINK.search(texto).group(1)
             verificacion = await api.post("/api/v1/auth/verify", json={"token": token})
             reuso = await api.post("/api/v1/auth/verify", json={"token": token})

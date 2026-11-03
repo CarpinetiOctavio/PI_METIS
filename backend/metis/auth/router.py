@@ -5,17 +5,34 @@ from datetime import datetime, timezone
 
 import aiosmtplib
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from metis.auth.dependencies import get_current_user
-from metis.auth.email import generate_verification_token, send_verification_email
+from metis.auth.email import (
+    generate_verification_token,
+    send_password_reset_email,
+    send_verification_email,
+)
 from metis.auth.jwt import create_access_token
+from metis.auth.tokens import (
+    RESET_TTL,
+    consume_reset_token,
+    invalidate_reset_tokens,
+    issue_reset_token,
+)
 from metis.db import get_db
 from metis.db.models import User
-from metis.schemas.auth import LoginRequest, RegisterRequest, UserMe, VerifyRequest
+from metis.schemas.auth import (
+    ForgotPasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+    UserMe,
+    VerifyRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +202,90 @@ async def login(
         samesite="lax",
         secure=_COOKIE_SECURE,
     )
+    return {"ok": True}
+
+
+# Misma respuesta exista o no la cuenta (DECISIÓN 085): el endpoint no le dice a un desconocido qué
+# mails tienen cuenta en METIS.
+_MENSAJE_FORGOT = (
+    "Si el email tiene una cuenta, te mandamos un link para elegir una contraseña nueva. "
+    "Revisá tu bandeja de entrada y la carpeta de spam."
+)
+
+
+async def _mandar_mail_reseteo(email: str, token: str) -> None:
+    """Corre en segundo plano, después de responder.
+
+    Un fallo de envío solo se registra: si saliera como error, la respuesta sería distinta para
+    las cuentas que existen y para las que no, y volvería a filtrar qué mails tienen cuenta.
+    """
+    try:
+        await send_password_reset_email(
+            email, token, int(RESET_TTL.total_seconds() // 60)
+        )
+    except (aiosmtplib.SMTPException, ssl.SSLError, OSError, RuntimeError):
+        logger.exception(
+            "Fallo al enviar mail de recuperación de contraseña a %s", email
+        )
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+
+    if user is not None:
+        token = await issue_reset_token(db, user.id)
+        # None: se pidió otro link hace menos de RESET_COOLDOWN; no se manda un mail más.
+        if token is not None:
+            background_tasks.add_task(_mandar_mail_reseteo, user.email, token)
+
+    return {"ok": True, "mensaje": _MENSAJE_FORGOT}
+
+
+@router.post("/reset-password")
+async def reset_password(
+    body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
+):
+    user_id = await consume_reset_token(db, body.token)
+    if user_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {
+                    "codigo": "AUTH_RESET_TOKEN_INVALID",
+                    "mensaje": "El link para restablecer la contraseña es inválido o expiró",
+                }
+            },
+        )
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        # El FK con ON DELETE CASCADE hace esto imposible; se contempla igual para no dejar un 500.
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": {
+                    "codigo": "AUTH_USER_NOT_FOUND",
+                    "mensaje": "Usuario no encontrado",
+                }
+            },
+        )
+
+    user.password_hash = bcrypt.hashpw(
+        body.password.encode(), bcrypt.gensalt()
+    ).decode()
+    # Abrir el link del mail prueba que la persona controla la casilla: lo mismo que verifica el
+    # link de registro. Así esta vía también destraba las cuentas que quedaron sin verificar
+    # porque el backend se reinició antes de que usaran su token (H8, DECISIÓN 034).
+    user.email_verified = True
+    await invalidate_reset_tokens(db, user.id)
+    await db.commit()
     return {"ok": True}
 
 

@@ -9,6 +9,8 @@ export const ERROR_TEXT: Record<string, string> = {
   AUTH_USER_NOT_FOUND: "No encontramos el usuario.",
   AUTH_INVALID_CREDENTIALS: "Email o contraseña incorrectos.",
   AUTH_EMAIL_NOT_VERIFIED: "Verificá tu email antes de iniciar sesión.",
+  AUTH_RESET_TOKEN_INVALID:
+    "El link para restablecer la contraseña es inválido, expiró o ya se usó.",
   SESSION_NOT_ESTABLISHED:
     "El login fue aceptado pero no se pudo abrir la sesión. Revisá la conexión con el backend.",
   VALIDATION_ERROR: "Revisá los datos ingresados.",

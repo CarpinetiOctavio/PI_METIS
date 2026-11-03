@@ -13,7 +13,7 @@ verifican, los tests que los implementan y los defectos registrados contra él.
 define requisitos no funcionales: las características de calidad se trazan en `matriz-iso25010.md`.
 
 **Cómo leer las columnas.**
-- **Casos:** IDs de `casos-de-prueba.md` (VL, CE, TD) y escenarios E2E de `despliegue-y-e2e.md` (E2E-0 a E2E-5).
+- **Casos:** IDs de `casos-de-prueba.md` (VL, CE, TD) y escenarios E2E de `despliegue-y-e2e.md` (E2E-0 a E2E-6).
 - **Tests:** archivos, no funciones. Backend relativo a `backend/tests/`; frontend relativo a `frontend/src/`.
 - **Defectos:** IDs de `registro-defectos.md` (issues #114 a #141).
 
@@ -73,7 +73,7 @@ define requisitos no funcionales: las características de calidad se trazan en `
 
 | RF | Requisito | Estado | Casos | Tests | Defectos |
 |---|---|---|---|---|---|
-| CU01-01 | Autenticación con mail institucional | Implementado | E2E-0, E2E-1 | `unit/auth/` (5 archivos), `integration/db/test_registro_mailpit.py`; `auth/AuthProvider.test.tsx`, `routes/auth-verify/AuthVerifyPage.test.tsx` | D-02, D-07 |
+| CU01-01 | Autenticación con mail institucional | Implementado (incluye la recuperación de contraseña, DECISIÓN 085) | E2E-0, E2E-1, E2E-6, CE-10a–h | `unit/auth/` (7 archivos), `integration/db/test_registro_mailpit.py`, `integration/db/test_recuperacion_contrasena.py`; `auth/AuthProvider.test.tsx`, `routes/auth-verify/AuthVerifyPage.test.tsx`, `routes/auth-recovery/` (2 archivos) | D-02, D-07 |
 | CU01-02 | Persistencia de análisis por usuario | Implementado | E2E-3, E2E-4 | `integration/db/test_persistencia.py`, `integration/db/test_exclusiones_guardadas.py` (exclusiones guardadas, DECISIÓN 080), `unit/api/test_history_archive.py`; `routes/history/HistoryPage.test.tsx`, `HistoryDetailPage.test.tsx` | D-15, D-16 |
 | CU01-03 | Modos de uso internos | Implementado | — | `routes/results/Etapa1ResultView.test.tsx`, `routes/config/ConfigPage.test.tsx` | — |
 | CU01-04 | Elección de alcance del pipeline | Implementado | CE-04a–c, TD-04 | Los de CU02-04, más `integration/db/test_persistencia.py` | — |
@@ -98,5 +98,8 @@ define requisitos no funcionales: las características de calidad se trazan en `
   la decisión ante atípicos de Chow, 5 defectos) y P-10 (agregación temporal, 3), coherente con el principio de
   agrupación de defectos (`principios.md`). Los dos son las zonas donde se cruzan la serie analizada, sus índices y
   lo que se le muestra o se le guarda al usuario.
+- **La recuperación de contraseña no es un RF del Manual de Requerimientos.** Se agregó el 02/11/2026 (DECISIÓN 085)
+  y se traza bajo CU01-01, sin crear un identificador que el Manual no tiene; por eso los totales de la tabla no
+  cambian.
 - **Los 8 no implementados** son la brecha de completitud de la adecuación funcional (`matriz-iso25010.md`).
 - **Sentido inverso:** todo caso de `casos-de-prueba.md` y todo E2E aparece en al menos una fila de esta matriz.

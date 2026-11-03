@@ -187,3 +187,40 @@ def test_smtp_starttls_se_lee_del_entorno(monkeypatch, valor, esperado):
     assert modulo._SMTP_STARTTLS is esperado
     monkeypatch.undo()
     importlib.reload(email_module)
+
+
+@pytest.mark.unit
+async def test_send_password_reset_email_arma_el_mensaje_con_el_link_y_la_vigencia(
+    monkeypatch,
+):
+    _set_config(monkeypatch)
+
+    with patch("metis.auth.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
+        await email_module.send_password_reset_email(
+            "legajo@ucc.edu.ar", "tok-reset", 60
+        )
+
+    mock_send.assert_awaited_once()
+    args, kwargs = mock_send.call_args
+    message = args[0]
+    assert message["To"] == "legajo@ucc.edu.ar"
+    assert message["From"] == "metis-noreply@ucc.edu.ar"
+    assert "Restablecé tu contraseña" in message["Subject"]
+    cuerpo = message.get_content()
+    assert "http://localhost:5173/auth/reset-password?token=tok-reset" in cuerpo
+    assert "60 minutos" in cuerpo
+    assert kwargs["hostname"] == "smtp.example.com"
+    assert kwargs["timeout"] == email_module._SMTP_TIMEOUT
+
+
+@pytest.mark.unit
+async def test_send_password_reset_email_sin_config_lanza_runtimeerror_sin_llamar_aiosmtplib(
+    monkeypatch,
+):
+    _set_config(monkeypatch, host=None)
+
+    with patch("metis.auth.email.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
+        with pytest.raises(RuntimeError):
+            await email_module.send_password_reset_email("legajo@ucc.edu.ar", "tok", 60)
+
+    mock_send.assert_not_awaited()

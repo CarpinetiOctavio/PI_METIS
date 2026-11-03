@@ -21,6 +21,7 @@ el alta en la base. Sin ese mail, la cuenta nunca se puede verificar y el docent
 | Cifrado | STARTTLS si `SMTP_STARTTLS` no es `false`/`0`/`no` (default: activo) |
 | Mensaje | Asunto "METIS — Verificá tu cuenta"; cuerpo de texto con `{FRONTEND_URL}/auth/verify?token=<token>` |
 | Token | `secrets.token_urlsafe(32)`, un solo uso, guardado en memoria del proceso (`auth/router.py::_pending_tokens`) |
+| Segundo mail | Recuperación de contraseña (DECISIÓN 085): `send_password_reset_email`, asunto "METIS: Restablecé tu contraseña", link `{FRONTEND_URL}/auth/reset-password?token=<token>`. Mismo cliente, mismo relay y mismas variables. A diferencia del registro, un fallo de envío **no** se devuelve al usuario: se registra en el log y la respuesta sigue siendo la genérica |
 
 **Errores.** Si faltan las variables obligatorias, `send_verification_email` levanta `RuntimeError`; si el servidor
 rechaza o no responde, `aiosmtplib.SMTPException`. En los dos casos el registro responde **500
@@ -58,7 +59,8 @@ defensa de la tesis. Antecedente: el envío real ya se probó a mano contra el r
 | El relay no responde o rechaza | El registro devuelve 500 `AUTH_VERIFICATION_EMAIL_FAILED`; el log del backend registra la excepción con el destinatario (`logger.exception`) | El usuario ve el mensaje traducido ("No pudimos enviar el mail de verificación…") y puede reintentar: no queda nada persistido |
 | Caída prolongada | Varios 500 seguidos del mismo código en el log | Bypass operativo: `scripts/seed-dev-user.sh <email>` crea el usuario ya verificado directo en la base; el docente entra sin esperar el mail |
 | Credenciales vencidas (App Password revocado) | `SMTPAuthenticationError` en el log | Pedir a IT un App Password nuevo y actualizar `SMTP_PASSWORD` en el `.env`; no requiere redeploy de código |
-| Tokens perdidos por reinicio del backend | El usuario recibe `AUTH_INVALID_TOKEN` con un link que antes servía | Limitación conocida (`_pending_tokens` en memoria, `auth/router.py`): reintentar el registro; mover los tokens a la base queda como mejora post-V1.0 |
+| Tokens perdidos por reinicio del backend | El usuario recibe `AUTH_INVALID_TOKEN` con un link que antes servía | Limitación conocida (`_pending_tokens` en memoria, `auth/router.py`): desde la DECISIÓN 085 el usuario puede pedir "¿Olvidaste tu contraseña?", que verifica la cuenta al restablecerla; mover los tokens de verificación a la base queda como mejora post-V1.0 |
+| Recuperación de contraseña sin mail | El usuario dice que el mail no llega y el backend no devuelve ningún error | Buscar `Fallo al enviar mail de recuperación` en el log del backend. Si la caída del relay se prolonga, el bypass es el mismo de arriba: el administrador restablece la contraseña directo en la base (hash bcrypt) o crea la cuenta con `scripts/seed-dev-user.sh` |
 
 Lo que **no** se hace ante una caída: no se desactiva la verificación ni se agrega una rama "sin mail" al registro.
 Esa alternativa se descartó en DECISIÓN 049 porque toca el camino crítico de autenticación.
