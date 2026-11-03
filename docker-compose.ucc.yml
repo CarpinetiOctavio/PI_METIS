@@ -1,0 +1,62 @@
+# Override del servidor de la UCC (DECISIÓN 083). Se aplica encima de docker-compose.yml y de
+# docker-compose.ci.yml (la configuración "de producción" que ya usan el CI y deploy-local.sh), de modo
+# que lo único que define este archivo es lo propio del servidor. En el .env del servidor:
+#
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml:docker-compose.ucc.yml
+#
+# Runbook completo (qué va en .env, verificación, contingencias): docs/calidad/despliegue-ucc.md.
+#
+# Qué agrega sobre docker-compose.ci.yml:
+# - SMTP del relay real de la UCC en lugar de Mailpit. El host es wally.uccor.edu.ar y no
+#   wally.ucc.edu.ar: el certificado del relay solo cubre el primero (D-UCC-01, DECISIÓN 034).
+# - FRONTEND_ORIGIN y FRONTEND_URL con la URL con la que se entra al servidor (METIS_URL en el .env;
+#   por defecto la IP). Es el link del mail de verificación y el origen que acepta CORS.
+# - restart: unless-stopped en todos los servicios, para que METIS vuelva solo después de un
+#   reinicio del servidor (H5). Se verifica con un reinicio controlado (B3).
+# - Una subred propia para la red de Docker (D-UCC-04). Sin ella Docker elige 172.18.0.0/16, el
+#   rango del gateway 172.18.0.1 que usa la ruta de IT hacia esta VM: las respuestas a esa ruta
+#   se iban al puente de Docker y IT veía 100 % de pérdida. 10.250.0.0/24 no lo usa la UCC.
+#   Docker no cambia la subred de una red existente: al agregarla hay que bajar el stack
+#   (`docker compose down`, SIN -v: el volumen de la base se conserva) y volver a levantarlo.
+#
+# ENV sigue en development (lo fija docker-compose.ci.yml): el servidor se sirve por HTTP y con
+# ENV=production la cookie de sesión sale con Secure, que el navegador no devuelve por HTTP
+# (el login quedaría muerto). Pasa a production junto con el HTTPS, en el override de TLS.
+#
+# Los secretos (METIS_CI_DB_PASSWORD, METIS_CI_JWT_SECRET, SMTP_PASSWORD) van en .env, que no se versiona.
+
+services:
+  backend:
+    restart: unless-stopped
+    environment:
+      FRONTEND_ORIGIN: ${METIS_URL:-http://172.16.168.14}
+      FRONTEND_URL: ${METIS_URL:-http://172.16.168.14}
+      SMTP_HOST: ${SMTP_HOST:-wally.uccor.edu.ar}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-metis}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?definir SMTP_PASSWORD en el .env}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-metis-noreply@ucc.edu.ar}
+      SMTP_STARTTLS: "true"
+    # Sin Mailpit: solo espera a la base.
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    restart: unless-stopped
+
+  frontend:
+    restart: unless-stopped
+
+  nginx:
+    restart: unless-stopped
+
+  mailpit:
+    # Solo desarrollo. Con el perfil, `up` no lo levanta salvo que se pida explícitamente.
+    profiles: ["mailpit"]
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 10.250.0.0/24
