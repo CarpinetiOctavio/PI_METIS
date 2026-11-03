@@ -57,3 +57,29 @@ Al ejecutar el smoke test manual de [DECISIÓN 032](decision032.md) contra el re
 **RESUELTO — 20/07/2026:** `tests/unit/auth/test_email.py` sí dependía de `message["From"] == SMTP_USER` en `_set_config()` — la suite estuvo rota desde la separación de `SMTP_FROM_ADDRESS` hasta este momento, sin que nadie la hubiera vuelto a correr en el medio (3 de 4 tests fallaban con `RuntimeError` antes de comparar nada). Corregido: `_set_config` ahora setea `SMTP_FROM_ADDRESS` con default distinto de `SMTP_USER` (`"metis-noreply@ucc.edu.ar"` vs `"metis"`), y se sumó `test_send_verification_email_from_es_independiente_de_smtp_user` (valores centinela deliberadamente distintos) más `test_send_verification_email_sin_from_address_lanza_runtimeerror_sin_llamar_aiosmtplib` (guard de `SMTP_FROM_ADDRESS` faltante, no cubierto antes). Suite de auth: 12/12 en verde. Suite completa del repo: 132 tests, 1 failure preexistente sin relación (gen_pareto MC, ver Fase 3 de auditoría), sin regresiones fuera de este alcance.
 
 **Ver también:** [DECISIÓN 004](decision004.md) — mecanismo de envío, pendiente de actualización con el hostname correcto. [DECISIÓN 032](decision032.md) — orden de operaciones, ahora verificado con evidencia real, no sólo mockeada.
+
+---
+
+### Addendum 29/10/2026 — el mismo error, en el servidor de la UCC
+
+En la evaluación del despliegue en 172.16.168.14 (A1 del
+[plan de mejoras post-despliegue](../Plan%20de%20mejoras%20post-despliegue%20UCC%20y%20respuestas%20de%20Facundo.md))
+el registro devolvía 500 con `SSLCertVerificationError` por hostname: el `.env` del servidor tenía
+`SMTP_HOST=wally.ucc.edu.ar`, el nombre de la comunicación de IT, no el corregido por esta decisión. Es el bug 1
+otra vez, ahora en un `.env` armado a mano en el servidor (defecto D-UCC-01).
+
+Verificado desde adentro del contenedor del backend:
+
+- Los dos nombres resuelven a **172.16.66.113** desde la red interna (DNS split-horizon: desde afuera, el 20/07/2026,
+  resolvían a 190.3.95.77 y 200.45.112.13). Es el mismo relay.
+- El certificado es solo para `wally.uccor.edu.ar` y **vence el 30/12/2026**.
+- Con `wally.uccor.edu.ar`, la verificación estricta del certificado y la autenticación pasan.
+
+**Corrección:** `SMTP_HOST=wally.uccor.edu.ar` en el `.env` del servidor y `docker compose up -d backend` (un
+`restart` no relee el `env_file`). Para que no se repita: el runbook del despliegue
+(`docs/calidad/despliegue-ucc.md` §2) fija el valor esperado, y el error de TLS ya no sale como 500 sin código
+(D-UCC-02, `auth/router.py`). Cierra los pendientes de cortesía con IT de esta decisión: la inconsistencia de su
+documentación se le informa en el mismo pedido de la DECISIÓN 083.
+
+**Verificación de punta a punta en el servidor (registro → mail → verificación → login):** hecha el 30/10/2026 desde un equipo de la red de la UCC, con `SMTP_HOST=wally.uccor.edu.ar`: el mail llegó y el login entró.
+

@@ -22,6 +22,7 @@ contra sys.modules. Confirmado empíricamente durante el desarrollo de
 este archivo — no es una suposición.
 """
 
+import ssl
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosmtplib
@@ -136,6 +137,37 @@ async def test_register_falla_runtimeerror_config_no_toca_bd():
     assert exc_info.value.detail["error"]["codigo"] == "AUTH_VERIFICATION_EMAIL_FAILED"
     db.add.assert_not_called()
     db.commit.assert_not_awaited()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "error",
+    [
+        ssl.SSLCertVerificationError(1, "certificate verify failed: Hostname mismatch"),
+        TimeoutError("timed out"),
+        ConnectionRefusedError("conexión rechazada"),
+    ],
+    ids=["ssl-hostname-mismatch", "timeout", "conexion-rechazada"],
+)
+async def test_register_falla_tls_o_red_responde_codigo_no_toca_bd(error):
+    # D-UCC-02: en el servidor de la UCC, SMTP_HOST con un nombre que el
+    # certificado no cubre levantaba ssl.SSLCertVerificationError sin envolver
+    # en SMTPException, y register() respondía un 500 genérico sin código.
+    db = _mock_db()
+
+    with patch(
+        "metis.auth.router.send_verification_email",
+        new_callable=AsyncMock,
+        side_effect=error,
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await register(_body(), db=db)
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail["error"]["codigo"] == "AUTH_VERIFICATION_EMAIL_FAILED"
+    db.add.assert_not_called()
+    db.commit.assert_not_awaited()
+    assert _pending_tokens == {}
 
 
 @pytest.mark.unit

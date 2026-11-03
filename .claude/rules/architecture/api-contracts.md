@@ -1057,6 +1057,10 @@ de error — ver nota general al principio de este archivo. Emitidos por
 todo código nuevo emitido por `core/` o `services/` se agrega acá en el mismo
 commit que lo introduce.
 
+`PARSE_FILE_TOO_LARGE` también lo responde nginx, con 413 y la misma estructura, cuando el cuerpo supera su
+`client_max_body_size` (11m, por encima de los 10 MB del backend — `nginx/nginx.conf`, plan de mejoras post-despliegue
+UCC del 29/10/2026); el frontend además rechaza un archivo de más de 10 MB antes de subirlo (`ConfigPage`).
+
 `PARSE_FILE_TOO_LARGE` es la excepción del grupo: se detecta en `api/v1/analysis.py`
 **antes** de que exista un stream SSE (en `/analysis/stream`) o directamente en un
 endpoint sincrónico (`/analysis/preview-columns`), así que siempre es una respuesta

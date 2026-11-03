@@ -55,6 +55,9 @@ async def test_send_verification_email_llama_aiosmtplib_send_con_parametros_corr
     assert kwargs["username"] == "metis"
     assert kwargs["password"] == "app-password"
     assert kwargs["start_tls"] is True
+    # Sin timeout propio aiosmtplib espera 60 s: un relay lento llegaba al navegador como timeout.
+    assert kwargs["timeout"] == email_module._SMTP_TIMEOUT
+    assert 0 < email_module._SMTP_TIMEOUT <= 30
 
 
 @pytest.mark.unit

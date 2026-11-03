@@ -80,3 +80,9 @@ reports/
 
 # Resultados de las pruebas de carga (B7): se suben como artefacto en CI; lo que se cita queda en docs/calidad/
 carga/resultados/
+
+# Certificado TLS del despliegue en la UCC (DECISIÓN 083) — vive solo en el servidor
+certs/
+
+# Respaldos de la base (scripts/respaldo-db.sh)
+respaldos/

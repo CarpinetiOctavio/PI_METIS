@@ -83,6 +83,29 @@ describe("ConfigPage", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Seleccioná un archivo");
   });
 
+  it("H13 — un archivo de más de 10 MB muestra PARSE_FILE_TOO_LARGE sin subirlo", async () => {
+    stubFetch();
+    renderConfigPage();
+    await waitForReady();
+
+    const file = new File(["1,100"], "grande.csv", { type: "text/csv" });
+    Object.defineProperty(file, "size", { value: 10 * 1024 * 1024 + 1 });
+    fireEvent.change(screen.getByLabelText("Archivo (CSV o Excel)"), {
+      target: { files: [file] },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("límite de 10 MB");
+    const llamadas = vi.mocked(fetch).mock.calls.map(([input]) => String(input));
+    expect(llamadas.some((url) => url.includes("/analysis/preview-columns"))).toBe(false);
+
+    fireEvent.change(screen.getByLabelText("Columna X"), { target: { value: "anio" } });
+    fireEvent.change(screen.getByLabelText("Columna Y"), { target: { value: "caudal" } });
+    fireEvent.click(screen.getByRole("button", { name: /Ejecutar análisis/ }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("límite de 10 MB");
+    expect(screen.queryByTestId("stream-state")).not.toBeInTheDocument();
+  });
+
   it("shows a validation error when the columns are empty", async () => {
     stubFetch();
     renderConfigPage();

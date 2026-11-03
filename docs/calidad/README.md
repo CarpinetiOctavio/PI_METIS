@@ -19,6 +19,7 @@ plan de pruebas, que enlaza a los demás.
 | [principios.md](principios.md) | Los siete principios del testing con casos del proyecto | B9 |
 | [mapa-herramientas.md](mapa-herramientas.md) | Herramienta por actividad del ciclo, con versión | B9 |
 | [despliegue-y-e2e.md](despliegue-y-e2e.md) | Despliegue efímero y local, smoke y E2E | B5, B6 |
+| [despliegue-ucc.md](despliegue-ucc.md) | Runbook del servidor de la UCC: `.env`, verificación, respaldo y contingencias | Plan post-despliegue, B7 |
 | [integracion-smtp.md](integracion-smtp.md) | Integración con SMTP vía Mailpit, y su contingencia | B4 |
 | [herramienta-carga.md](herramienta-carga.md) | Selección de k6 y resultados de stress y esfuerzo sostenido | B7 |
 | [evidencia/](evidencia/) | Salidas de corridas citadas en los documentos | B10 |
