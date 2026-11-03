@@ -14,6 +14,8 @@ function distribucion(nombre: string, eea: number): DistribucionResult {
   };
 }
 
+// 13 filas a propósito: un análisis guardado antes de la v1 (DECISIÓN 074, addendum) trae la
+// Generalizada de Pareto en su ranking y la vista tiene que seguir mostrándolo completo.
 const RANKING_13 = Array.from({ length: 13 }, (_, i) => distribucion(`dist-${i}`, 10 + i));
 
 // Una distribución sin ningún método "ok": todos con el mismo status, o

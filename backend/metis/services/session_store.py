@@ -18,7 +18,7 @@ class SessionState:
 
     `serie`, `tiene_ceros`, `tiene_negativos` y `etapa2` se guardan antes de pausar en
     result_etapa2_ranking, para que distribution-decision no tenga que
-    reajustar las 13 distribuciones de nuevo.
+    reajustar las distribuciones de nuevo.
     """
 
     event: asyncio.Event
@@ -44,7 +44,7 @@ def sweep_expired() -> None:
     colgado si el proceso se reinicia a mitad de una tarea programada.
     Antes de DECISIÓN 053 una sesión sin `finally` que corriera quedaba
     para siempre; ahora cada entrada carga la serie completa y un
-    Etapa2Result de 13 distribuciones, así que el costo de no limpiarla ya
+    Etapa2Result con todas las distribuciones, así que el costo de no limpiarla ya
     no es despreciable.
     """
     ahora = time.monotonic()

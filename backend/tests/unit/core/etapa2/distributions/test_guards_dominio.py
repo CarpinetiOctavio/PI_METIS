@@ -1,5 +1,8 @@
 """
-Guards de dominio de las 13 distribuciones de Etapa 2 (B2 del plan del TP de Calidad).
+Guards de dominio de las 13 distribuciones implementadas de Etapa 2 (B2 del plan del TP de Calidad).
+
+El pipeline de la v1 ajusta 12: la Generalizada de Pareto sigue en el repo y se prueba acá, pero queda fuera
+del cálculo (`EXCLUIDAS_V1`, addendum a la DECISIÓN 074).
 
 Cada `ajustar()` tiene ramas que devuelven `no_aplicable` o `no_converge` en lugar de un ajuste:
 método inexistente, serie degenerada (sin dispersión), valores fuera del dominio. Antes de este

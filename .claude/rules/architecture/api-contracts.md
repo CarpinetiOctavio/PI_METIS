@@ -586,7 +586,7 @@ Bloque A4) y persiste `analysis_results.etapa2` para CU-01 (Bloque A5).
 Verificado con `tests/integration/test_etapa2_stream_distribution_decision.py`
 (stream completo, sin red) y con un smoke test manual contra el backend real
 vía HTTP — CU-01 con `etapas=1,2`, `distribution-decision` real, y
-`psql` confirmando `analysis_results.etapa2` con las 13 distribuciones.
+`psql` confirmando `analysis_results.etapa2` con todas las distribuciones (13 cuando se hizo esa prueba; 12 desde la v1, ver addendum a la DECISIÓN 074).
 Ver `.claude/rules/core/statistical-pipeline.md` para la secuencia SSE
 completa.
 
@@ -759,7 +759,7 @@ guardado en disco. Exporta Etapa 1 o Etapa 1 + 2 según lo que se corrió, **sie
 **Response 200:** `application/pdf`, con `Content-Disposition: attachment; filename="metis_<archivo>_<fecha>.pdf"`
 (nombre en ASCII). Contenido: datos y configuración del análisis, advertencias, estadística descriptiva, las ocho
 pruebas por batería con sus niveles, decisión ante el atípico, gráficos de la serie y del correlograma de Anderson;
-con Etapa 2, el ranking de las 13 distribuciones (mejor método, EEA, EEA/media, sin marcar ganadora), la
+con Etapa 2, el ranking de las distribuciones (12 en la v1; un análisis guardado antes puede traer 13, con la Generalizada de Pareto como "pendiente de validación"), con mejor método, EEA y EEA/media, sin marcar ganadora, la
 distribución elegida con sus parámetros y eventos de diseño, y el gráfico de ajuste.
 
 **Errores:** 401 sin sesión; 404 `ANALYSIS_NOT_FOUND` si el análisis no existe o no pertenece al usuario (body con

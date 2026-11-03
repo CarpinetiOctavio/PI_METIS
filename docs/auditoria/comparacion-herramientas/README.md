@@ -228,7 +228,7 @@ llegan (sin agregar) y saltea series de menos de 12 datos (est_09).
 | Homogeneidad | Helmert, t de Student y Cramer, con Cramer como prueba decisiva | Mann-Whitney y Mood entre mitades | est_08: METIS da homogeneidad crítica (Cramer rechaza el último 30 %), SAMHIA no detecta nada |
 | Tendencia | Mann-Kendall y Kolmogorov-Smirnov | Mann-Kendall | Coinciden en 8/8 |
 | Atípicos | Chow (Grubbs-Beck sobre logaritmos, 10 %) | Banda media ± K_n·S sobre los valores, K_n = 0,4083 ln N + 1,1584 | SAMHIA marca 1 o 2 puntos en 6 estaciones; Chow no marca ninguno |
-| Etapa 2 | 13 distribuciones, EEA, eventos de diseño | No tiene | |
+| Etapa 2 | 12 distribuciones en la v1 (13 en la tesis), EEA, eventos de diseño | No tiene | |
 
 **Serie mensual (P_IMERG, 304 meses de 2000 a 2025).** SAMHIA corre las pruebas sobre los 304 valores
 mensuales: Pearson de lag 1 con p = 4·10⁻²⁶, Wald-Wolfowitz p = 5·10⁻²³, Ljung-Box p ≈ 0. La serie
