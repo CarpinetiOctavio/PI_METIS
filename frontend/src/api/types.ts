@@ -33,6 +33,15 @@ export interface OkResponse {
   ok: true;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  password: string;
+}
+
 // --- Análisis — shapes reales, ver docs/frontend/frontend-integration.md §3-4.
 // NO usar metis/schemas/analysis.py como referencia: desconectado de los
 // endpoints reales (ver ese documento §5/§6).

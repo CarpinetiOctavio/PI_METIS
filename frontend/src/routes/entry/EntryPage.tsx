@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { register as registerRequest } from "../../api/auth";
 import { ApiError } from "../../api/client";
@@ -100,6 +100,11 @@ function LoginForm({ onSwitchToRegister }: Readonly<{ onSwitchToRegister: () => 
           </button>
         </SpecularHighlight>
       </Magnet>
+      <p className="entry__switch">
+        <Link to="/auth/forgot-password" className="link-btn">
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </p>
       <p className="entry__switch">
         ¿No tenés cuenta?{" "}
         <button type="button" className="link-btn" onClick={onSwitchToRegister}>

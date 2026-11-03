@@ -31,6 +31,10 @@ function renderEntryPage() {
         <Routes>
           <Route path="/" element={<EntryPage />} />
           <Route path="/config" element={<div>config screen</div>} />
+          <Route
+            path="/auth/forgot-password"
+            element={<div>forgot screen</div>}
+          />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -57,6 +61,17 @@ describe("EntryPage", () => {
     expect(
       screen.getByRole("heading", { name: "Iniciar sesión" }),
     ).toBeInTheDocument();
+  });
+
+  it("links the login form to the password recovery screen", async () => {
+    stubFetch({ "/auth/me": { ok: false, status: 401, body: {} } });
+    renderEntryPage();
+
+    fireEvent.click(
+      await screen.findByRole("link", { name: "¿Olvidaste tu contraseña?" }),
+    );
+
+    expect(await screen.findByText("forgot screen")).toBeInTheDocument();
   });
 
   it("shows a legible error banner when login fails with invalid credentials", async () => {

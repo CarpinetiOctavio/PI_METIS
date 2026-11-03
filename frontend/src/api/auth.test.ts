@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { login, logout, me, register, verify } from "./auth";
+import { forgotPassword, login, logout, me, register, resetPassword, verify } from "./auth";
 
 function stubFetch(body: unknown, ok = true) {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -36,6 +36,33 @@ describe("api/auth", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/auth/verify",
       expect.objectContaining({ method: "POST", body: JSON.stringify({ token: "tok123" }) }),
+    );
+  });
+
+  it("forgotPassword posts the email to /api/v1/auth/forgot-password", async () => {
+    const fetchMock = stubFetch({ ok: true, mensaje: "Revisá tu bandeja." });
+    const respuesta = await forgotPassword({ email: "a@ucc.edu.ar" });
+
+    expect(respuesta.mensaje).toBe("Revisá tu bandeja.");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/auth/forgot-password",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ email: "a@ucc.edu.ar" }),
+      }),
+    );
+  });
+
+  it("resetPassword posts token and new password to /api/v1/auth/reset-password", async () => {
+    const fetchMock = stubFetch({ ok: true });
+    await resetPassword({ token: "tok123", password: "clave-nueva-1" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/auth/reset-password",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ token: "tok123", password: "clave-nueva-1" }),
+      }),
     );
   });
 
