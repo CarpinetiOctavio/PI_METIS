@@ -105,6 +105,8 @@ export const ERROR_TEXT: Record<string, string> = {
     "Esa combinación de distribución y método no tiene parámetros ajustados en este análisis.",
   DIST_PENDING_VALIDATION:
     "Esa distribución no se puede elegir en esta versión: sus fórmulas de referencia tienen una inconsistencia que está en revisión con el autor de la tesis.",
+  DIST_EXCLUDED:
+    "Esa distribución no se calcula en esta versión de METIS: queda fuera hasta validar sus fórmulas con otra bibliografía.",
 
   // Stream
   PARSE_ERROR:

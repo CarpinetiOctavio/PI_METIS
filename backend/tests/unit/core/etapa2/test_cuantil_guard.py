@@ -1,6 +1,6 @@
 """
 Bloque 0.3 del plan de Etapa 2 — vuelve ejecutable la afirmación de que el
-guard p ∈ (0, 1) está presente en las 13 distribuciones (Fase 4.5, ver
+guard p ∈ (0, 1) está presente en las 13 distribuciones implementadas (Fase 4.5, ver
 docs/sprint.md).
 
 Descubre los módulos recorriendo _DISTRIBUCIONES de pipeline_etapa2.py, no

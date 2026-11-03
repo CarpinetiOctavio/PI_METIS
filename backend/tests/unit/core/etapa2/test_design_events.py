@@ -41,7 +41,7 @@ class _ModuloQueFallaParaUnT:
     cuyo cuantil() no puede resolver un período de retorno particular sin
     afectar al resto. No usa ninguna distribución real: aísla la lógica de
     resiliencia de calcular_eventos_diseno() del comportamiento numérico
-    real de las 13 distribuciones (ya cubierto por sus propios tests)."""
+    real de las distribuciones (ya cubierto por sus propios tests)."""
 
     @staticmethod
     def cuantil(p: float, parametros: dict) -> float:

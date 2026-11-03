@@ -85,7 +85,7 @@ def test_remove_session_limpia_la_entrada():
 def test_session_guarda_serie_tiene_ceros_y_etapa2_antes_de_pausar():
     """DECISIÓN 053 — el stream escribe estos tres campos directo sobre el
     SessionState antes de emitir result_etapa2_ranking, para que
-    distribution-decision no tenga que reajustar las 13 distribuciones."""
+    distribution-decision no tenga que reajustar las distribuciones."""
     session_store.create_session("s1")
     estado = session_store.get_session("s1")
 

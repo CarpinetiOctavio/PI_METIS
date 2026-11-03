@@ -105,6 +105,8 @@ Un representante por clase, válida o inválida.
 | CE-08a | `cobertura_minima_interior` | No numérico | `abc` | 400 `CONTRACT_COBERTURA_INVALID` (no un 422 genérico) | DECISIÓN 081 | `casos_dinamicos/test_cobertura_minima_interior.py::test_cobertura_fuera_del_rango_o_no_entera_da_400[CE-08a abc]` |
 | CE-08b | | Numérico no entero | `90.5` | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…[CE-08b 90.5]` |
 | CE-08c | | Vacío | `""` | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…[CE-08c vacío]` |
+| CE-09a | Distribución de la selección (`distribution-decision`, `{id}/design-events`, `seleccion` de `simulate-exclusion`) | Calculada en la v1 | `gumbel` | Válida, desbloquea la pausa | DECISIÓN 052 | `tests/unit/api/test_distribution_decision.py::test_sesion_existente_resuelve_y_desbloquea` |
+| CE-09b | | Excluida de la v1 | `gen_pareto` | 400 `DIST_EXCLUDED`; la sesión sigue esperando | Addendum 29/10/2026 a DECISIÓN 074 | `…/test_distribution_decision.py::test_distribucion_excluida_de_la_version_da_400_dist_excluded`, `tests/unit/api/test_analysis_design_events.py::test_recalcular_design_events_400_si_la_distribucion_esta_excluida_de_la_version`, `tests/unit/api/test_simulate_exclusion.py::test_seleccion_invalida_400_con_el_codigo_de_distribution_decision[excluida-de-la-version]` |
 
 ---
 
@@ -211,6 +213,8 @@ de Chow y la vista calendario: `tests/integration/test_stream_agregacion_mensual
   DECISIÓN 081 en `casos_dinamicos/test_cobertura_minima_interior.py`.
 - **Total al 22/10/2026: 104 casos.** 41 de valores límite, 32 de clases de equivalencia (también CE-06a–c, del α
   configurable de la DECISIÓN 078) y 31 columnas de seis tablas de decisión.
+- **Agregados el 29/10/2026:** CE-09a–b (Generalizada de Pareto fuera de la v1, addendum a la DECISIÓN 074), con
+  tests que ya existían ajustados al código nuevo. **Total: 106 casos**, 34 de clases de equivalencia.
 - **Ningún caso encontró un defecto.** Si uno lo hubiera encontrado, se registraría con la plantilla de
   `registro-defectos.md`.
 - **Bordes que no se probaban en el borde:** antes de este bloque, la longitud se probaba con n = 8, 15 y 30 (no con

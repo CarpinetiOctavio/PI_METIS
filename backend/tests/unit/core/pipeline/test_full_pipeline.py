@@ -24,7 +24,7 @@ def test_validado_corre_etapa2():
     resultado = ejecutar_pipeline_completo(SERIE_VALIDADA, "otro", "anual")
     assert resultado.etapa1.nivel_confianza == "validado"
     assert resultado.etapa2 is not None
-    assert len(resultado.etapa2.ranking) == 13
+    assert len(resultado.etapa2.ranking) == 12
 
 
 @pytest.mark.unit
@@ -35,7 +35,7 @@ def test_con_warnings_critico_corre_etapa2_igual():
     # RF-GEN-P-03: ningún nivel de warning bloquea el pipeline completo —
     # solo "rechazado" lo hace. Etapa 2 debe correr igual.
     assert resultado.etapa2 is not None
-    assert len(resultado.etapa2.ranking) == 13
+    assert len(resultado.etapa2.ranking) == 12
 
 
 @pytest.mark.unit
@@ -75,4 +75,4 @@ def test_strings_no_numericos_no_rompen_derivacion_de_ceros():
     serie = [float(i) for i in range(10, 40)] + ["x", "y", "z"]
     resultado = ejecutar_pipeline_completo(serie, "otro", "anual")
     assert resultado.etapa2 is not None
-    assert len(resultado.etapa2.ranking) == 13
+    assert len(resultado.etapa2.ranking) == 12

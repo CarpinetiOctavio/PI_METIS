@@ -11,10 +11,11 @@ from metis.core.pipeline import ejecutar_etapa2
 
 
 @pytest.mark.unit
-def test_ranking_incluye_las_13_distribuciones(serie_facundo):
+def test_ranking_incluye_las_12_distribuciones_de_la_v1(serie_facundo):
+    # 13 en la tesis; gen_pareto sale del cálculo en la v1 (EXCLUIDAS_V1).
     arr = np.array(serie_facundo)
     resultado = ejecutar_etapa2(arr, tiene_ceros=False)
-    assert len(resultado.ranking) == 13
+    assert len(resultado.ranking) == 12
 
 
 @pytest.mark.unit

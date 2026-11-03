@@ -571,10 +571,12 @@ devolver un 400 legible en vez de un 500). Cualquier violación → 400
 **Errores:** 404 `SESSION_NOT_FOUND` (la sesión no existe o ya expiró — a
 diferencia de `outlier-decision`, que no valida existencia de sesión, este
 endpoint sí lo hace explícitamente por mandato de DECISIÓN 052), 400
-`DIST_SELECTION_INVALID`, 400 `DIST_PENDING_VALIDATION` (la distribución está
-en `PENDIENTES_VALIDACION` de `core/etapa2/distributions/__init__.py` — hoy
-`gen_pareto` — y no se puede elegir en esta versión, DECISIÓN 074; evaluado en
-el borde después de la forma del request y antes de tocar `session_store`).
+`DIST_SELECTION_INVALID`, 400 `DIST_EXCLUDED` (la distribución está en
+`EXCLUIDAS_V1` de `core/etapa2/distributions/__init__.py` — hoy `gen_pareto` —
+y no se calcula en esta versión, addendum del 29/10/2026 a la DECISIÓN 074), 400
+`DIST_PENDING_VALIDATION` (la distribución está en `PENDIENTES_VALIDACION`, hoy
+vacío, DECISIÓN 074). Los dos se evalúan en el borde después de la forma del
+request y antes de tocar `session_store`.
 
 **Estado de implementación (09/08/2026, cierre del Bloque A1-A6 del plan de
 Etapa 2):** cableado de punta a punta y verificado. El stream pausa de
@@ -584,7 +586,7 @@ Bloque A4) y persiste `analysis_results.etapa2` para CU-01 (Bloque A5).
 Verificado con `tests/integration/test_etapa2_stream_distribution_decision.py`
 (stream completo, sin red) y con un smoke test manual contra el backend real
 vía HTTP — CU-01 con `etapas=1,2`, `distribution-decision` real, y
-`psql` confirmando `analysis_results.etapa2` con las 13 distribuciones.
+`psql` confirmando `analysis_results.etapa2` con todas las distribuciones (13 cuando se hizo esa prueba; 12 desde la v1, ver addendum a la DECISIÓN 074).
 Ver `.claude/rules/core/statistical-pipeline.md` para la secuencia SSE
 completa.
 
@@ -657,9 +659,11 @@ stream.
   partir. Distinto de `DIST_SELECTION_INVALID`: ese código es sobre la
   forma del request, este es sobre si la combinación bien formada tiene
   algo que recalcular.
-- 400 `DIST_PENDING_VALIDATION` — la distribución está pendiente de
-  validación (DECISIÓN 074, hoy `gen_pareto`): tampoco se puede explorar desde
-  el historial. Evaluado en el borde, antes de tocar la base.
+- 400 `DIST_EXCLUDED` — la distribución no se calcula en esta versión
+  (addendum del 29/10/2026 a la DECISIÓN 074, hoy `gen_pareto`): un análisis
+  guardado antes la trae en su ranking, pero no se puede explorar. 400
+  `DIST_PENDING_VALIDATION` para las pendientes de validación (DECISIÓN 074, hoy
+  ninguna). Evaluados en el borde, antes de tocar la base.
 
 **No toca `session_store`, no persiste nada, no altera
 `analysis_results.decisiones`** — DECISIÓN 062, "explorar no es decidir".
@@ -738,7 +742,8 @@ serie resultante, para que el frontend arme el CSV desde lo que devolvió `core/
 finitos), 400 `CONTRACT_EXCLUSION_INVALID` (índices fuera de rango o repetidos, `anios` de otro
 largo que `serie`, `tratamiento` inexistente), 400 `CONTRACT_ETAPAS_INVALID` (`etapas` distinto
 de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 400 `CONTRACT_ALFA_INVALID`, 400 `DIST_SELECTION_INVALID` /
-`DIST_PENDING_VALIDATION` (`seleccion` mal formada o pendiente de validación), 422 validación Pydantic (por
+`DIST_EXCLUDED` / `DIST_PENDING_VALIDATION` (`seleccion` mal formada, excluida de la versión o pendiente de
+validación), 422 validación Pydantic (por
 ejemplo, `tipo_variable` fuera de las dos opciones).
 
 ---
@@ -754,7 +759,7 @@ guardado en disco. Exporta Etapa 1 o Etapa 1 + 2 según lo que se corrió, **sie
 **Response 200:** `application/pdf`, con `Content-Disposition: attachment; filename="metis_<archivo>_<fecha>.pdf"`
 (nombre en ASCII). Contenido: datos y configuración del análisis, advertencias, estadística descriptiva, las ocho
 pruebas por batería con sus niveles, decisión ante el atípico, gráficos de la serie y del correlograma de Anderson;
-con Etapa 2, el ranking de las 13 distribuciones (mejor método, EEA, EEA/media, sin marcar ganadora), la
+con Etapa 2, el ranking de las distribuciones (12 en la v1; un análisis guardado antes puede traer 13, con la Generalizada de Pareto como "pendiente de validación"), con mejor método, EEA y EEA/media, sin marcar ganadora, la
 distribución elegida con sus parámetros y eventos de diseño, y el gráfico de ajuste.
 
 **Errores:** 401 sin sesión; 404 `ANALYSIS_NOT_FOUND` si el análisis no existe o no pertenece al usuario (body con
@@ -1017,9 +1022,13 @@ DIST_SELECTION_INVALID           distribucion/metodo vacíos o periodos_retorno 
 DIST_METHOD_NOT_FITTED           La combinación distribución+método pedida en POST /analysis/{id}/design-events
                                   no aparece en el ranking persistido, o su status != "ok" (DECISIÓN 062)
 DIST_PENDING_VALIDATION          La distribución pedida está pendiente de validación y no se puede elegir ni explorar
-                                  (DECISIÓN 074, hoy gen_pareto) — distribution-decision y POST /analysis/{id}/design-events
+                                  (DECISIÓN 074) — distribution-decision y POST /analysis/{id}/design-events. Hoy
+                                  ninguna: gen_pareto pasó a DIST_EXCLUDED el 29/10/2026
+DIST_EXCLUDED                    La distribución pedida no se calcula en esta versión (addendum del 29/10/2026 a la
+                                  DECISIÓN 074, hoy gen_pareto, EXCLUIDAS_V1) — distribution-decision,
+                                  POST /analysis/{id}/design-events y la seleccion de simulate-exclusion
 ```
-`DIST_SELECTION_INVALID`, `DIST_METHOD_NOT_FITTED` y `DIST_PENDING_VALIDATION` no son estados de
+`DIST_SELECTION_INVALID`, `DIST_METHOD_NOT_FITTED`, `DIST_PENDING_VALIDATION` y `DIST_EXCLUDED` no son estados de
 ajuste de una distribución como los otros cinco — son validaciones de
 request (respuesta HTTP 400, no un campo de `DistResult`). Se agrupan acá
 por prefijo/dominio, igual que `CONTRACT_ETAPAS_INVALID` se agrupa con los

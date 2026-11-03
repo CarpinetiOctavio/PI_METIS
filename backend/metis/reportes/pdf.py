@@ -90,6 +90,13 @@ _DISTRIBUCIONES = {
     "gen_exponencial": "Generalizada Exponencial",
 }
 
+# Distribuciones que solo pueden aparecer en el ranking de un análisis guardado
+# antes de que salieran del cálculo (gen_pareto, addendum del 29/10/2026 a la
+# DECISIÓN 074). Los anteriores a la DECISIÓN 074 no traen pendiente_validacion,
+# así que se las marca por nombre, igual que el frontend (Etapa2RankingView.tsx).
+# Copia local y no core/: este módulo es presentación pura (DECISIÓN 075).
+_NO_ELEGIBLES_EN_HISTORIAL = frozenset({"gen_pareto"})
+
 _METODOS = {
     "momentos": "Momentos",
     "momentos_directo": "Momentos (directo)",
@@ -980,7 +987,10 @@ def _tabla_ranking(
     for i, dist in enumerate(etapa2.get("ranking") or [], start=1):
         eea = dist.get("mejor_eea")
         notas = []
-        if dist.get("pendiente_validacion"):
+        if (
+            dist.get("pendiente_validacion")
+            or dist.get("distribucion") in _NO_ELEGIBLES_EN_HISTORIAL
+        ):
             notas.append("Pendiente de validación, no elegible")
         if eea is None:
             notas.append("Sin ajuste válido")

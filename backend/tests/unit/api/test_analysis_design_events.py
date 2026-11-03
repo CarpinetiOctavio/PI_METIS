@@ -138,9 +138,10 @@ async def test_recalcular_design_events_400_si_periodos_retorno_fuera_de_rango()
 
 
 @pytest.mark.unit
-async def test_recalcular_design_events_400_si_la_distribucion_esta_pendiente_de_validacion():
-    # DECISIÓN 074 — tampoco se puede explorar desde el historial; no llega a
-    # tocar la base.
+async def test_recalcular_design_events_400_si_la_distribucion_esta_excluida_de_la_version():
+    # Addendum del 29/10/2026 a la DECISIÓN 074 — un análisis guardado antes trae
+    # a gen_pareto en su ranking, pero no se puede explorar; no llega a tocar la
+    # base.
     user = _user()
 
     with patch(
@@ -156,5 +157,5 @@ async def test_recalcular_design_events_400_si_la_distribucion_esta_pendiente_de
             )
 
     assert exc_info.value.status_code == 400
-    assert exc_info.value.detail["error"]["codigo"] == "DIST_PENDING_VALIDATION"
+    assert exc_info.value.detail["error"]["codigo"] == "DIST_EXCLUDED"
     mock_recalcular.assert_not_awaited()

@@ -256,7 +256,7 @@ def _serializar_etapa1(
 def _serializar_etapa2(result: Etapa2Result, seleccion: dict | None = None) -> dict:
     """Hermana exacta de _serializar_etapa1() (DECISIÓN 055, Bloque A5).
 
-    Serializa la grilla completa — las 13 distribuciones con TODOS sus
+    Serializa la grilla completa — las 12 distribuciones de la v1 con TODOS sus
     métodos, incluidos no_converge/no_aplicable/disabled_zeros. No aplana
     a un top-3: la tesis misma reporta que ciertas combinaciones no
     convergen, y eso es información docente, no un error a esconder.
@@ -838,7 +838,7 @@ async def stream_analysis(
             )
 
             # Guardar en la sesión antes de pausar — distribution-decision
-            # necesita estos parámetros ya ajustados, no reajustar las 13
+            # necesita estos parámetros ya ajustados, no reajustar las
             # distribuciones de nuevo (DECISIÓN 053).
             estado_sesion = session_store.get_session(session_id)
             if estado_sesion is not None:

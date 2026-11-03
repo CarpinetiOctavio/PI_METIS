@@ -355,7 +355,8 @@ export interface SseErrorEvent {
 
 // DECISIÓN 052 — pausa de Etapa 2, misma forma que outlier_detected/
 // result_etapa1: result_etapa2_ranking trae la grilla completa serializada
-// por _serializar_etapa2() (13 distribuciones, sin aplanar a top-3) y pausa
+// por _serializar_etapa2() (12 distribuciones en la v1, 13 en análisis guardados
+// antes del 29/10/2026; sin aplanar a top-3) y pausa
 // el stream hasta POST /analysis/distribution-decision.
 export interface SseResultEtapa2RankingEvent {
   type: "result_etapa2_ranking";

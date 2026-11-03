@@ -1,6 +1,6 @@
 // Requests de METIS para las pruebas de carga (B7 del plan del TP de Calidad, DECISIÓN 077).
 // Cada función es un paso del recorrido de un usuario anónimo (CU-02): subir el archivo, correr
-// Etapa 1 y simular la exclusión de un punto, que dispara Etapa 2 completa (13 distribuciones).
+// Etapa 1 y simular la exclusión de un punto, que dispara Etapa 2 completa (12 distribuciones en la v1).
 // Cada request lleva el tag `endpoint`, así los umbrales y el resumen se leen por endpoint.
 import http from "k6/http";
 import { check } from "k6";

@@ -32,7 +32,8 @@
 - CU-03 no tiene endpoint outlier-decision ni design-events
 - Toda selección automática por menor EEA (`statistical-pipeline.md` menciona una para CU-03, en contradicción
   con la primera línea de esta lista — sin resolver, CU-03 no está implementado) tiene que saltear las
-  distribuciones de `PENDIENTES_VALIDACION` (DECISIÓN 074, hoy `gen_pareto`): no se pueden elegir.
+  distribuciones de `PENDIENTES_VALIDACION` (DECISIÓN 074, hoy vacío): no se pueden elegir. `gen_pareto` ni siquiera
+  se ajusta en la v1 (`EXCLUIDAS_V1`, addendum del 29/10/2026).
 
 ---
 

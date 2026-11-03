@@ -377,7 +377,7 @@ describe("StreamPage", () => {
 
   // Segundo punto de pausa del stream (DECISIÓN 052) — hermano del test del
   // modal de Chow arriba, pero inline en la página, no un modal: la grilla
-  // de 13 distribuciones no cabe en un diálogo de confirmación chico, y no
+  // del ranking de distribuciones no cabe en un diálogo de confirmación chico, y no
   // hay backdrop/focus-trap para esta pausa (decisión explícita, ver el PR).
   it("shows the Etapa 2 ranking inline when paused, and calls resolveDistribution when 'Elegir' is clicked", async () => {
     const { resolveDistribution } = renderStreamPage({

@@ -1,7 +1,9 @@
 """
 Pipeline de Etapa 2 — ajuste exhaustivo de distribuciones.
 
-Recorre las 13 distribuciones × sus métodos aplicables, calcula EEA
+Recorre las distribuciones × sus métodos aplicables (13 en la tesis; 12 en
+esta versión, sin las de EXCLUIDAS_V1 — addendum del 29/10/2026 a la DECISIÓN
+074), calcula EEA
 para cada ajuste exitoso, y retorna un Etapa2Result con el ranking
 ordenado por EEA ascendente (menor EEA = mejor ajuste).
 
@@ -14,6 +16,7 @@ import numpy as np
 from metis.core.etapa2.distributions import (
     DISABLED_WITH_NEGATIVES,
     DISABLED_WITH_ZEROS,
+    EXCLUIDAS_V1,
     PENDIENTES_VALIDACION,
     TOLERA_CEROS_CON_ADVERTENCIA,
 )
@@ -89,6 +92,8 @@ def ejecutar_etapa2(
     warnings: list[WarningItem] = []
 
     for nombre, modulo in _DISTRIBUCIONES:
+        if nombre in EXCLUIDAS_V1:
+            continue
         # Deshabilitada por negativos (precedencia) o por ceros.
         estado_deshabilitada: str | None = None
         if tiene_negativos and nombre in DISABLED_WITH_NEGATIVES:
