@@ -18,6 +18,10 @@ _SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 _SMTP_USER = os.environ.get("SMTP_USER")
 _SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 _SMTP_FROM_ADDRESS = os.environ.get("SMTP_FROM_ADDRESS")
+# Segundos máximos para conectar y para cada comando SMTP. aiosmtplib espera 60 por defecto, más que el
+# navegador: un relay lento se veía como un timeout del registro sin código (despliegue UCC, 30/10/2026).
+# Con 20 s el error sale como AUTH_VERIFICATION_EMAIL_FAILED, con el detalle en el log del backend.
+_SMTP_TIMEOUT = float(os.environ.get("SMTP_TIMEOUT", "20"))
 # DECISIÓN 049: STARTTLS se puede apagar para un servidor de captura local (Mailpit en
 # desarrollo, E2E y CI, que no habla TLS). Default "true": producción no cambia.
 _SMTP_STARTTLS = os.environ.get("SMTP_STARTTLS", "true").strip().lower() not in (
@@ -64,4 +68,5 @@ async def send_verification_email(email: str, token: str) -> None:
         username=_SMTP_USER,
         password=_SMTP_PASSWORD,
         start_tls=_SMTP_STARTTLS,
+        timeout=_SMTP_TIMEOUT,
     )

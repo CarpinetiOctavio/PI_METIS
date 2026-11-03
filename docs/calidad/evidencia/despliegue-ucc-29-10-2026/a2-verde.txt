@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-8.2.0, pluggy-1.7.0 -- /usr/local/bin/python3.11
+rootdir: /app
+configfile: pytest.ini
+plugins: anyio-4.15.1, cov-5.0.0, asyncio-0.23.6
+asyncio: mode=Mode.AUTO
+collecting ... collected 10 items
+
+tests/unit/auth/test_router_register.py::test_register_manda_mail_antes_que_add_y_commit PASSED [ 10%]
+tests/unit/auth/test_router_register.py::test_register_ok_registra_token_solo_tras_commit_exitoso PASSED [ 20%]
+tests/unit/auth/test_router_register.py::test_register_falla_smtpexception_no_toca_bd PASSED [ 30%]
+tests/unit/auth/test_router_register.py::test_register_falla_runtimeerror_config_no_toca_bd PASSED [ 40%]
+tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[ssl-hostname-mismatch] PASSED [ 50%]
+tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[timeout] PASSED [ 60%]
+tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[conexion-rechazada] PASSED [ 70%]
+tests/unit/auth/test_router_register.py::test_register_integrityerror_en_commit_mapea_a_email_already_registered PASSED [ 80%]
+tests/unit/auth/test_router_register.py::test_register_race_concurrente_segundo_commit_falla_sin_excepcion_sin_capturar PASSED [ 90%]
+tests/unit/auth/test_router_register.py::test_register_email_ya_registrado_responde_400_sin_mandar_mail PASSED [100%]
+
+============================== 10 passed in 5.11s ==============================
+All checks passed!
+Would reformat: tests/unit/auth/test_router_register.py
+1 file would be reformatted, 81 files already formatted
