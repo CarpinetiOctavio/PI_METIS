@@ -24,6 +24,7 @@ convención de planes en `docs/`; su historia está en `docs/sprint.md` y en `au
 
 | Plan | Qué es |
 |---|---|
+| [`plan-mejoras-post-despliegue-ucc-29-10-2026.md`](plan-mejoras-post-despliegue-ucc-29-10-2026.md) | Despliegue en la UCC y respuestas de Facundo del 29/10. Hecho todo lo que no depende de IT; su sección "Estado al 02/11/2026" dice qué falta (HTTPS, reinicio, NTP). |
 | [`plan-feedback-directores-20-09-2026.md`](plan-feedback-directores-20-09-2026.md) | Feedback de Catalini y Facundo del 20/09: ítems A a F. Frontend hecho (PRs #91 a #95). |
 | [`plan-backend-feedback-directores-20-09-2026.md`](plan-backend-feedback-directores-20-09-2026.md) | Los contratos de backend de ese feedback. C, E y A los ejecutó el frente 16; falta el bloque B. |
 | [`checklist-pendientes-feedback-directores.md`](checklist-pendientes-feedback-directores.md) | Pendientes por persona (Octavio, Facundo, Catalini, IT, Kevin). |
@@ -377,3 +378,41 @@ revirtió la pasada 5 (DECISIÓN 051).
   - **El libro** (Tabla 12, §6.2, Anexo A, figura de la pausa de Chow, conteo de pruebas, Tabla 37, Anexo G): a cargo
     de Kevin, fuera del repo.
 - **Archivo:** [`plan-revision-manual-21-10-2026.md`](historico/planes/plan-revision-manual-21-10-2026.md)
+
+## 20. Despliegue en la UCC, respuestas de Facundo del 29/10 y recuperación de contraseña
+
+- **Fechas y PRs:** 29/10 al 02/11/2026. Cinco PRs, todavía sin pushear: SMTP (`fix/register-error-tls`), nginx
+  (`feature/nginx-endurecimiento`), despliegue HTTP (`feature/despliegue-ucc-http`), Pareto y respuestas de Facundo
+  (`feature/gen-pareto-fuera-v1`, `docs/respuestas-facundo-29-10`) y recuperación de contraseña
+  (`feature/recuperacion-contrasena`).
+- **Qué pedía:** poder defender METIS desde el servidor de la UCC. Había dos bloqueos: el registro devolvía 500 y, desde
+  la red del campus, Etapa 2 y la pausa por atípico no llegaban al navegador. Además, cuatro respuestas de Facundo.
+- **Qué se hizo:**
+  - **Defectos D-20 a D-23,** hallados solo con la red, el DNS y el relay reales de la UCC: `SMTP_HOST` con un nombre
+    que el certificado no cubre (D-20), un error de TLS sin código de contrato (D-21, con timeout de 20 s), la red que
+    retenía el stream en pausa (D-22, mitigado por IT con una excepción de inspección) y la red de Docker que pisaba el
+    gateway de la ruta de IT (D-23, subred propia 10.250.0.0/24).
+  - **DECISIÓN 083, parte 1:** `docker-compose.ucc.yml` sobre el compose de CI, con reinicio automático, SMTP del relay
+    y mailpit apagado; runbook, respaldo de la base (`scripts/respaldo-db.sh`) y addendum a la DECISIÓN 034.
+  - **nginx (B1 y B2):** cabeceras de seguridad, `gzip` sin comprimir el SSE, caché de assets y `client_max_body_size`
+    de 11 MB con un 413 en JSON, y el frontend valida los 10 MB antes de subir y muestra `PARSE_FILE_TOO_LARGE`.
+  - **C1 a C3 — DECISIÓN 084:** la partición de t de Student con n impar (dato del medio al segundo subgrupo),
+    Mann-Kendall de dos colas y U_T con F > 0,5 se resolvieron con documentación y un test.
+  - **C4 — addendum a la DECISIÓN 074:** la Generalizada de Pareto sale del cálculo de la v1 (`EXCLUIDAS_V1`); el módulo
+    y sus tests quedan para la v2 y el historial viejo se sigue viendo.
+  - **DECISIÓN 085:** recuperación de contraseña por mail (tabla `auth_tokens`, migración `007`, `forgot-password` y
+    `reset-password`, dos pantallas, E2E-6). No estaba en el plan: se detectó probando en el servidor.
+- **Decisiones:** 083 (parte 1), 084 y 085. Addenda a la 034 y a la 074.
+- **Cifras al cierre:** backend 960 tests unitarios y 60 de integración (2 se saltean sin Mailpit), frontend 599,
+  casos nuevos CE-10a–h y E2E-6.
+- **Quedó abierto:**
+  - **Depende de IT:** nombre DNS y certificado (HTTPS, parte 2 de la DECISIÓN 083), reinicio controlado y NTP. El
+    detalle está en la sección "Estado al 02/11/2026" del plan.
+  - **Manual, en el servidor de la UCC:** `alembic upgrade head` (migraciones `006` y `007`), cron del respaldo con una
+    restauración de prueba y la primera corrida del smoke.
+  - **En `pendientes-tecnicos.md`:** reenvío del mail de verificación y token de verificación en la base (B8), límite
+    de intentos en nginx (B9) y las sesiones ya emitidas tras cambiar la contraseña.
+  - **El libro:** atribuir a la planilla las diferencias de U_T, documentar la convención de t de Student y
+    Mann-Kendall, y pasar de 13 a 12 distribuciones donde corresponda. A cargo de Kevin, fuera del repo.
+- **Plan:** [`plan-mejoras-post-despliegue-ucc-29-10-2026.md`](plan-mejoras-post-despliegue-ucc-29-10-2026.md), activo
+  hasta que lleguen el certificado y el reinicio.
