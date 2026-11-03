@@ -62,6 +62,25 @@ Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
 
 ---
 
+### POST /api/v1/auth/forgot-password
+
+**Request:** `{"email": "..."}`
+**Auth:** Sin auth
+**Response 200:** `{"ok": true, "mensaje": "Si el mail corresponde a una cuenta, te enviamos un link para restablecer la contraseña."}`. Es la misma respuesta exista o no la cuenta (no revela qué mails están registrados). El mail se manda en segundo plano: si el envío falla solo se registra en el log. Dentro de los `RESET_COOLDOWN_SECONDS` (60) del último pedido no se genera un token nuevo, pero la respuesta es idéntica.
+**Errores:** 422 validación Pydantic (email mal formado)
+
+---
+
+### POST /api/v1/auth/reset-password
+
+**Request:** `{"token": "...", "password": "..."}`
+**Validaciones:** password mínimo 8 caracteres (mismo criterio que register)
+**Auth:** Sin auth
+**Response 200:** `{"ok": true}`. Cambia la contraseña, marca el mail como verificado e invalida el resto de los tokens de reseteo de la cuenta. El token es de un solo uso y vale `RESET_TOKEN_TTL_MINUTES` (60). Las sesiones ya iniciadas siguen vigentes hasta que expire su JWT (DECISIÓN 085).
+**Errores:** 400 AUTH_RESET_TOKEN_INVALID (inexistente, vencido o ya usado), 404 AUTH_USER_NOT_FOUND, 422 validación Pydantic
+
+---
+
 ### POST /api/v1/auth/logout
 
 **Auth:** Sin auth (borra la cookie aunque no haya sesión activa)
@@ -853,6 +872,7 @@ AUTH_INVALID_TOKEN                Token de verificación inválido o expirado (v
 AUTH_USER_NOT_FOUND               Usuario no encontrado (verify)
 AUTH_INVALID_CREDENTIALS          Email o contraseña incorrectos (login)
 AUTH_EMAIL_NOT_VERIFIED           Email sin verificar (login)
+AUTH_RESET_TOKEN_INVALID           Token de reseteo inexistente, vencido o ya usado (reset-password)
 ```
 
 ### Contrato — bloqueantes

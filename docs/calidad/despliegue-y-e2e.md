@@ -84,6 +84,7 @@ credenciales del usuario sembrado (`E2E_EMAIL`/`E2E_PASSWORD`); los specs no tra
 | E2E-3 | `e2e3-cu01-analisis-historial.spec.ts` | CU-01: Etapa 1 y 2, rechazo del atípico, elección de distribución, Resultados y PDF (`%PDF`) | F1, F5; pausas del stream; DECISIÓN 075 |
 | E2E-4 | ídem | Historial → detalle del análisis de E2E-3 | F4; persistencia de CU-01 |
 | E2E-5 | `e2e5-serie-corta.spec.ts` | Serie de 8 datos: bloqueante con su mensaje y el stream cerrado | Único bloqueante por longitud, sin cuelgue |
+| E2E-6 | `e2e6-recuperacion.spec.ts` | Registro sin verificar → "¿Olvidaste tu contraseña?" → mail en Mailpit → contraseña nueva → link reutilizado rechazado → login con la nueva; la vieja ya no entra | Recuperación de contraseña (DECISIÓN 085); H8 (cuenta sin verificar) |
 
 Las series están copiadas en `frontend/e2e/fixtures/` (no referenciadas desde `docs/series prueba/`): si cambia la
 serie de docs, el E2E no se rompe en silencio. `serie_8_datos.csv` son los primeros 8 años de `serie_con_atipico.csv`.

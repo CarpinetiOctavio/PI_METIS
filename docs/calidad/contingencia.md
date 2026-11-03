@@ -55,6 +55,10 @@ crea el usuario ya verificado directo en la base. Con credenciales vencidas, se 
 actualiza el `.env`, sin redeploy de código. **No se desactiva la verificación** ni se agrega una rama "sin mail":
 toca el camino crítico de autenticación (DECISIÓN 049).
 
+La recuperación de contraseña (DECISIÓN 085) usa el mismo relay. Con el SMTP caído el usuario ve igual el mensaje de
+éxito, porque el endpoint no revela fallos de envío (así no filtra qué mails tienen cuenta): el síntoma es "el mail no
+llega" y la evidencia está en el log del backend. Ver `integracion-smtp.md` §5.
+
 ## 4. Reinicio del backend
 
 | Qué se pierde | Cómo lo ve el usuario | Respuesta |
