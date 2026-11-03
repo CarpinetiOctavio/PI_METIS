@@ -3,6 +3,12 @@ import uuid
 from pydantic import BaseModel, EmailStr, field_validator
 
 
+def _validar_largo_password(v: str) -> str:
+    if len(v) < 8:
+        raise ValueError("La contraseña debe tener al menos 8 caracteres")
+    return v
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
@@ -18,9 +24,7 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_min_length(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("La contraseña debe tener al menos 8 caracteres")
-        return v
+        return _validar_largo_password(v)
 
 
 class LoginRequest(BaseModel):
@@ -30,6 +34,22 @@ class LoginRequest(BaseModel):
 
 class VerifyRequest(BaseModel):
     token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    # Sin la restricción de @ucc.edu.ar de RegisterRequest: la respuesta es la misma exista o no la
+    # cuenta (DECISIÓN 085), así que no hay nada que validar acá más que el formato.
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        return _validar_largo_password(v)
 
 
 class UserMe(BaseModel):

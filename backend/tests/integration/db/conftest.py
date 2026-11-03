@@ -45,6 +45,8 @@ async def db():
             await conexion.execute(
                 text("SELECT exclusiones FROM analysis_results LIMIT 0")
             )
+            # Migración 007 (DECISIÓN 085).
+            await conexion.execute(text("SELECT token_hash FROM auth_tokens LIMIT 0"))
     except Exception as exc:  # noqa: BLE001 — cualquier falla de conexión o de esquema
         await engine.dispose()
         mensaje = f"Sin PostgreSQL de test con las migraciones aplicadas: {exc!r}"
@@ -81,3 +83,18 @@ async def crear_usuario(db):
     if creados:
         await db.execute(delete(User).where(User.id.in_(creados)))
         await db.commit()
+
+
+@pytest.fixture
+def mailpit_url() -> str:
+    """API HTTP de Mailpit (DECISIÓN 049). Sin MAILPIT_URL el test se saltea; con
+    METIS_REQUIRE_MAILPIT=1 (CI) falla."""
+    url = os.environ.get("MAILPIT_URL")
+    if not url:
+        mensaje = (
+            "MAILPIT_URL no definido: no hay servidor SMTP de captura (DECISIÓN 049)"
+        )
+        if os.environ.get("METIS_REQUIRE_MAILPIT") == "1":
+            pytest.fail(mensaje)
+        pytest.skip(mensaje)
+    return url.rstrip("/")
