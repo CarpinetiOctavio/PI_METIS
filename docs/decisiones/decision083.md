@@ -65,7 +65,7 @@ suponía un certificado de la UCC y un nombre DNS interno; ninguno de los dos ll
   IP, `CA:FALSE`, `serverAuth`, clave y certificado correspondientes, clave con permisos 600, el script no pisa un
   certificado existente) y los tres YAML de compose parsean. **No se pudo levantar nginx en el entorno de trabajo** (sin
   Docker); la sintaxis y el contexto de cada directiva de `nginx.conf` y `nginx.ucc.conf` (con `metis-comun.conf` incluido) se
-  validaron con el parser `crossplane`, que no reemplaza a `nginx -t`: la configuración con el 443 se verifica en el servidor con `docker compose config` y `nginx -t` antes de
+  validaron con el parser `crossplane`, que no reemplaza a `nginx -t`: la configuración con el HTTPS se verifica en el servidor con `docker compose config` y `nginx -t` antes de
   avisar a IT. Falta además la verificación desde UCC-Free, el reinicio controlado del servidor (B3) y la prueba de la
   pausa del stream a través de Cloudflare.
 
@@ -91,10 +91,11 @@ la UCC, nombre DNS interno, el 80 redirigiendo al 443).
   Cloudflare en modo "Full" el certificado de origen se cifra pero no se valida, así que no tiene que ser de confianza
   (en modo "Full (strict)" haría falta un certificado de origen de Cloudflare: es una pregunta abierta a IT).
 - **`docker-compose.ucc-tls.yml` como cuarto archivo de `COMPOSE_FILE`**, no como edición de `docker-compose.ucc.yml`:
-  sin certificado, nginx no arranca, y el override de la parte 1 tiene que seguir sirviendo sin él. Publica el 443,
+  sin certificado, nginx no arranca, y el override de la parte 1 tiene que seguir sirviendo sin él. Publica el 4443 del
+  host (el 443 del contenedor: IT pidió el 4443),
   monta `nginx/nginx.ucc.conf` y `certs/` de solo lectura, y deja el `ENV` del backend en `METIS_ENV`.
 - **El 80 no redirige al 443.** Mientras IT no repunte el proxy, Cloudflare sigue entrando por el 80; una redirección
-  ahí produce un bucle. Los dos puertos sirven lo mismo. Cuando el proxy ya entre por el 443, el 80 puede pasar a
+  ahí produce un bucle. Los dos puertos sirven lo mismo. Cuando el proxy ya entre por el 4443, el 80 puede pasar a
   redirigir, o cerrarse.
 - **`nginx/metis-comun.conf`** parte lo común (tope de subida, cabeceras, `location`) entre `nginx.conf` (80, desarrollo,
   CI) y `nginx.ucc.conf` (80 y 443). `docker-compose.yml` lo monta, así que el cambio también pasa por el CI.
@@ -105,15 +106,30 @@ la UCC, nombre DNS interno, el 80 redirigiendo al 443).
   mails de verificación y de recuperación. Con la IP, esos links apuntan a una dirección que fuera de la UCC no existe.
 - **HSTS no se activa** con un certificado autofirmado.
 
-**Qué no se resuelve acá y queda abierto con IT** (mail del 04/11/2026):
+**Respuesta de IT del 04/11/2026** (Mariano Aliaga, por mail):
 
-- **IP real del cliente.** Sin `real_ip` todo llega con la IP del proxy. `nginx.ucc.conf` trae el bloque comentado; se
-  completa con la cabecera y los rangos que conteste IT. Es requisito previo para cualquier `limit_req` (B9).
-- **SSE detrás de Cloudflare.** Un stream en pausa (Chow, elección de distribución) puede quedarse minutos sin emitir
-  y el proxy puede cortarlo por inactividad (en el plan gratuito de Cloudflare, alrededor de 100 s). Se prueba dejando una
-  pausa abierta 3 minutos; si se corta, hace falta un latido periódico en el stream (cambio de `services/`, no de nginx).
-- **Modo SSL de Cloudflare, desafíos y caché sobre `/api/`**, y límite de envío de mails del relay.
+- URL pública: `https://metis.ucc.edu.ar`. Es el `METIS_URL` del `.env`.
+- Modo SSL de Cloudflare: lo configura IT; piden solo un autofirmado (modo "Full").
+- Puerto: **4443** en lugar del 443. El 80 queda como está hasta que se avise.
+- IP real: `X-Real-IP` y, si no está, `CF-Connecting-IP`. No dijeron los rangos desde los que se conecta el proxy.
+- Sin desafíos, Rocket Loader ni Auto Minify, y sin caché de `/api/`: aceptado.
+- Timeout de inactividad de Cloudflare: **100 s**, y la recomendación es un latido.
+- Límite de envío del relay para el usuario `metis`: no hay.
+
+**Latido del stream (mismo día).** Con el tope de 100 s confirmado, las dos pausas del stream (atípico de Chow y
+elección de distribución, de hasta `SESSION_TIMEOUT` = 300 s) mandan un comentario SSE (`: latido`) cada 20 s mientras
+esperan la decisión (`services/analysis_service.py::_esperar_decision_con_latido`). Es un comentario, no un evento: el
+contrato del stream no cambia, y `@microsoft/fetch-event-source` lo entrega con `data` vacío, que `api/sse.ts` ya
+descarta (`if (!ev.data) return`). Tests en `tests/unit/services/test_latido_sse.py`. Falta confirmarlo a través de
+Cloudflare dejando una pausa abierta 3 minutos. nginx no hace falta tocarlo: `proxy_buffering off` y
+`proxy_read_timeout 3600s` ya estaban.
+
+**Qué sigue abierto:**
+
+- **Rangos del proxy para `real_ip`.** `nginx.ucc.conf` trae el bloque comentado con `X-Real-IP`; se completa con la IP
+  del proxy que se lea en el log de nginx después de que repunte. Es requisito previo para cualquier `limit_req` (B9).
+- **Rotación de la contraseña SMTP** (se mostró en capturas durante el diagnóstico): no la contestaron.
 
 **Por qué se sigue considerando solución para D-22.** El tramo que retenía las respuestas es el de la red de la UCC; si
-Cloudflare entra por el 443, ese tramo ya no es legible para la inspección. Se confirma con la corrida de
+Cloudflare entra por el 4443, ese tramo ya no es legible para la inspección. Se confirma con la corrida de
 `sonda_metis.py` desde UCC-Free, no se da por cerrado antes.

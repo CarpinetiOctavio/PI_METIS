@@ -161,7 +161,7 @@ sección es el estado real. Los PRs figuran como "en rama" hasta que se pushean 
 | A1. SMTP del servidor | Hecho el 30/10. Registro, mail, verificación y login funcionan desde la red de IT | Configuración del servidor; addendum a la DECISIÓN 034 |
 | A2. Errores de TLS del envío | Hecho, con timeout de 20 s. Evidencia rojo/verde guardada | Rama `fix/register-error-tls` |
 | A3. HTTP: reinicio automático, subred propia, SMTP, mailpit apagado | Hecho y probado en el servidor. Se agregó un defecto que el plan no tenía: la red de Docker (172.18.0.0/16) pisaba el gateway de la ruta de IT (D-23) | `docker-compose.ucc.yml`, DECISIÓN 083 parte 1 |
-| A3. HTTPS, nombre DNS y certificado | Cambió el esquema el 04/11: el sitio está detrás de Cloudflare y IT pidió HTTPS autofirmado en un puerto nuevo. Implementado en la rama `deploy/ucc` (archivo adicional `docker-compose.ucc-tls.yml`). **Falta que IT repunte el proxy** y las respuestas a las preguntas abiertas (IP real, SSE, modo SSL) | DECISIÓN 083, addendum del 04/11/2026 |
+| A3. HTTPS, nombre DNS y certificado | Cambió el esquema el 04/11: el sitio está detrás de Cloudflare y IT pidió HTTPS autofirmado en un puerto nuevo. Implementado en la rama `deploy/ucc` (archivo adicional `docker-compose.ucc-tls.yml`). IT respondió el 04/11 (URL `https://metis.ucc.edu.ar`, puerto 4443, `X-Real-IP`, tope de 100 s con latido, sin límite de mails). **Falta que IT repunte el proxy** y el rango del proxy para `real_ip` | DECISIÓN 083, addendum del 04/11/2026 |
 | B1, B2. Cabeceras, gzip sin SSE, caché, tope de subida | Hecho | Rama `feature/nginx-endurecimiento` |
 | B3. Reinicio controlado | **Depende de IT** | |
 | B4. Zona horaria y NTP | **Depende de IT** | |

@@ -45,7 +45,7 @@ con la red, el DNS y el relay reales de la UCC. El despliegue real es un nivel d
 | `SMTP_PASSWORD` | credencial de IT | Obligatoria: sin ella el compose no arranca. Cargarla con `read -s`, entre comillas simples |
 | `SMTP_HOST` | opcional, por defecto **`wally.uccor.edu.ar`** | No `wally.ucc.edu.ar`: el certificado del relay no lo cubre (D-UCC-01, DECISIÓN 034) |
 | `SMTP_PORT`, `SMTP_USER`, `SMTP_FROM_ADDRESS` | opcionales: `587`, `metis`, `metis-noreply@ucc.edu.ar` | `SMTP_FROM_ADDRESS` distinta de `SMTP_USER` (DECISIÓN 034, bug 2) |
-| `METIS_URL` | opcional, por defecto `http://172.16.168.14` | Con HTTPS: la URL pública de Cloudflare (`https://...`), la que abre la gente: es el link de los mails y el origen de CORS. Sin barra final |
+| `METIS_URL` | opcional, por defecto `http://172.16.168.14` | Con HTTPS: `https://metis.ucc.edu.ar` (la de Cloudflare), la que abre la gente: es el link de los mails y el origen de CORS. Sin barra final |
 | `METIS_ENV` | opcional, por defecto `development` (solo lo lee `docker-compose.ucc-tls.yml`) | `production` pone la cookie con `Secure`: solo cuando nadie entre por `http://` directo (el login por la IP quedaría muerto) |
 
 Un valor de relleno sin reemplazar (`SMTP_PORT=PUERTO_REAL`, por ejemplo) hace caer el backend en bucle con
@@ -84,24 +84,26 @@ un puerto nuevo, más el aviso para repuntar el proxy.
 ```bash
 cd ~/metis-app
 git fetch && git checkout deploy/ucc && git pull
-scripts/generar-cert-ucc.sh 172.16.168.14 3650 <nombre-de-cloudflare>   # crea certs/metis.crt y metis.key
-# En el .env: sumar el cuarto archivo a COMPOSE_FILE y poner METIS_URL con la URL pública
+scripts/generar-cert-ucc.sh 172.16.168.14 3650 metis.ucc.edu.ar   # crea certs/metis.crt y metis.key
+# En el .env: sumar el cuarto archivo a COMPOSE_FILE y poner METIS_URL=https://metis.ucc.edu.ar
 #   COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml:docker-compose.ucc.yml:docker-compose.ucc-tls.yml
 docker compose config > /dev/null && echo "compose valida"             # sin pegar su salida en ningún lado
 docker compose up -d --build
 docker compose exec nginx nginx -t
-curl -skI https://localhost/ping | head -1                              # 200 por el 443
+curl -skI https://localhost:4443/ping | head -1                         # 200 por el 4443
 curl -sI http://localhost/ping | head -1                                # el 80 sigue sirviendo (sin redirigir)
-echo | openssl s_client -connect localhost:443 -servername localhost 2>/dev/null | openssl x509 -noout -subject -ext subjectAltName
+echo | openssl s_client -connect localhost:4443 -servername localhost 2>/dev/null | openssl x509 -noout -subject -ext subjectAltName
 ```
 
-Después se le avisa a IT (Mariano) que el 443 está expuesto, para que repunte el proxy. **No** poner una redirección
-del 80 al 443 antes de eso: Cloudflare sigue entrando por el 80 y se arma un bucle. Con el proxy ya apuntando al 443,
-dejar una pausa del stream abierta 3 minutos a través de Cloudflare (Etapa 2, sin elegir distribución): si el stream se
-corta por inactividad hace falta un latido en el backend. Recién cuando nadie entre por `http://` directo, `METIS_ENV=production`.
+Después se le avisa a IT (Mariano) que el **4443** está expuesto (el puerto que pidió), para que repunte el proxy y
+abra el firewall hacia la VM. **No** poner una redirección del 80 al 4443 antes de eso: Cloudflare sigue entrando por
+el 80 y se arma un bucle. Con el proxy ya apuntando al 4443: (1) leer en `docker compose logs nginx` la IP desde la que
+llegan los pedidos del proxy, completar `set_real_ip_from` en `nginx/nginx.ucc.conf` y redesplegar nginx; (2) dejar una
+pausa del stream abierta 3 minutos a través de Cloudflare (Etapa 2, sin elegir distribución): el backend manda un
+latido cada 20 s para que el tope de 100 s de Cloudflare no la corte, y esto lo confirma. Recién cuando nadie entre por `http://` directo, `METIS_ENV=production`.
 
 Si Cloudflare responde 525 o 526, el modo SSL no coincide con el certificado: "Full" acepta el autofirmado, "Full
-(strict)" no.
+(strict)" no (el modo lo configura IT). 521 o 522 suelen ser el firewall: el 4443 tiene que estar abierto del proxy a la VM.
 
 ## 4. Verificación después de cada redespliegue
 
@@ -166,7 +168,7 @@ Probado el 29/10/2026 contra el despliegue de `scripts/deploy-local.sh`: `users`
 | Desde el campus no llega Etapa 2 ni el modal de atípico; `/ping` anda | La red retiene la respuesta HTTP hasta que termina (D-UCC-03): la excepción de IT dejó de aplicarse | Pedir a IT que verifique la exclusión de 172.16.168.14; la solución de fondo es HTTPS (§3.1) |
 | Cloudflare responde 525 o 526 | El modo SSL no coincide con el certificado autofirmado | Modo "Full" (no "Full (strict)"); el certificado debe estar en `certs/` y nginx arrancado |
 | `nginx` se reinicia en bucle tras sumar el cuarto archivo | Falta `certs/metis.crt` o `metis.key` | `scripts/generar-cert-ucc.sh` y `docker compose up -d nginx`; sin certificado, sacar `docker-compose.ucc-tls.yml` de `COMPOSE_FILE` |
-| El stream de Etapa 2 se corta a los ~100 s en pausa solo a través de Cloudflare | Tiempo de inactividad del proxy | Hace falta un latido periódico en el stream (cambio en `services/`); registrar el hallazgo y hablarlo con IT |
+| El stream de Etapa 2 se corta a los ~100 s en pausa solo a través de Cloudflare | Tiempo de inactividad del proxy; el backend manda un latido (`: latido`) cada 20 s | Verificar que el backend desplegado es el de `deploy/ucc` (`INTERVALO_LATIDO`); `curl -N` al stream desde el servidor muestra los comentarios; si llegan y aun así se corta, hablarlo con IT |
 | El login responde 200 pero no queda sesión | Solo con HTTPS: cookie con `Secure` servida por HTTP | Entrar por `https://`. Con el servidor en HTTP, `ENV` tiene que seguir en `development` |
 | METIS no vuelve después de un reinicio del servidor | Docker no arranca con el host, o se levantó sin los tres archivos | `systemctl is-enabled docker`; `docker compose up -d` en `~/metis-app` (§1) |
 | Las cuentas sin verificar no reciben el link después de reiniciar el backend | Los tokens de verificación viven en memoria del proceso (H8) | Limitación conocida (B8, v2). Mientras tanto: borrar la cuenta con `scripts/clean-dev-user.sh` y que se registre de nuevo, o sembrarla con `scripts/seed-dev-user.sh` |
