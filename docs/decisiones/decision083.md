@@ -64,7 +64,8 @@ suponía un certificado de la UCC y un nombre DNS interno; ninguno de los dos ll
 - **Parte 2 (04/11/2026):** el certificado que genera `scripts/generar-cert-ucc.sh` se validó con `openssl` (SAN con la
   IP, `CA:FALSE`, `serverAuth`, clave y certificado correspondientes, clave con permisos 600, el script no pisa un
   certificado existente) y los tres YAML de compose parsean. **No se pudo levantar nginx en el entorno de trabajo** (sin
-  Docker): la configuración con el 443 se verifica en el servidor con `docker compose config` y `nginx -t` antes de
+  Docker); la sintaxis y el contexto de cada directiva de `nginx.conf` y `nginx.ucc.conf` (con `metis-comun.conf` incluido) se
+  validaron con el parser `crossplane`, que no reemplaza a `nginx -t`: la configuración con el 443 se verifica en el servidor con `docker compose config` y `nginx -t` antes de
   avisar a IT. Falta además la verificación desde UCC-Free, el reinicio controlado del servidor (B3) y la prueba de la
   pausa del stream a través de Cloudflare.
 
