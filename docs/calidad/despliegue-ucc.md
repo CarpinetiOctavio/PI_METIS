@@ -176,8 +176,11 @@ Probado el 29/10/2026 contra el despliegue de `scripts/deploy-local.sh`: `users`
 | `no space left on device` al construir | Disco de 9,3 GB casi lleno | `df -h /`, `docker image prune -f` y reintentar. Un `unmount ... device or resource busy` de containerd es transitorio: reintentar |
 | El certificado del relay vence | No aplica | El de `wally.uccor.edu.ar` vence el 30/12/2026: lo renueva IT; pedirle que confirme que es automático |
 
-**Respaldo para la defensa** si el servidor no está disponible: el despliegue local de `scripts/deploy-local.sh` en la
-notebook ([despliegue-y-e2e.md](despliegue-y-e2e.md)).
+**La defensa de la tesis no depende de este servidor.** Se presenta desde Docker en la notebook, con
+`scripts/deploy-local.sh` ([despliegue-y-e2e.md](despliegue-y-e2e.md)), porque el servidor de la UCC queda sujeto a su
+disponibilidad y a su velocidad. Ese camino usa solo `docker-compose.yml` y `docker-compose.ci.yml`: nada de lo de este
+documento (`docker-compose.ucc*.yml`, HTTPS, Cloudflare) interviene, y los mails de verificación y de recuperación los
+captura Mailpit en http://localhost:8025. El servidor de la UCC es un despliegue adicional, no el que se presenta.
 
 ## 7. Pendiente en el servidor (no se hace desde el repo)
 
