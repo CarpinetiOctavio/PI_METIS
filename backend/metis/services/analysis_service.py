@@ -1,6 +1,7 @@
+import asyncio
 import json
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
 from datetime import datetime, timezone
 
 import numpy as np
@@ -37,6 +38,35 @@ class MetodoNoAjustadoError(Exception):
 
 def _sse(tipo: str, payload: dict) -> str:
     return f"event: {tipo}\ndata: {json.dumps(payload)}\n\n"
+
+
+# Un proxy intermedio (Cloudflare corta a los 100 s) cierra una conexión sin tráfico. Las dos pausas del
+# stream (atípico de Chow, elección de distribución) pueden durar hasta SESSION_TIMEOUT sin emitir nada, así
+# que mientras esperan se manda un comentario SSE cada INTERVALO_LATIDO. El comentario no lo entrega ningún
+# cliente SSE como evento (línea que empieza con ":"), así que el contrato del stream no cambia.
+INTERVALO_LATIDO = 20  # segundos, bien por debajo de los 100 s de Cloudflare
+LATIDO_SSE = ": latido\n\n"
+
+
+async def _esperar_decision_con_latido(session_id: str) -> AsyncIterator[str | bool]:
+    """Espera la decisión del usuario emitiendo un latido SSE cada INTERVALO_LATIDO.
+
+    Genera los latidos (`str`) y, al terminar, un único `bool` final con el mismo significado que el retorno
+    de `session_store.wait_for_decision()`: True si llegó la decisión, False si se agotó el tiempo. Un
+    generador asíncrono no puede devolver un valor, de ahí el centinela.
+    """
+    espera = asyncio.ensure_future(session_store.wait_for_decision(session_id))
+    try:
+        while True:
+            hecho, _ = await asyncio.wait({espera}, timeout=INTERVALO_LATIDO)
+            if hecho:
+                yield espera.result()
+                return
+            yield LATIDO_SSE
+    finally:
+        # El cliente se desconectó (o el generador se cerró): no dejar la espera huérfana.
+        if not espera.done():
+            espera.cancel()
 
 
 def _serializar_timestamps(
@@ -687,7 +717,12 @@ async def stream_analysis(
                 },
             )
 
-            recibio_decision = await session_store.wait_for_decision(session_id)
+            recibio_decision = False
+            async for item in _esperar_decision_con_latido(session_id):
+                if isinstance(item, bool):
+                    recibio_decision = item
+                else:
+                    yield item
 
             if not recibio_decision:
                 yield _sse(
@@ -857,7 +892,12 @@ async def stream_analysis(
                 {"session_id": session_id, **_serializar_etapa2(etapa2_result)},
             )
 
-            recibio_decision_etapa2 = await session_store.wait_for_decision(session_id)
+            recibio_decision_etapa2 = False
+            async for item in _esperar_decision_con_latido(session_id):
+                if isinstance(item, bool):
+                    recibio_decision_etapa2 = item
+                else:
+                    yield item
 
             if not recibio_decision_etapa2:
                 yield _sse(
