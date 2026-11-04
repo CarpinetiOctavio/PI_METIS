@@ -1,0 +1,29 @@
+# HTTPS del servidor de la UCC (DECISIÓN 083, parte 2). Archivo ADICIONAL: se suma a los tres anteriores y solo se
+# usa cuando el certificado ya está en certs/ (scripts/generar-cert-ucc.sh). Sin certificado, nginx no arranca,
+# por eso no vive dentro de docker-compose.ucc.yml. En el .env del servidor:
+#
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml:docker-compose.ucc.yml:docker-compose.ucc-tls.yml
+#
+# Qué cambia:
+# - nginx publica también el 443, con nginx/nginx.ucc.conf (el 80 sigue sirviendo igual, sin redirigir: ver ese
+#   archivo) y el certificado de certs/ montado de solo lectura.
+# - METIS_ENV (en el .env) decide el `ENV` del backend. Con `production` la cookie de sesión sale con `Secure`
+#   (H6). Dejarlo en `development` (el valor por defecto) hasta que NADIE más entre por http://: el navegador no
+#   devuelve una cookie Secure por HTTP, y el login por la IP directa quedaría muerto. Detrás de Cloudflare el
+#   navegador ve https:// y funciona; el acceso directo por la IP no.
+# - METIS_URL (en el .env) tiene que ser la URL pública con la que entra la gente (https://<nombre de Cloudflare>):
+#   es el link del mail de verificación y de recuperación, y el origen que acepta CORS.
+
+services:
+  backend:
+    environment:
+      ENV: ${METIS_ENV:-development}
+
+  nginx:
+    # !override: ports de docker-compose.ci.yml es solo el 80, y las listas se concatenan al combinar archivos.
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.ucc.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
