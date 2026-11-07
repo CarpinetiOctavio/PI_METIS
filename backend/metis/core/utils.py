@@ -1,4 +1,5 @@
 import math
+import os  # DEMO Ruleset: import sin usar a propósito (ruff F401) para que falle el job lint
 
 
 def es_numerico(v) -> bool:
