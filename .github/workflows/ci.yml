@@ -240,10 +240,11 @@ jobs:
       - uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        # Esperar el quality gate solo en PR y en staging/main. En otras ramas (deploy/ucc) el plan de la
+        # organización no permite leer el estado del gate ("Organization is not allowed to access data from
+        # non main branches", exit code 3). El análisis se sube igual; el gate se exige en el PR a staging.
         with:
-          args: >
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=600
+          args: ${{ (github.event_name == 'pull_request' || github.ref_name == 'staging' || github.ref_name == 'main') && '-Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=600' || '' }}
 
   # Gate propio, independiente de SonarCloud (DECISIÓN 077): cobertura del código nuevo
   # ≥ 80 % (diff-cover, solo en PR) y duplicación ≤ 5 % (jscpd). Resume todo en el job.
