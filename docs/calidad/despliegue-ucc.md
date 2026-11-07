@@ -90,8 +90,8 @@ scripts/generar-cert-ucc.sh 172.16.168.14 3650 metis.ucc.edu.ar   # crea certs/m
 docker compose config > /dev/null && echo "compose valida"             # sin pegar su salida en ningún lado
 docker compose up -d --build
 docker compose exec nginx nginx -t
-curl -skI https://localhost:4443/ping | head -1                         # 200 por el 4443
-curl -sI http://localhost/ping | head -1                                # el 80 sigue sirviendo (sin redirigir)
+curl -sk -o /dev/null -w '%{http_code}\n' https://localhost:4443/ping   # 200 por el 4443 (GET: con -I da 405)
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost/ping              # 200: el 80 sigue sirviendo (sin redirigir)
 echo | openssl s_client -connect localhost:4443 -servername localhost 2>/dev/null | openssl x509 -noout -subject -ext subjectAltName
 ```
 
