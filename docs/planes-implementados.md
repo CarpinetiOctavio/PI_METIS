@@ -381,10 +381,11 @@ revirtió la pasada 5 (DECISIÓN 051).
 
 ## 20. Despliegue en la UCC, respuestas de Facundo del 29/10 y recuperación de contraseña
 
-- **Fechas y PRs:** 29/10 al 02/11/2026. Cinco PRs, todavía sin pushear: SMTP (`fix/register-error-tls`), nginx
-  (`feature/nginx-endurecimiento`), despliegue HTTP (`feature/despliegue-ucc-http`), Pareto y respuestas de Facundo
-  (`feature/gen-pareto-fuera-v1`, `docs/respuestas-facundo-29-10`) y recuperación de contraseña
-  (`feature/recuperacion-contrasena`).
+- **Fechas y PRs:** 29/10 al 07/11/2026. Seis PRs mergeados a `staging`: SMTP (#149, `fix/register-error-tls`), nginx
+  (#150, `feature/nginx-endurecimiento`), despliegue HTTP (#151, `feature/despliegue-ucc-http`), Pareto (#152,
+  `feature/gen-pareto-fuera-v1`), respuestas de Facundo (#153, `docs/respuestas-facundo-29-10`) y recuperación de
+  contraseña (#154, `feature/recuperacion-contrasena`). El HTTPS autofirmado, el latido SSE y el arreglo del job de Sonar
+  viven en la rama `deploy/ucc` (DECISIÓN 083, addenda del 04/11 y del 07/11), desplegada en el servidor el 07/11.
 - **Qué pedía:** poder defender METIS desde el servidor de la UCC. Había dos bloqueos: el registro devolvía 500 y, desde
   la red del campus, Etapa 2 y la pausa por atípico no llegaban al navegador. Además, cuatro respuestas de Facundo.
 - **Qué se hizo:**
@@ -406,13 +407,15 @@ revirtió la pasada 5 (DECISIÓN 051).
 - **Cifras al cierre:** backend 960 tests unitarios y 60 de integración (2 se saltean sin Mailpit), frontend 599,
   casos nuevos CE-10a–h y E2E-6.
 - **Quedó abierto:**
-  - **Depende de IT:** nombre DNS y certificado (HTTPS, parte 2 de la DECISIÓN 083), reinicio controlado y NTP. El
-    detalle está en la sección "Estado al 02/11/2026" del plan.
-  - **Manual, en el servidor de la UCC:** `alembic upgrade head` (migraciones `006` y `007`), cron del respaldo con una
-    restauración de prueba y la primera corrida del smoke.
+  - **Depende de IT:** repuntar el proxy al 4443 y abrir el firewall (HTTPS de punta a punta, parte 2 de la DECISIÓN
+    083), la IP del proxy para `real_ip`, la rotación de la contraseña SMTP, el reinicio controlado y NTP. El detalle
+    está en la sección "Estado al 09/11/2026" del plan.
+  - **Manual, en el servidor de la UCC:** hecho el 07/11 (`alembic upgrade head`, migración `007`, HTTPS en el 4443).
+    Falta el cron del respaldo con una restauración de prueba, la primera corrida del smoke, la prueba de la pausa por
+    Cloudflare y la sonda desde UCC-Free.
   - **En `pendientes-tecnicos.md`:** reenvío del mail de verificación y token de verificación en la base (B8), límite
     de intentos en nginx (B9) y las sesiones ya emitidas tras cambiar la contraseña.
   - **El libro:** atribuir a la planilla las diferencias de U_T, documentar la convención de t de Student y
     Mann-Kendall, y pasar de 13 a 12 distribuciones donde corresponda. A cargo de Kevin, fuera del repo.
 - **Plan:** [`plan-mejoras-post-despliegue-ucc-29-10-2026.md`](plan-mejoras-post-despliegue-ucc-29-10-2026.md), activo
-  hasta que lleguen el certificado y el reinicio.
+  hasta que IT repunte el proxy y haga el reinicio.
