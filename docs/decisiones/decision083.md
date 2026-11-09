@@ -2,8 +2,9 @@
 
 **Fecha:** 29 de octubre de 2026 (actualizada el 30/10/2026)
 **Estado:** Parte HTTP aplicada en el servidor. Parte HTTPS reescrita el 04/11/2026 para el esquema de Cloudflare con
-certificado autofirmado (ver el addendum de esa fecha) y trabajada en la rama `deploy/ucc`: lista para desplegar,
-pendiente de que IT repunte el proxy y de las respuestas a las preguntas abiertas de esa sección.
+certificado autofirmado (ver el addendum de esa fecha) y **desplegada en el servidor el 07/11/2026** desde la rama
+`deploy/ucc` (ver el addendum de esa fecha): el 80 y el 4443 responden. Pendiente de que IT repunte el proxy al 4443,
+de la prueba de la pausa del stream a través de Cloudflare y de `real_ip`.
 **Decide:** Kevin, a partir de la evaluación del despliegue en 172.16.168.14 del 29/10/2026.
 **Origen:** [plan de mejoras post-despliegue](../Plan%20de%20mejoras%20post-despliegue%20UCC%20y%20respuestas%20de%20Facundo.md),
 bloque A3 (hallazgos H2, H4, H5 y H6). Defectos D-UCC-03 y D-UCC-04.
@@ -68,6 +69,11 @@ suponía un certificado de la UCC y un nombre DNS interno; ninguno de los dos ll
   validaron con el parser `crossplane`, que no reemplaza a `nginx -t`: la configuración con el HTTPS se verifica en el servidor con `docker compose config` y `nginx -t` antes de
   avisar a IT. Falta además la verificación desde UCC-Free, el reinicio controlado del servidor (B3) y la prueba de la
   pausa del stream a través de Cloudflare.
+- **Parte 2, en el servidor (07/11/2026):** `docker compose config` valida, `nginx -t` da `test is successful` (con nginx
+  real, lo que no se había podido en el entorno de trabajo), `/ping` responde 200 por el 80 y por el 4443, el certificado
+  trae la IP y `metis.ucc.edu.ar`, `alembic current` da `007 (head)`, el log del backend sin errores y `ip route` con
+  `10.250.0.0/24`. Evidencia en `docs/calidad/evidencia/despliegue-ucc-07-11-2026/verificacion-https.txt`. Sigue sin
+  verificarse la entrada a través de Cloudflare, la sonda desde UCC-Free y el reinicio controlado (B3).
 
 ### Relación con otras decisiones
 
@@ -128,8 +134,31 @@ Cloudflare dejando una pausa abierta 3 minutos. nginx no hace falta tocarlo: `pr
 
 - **Rangos del proxy para `real_ip`.** `nginx.ucc.conf` trae el bloque comentado con `X-Real-IP`; se completa con la IP
   del proxy que se lea en el log de nginx después de que repunte. Es requisito previo para cualquier `limit_req` (B9).
-- **Rotación de la contraseña SMTP** (se mostró en capturas durante el diagnóstico): no la contestaron.
+- **Rotación de la contraseña SMTP** (se mostró en capturas durante el diagnóstico): no se había pedido a IT antes de
+  terminar el despliegue. Se pide junto con el aviso del 4443.
 
 **Por qué se sigue considerando solución para D-22.** El tramo que retenía las respuestas es el de la red de la UCC; si
 Cloudflare entra por el 4443, ese tramo ya no es legible para la inspección. Se confirma con la corrida de
 `sonda_metis.py` desde UCC-Free, no se da por cerrado antes.
+
+### Addendum 07/11/2026: primer despliegue de la parte 2 en el servidor
+
+- **Qué se hizo.** En `~/metis-app`: checkout de `deploy/ucc`, certificado con `scripts/generar-cert-ucc.sh`,
+  `COMPOSE_FILE` con `docker-compose.ucc-tls.yml`, `up -d --build`, `alembic upgrade head` (la `007`, `auth_tokens`) y
+  `nginx -t`. Resultado y evidencia en la sección Verificación.
+- **Tropiezos, todos de procedimiento y ninguno de diseño** (ahora en el runbook, `despliegue-ucc.md` §6): un
+  `docker-compose.ucc.yml` armado a mano que impedía el checkout; un bloque de comandos pegado dentro de `nano` que
+  ensució el `.env` (se reparó con `sed`, sin mostrar valores); `docker compose exec` consumiendo la entrada pegada, y
+  `/ping` que responde 405 a HEAD (el runbook usaba `curl -I`). Además, la primera migración se corrió antes de
+  reconstruir la imagen, contra el código viejo, y no hizo nada: va después de `--build`, porque las migraciones viajan
+  en la imagen.
+- **Qué entra hoy.** Cloudflare sigue entrando por el 80, porque IT todavía no repunta. La entrada oficial es
+  `https://metis.ucc.edu.ar`; la IP y el 4443 son direcciones del origen. `FRONTEND_ORIGIN` y `FRONTEND_URL` salen de
+  `METIS_URL`, con la IP solo como valor por defecto del compose: con `METIS_URL` en el `.env` el origen CORS y los links de
+  los mails usan el dominio. La prueba que vale es por el dominio.
+- **La prueba del latido no espera a IT.** El tope de 100 s es del tramo entre el navegador y Cloudflare, sea cual sea
+  el puerto del origen: se prueba por el dominio con una pausa de Etapa 2 abierta 3 minutos.
+- **Qué sigue abierto:** confirmar `METIS_URL` en el `.env`, la prueba por el dominio, el aviso a IT (repunte al 4443,
+  firewall proxy a VM por el 4443, IP del proxy para `set_real_ip_from`), la sonda desde UCC-Free, el reinicio
+  controlado y NTP (B3 y B4, de IT), el cron del respaldo con una restauración de prueba (B5), el smoke del servidor
+  (B6) y `METIS_ENV=production` cuando nadie entre por HTTP directo.
