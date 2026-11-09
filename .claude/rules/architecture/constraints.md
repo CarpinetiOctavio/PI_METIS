@@ -174,6 +174,11 @@ confirmado — usuario de dominio vía portal institucional
 repositorio, no se documentan acá. Uso previsto: deploy de la versión
 estable a `main`, a cargo de Facundo (ver DECISIÓN 028).
 
+**Actualización 09/11/2026:** METIS está desplegado en el servidor de la UCC desde el 29/10/2026 (HTTP) y el
+07/11/2026 (HTTPS autofirmado en el 4443, detrás de Cloudflare), a mano y desde `staging` (DECISIÓN 083,
+`docs/calidad/despliegue-ucc.md`). El CD automático sigue fuera del alcance. `main` solo recibe `staging` cuando lo
+disponen los directores del proyecto.
+
 ### Datos de fixtures de testing
 Los datos de las 9 estaciones de la tesis de Facundo para los tests de regresión matemática
 están pendientes de confirmación en formato digital.

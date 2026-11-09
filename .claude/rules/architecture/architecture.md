@@ -28,7 +28,7 @@ CU-01 y CU-02 ejecutan exactamente el mismo pipeline estadístico. La diferencia
 El motor estadístico en core/ no importa nada de api/, services/, db/ ni auth/. Esto hace posible los tests de regresión matemática — se puede testear que Anderson calcula correctamente el estadístico sin levantar la aplicación completa. Es el argumento técnico más sólido ante el tribunal de ISI.
 
 ### Nginx como reverse proxy
-Único servicio expuesto al exterior — FastAPI y React nunca se exponen directamente. Sirve el build estático del frontend, actúa como reverse proxy hacia `/api` del backend, y termina HTTPS con certificado institucional. Relevante en particular por el despliegue dentro de la intranet de la UCC. El frontend ya está integrado contra el backend real (Fases 1-5, ver `sprint.md` — "feature/frontend-fases1-5").
+Único servicio expuesto al exterior — FastAPI y React nunca se exponen directamente. Sirve el build estático del frontend, actúa como reverse proxy hacia `/api` del backend, y termina HTTPS. Relevante en particular por el despliegue dentro de la intranet de la UCC. **Actualización 09/11/2026 (DECISIÓN 083):** en el servidor de la UCC el TLS público lo termina Cloudflare; nginx expone además el 4443 con un certificado autofirmado (`nginx/nginx.ucc.conf`) para el tramo proxy → servidor, que Cloudflare en modo "Full" cifra sin validar. El frontend ya está integrado contra el backend real (Fases 1-5, ver `sprint.md` — "feature/frontend-fases1-5").
 
 **Actualización 31/07/2026 (`fix/frontend-ui-integracion`, F9):** el build estático servido por nginx ya existe y corre — `frontend/Dockerfile` (multi-stage: node build + nginx sirviendo `dist/` con fallback `try_files` a `index.html`, necesario porque el router usa `createBrowserRouter`). Verificado end-to-end por primera vez en la historia del proyecto: `docker-compose up -d` levanta los cuatro servicios, y a través de nginx `GET /` responde 200 con HTML real, `/ping` proxea al backend, `/config` sirve la SPA, y un login real funciona same-origin (sin CORS de por medio, tal como predice esta misma sección). La nota anterior de esta sección ("lo que todavía no existe es el build estático servido por nginx") queda superada — ver mapeo de puertos del backend más abajo, que sigue siendo válido para desarrollo sin levantar nginx.
 
@@ -221,6 +221,18 @@ decisiones   JSONB    -- registro de auditoría: qué decidió el usuario ante c
 exclusiones  JSONB NOT NULL DEFAULT '[]'  -- migración 006 (DECISIÓN 080) — exclusiones de puntos guardadas a
                                           -- pedido; índices, años y valores, no resultados (se recalculan)
 ```
+
+### Tabla: auth_tokens (migración 007, DECISIÓN 085)
+```sql
+id          UUID PRIMARY KEY
+user_id     UUID REFERENCES users(id) ON DELETE CASCADE
+purpose     VARCHAR(32) NOT NULL     -- hoy solo recuperación de contraseña
+token_hash  VARCHAR(64) UNIQUE NOT NULL  -- SHA-256 del token del mail, nunca el token
+expires_at  TIMESTAMP NOT NULL
+used_at     TIMESTAMP                -- un solo uso: se marca al consumirlo
+created_at  TIMESTAMP NOT NULL
+```
+Índice `ix_auth_tokens_user_purpose` sobre `(user_id, purpose)`.
 
 ### Tabla: api_clients
 ```sql
