@@ -155,7 +155,7 @@ pregunta imposible de formular a un test real.
 Para los defectos que solo son detectables con el sistema completo corriendo
 junto (F1, F4, F5, F6, F9 del informe de diagnóstico). Habilitada por
 [DECISIÓN 046](../../docs/decisiones/decision046.md): Playwright en
-`frontend/e2e/`, seis escenarios (E2E-0 a E2E-5) contra el build de
+`frontend/e2e/`, siete escenarios (E2E-0 a E2E-6) contra el build de
 producción detrás de nginx, con el registro probado contra Mailpit (DECISIÓN
 049). Corren en el job `despliegue` de CI en cada push y PR, después del smoke, y
 en local con `scripts/deploy-local.sh` + `npm run test:e2e`. Nunca contra
@@ -304,7 +304,7 @@ Cambiar un umbral es cambiar `carga/umbrales.json` en un PR, con la corrida que 
 ## Smoke del despliegue (B5) — no confundir con los de desarrollo
 
 `backend/tests/smoke/` (marker `smoke`) sí vive en `tests/` y sí corre en CI:
-siete pruebas black-box con httpx contra nginx de un stack levantado por
+quince pruebas black-box (contando las parametrizadas, entre ellas las de aislamiento entre perfiles) con httpx contra nginx de un stack levantado por
 `scripts/deploy-local.sh` (SPA, `/ping`, `preview-columns`, login, stream
 hasta `complete`, historial). No importa nada de `metis`. Sin stack se
 saltean; con `METIS_REQUIRE_SMOKE=1` fallan. Detalle en

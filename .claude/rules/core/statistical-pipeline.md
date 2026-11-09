@@ -281,6 +281,11 @@ f"event: {tipo}\ndata: {json.dumps(payload)}\n\n"
 "error"                   # error interno inesperado
 ```
 
+Además de los eventos, mientras el stream espera una decisión (las dos pausas) manda un comentario SSE
+`: latido` cada 20 s (`INTERVALO_LATIDO`, DECISIÓN 083, addendum del 04/11/2026). No es un evento: ningún cliente
+SSE lo entrega como tal y el contrato no cambia; existe para que un proxy con tope de inactividad (Cloudflare, 100 s)
+no corte la pausa.
+
 Payload mínimo de `progress`:
 ```json
 {"paso": "anderson", "etapa": 1, "completado": 2, "total": 8}

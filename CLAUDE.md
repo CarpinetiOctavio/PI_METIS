@@ -60,9 +60,10 @@ backend/metis/
 │                          # export_service.py, exclusiones_service.py (exclusiones guardadas — DECISIÓN 080)
 ├── reportes/              # pdf.py — informe PDF (ReportLab + matplotlib). Presentación pura: recibe el dict de
 │                          # get_analysis_by_id(), no importa api/services/db/core (DECISIÓN 075)
-├── db/                    # models/ (user, analysis, result, api_client) + base.py, session.py
+├── db/                    # models/ (user, analysis, result, auth_token, api_client) + base.py, session.py
 ├── schemas/               # Modelos Pydantic: analysis.py, auth.py, common.py, export.py
-└── auth/                  # router.py, jwt.py, email.py (aiosmtplib), dependencies.py
+└── auth/                  # router.py, jwt.py, email.py (aiosmtplib), tokens.py (recuperación de contraseña,
+                           # DECISIÓN 085), dependencies.py
 ```
 
 **Regla crítica:** `core/` no importa nada de `api/`, `services/`, `db/` ni `auth/`. El motor estadístico es una librería pura — recibe datos, devuelve resultados. Esto es lo que hace posible los tests de regresión matemática.
@@ -71,7 +72,7 @@ backend/metis/
 
 `POST /analysis/stream` (`api/v1/analysis.py`) valida parámetros en el borde (`etapas`, `mes_inicio_anio`, `variable_diaria`, `cramer_particion`, tope de 10 MB) y delega a `services/analysis_service.py::stream_analysis()`, un generador async que orquesta todo: parsea con `core/validacion/parser.py`, corre `ejecutar_etapa1()` (paso 0a orden cronológico → paso 0 agregación → contrato → pruebas → Chow) y, si `etapas=[1,2]` y el resultado no es `rechazado`, `ejecutar_etapa2()`.
 
-El stream **se pausa dos veces** (atípico de Chow; elección de distribución+método) esperando un `POST` aparte (`/outlier-decision`, `/distribution-decision`) que llega por otro request y desbloquea vía `services/session_store.py` (`SessionState` con `asyncio.Event` y TTL, en memoria del proceso). El mismo `Event` sirve para las dos pausas — se hace `.clear()` antes de la segunda espera.
+El stream **se pausa dos veces** (atípico de Chow; elección de distribución+método) esperando un `POST` aparte (`/outlier-decision`, `/distribution-decision`) que llega por otro request y desbloquea vía `services/session_store.py` (`SessionState` con `asyncio.Event` y TTL, en memoria del proceso). El mismo `Event` sirve para las dos pausas — se hace `.clear()` antes de la segunda espera. Mientras espera, el stream manda un comentario SSE (`: latido`) cada `INTERVALO_LATIDO` = 20 s (`_esperar_decision_con_latido`, DECISIÓN 083, addendum del 04/11/2026): Cloudflare corta a los 100 s una conexión sin tráfico. Es un comentario, no un evento: el contrato no cambia y `api/sse.ts` lo descarta.
 
 Tras rechazar un atípico o para alimentar Etapa 2, usar `Etapa1Result.serie_efectiva`/`timestamps_efectivos` (la serie realmente analizada, ya agregada), **nunca** `serie_original` (la cruda subida) — mapear el índice de Chow contra la serie cruda borra un dato equivocado. Ambas listas se filtran de a pares (`core/utils.py::filtrar_numericos_alineados`) y quedan siempre del mismo largo, aun con celdas vacías en una carga anual — antes de eso el parser conservaba los `None` solo en los timestamps y las etiquetas de año se corrían (`docs/auditoria/hallazgos/hallazgo-timestamps-desalineados.md`). `core/pipeline/full_pipeline.py` no lo usa `services/` (DECISIÓN 055); existe para los tests de regresión. Detalle de eventos y payloads: `.claude/rules/core/statistical-pipeline.md`.
 
@@ -134,7 +135,7 @@ npm run test:watch                            # Vitest en modo watch
 npx vitest run src/routes/results/ResultsPage.test.tsx   # un solo archivo de test
 # E2E (Playwright, frontend/e2e/ — el path del spec es relativo a frontend/): desde la raíz, contra el despliegue de scripts/deploy-local.sh, nunca contra npm run dev.
 # scripts/test.sh exporta E2E_EMAIL/E2E_PASSWORD (el usuario sembrado); sin ellas los specs no arrancan.
-bash scripts/test.sh e2e                                  # los seis escenarios
+bash scripts/test.sh e2e                                  # los siete escenarios (E2E-0 a E2E-6)
 bash scripts/test.sh e2e e2e/e2e1-login.spec.ts           # uno solo
 ```
 
@@ -158,7 +159,7 @@ docker exec <backend> alembic upgrade head
 
 Ver `.claude/rules/architecture/architecture.md` — sección "Exposición de puertos en desarrollo" para por qué `backend` y `postgres` mapean puertos al host, y "DATABASE_URL — diferencia entre Docker y host" para el override de Alembic/psql desde la terminal local.
 
-**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main`: job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"` con cobertura de sentencia y de decisión, `--cov-branch`; ya no tolera el exit code 5; levanta `postgres:15` y `mailpit` como servicios y corre `alembic upgrade head` antes, para `tests/integration/db/`), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test con cobertura + build) y job `quality-gate` (DECISIÓN 077): duplicación ≤ 5 % con `jscpd` (`.jscpd.json`) y, en PR, cobertura del código nuevo ≥ 80 % con `diff-cover`, una corrida para el backend y otra para el frontend. Suma un paso informativo (no bloquea) con `radon`: complejidad ciclomática, índice de mantenibilidad y LOC del backend (B11). El job resume tests, cobertura, duplicación y complejidad en el resumen de Actions (`scripts/ci_resumen.py`) y sube `metricas.json` como artefacto: los números del informe del TP de Calidad salen de ahí. Job `despliegue` (B5/B6): levanta el stack completo con `docker-compose.ci.yml` vía `scripts/deploy-local.sh` (migraciones, usuario sembrado, smoke contra nginx) y corre los E2E de Playwright y sube `reporte-e2e`, en cada push y PR. Job `carga` (B7, solo en PR): stress con k6 sobre su propio despliegue, con los umbrales de `carga/umbrales.json`; falla si se superan. Job `sonarcloud` (B13): análisis de SonarCloud por CI con la cobertura de `test` y `frontend` importada; espera el quality gate de Sonar y falla si no pasa (necesita el secret `SONAR_TOKEN`). El esfuerzo sostenido no corre en cada PR: workflow aparte `carga-sostenida.yml` (manual y semanal). No mergear sin que los ocho pasen. `scripts/test.sh` corre lo mismo en local (`unit`, `integration`, `backend`, `frontend`, `duplicacion`, `gate`, `complejidad`, `all`, `smoke`, `e2e`, `stress`, `soak`); sin `venv`, los de pytest caen solos a `docker compose run backend`.
+**CI (`.github/workflows/ci.yml`)** corre en cada push/PR a `staging`/`main` (la lista de ramas todavía nombra `deploy/ucc`, integrada a `staging` y borrada el 09/11/2026): job `lint` (ruff check + format --check), job `test` (`pytest -m "unit or integration"` con cobertura de sentencia y de decisión, `--cov-branch`; ya no tolera el exit code 5; levanta `postgres:15` y `mailpit` como servicios y corre `alembic upgrade head` antes, para `tests/integration/db/`), job `error-catalog` (`scripts/check-error-catalog.sh` — verifica en las tres direcciones que todo código de error emitido por el backend, documentado en `api-contracts.md` y usado en `frontend/src/i18n/errors.es.ts` esté sincronizado; excepciones legítimas van en `scripts/error-catalog-allowlist.txt`, ver DECISIÓN 038), job `frontend` (lint + test con cobertura + build) y job `quality-gate` (DECISIÓN 077): duplicación ≤ 5 % con `jscpd` (`.jscpd.json`) y, en PR, cobertura del código nuevo ≥ 80 % con `diff-cover`, una corrida para el backend y otra para el frontend. Suma un paso informativo (no bloquea) con `radon`: complejidad ciclomática, índice de mantenibilidad y LOC del backend (B11). El job resume tests, cobertura, duplicación y complejidad en el resumen de Actions (`scripts/ci_resumen.py`) y sube `metricas.json` como artefacto: los números del informe del TP de Calidad salen de ahí. Job `despliegue` (B5/B6): levanta el stack completo con `docker-compose.ci.yml` vía `scripts/deploy-local.sh` (migraciones, usuario sembrado, smoke contra nginx) y corre los E2E de Playwright y sube `reporte-e2e`, en cada push y PR. Job `carga` (B7, solo en PR): stress con k6 sobre su propio despliegue, con los umbrales de `carga/umbrales.json`; falla si se superan. Job `sonarcloud` (B13): análisis de SonarCloud por CI con la cobertura de `test` y `frontend` importada; espera el quality gate de Sonar y falla si no pasa (necesita el secret `SONAR_TOKEN`). El gate solo se espera en PR, `staging` y `main`: en otras ramas el plan de la organización no permite leerlo (`exit code 3`, D-24, addendum del 07/11/2026 a la DECISIÓN 077). El esfuerzo sostenido no corre en cada PR: workflow aparte `carga-sostenida.yml` (manual y semanal). No mergear sin que los ocho pasen. `scripts/test.sh` corre lo mismo en local (`unit`, `integration`, `backend`, `frontend`, `duplicacion`, `gate`, `complejidad`, `all`, `smoke`, `e2e`, `stress`, `soak`); sin `venv`, los de pytest caen solos a `docker compose run backend`.
 
 **SonarCloud corre por CI desde B13** (job `sonarcloud`, DECISIÓN 077), no por Análisis Automático: los dos son
 excluyentes, y con el automático activado en SonarCloud el job falla en todos los PR. **Toda la configuración de
@@ -176,7 +177,7 @@ requerido hasta que se lo agregue ahí. Ver [decision077.md](docs/decisiones/dec
 - **PR que toca `frontend/`:** además de lint + test + build, correr el flujo en el navegador después del último commit y dejar evidencia (captura o pestaña Network). Los tests bajo `StrictMode` no reemplazan esto — ver `.claude/rules/testing.md`, "Capa 4".
 - **Defecto encontrado** (comportamiento distinto del esperado, no una mejora): issue con la plantilla *Defecto* (`.github/ISSUE_TEMPLATE/defecto.yml`) y labels `defecto`/`sev:`/`prio:`/`fase:`. Se cierra solo con un test que lo cubra, nombrado en el comentario de cierre. Criterios y registro: `docs/calidad/registro-defectos.md`.
 - **Borde, clase o regla de decisión nueva** (un límite de n, un parámetro validado en el borde, una combinación que cambia un nivel): se agrega su caso a `docs/calidad/casos-de-prueba.md` con el test que lo implementa. Los tests propios de esos casos viven en `backend/tests/unit/casos_dinamicos/`, con el ID del caso en el id de `parametrize` (B8).
-- **Ramas:** `feature/xxx` / `fix/xxx` salen de `staging` y vuelven a `staging` por PR; `main` solo recibe PRs desde `staging`. Push directo bloqueado por Ruleset.
+- **Ramas:** `feature/xxx` / `fix/xxx` salen de `staging` y vuelven a `staging` por PR; `main` solo recibe PRs desde `staging`, y solo cuando lo disponen los directores del proyecto de investigación (al 09/11/2026 no lo dispusieron: `main` sigue en el scaffolding y la versión 1.0 está en `staging`). Push directo bloqueado por Ruleset.
 
 ### Scripts de desarrollo — `scripts/`
 
@@ -190,7 +191,7 @@ requerido hasta que se lo agregue ahí. Ver [decision077.md](docs/decisiones/dec
 
 ## Frontend — estado actual
 
-Vite + React + TypeScript + react-router-dom, 7 pantallas de CU-01/CU-02: `entry`, `config`, `stream`, `results`, `history` (lista y detalle), `auth-verify` (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`).
+Vite + React + TypeScript + react-router-dom, 9 pantallas de CU-01/CU-02: `entry`, `config`, `stream`, `results`, `history` (lista y detalle), `auth-verify` y `auth-recovery` (olvido y reseteo de contraseña, DECISIÓN 085) (`frontend/src/routes/`, tabla de rutas en `frontend/src/routes.tsx`).
 
 ```
 frontend/src/
@@ -205,7 +206,7 @@ frontend/src/
 │                  # format.ts (formateo numérico único de la UI, 5 decimales como la tesis),
 │                  # alfa.ts (niveles de α, DECISIÓN 078), cramer.ts (rótulo de la partición usada),
 │                  # estadoMetodo.ts (rótulos de status de Etapa 2)
-├── routes/        # entry/, config/, stream/, results/, history/, auth-verify/ — una carpeta por pantalla
+├── routes/        # entry/, config/, stream/, results/, history/, auth-verify/, auth-recovery/ — una carpeta por pantalla
 ├── theme/         # tokens.ts + tokens.instrumento.css (paridad verificada por tokenParity.test.ts)
 └── test/          # renderPage.tsx — helper que envuelve toda página en <StrictMode> (regla, no opcional)
 ```
@@ -250,6 +251,8 @@ POST   /api/v1/auth/register
 POST   /api/v1/auth/verify
 POST   /api/v1/auth/login
 POST   /api/v1/auth/logout
+POST   /api/v1/auth/forgot-password   # Misma respuesta exista o no la cuenta; enfriamiento de 60 s — DECISIÓN 085
+POST   /api/v1/auth/reset-password    # Token de un solo uso (hash SHA-256 en auth_tokens), 60 min; verifica la cuenta
 GET    /api/v1/auth/me
 POST   /api/v1/analysis/stream            # SSE — CU-01 y CU-02
 POST   /api/v1/analysis/outlier-decision  # Decisión ante atípico Chow — CU-01 y CU-02
@@ -274,6 +277,10 @@ POST   /api/v1/validate/                  # CU-03, sincrónico, solo Etapa 1 —
 ## Seguridad
 
 Reglas no negociables (JWT en HttpOnly Cookie, API Key en `X-API-Key` y guardada como hash, credenciales solo en `.env`, CORS estricto, HTTPS en producción): `.claude/rules/architecture/constraints.md`, sección "Seguridad".
+
+## Despliegue en la UCC
+
+El servidor de la UCC (172.16.168.14, publicado por IT en `https://metis.ucc.edu.ar` detrás de Cloudflare, con acceso restringido a la red interna) es un **despliegue adicional**: la defensa corre en Docker local con `scripts/deploy-local.sh`, sin nada de lo que sigue. En el servidor, `COMPOSE_FILE` suma `docker-compose.ucc.yml` (relay real, `restart`, subred `10.250.0.0/24`) y `docker-compose.ucc-tls.yml` (HTTPS autofirmado en el 4443 con `nginx/nginx.ucc.conf`; certificado de `scripts/generar-cert-ucc.sh`, fuera de git) — DECISIÓN 083. El servidor se actualiza a mano desde `staging` (`deploy/ucc` se integró y se borró el 09/11/2026). Procedimiento, pendientes de IT (repunte del proxy al 4443, `real_ip`, reinicio, NTP) y contingencias: `docs/calidad/despliegue-ucc.md`. Las migraciones van después de `--build`: viajan en la imagen.
 
 ---
 
