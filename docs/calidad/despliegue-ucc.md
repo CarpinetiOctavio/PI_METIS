@@ -216,3 +216,17 @@ captura Mailpit en http://localhost:8025. El servidor de la UCC es un despliegue
       la anterior recién cuando el registro funciona con la nueva.
 - [ ] Corrida formal de `sonda_metis.py` desde UCC-Free (§4.1) y guardado de la salida en
       `evidencia/despliegue-ucc-29-10-2026/`.
+
+### Cómo se registran los pasos que se hagan después de la entrega
+
+Los pendientes de arriba son pasos manuales en el servidor y dependen de IT; no bloquean la defensa, que corre en
+Docker local. Los que se hagan después del 13/11/2026 se registran con un PR chico de solo documentación, sin tocar
+código:
+
+1. Guardar la salida de cada verificación en `evidencia/despliegue-ucc-<fecha>/`, sin secretos (si hay un `.env`, solo
+   con `sed -E 's/=.*/=<oculto>/'`).
+2. Tildar acá el paso con su fecha, igual que los marcados arriba.
+3. Actualizar el estado de D-22 en `registro-defectos.md` y la fila del HTTPS en `pendientes-tecnicos.md`; si cambia lo
+   que depende de IT, también la tabla "Estado al 09/11/2026" del plan de mejoras.
+
+Hasta entonces, lo que figura como pendiente es el estado real, no un olvido.
