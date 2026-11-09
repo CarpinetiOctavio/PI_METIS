@@ -97,6 +97,19 @@ editar el ruleset), y Kevin no la tiene: el repo es de Octavio. Por eso:
 - **Checks requeridos (punto 4):** los ocho jobs de `ci.yml`, configurados por Octavio en el Ruleset de `staging` y
   `main`. Un job salteado cuenta como aprobado para GitHub; `carga` solo corre en PR, que es donde se exige; los E2E corren en cada push y PR desde el addendum del 22/10/2026 a la DECISIÓN 046.
 
+### Addendum (07/11/2026): el gate de Sonar no se espera en ramas que no son PR, staging ni main
+
+- **Qué pasó.** El primer push de la rama `deploy/ucc` (la del despliegue en la UCC, DECISIÓN 083) dejó el job
+  `sonarcloud` en rojo. El análisis se subió bien (rama de tipo `short`, el check de la decoración dice "Quality Gate
+  passed"), y el scanner falló después, al consultar el estado del gate con `sonar.qualitygate.wait=true`: `Failed to
+  get Quality Gate status - Organization is not allowed to access data from non main branches`, `exit code 3`.
+- **Causa.** El plan de la organización en SonarCloud no permite leer el gate de las ramas que no son la principal. No
+  es un problema del código ni de la cobertura. Los pull requests sí se analizan como tales y el gate se lee.
+- **Qué se cambió.** En `ci.yml`, los argumentos `-Dsonar.qualitygate.wait=true` y `-Dsonar.qualitygate.timeout=600` se
+  pasan solo cuando el evento es `pull_request` o la rama es `staging` o `main`, que es donde el Ruleset exige el job.
+  En otras ramas el análisis se sube igual y el gate se evalúa al abrir el PR contra `staging`. Lo exigido no se relaja.
+- **Pendiente de verificar:** el job verde en el próximo push de `deploy/ucc` y el gate en el PR hacia `staging`.
+
 ### Addendum (22/10/2026): Ruleset activo y cierre
 
 - **Ruleset:** el único ruleset que existía ("main") estaba desactivado, apuntaba solo a `main` y no tenía checks

@@ -154,14 +154,15 @@ La versión 1 de METIS se da por cerrada. El despliegue en intranet es un agrega
 bloquea la presentación del proyecto integrador. Lo que sigue abierto depende de IT o es de la versión 2.
 
 El estado de arriba (casillas del criterio de hecho, bloques A a C) refleja el plan tal como se escribió el 29/10. Esta
-sección es el estado real. Los PRs figuran como "en rama" hasta que se pushean y se mergean.
+sección es el estado real. Los PRs figuran como "en rama" hasta que se pushean y se mergean (actualización del
+09/11/2026: los PRs #149 a #154 ya están en `staging`; lo único que vive aparte es la rama `deploy/ucc`).
 
 | Punto | Estado | Dónde |
 | --- | --- | --- |
 | A1. SMTP del servidor | Hecho el 30/10. Registro, mail, verificación y login funcionan desde la red de IT | Configuración del servidor; addendum a la DECISIÓN 034 |
 | A2. Errores de TLS del envío | Hecho, con timeout de 20 s. Evidencia rojo/verde guardada | Rama `fix/register-error-tls` |
 | A3. HTTP: reinicio automático, subred propia, SMTP, mailpit apagado | Hecho y probado en el servidor. Se agregó un defecto que el plan no tenía: la red de Docker (172.18.0.0/16) pisaba el gateway de la ruta de IT (D-23) | `docker-compose.ucc.yml`, DECISIÓN 083 parte 1 |
-| A3. HTTPS, nombre DNS y certificado | **Depende de IT** (Mariano). Quedó guardado en `feature/despliegue-ucc-tls-cert` para rehacerlo como un archivo adicional cuando llegue el certificado | DECISIÓN 083 parte 2 |
+| A3. HTTPS, nombre DNS y certificado | Cambió el esquema el 04/11: el sitio está detrás de Cloudflare y IT pidió HTTPS autofirmado en un puerto nuevo. Implementado en la rama `deploy/ucc` (archivo adicional `docker-compose.ucc-tls.yml`). IT respondió el 04/11 (URL `https://metis.ucc.edu.ar`, puerto 4443, `X-Real-IP`, tope de 100 s con latido, sin límite de mails). **Falta que IT repunte el proxy** y el rango del proxy para `real_ip` | DECISIÓN 083, addendum del 04/11/2026 |
 | B1, B2. Cabeceras, gzip sin SSE, caché, tope de subida | Hecho | Rama `feature/nginx-endurecimiento` |
 | B3. Reinicio controlado | **Depende de IT** | |
 | B4. Zona horaria y NTP | **Depende de IT** | |
@@ -180,5 +181,30 @@ Criterio de hecho del plan completo:
 - [x] Una corrida con Etapa 1 y 2 llega a "Elegí una distribución" (30/10, con la excepción de inspección que dio IT)
 - [x] El ranking muestra 12 distribuciones y el historial viejo con Pareto se sigue viendo
 - [ ] El modal de atípico aparece con `serie_con_atipico.csv` desde UCC-Free: sin verificar en esta tanda
-- [ ] `sonda_metis.py` sin FALLA ni RIESGO en HTTPS: depende del certificado
+- [ ] `sonda_metis.py` sin FALLA ni RIESGO en HTTPS: depende de desplegar el TLS y de que IT repunte el proxy
 - [ ] El servidor vuelve solo después de un reinicio y hay un respaldo restaurado de prueba: depende de IT (reinicio) y de B5
+
+## Estado al 09/11/2026
+
+El HTTPS autofirmado se desplegó en el servidor el 07/11 desde la rama `deploy/ucc` (DECISIÓN 083, addendum de esa
+fecha). Esa rama es lo único que vive aparte de `staging`: nginx partido en `metis-comun.conf`, HTTPS en el 4443, el
+latido del stream, el arreglo del job de Sonar y la documentación de este despliegue. La defensa corre en Docker local
+y no depende de nada de esto.
+
+| Punto | Estado | Dónde |
+| --- | --- | --- |
+| A3. HTTPS autofirmado | **Desplegado el 07/11.** `/ping` responde 200 por el 80 y por el 4443, el certificado trae la IP y `metis.ucc.edu.ar`, `nginx -t` correcto, migración `007` aplicada. Falta que IT repunte el proxy al 4443 y abra el firewall | `docs/calidad/evidencia/despliegue-ucc-07-11-2026/` |
+| Latido del stream | Implementado y con tests. Falta la prueba de una pausa abierta 3 minutos por Cloudflare (no espera a IT) | DECISIÓN 083 |
+| `real_ip` | Falta la IP del proxy (IT, o el log de nginx cuando repunten) | `nginx/nginx.ucc.conf` |
+| B3, B4 | De IT | |
+| B5. Respaldo | Falta el cron y una restauración de prueba en el servidor | Runbook §5 |
+| B6. Smoke | Falta la primera corrida en el servidor | Runbook §4.2 |
+| Contraseña SMTP | La rotación no se había pedido a IT; se pide con el aviso del 4443 | Runbook §7 |
+| Sonar en `deploy/ucc` | Corregido el 07/11 (D-24), a verificar en el pipeline | DECISIÓN 077, addendum del 07/11 |
+
+Criterio de hecho, actualizado:
+
+- [x] HTTPS autofirmado desplegado y respondiendo en el 4443 (07/11)
+- [ ] Prueba completa por `https://metis.ucc.edu.ar`, incluida una pausa de Etapa 2 abierta 3 minutos
+- [ ] `sonda_metis.py` sin FALLA ni RIESGO desde UCC-Free, ya con el proxy en el 4443
+- [ ] Reinicio controlado del servidor y respaldo restaurado de prueba

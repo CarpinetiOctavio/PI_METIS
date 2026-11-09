@@ -21,7 +21,7 @@
 #
 # ENV sigue en development (lo fija docker-compose.ci.yml): el servidor se sirve por HTTP y con
 # ENV=production la cookie de sesión sale con Secure, que el navegador no devuelve por HTTP
-# (el login quedaría muerto). Pasa a production junto con el HTTPS, en el override de TLS.
+# (el login quedaría muerto). Pasa a production con METIS_ENV en docker-compose.ucc-tls.yml, cuando nadie entre ya por HTTP.
 #
 # Los secretos (METIS_CI_DB_PASSWORD, METIS_CI_JWT_SECRET, SMTP_PASSWORD) van en .env, que no se versiona.
 
