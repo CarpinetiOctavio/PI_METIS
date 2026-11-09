@@ -26,8 +26,10 @@ con la red, el DNS y el relay reales de la UCC. El despliegue real es un nivel d
   `docker-compose.ci.yml` es la configuración "de producción" (sin `--reload`, sin bind mount, sin puertos de base y
   backend) y `docker-compose.ucc.yml` agrega lo propio del servidor (DECISIÓN 083). Con el HTTPS (§3.1) se suma un
   cuarto, `docker-compose.ucc-tls.yml`.
-- **Rama del servidor:** `deploy/ucc`, no `main` ni `staging`. Lleva lo de la UCC que depende de terceros (IT,
-  Cloudflare) sin atarlo a la versión que se presenta. En el servidor: `git fetch && git checkout deploy/ucc && git pull`.
+- **Rama del servidor:** `staging`. Hasta el 09/11/2026 era `deploy/ucc`, que llevaba lo de la UCC que depende de
+  terceros (IT, Cloudflare); se integró a `staging` (#156) y se borró. `main` recibe `staging` solo cuando lo disponen
+  los directores del proyecto. En el servidor, la primera vez: `git fetch --prune && git checkout staging && git pull`
+  (la rama local `deploy/ucc` puede borrarse con `git branch -d deploy/ucc`).
 - **Disco:** la VM tiene 9,3 GB y unos 3,9 GB libres. Antes de reconstruir imágenes, `df -h /`; si hace falta,
   `docker image prune -f`.
 
@@ -56,7 +58,7 @@ pegar su salida en ningún lado.
 
 ```bash
 cd ~/metis-app
-git pull                                             # rama deploy/ucc
+git pull                                             # rama staging
 docker compose up -d --build
 docker compose exec backend alembic upgrade head     # nada lo corre solo
 docker compose ps
@@ -83,7 +85,7 @@ un puerto nuevo, más el aviso para repuntar el proxy.
 
 ```bash
 cd ~/metis-app
-git fetch && git checkout deploy/ucc && git pull
+git fetch && git checkout staging && git pull
 scripts/generar-cert-ucc.sh 172.16.168.14 3650 metis.ucc.edu.ar   # crea certs/metis.crt y metis.key
 # En el .env: sumar el cuarto archivo a COMPOSE_FILE y poner METIS_URL=https://metis.ucc.edu.ar
 #   COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml:docker-compose.ucc.yml:docker-compose.ucc-tls.yml
@@ -170,7 +172,7 @@ Probado el 29/10/2026 contra el despliegue de `scripts/deploy-local.sh`: `users`
 | Desde el campus no llega Etapa 2 ni el modal de atípico; `/ping` anda | La red retiene la respuesta HTTP hasta que termina (D-UCC-03): la excepción de IT dejó de aplicarse | Pedir a IT que verifique la exclusión de 172.16.168.14; la solución de fondo es HTTPS (§3.1) |
 | Cloudflare responde 525 o 526 | El modo SSL no coincide con el certificado autofirmado | Modo "Full" (no "Full (strict)"); el certificado debe estar en `certs/` y nginx arrancado |
 | `nginx` se reinicia en bucle tras sumar el cuarto archivo | Falta `certs/metis.crt` o `metis.key` | `scripts/generar-cert-ucc.sh` y `docker compose up -d nginx`; sin certificado, sacar `docker-compose.ucc-tls.yml` de `COMPOSE_FILE` |
-| El stream de Etapa 2 se corta a los ~100 s en pausa solo a través de Cloudflare | Tiempo de inactividad del proxy; el backend manda un latido (`: latido`) cada 20 s | Verificar que el backend desplegado es el de `deploy/ucc` (`INTERVALO_LATIDO`); `curl -N` al stream desde el servidor muestra los comentarios; si llegan y aun así se corta, hablarlo con IT |
+| El stream de Etapa 2 se corta a los ~100 s en pausa solo a través de Cloudflare | Tiempo de inactividad del proxy; el backend manda un latido (`: latido`) cada 20 s | Verificar que el backend desplegado tiene el latido (`INTERVALO_LATIDO` en `services/analysis_service.py`); `curl -N` al stream desde el servidor muestra los comentarios; si llegan y aun así se corta, hablarlo con IT |
 | El login responde 200 pero no queda sesión | Solo con HTTPS: cookie con `Secure` servida por HTTP | Entrar por `https://`. Con el servidor en HTTP, `ENV` tiene que seguir en `development` |
 | `git checkout deploy/ucc` aborta con "untracked working tree files would be overwritten: docker-compose.ucc.yml" | El servidor tenía un `docker-compose.ucc.yml` armado a mano antes de que existiera el versionado | `mv docker-compose.ucc.yml ~/docker-compose.ucc.yml.manual`, `git checkout deploy/ucc`, `git pull` y `diff` entre los dos. El versionado lee los mismos valores del `.env` con un valor por defecto (por ejemplo `${METIS_URL:-http://172.16.168.14}`), así que la IP que se ve ahí no es la que se usa si `METIS_URL` está en el `.env` |
 | `docker compose` falla o el `.env` tiene líneas con comandos adentro | Se pegó un bloque de comandos con el editor (`nano`) abierto: lo que seguía se tipeó dentro del archivo | Salir sin guardar (`Ctrl+X`, `N`). No abrir un editor en medio de un bloque pegado: cambiar variables con `sed -i` y revisar la estructura sin mostrar los valores con `sed -E 's/=.*/=<oculto>/' .env`. Hacer un respaldo antes (`cp .env .env.bak && chmod 600 .env.bak`) y borrarlo después |
