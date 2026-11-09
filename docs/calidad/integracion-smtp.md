@@ -52,6 +52,12 @@ beneficio para la materia. Se verifica cuando METIS se despliegue en los servido
 defensa de la tesis. Antecedente: el envío real ya se probó a mano contra el relay de la UCC el 20/07/2026
 (`docs/sprint.md`).
 
+**Actualización (30/10/2026).** Con METIS en el servidor se verificó el envío real: registro, mail, link de verificación y
+login desde la red de IT. Salieron dos defectos de configuración y de manejo de errores: D-20 (`SMTP_HOST` con un nombre
+que el certificado del relay no cubre) y D-21 (un error de TLS salía como 500 sin código). Ver
+[registro-defectos.md](registro-defectos.md) y [despliegue-ucc.md](despliegue-ucc.md) §4.3. La rotación de la contraseña
+del relay sigue pendiente (§7 del runbook).
+
 ## 5. Plan de contingencia: SMTP caído
 
 | Síntoma | Detección | Respuesta |
