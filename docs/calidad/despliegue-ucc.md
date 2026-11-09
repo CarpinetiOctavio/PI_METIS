@@ -89,6 +89,7 @@ scripts/generar-cert-ucc.sh 172.16.168.14 3650 metis.ucc.edu.ar   # crea certs/m
 #   COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml:docker-compose.ucc.yml:docker-compose.ucc-tls.yml
 docker compose config > /dev/null && echo "compose valida"             # sin pegar su salida en ningún lado
 docker compose up -d --build
+docker compose exec backend alembic upgrade head   # después del build: las migraciones viajan en la imagen
 docker compose exec nginx nginx -t
 curl -sk -o /dev/null -w '%{http_code}\n' https://localhost:4443/ping   # 200 por el 4443 (GET: con -I da 405)
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost/ping              # 200: el 80 sigue sirviendo (sin redirigir)
@@ -108,9 +109,10 @@ Si Cloudflare responde 525 o 526, el modo SSL no coincide con el certificado: "F
 ## 4. Verificación después de cada redespliegue
 
 1. **Sonda desde UCC-Free** (una notebook en el wifi del campus, no desde el servidor):
-   `python sonda_metis.py --base http://172.16.168.14`. Tiene que llegar a Etapa 1 y 2 hasta el ranking y a la pausa
-   por atípico con `serie_con_atipico.csv`. Con HTTPS (parte 2 de la DECISIÓN 083) pasa a `https://<nombre-interno>`
-   y suma la cookie con `Secure` y los chequeos de cabeceras y puertos.
+   `python sonda_metis.py --base https://metis.ucc.edu.ar`. Es la dirección que usan las personas (Cloudflare, proxy de
+   IT y el puerto 80 de la VM hasta que IT repunte al 4443), así que la corrida formal va contra el dominio. Una
+   segunda corrida con `--base http://172.16.168.14` verifica el servidor sin Cloudflare. Tiene que llegar a Etapa 1 y 2
+   hasta el ranking y a la pausa por atípico con `serie_con_atipico.csv`.
 2. **Smoke del repo** (B6), desde el contenedor del backend, contra nginx y con una cuenta de smoke propia:
 
    ```bash
@@ -170,6 +172,10 @@ Probado el 29/10/2026 contra el despliegue de `scripts/deploy-local.sh`: `users`
 | `nginx` se reinicia en bucle tras sumar el cuarto archivo | Falta `certs/metis.crt` o `metis.key` | `scripts/generar-cert-ucc.sh` y `docker compose up -d nginx`; sin certificado, sacar `docker-compose.ucc-tls.yml` de `COMPOSE_FILE` |
 | El stream de Etapa 2 se corta a los ~100 s en pausa solo a través de Cloudflare | Tiempo de inactividad del proxy; el backend manda un latido (`: latido`) cada 20 s | Verificar que el backend desplegado es el de `deploy/ucc` (`INTERVALO_LATIDO`); `curl -N` al stream desde el servidor muestra los comentarios; si llegan y aun así se corta, hablarlo con IT |
 | El login responde 200 pero no queda sesión | Solo con HTTPS: cookie con `Secure` servida por HTTP | Entrar por `https://`. Con el servidor en HTTP, `ENV` tiene que seguir en `development` |
+| `git checkout deploy/ucc` aborta con "untracked working tree files would be overwritten: docker-compose.ucc.yml" | El servidor tenía un `docker-compose.ucc.yml` armado a mano antes de que existiera el versionado | `mv docker-compose.ucc.yml ~/docker-compose.ucc.yml.manual`, `git checkout deploy/ucc`, `git pull` y `diff` entre los dos. El versionado lee los mismos valores del `.env` con un valor por defecto (por ejemplo `${METIS_URL:-http://172.16.168.14}`), así que la IP que se ve ahí no es la que se usa si `METIS_URL` está en el `.env` |
+| `docker compose` falla o el `.env` tiene líneas con comandos adentro | Se pegó un bloque de comandos con el editor (`nano`) abierto: lo que seguía se tipeó dentro del archivo | Salir sin guardar (`Ctrl+X`, `N`). No abrir un editor en medio de un bloque pegado: cambiar variables con `sed -i` y revisar la estructura sin mostrar los valores con `sed -E 's/=.*/=<oculto>/' .env`. Hacer un respaldo antes (`cp .env .env.bak && chmod 600 .env.bak`) y borrarlo después |
+| Varios comandos pegados juntos y los que siguen a un `docker compose exec` no se ejecutan | `docker compose exec` lee la entrada estándar y se come las líneas pegadas | Correr los comandos de a uno, o agregar `-T` y `< /dev/null` al `exec` |
+| `curl -I` a `/ping` responde 405 | `/ping` solo acepta GET y `-I` manda HEAD | `curl -s -o /dev/null -w '%{http_code}\n' http://localhost/ping` (200) |
 | METIS no vuelve después de un reinicio del servidor | Docker no arranca con el host, o se levantó sin los tres archivos | `systemctl is-enabled docker`; `docker compose up -d` en `~/metis-app` (§1) |
 | Las cuentas sin verificar no reciben el link después de reiniciar el backend | Los tokens de verificación viven en memoria del proceso (H8) | Limitación conocida (B8, v2). Mientras tanto: borrar la cuenta con `scripts/clean-dev-user.sh` y que se registre de nuevo, o sembrarla con `scripts/seed-dev-user.sh` |
 | `GET /history/` responde 500 `UndefinedColumnError` | Migraciones sin aplicar | `docker compose exec backend alembic upgrade head` |
@@ -186,15 +192,27 @@ captura Mailpit en http://localhost:8025. El servidor de la UCC es un despliegue
 
 - [x] A1: `SMTP_HOST=wally.uccor.edu.ar`; registro, mail, verificación y login probados el 30/10/2026.
 - [x] D-UCC-04: la subred fija se aplicó en el servidor (`ip route` sin 172.18.0.0/16).
-- [ ] Aplicar este override versionado: `git pull` del PR, `docker compose config`, `docker compose up -d`.
-- [ ] A3, parte 2: generar el certificado (§3.1), `METIS_URL` con la URL pública, redespliegue con el override de TLS,
-      aviso a IT para que repunte el proxy y sonda del §4.1 por HTTPS.
+- [x] Aplicar el override versionado y activar el HTTPS autofirmado (07/11/2026, rama `deploy/ucc`): certificado
+      generado, `COMPOSE_FILE` con el cuarto archivo, redespliegue, migración `007` (`alembic current` en `007 (head)`),
+      `nginx -t` correcto, `/ping` responde 200 por el 80 y por el 4443, el certificado trae la IP y `metis.ucc.edu.ar`,
+      el log del backend sin errores y la subred `10.250.0.0/24` en su lugar. Transcripción de las capturas en
+      `evidencia/despliegue-ucc-07-11-2026/verificacion-https.txt`.
+- [ ] Confirmar que el `.env` tiene `METIS_URL=https://metis.ucc.edu.ar` (`grep -c '^METIS_URL=' .env` da 1): de ahí
+      salen el origen CORS y los links de los mails.
+- [ ] Probar por `https://metis.ucc.edu.ar`: registro, mail, análisis completo y una pausa de Etapa 2 abierta 3
+      minutos (el latido contra el tope de 100 s de Cloudflare). Corre con el proxy entrando por el 80, no hace falta
+      esperar a IT.
+- [ ] Avisar a IT que el 4443 está expuesto y pedir el repunte del proxy, el firewall proxy→VM por el 4443 y la IP
+      del proxy para `set_real_ip_from` (§3.1). Después, la sonda del §4.1 y `METIS_ENV=production` solo cuando nadie
+      entre por HTTP directo.
 - [ ] B3: reinicio controlado del servidor, con IT avisado (lo gestiona Seguridad), para confirmar que todo vuelve
       solo y en orden.
 - [ ] B4: `timedatectl` y NTP: el servidor marcaba una hora menos (H12). Lo gestiona IT.
 - [ ] B5: cron del §5 y una restauración de prueba en el servidor.
 - [ ] B6: cuentas de smoke y una corrida del §4.2.
 - [ ] Seguridad: cambiar la contraseña del usuario `metis` (`passwd`), pedir a IT la rotación de la contraseña SMTP
-      (se mostró en capturas durante el diagnóstico) y limpiar el historial de la terminal (`history -c; history -w`).
+      (se mostró en capturas; no se había pedido antes de terminar el despliegue), cargar la nueva con el bloque de
+      `read -s` de la contingencia 535 y limpiar el historial de la terminal (`history -c; history -w`). IT da de baja
+      la anterior recién cuando el registro funciona con la nueva.
 - [ ] Corrida formal de `sonda_metis.py` desde UCC-Free (§4.1) y guardado de la salida en
       `evidencia/despliegue-ucc-29-10-2026/`.
