@@ -100,8 +100,9 @@ echo | openssl s_client -connect localhost:4443 -servername localhost 2>/dev/nul
 
 Después se le avisa a IT (Mariano) que el **4443** está expuesto (el puerto que pidió), para que repunte el proxy y
 abra el firewall hacia la VM. **No** poner una redirección del 80 al 4443 antes de eso: Cloudflare sigue entrando por
-el 80 y se arma un bucle. Con el proxy ya apuntando al 4443: (1) leer en `docker compose logs nginx` la IP desde la que
-llegan los pedidos del proxy, completar `set_real_ip_from` en `nginx/nginx.ucc.conf` y redesplegar nginx; (2) dejar una
+el 80 y se arma un bucle. Con el proxy ya apuntando al 4443: (1) `set_real_ip_from` ya trae la IP del proxy (172.16.66.132, dato de IT del 11/11/2026): recrear nginx con
+`docker compose up -d --force-recreate nginx` (un `restart` no relee el montaje) y comprobar en `docker compose logs nginx` que el
+primer campo de cada línea es la IP del cliente y no la del proxy; (2) dejar una
 pausa del stream abierta 3 minutos a través de Cloudflare (Etapa 2, sin elegir distribución): el backend manda un
 latido cada 20 s para que el tope de 100 s de Cloudflare no la corte, y esto lo confirma. Recién cuando nadie entre por `http://` directo, `METIS_ENV=production`.
 
