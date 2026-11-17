@@ -110,6 +110,19 @@ editar el ruleset), y Kevin no la tiene: el repo es de Octavio. Por eso:
   En otras ramas el análisis se sube igual y el gate se evalúa al abrir el PR contra `staging`. Lo exigido no se relaja.
 - **Pendiente de verificar:** el job verde en el próximo push de `deploy/ucc` y el gate en el PR hacia `staging`.
 
+### Addendum (17/11/2026): `main` tampoco es la rama principal en SonarCloud
+
+- **Qué pasó.** El primer merge de `staging` a `main` dejó el job `sonarcloud` en rojo en el push a `main`, con el
+  mismo error del addendum del 07/11/2026 (`exit code 3`). El PR de `staging` a `main` había pasado el gate.
+- **Causa.** El addendum anterior supuso que `main` era una rama donde el gate se podía leer. No lo es: la rama
+  principal del proyecto en SonarCloud es `staging` (la rama por defecto en GitHub), y `main` figura como rama
+  `short` con `mergeBranch: staging` (verificado con `api/project_branches/list`).
+- **Qué se cambió.** En `ci.yml` el gate se espera solo en `pull_request` y en `staging`. En el push a `main` el
+  análisis se sube igual. No se relaja nada: a `main` solo llega código por PR desde `staging`, y en ese PR el job
+  espera el gate y es check requerido del Ruleset.
+- **Descartado:** marcar `main` como rama principal en SonarCloud (pasaría a fallar `staging`, donde se integra todo)
+  y un plan pago con varias ramas largas.
+
 ### Addendum (22/10/2026): Ruleset activo y cierre
 
 - **Ruleset:** el único ruleset que existía ("main") estaba desactivado, apuntaba solo a `main` y no tenía checks
