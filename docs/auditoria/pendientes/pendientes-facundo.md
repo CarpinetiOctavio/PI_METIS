@@ -1,5 +1,9 @@
 # Pendientes para Facundo — Auditoría de Regresión METIS
 
+**Autoría.** Octavio Carpineti creó este documento y redactó la mayor parte de sus preguntas. Kevin Massholder
+implementó los cambios que surgieron de las respuestas. El detalle, con los commits, está en
+[`docs/autoria-y-aportes.md`](../../autoria-y-aportes.md).
+
 ## Respuestas del 22/10/2026
 
 Facundo respondió el 22/10/2026 el "Consolidado de pendientes y decisiones de la auditoría del motor estadístico"

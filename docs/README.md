@@ -46,6 +46,10 @@ estadística. Es transversal a todo el proyecto (auth, base de datos,
 testing, gobernanza de ramas, etc.) — no es específico de auditoría
 estadística, por eso no vive dentro de `auditoria/`.
 
+### `autoria-y-aportes.md`
+Aporte de cada integrante más allá de los commits: métricas de autoría por área, relevamiento de pendientes y
+consultas a los directores, implementación de las respuestas y fuentes fuera del repositorio.
+
 ### `historico/`
 Documentos que quedaron superados por trabajo posterior. Nunca se
 borran — se mueven acá con una nota en `historico/README.md` explicando
