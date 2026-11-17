@@ -1,0 +1,742 @@
+"""
+Tests unitarios del informe PDF (DECISIÓN 075) — metis/reportes/pdf.py.
+
+El payload de entrada se arma con el pipeline y los serializadores reales
+(`ejecutar_etapa1/2`, `_serializar_etapa1/2`), no a mano: si la forma de
+`analysis_results` cambia, estos tests se enteran. Además del PDF completo
+(bytes válidos), se inspecciona el texto de cada sección antes de maquetarlo
+— el texto del PDF ya armado está codificado por subconjunto de glifos y no se
+puede buscar sin una librería de lectura que el proyecto no tiene.
+"""
+
+import copy
+import json
+
+import numpy as np
+import pytest
+from reportlab.platypus import KeepTogether, Paragraph, Table
+
+from metis.core.etapa2.design_events import calcular_eventos_diseno
+from metis.core.pipeline import ejecutar_etapa1, ejecutar_etapa2
+from metis.reportes.pdf import (
+    _estilos,
+    _grafico_correlograma,
+    _grafico_serie,
+    _registrar_fuentes,
+    _seccion_datos,
+    _seccion_etapa1,
+    _seccion_etapa2,
+    _seccion_simulacion,
+    _subtitulo,
+    generar_pdf_analisis,
+    nombre_archivo_pdf,
+)
+from metis.services.analysis_service import (
+    _MODULOS_POR_DISTRIBUCION,
+    _calcular_curva_ajuste,
+    _serializar_etapa1,
+    _serializar_etapa2,
+)
+from metis.services.export_service import (
+    SimulacionNoDisponibleError,
+    _simular_desde_detalle,
+)
+
+_PERIODOS = [2, 10, 100]
+
+
+def _serie(n: int = 40) -> list[float]:
+    rng = np.random.default_rng(7)
+    return [round(float(v), 2) for v in rng.gumbel(100.0, 20.0, size=n)]
+
+
+def _seleccion(etapa2_result, distribucion: str, metodo: str) -> dict:
+    parametros = next(
+        m.parametros
+        for d in etapa2_result.ranking
+        if d.distribucion == distribucion
+        for m in d.metodos
+        if m.metodo == metodo
+    )
+    modulo = _MODULOS_POR_DISTRIBUCION[distribucion]
+    eventos = calcular_eventos_diseno(modulo, parametros, _PERIODOS)
+    curva = _calcular_curva_ajuste(
+        modulo,
+        parametros,
+        _PERIODOS,
+        max(p.periodo_retorno for p in etapa2_result.puntos_empiricos),
+    )
+    return {
+        "distribucion": distribucion,
+        "metodo": metodo,
+        "periodos_retorno": _PERIODOS,
+        "eventos_diseno": [
+            {"periodo_retorno": e.periodo_retorno, "valor": e.valor} for e in eventos
+        ],
+        "curva_ajuste": [
+            {"periodo_retorno": e.periodo_retorno, "valor": e.valor} for e in curva
+        ],
+    }
+
+
+def _detalle(
+    etapas: tuple[int, ...] = (1, 2),
+    con_seleccion: bool = True,
+    serie: list[float] | None = None,
+) -> dict:
+    """Misma forma que get_analysis_by_id(), pasada por JSON como si saliera
+    de las columnas JSONB."""
+    serie = serie if serie is not None else _serie()
+    timestamps = [f"{1980 + i}-01-01" for i in range(len(serie))]
+    r1 = ejecutar_etapa1(serie, "caudal_precipitacion", "anual", timestamps)
+    etapa2 = None
+    if 2 in etapas and r1.nivel_confianza != "rechazado":
+        r2 = ejecutar_etapa2(np.array(r1.serie_efectiva, dtype=float))
+        seleccion = _seleccion(r2, "gumbel", "momentos") if con_seleccion else None
+        etapa2 = _serializar_etapa2(r2, seleccion)
+    detalle = {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "tipo_variable": "caudal_precipitacion",
+        "modo": "paso_a_paso",
+        "etapas": [str(e) for e in etapas],
+        "created_at": "2026-10-06T12:00:00",
+        "etapa1": _serializar_etapa1(r1, 7),
+        "etapa2": etapa2,
+        "decisiones": {},
+        "serie": serie,
+        "timestamps": [{"iso": t, "anio": int(t[:4])} for t in timestamps],
+        "configuracion": {
+            "cramer_particion": "default",
+            "mes_inicio_anio": 7,
+            "variable_diaria": "pico",
+            "nombre_archivo": "estación 04.csv",
+        },
+    }
+    return json.loads(json.dumps(detalle))
+
+
+def _textos(flowables) -> list[str]:
+    textos = []
+    for f in flowables:
+        if isinstance(f, Paragraph):
+            textos.append(f.getPlainText())
+        elif isinstance(f, Table):
+            for fila in f._cellvalues:
+                textos.append(" | ".join(" ".join(_textos([c])) for c in fila))
+        elif isinstance(f, KeepTogether):
+            textos += _textos(f._content)
+    return textos
+
+
+@pytest.fixture(scope="module")
+def est():
+    _registrar_fuentes()
+    return _estilos()
+
+
+@pytest.fixture(scope="module")
+def detalle_completo() -> dict:
+    return _detalle()
+
+
+def _es_pdf(contenido: bytes) -> bool:
+    return contenido.startswith(b"%PDF-") and b"%%EOF" in contenido[-1024:]
+
+
+@pytest.mark.unit
+def test_pdf_etapa1_y_etapa2_es_un_pdf_valido(detalle_completo):
+    assert _es_pdf(generar_pdf_analisis(detalle_completo, autor="Docente"))
+
+
+@pytest.mark.unit
+def test_pdf_solo_etapa1_no_tiene_seccion_de_etapa2(est):
+    detalle = _detalle(etapas=(1,))
+
+    assert _es_pdf(generar_pdf_analisis(detalle))
+    assert _seccion_etapa2(detalle, est) == []
+    textos = _textos(_seccion_etapa1(detalle, est))
+    assert any("Independencia" in t for t in textos)
+    assert any(t.startswith("Anderson |") for t in textos)
+
+
+@pytest.mark.unit
+def test_ranking_completo_sin_ganadora_y_con_la_elegida_resaltada(
+    detalle_completo, est
+):
+    seccion = _seccion_etapa2(detalle_completo, est)
+    textos = _textos(seccion)
+    tabla = next(
+        f
+        for f in seccion
+        if isinstance(f, Table) and _textos([f])[0].startswith("# | Distribución")
+    )
+    filas = _textos([tabla])[1:]
+
+    # 12: la Generalizada de Pareto salió del cálculo en la v1 (addendum del
+    # 29/10/2026 a la DECISIÓN 074).
+    assert len(filas) == 12
+    elegidas = [f for f in filas if "Elegida por el usuario" in f]
+    assert len(elegidas) == 1 and "Gumbel" in elegidas[0]
+    assert not any("recomend" in t.lower() or "ganador" in t.lower() for t in textos)
+    assert not any("Generalizada de Pareto" in f for f in filas)
+
+
+def _filas_ranking(seccion) -> list[str]:
+    tabla = next(
+        f
+        for f in seccion
+        if isinstance(f, Table) and _textos([f])[0].startswith("# | Distribución")
+    )
+    return _textos([tabla])[1:]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "marca",
+    [{"pendiente_validacion": True}, {}],
+    ids=["guardado-con-la-074", "anterior-a-la-074-sin-marca"],
+)
+def test_analisis_guardado_con_pareto_la_sigue_mostrando_no_elegible(
+    detalle_completo, est, marca
+):
+    # Un análisis guardado antes de que Pareto saliera del cálculo la trae en
+    # su ranking; el PDF la sigue mostrando, sin que se pueda leer como elegible.
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["etapa2"]["ranking"].append(
+        {
+            "distribucion": "gen_pareto",
+            "n_parametros": 3,
+            "metodos": [],
+            "mejor_eea": 1.0,
+            "mejor_metodo": "momentos",
+            **marca,
+        }
+    )
+
+    filas = _filas_ranking(_seccion_etapa2(detalle, est))
+
+    assert len(filas) == 13
+    pareto = next(f for f in filas if "Generalizada de Pareto" in f)
+    assert "Pendiente de validación" in pareto
+
+
+@pytest.mark.unit
+def test_eventos_de_diseno_de_la_eleccion(detalle_completo, est):
+    textos = _textos(_seccion_etapa2(detalle_completo, est))
+    eventos = detalle_completo["etapa2"]["seleccion"]["eventos_diseno"]
+
+    assert any(t.startswith("Distribución | Gumbel") for t in textos)
+    for e in eventos:
+        assert any(
+            t.startswith(f"{e['periodo_retorno']} |") and f"{e['valor']:.4f}" in t
+            for t in textos
+        )
+
+
+@pytest.mark.unit
+def test_etapa2_sin_eleccion_registrada_lo_avisa(est):
+    detalle = _detalle(con_seleccion=False)
+
+    assert _es_pdf(generar_pdf_analisis(detalle))
+    textos = _textos(_seccion_etapa2(detalle, est))
+    assert any("No quedó registrada ninguna distribución elegida" in t for t in textos)
+    assert not any("Elegida por el usuario" in t for t in textos)
+
+
+@pytest.mark.unit
+def test_etapa1_rechazada_por_contrato(est):
+    detalle = _detalle(serie=[10.0, 12.0, 11.0, 14.0, 13.0])
+
+    assert detalle["etapa1"]["nivel_confianza"] == "rechazado"
+    assert _es_pdf(generar_pdf_analisis(detalle))
+    etapa1 = _textos(_seccion_etapa1(detalle, est))
+    assert any("CONTRACT_SERIES_TOO_SHORT" in t for t in etapa1)
+    assert not any("Estadística descriptiva" in t for t in etapa1)
+    etapa2 = _textos(_seccion_etapa2(detalle, est))
+    assert any("Etapa 2 no se ejecutó" in t for t in etapa2)
+
+
+@pytest.mark.unit
+def test_formato_experto_no_muestra_formulas(detalle_completo, est):
+    # El análisis se corrió en paso a paso y su payload trae `explicacion` con
+    # ecuaciones y términos; el PDF es siempre Experto y no los usa.
+    anderson = detalle_completo["etapa1"]["independencia"][0]
+    assert anderson["explicacion"]["ecuacion"]
+
+    textos = _textos(
+        _seccion_etapa1(detalle_completo, est) + _seccion_etapa2(detalle_completo, est)
+    )
+    assert not any(anderson["explicacion"]["ecuacion"] in t for t in textos)
+    assert not any("Ec." in t or "ecuación" in t.lower() for t in textos)
+
+
+@pytest.mark.unit
+def test_decision_ante_atipico(detalle_completo, est):
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["decisiones"] = {"chow": {"accion": "rechazar", "dato": 950.0}}
+
+    textos = _textos(_seccion_etapa1(detalle, est))
+    assert any("950.0000" in t and "rechazó" in t for t in textos)
+
+
+@pytest.mark.unit
+def test_decision_ante_varios_atipicos(detalle_completo, est):
+    # DECISIÓN 079 — una fila por atípico, con su lado y su decisión.
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["decisiones"] = {
+        "chow": {
+            "atipicos": [
+                {
+                    "indice": 14,
+                    "periodo": 1994,
+                    "valor": 296.93,
+                    "z": -3.52,
+                    "lado": "bajo",
+                    "decision": "rechazar",
+                    "codigo": "TEST_OUTLIER_REJECTED_BY_USER",
+                },
+                {
+                    "indice": 25,
+                    "periodo": 2005,
+                    "valor": 296.99,
+                    "z": -3.44,
+                    "lado": "bajo",
+                    "decision": "aceptar",
+                    "codigo": "TEST_OUTLIER_ACCEPTED_BY_USER",
+                },
+            ]
+        }
+    }
+
+    textos = _textos(_seccion_etapa1(detalle, est))
+
+    assert "Decisión ante los atípicos" in textos
+    assert any(
+        t.startswith("1994 |") and "Bajo" in t and "Rechazado" in t for t in textos
+    )
+    assert any(t.startswith("2005 |") and "Aceptado" in t for t in textos)
+
+
+@pytest.mark.unit
+def test_analisis_anterior_sin_datos_ni_desglose(detalle_completo):
+    # Registros previos a DECISIÓN 058 / addendum de la 064: sin `datos`,
+    # sin `desglose` y sin `timestamps` — se exporta igual, sin gráficos.
+    detalle = copy.deepcopy(detalle_completo)
+    del detalle["etapa1"]["datos"]
+    for tr in detalle["etapa1"]["independencia"]:
+        if tr["explicacion"]:
+            tr["explicacion"].pop("desglose", None)
+    detalle["timestamps"] = None
+    detalle["configuracion"] = None
+
+    assert _es_pdf(generar_pdf_analisis(detalle))
+
+
+@pytest.mark.unit
+def test_datos_del_analisis(detalle_completo, est):
+    textos = _textos(_seccion_datos(detalle_completo, "Ana (ana@ucc.edu.ar)", est))
+
+    assert "Archivo | estación 04.csv" in textos
+    assert "Usuario | Ana (ana@ucc.edu.ar)" in textos
+    assert "Etapas ejecutadas | Etapa 1 y Etapa 2" in textos
+    assert "Inicio del año | Julio" in textos
+    assert "Partición de Cramer | Por defecto (60 % / 30 %)" in textos
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [
+        ({"alfa": 0.05}, "5 % (estándar en hidrología)"),
+        ({"alfa": 0.1}, "10 %"),
+        (
+            {"alfa": 0.05, "alfa_implicito": True},
+            "5 % (el único disponible cuando se corrió el análisis)",
+        ),
+    ],
+)
+def test_nivel_de_significancia_en_datos_y_pruebas(
+    detalle_completo, est, config, esperado
+):
+    # DECISIÓN 078 — α en la configuración y sobre las tablas de pruebas.
+    detalle = copy.deepcopy(detalle_completo)
+    detalle["configuracion"].update(config)
+
+    datos = _textos(_seccion_datos(detalle, None, est))
+    pruebas = " ".join(_textos(_seccion_etapa1(detalle, est)))
+
+    assert f"Nivel de significancia (Etapa 1) | {esperado}" in datos
+    assert f"nivel de significancia de {esperado}" in pruebas
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [
+        ({}, "α = 5 % (estándar en hidrología)"),
+        ({"alfa": 0.01}, "α = 1 %"),
+        ({"alfa": 0.1}, "α = 10 %"),
+    ],
+)
+def test_subtitulo_declara_el_alfa_del_analisis(config, esperado):
+    # D-11 (#130): el subtítulo decía "α = 5 %" fijo aunque el análisis
+    # hubiera corrido con otro α.
+    subtitulo = _subtitulo(config, simulacion=None)
+
+    assert f"Nivel de significancia {esperado}." in subtitulo
+    if config.get("alfa", 0.05) != 0.05:
+        assert "5 %" not in subtitulo
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("config", "esperado"),
+    [({}, "95 %"), ({"alfa": 0.01}, "99 %"), ({"alfa": 0.1}, "90 %")],
+)
+def test_correlograma_rotula_la_confianza_del_analisis(
+    detalle_completo, config, esperado
+):
+    # D-11 (#130): la leyenda decía "95 %" con cualquier α; las bandas de
+    # Anderson (Ec. III-3) se calculan con el α del análisis.
+    anderson = next(
+        t
+        for t in detalle_completo["etapa1"]["independencia"]
+        if t["prueba"] == "anderson"
+    )
+    fig = _grafico_correlograma(anderson, config)
+
+    leyenda = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+    assert leyenda == [f"Límites de confianza ({esperado})"]
+
+
+@pytest.mark.unit
+def test_pdf_dice_lag_y_nombra_la_tolerancia_de_anderson(detalle_completo, est):
+    # Bloque J del plan de revisión manual (21/10/2026): Facundo confirmó que en
+    # hidrología se dice "lag" y que el 10 % de Anderson es una regla fija.
+    anderson = next(
+        t
+        for t in detalle_completo["etapa1"]["independencia"]
+        if t["prueba"] == "anderson"
+    )
+    fig = _grafico_correlograma(anderson, {})
+    pruebas = " ".join(_textos(_seccion_etapa1(detalle_completo, est)))
+
+    assert fig.axes[0].get_xlabel() == "Lag k"
+    assert "tolerancia de Anderson (10 % de los coeficientes fuera de banda)" in pruebas
+    assert "rezago" not in pruebas.lower()
+
+
+@pytest.mark.unit
+def test_nombre_archivo_pdf_ascii():
+    detalle = {
+        "created_at": "2026-10-06T12:00:00",
+        "configuracion": {"nombre_archivo": "Estación Río Cuarto (1980-2019).xlsx"},
+    }
+    assert (
+        nombre_archivo_pdf(detalle)
+        == "metis_Estacion_Rio_Cuarto_1980-2019_2026-10-06.pdf"
+    )
+
+
+@pytest.mark.unit
+def test_nombre_archivo_pdf_sin_nombre_registrado():
+    detalle = {"created_at": "2026-10-06T12:00:00", "configuracion": None}
+    assert nombre_archivo_pdf(detalle) == "metis_analisis_2026-10-06.pdf"
+
+
+# --- Simulación sin los puntos excluidos (DECISIÓN 075, addendum) -----------
+
+
+def _indice_maximo(detalle: dict) -> int:
+    serie = detalle["etapa1"]["datos"]["serie_efectiva"]
+    return max(range(len(serie)), key=lambda i: serie[i])
+
+
+@pytest.mark.unit
+def test_simulacion_compara_con_y_sin_los_puntos(detalle_completo, est):
+    indice = _indice_maximo(detalle_completo)
+    simulacion = _simular_desde_detalle(detalle_completo, [indice])
+
+    assert _es_pdf(generar_pdf_analisis(detalle_completo, simulacion=simulacion))
+
+    seccion = _seccion_simulacion(detalle_completo, simulacion, est)
+    textos = _textos(seccion)
+    excluido = simulacion["excluidos"][0]
+    assert any(
+        f"Se quitó: {excluido['periodo']} ({excluido['valor_original']:.4f})" in t
+        and "Datos: 40 → 39" in t
+        for t in textos
+    )
+    tabla_pruebas = next(
+        f
+        for f in seccion
+        if isinstance(f, Table) and _textos([f])[0].startswith("Prueba | Grupo")
+    )
+    assert len(_textos([tabla_pruebas])) == 1 + 8
+    assert any("Ranking de distribuciones sin esos puntos" in t for t in textos)
+    # La elección original reajustada: una fila por período, con la diferencia.
+    tabla_eventos = next(
+        f
+        for f in seccion
+        if isinstance(f, Table) and _textos([f])[0].endswith("Diferencia")
+    )
+    filas = _textos([tabla_eventos])[1:]
+    assert len(filas) == len(_PERIODOS)
+    assert all(f.endswith("%") for f in filas)
+
+
+@pytest.mark.unit
+def test_simulacion_toma_la_entrada_del_analisis_persistido(detalle_completo):
+    # Del cliente llegan solo los índices: serie, años, configuración y la
+    # elección salen del análisis guardado.
+    simulacion = _simular_desde_detalle(detalle_completo, [0])
+
+    serie = detalle_completo["etapa1"]["datos"]["serie_efectiva"]
+    assert simulacion["serie"] == serie[1:]
+    assert simulacion["anios"][0] == 1981
+    seleccion = simulacion["etapa2"]["seleccion"]
+    assert (seleccion["distribucion"], seleccion["metodo"]) == ("gumbel", "momentos")
+    assert [e["periodo_retorno"] for e in seleccion["eventos_diseno"]] == _PERIODOS
+
+
+@pytest.mark.unit
+def test_simulacion_que_deja_la_serie_bloqueada(est):
+    detalle = _detalle(etapas=(1,), serie=_serie(11))
+    simulacion = _simular_desde_detalle(detalle, [0, 1])
+
+    assert simulacion["etapa1"]["contract"]["bloqueante"]
+    assert _es_pdf(generar_pdf_analisis(detalle, simulacion=simulacion))
+    textos = _textos(_seccion_simulacion(detalle, simulacion, est))
+    assert any("CONTRACT_SERIES_TOO_SHORT" in t for t in textos)
+    assert not any(t.startswith("Prueba | Grupo") for t in textos)
+
+
+@pytest.mark.unit
+def test_simulacion_no_disponible_sin_la_serie_analizada(detalle_completo):
+    detalle = copy.deepcopy(detalle_completo)
+    del detalle["etapa1"]["datos"]
+
+    with pytest.raises(SimulacionNoDisponibleError):
+        _simular_desde_detalle(detalle, [0])
+
+
+@pytest.mark.unit
+def test_nombre_archivo_pdf_con_simulacion():
+    detalle = {"created_at": "2026-10-06T12:00:00", "configuracion": None}
+    assert (
+        nombre_archivo_pdf(detalle, simulacion=True)
+        == "metis_analisis_2026-10-06_simulacion.pdf"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Rótulos del período de retorno según la serie ajustada (DECISIÓN 076)
+# ---------------------------------------------------------------------------
+
+
+def _con_carga(detalle: dict, resolucion: str, **config) -> dict:
+    """El mismo análisis, como si la carga hubiera sido mensual o diaria. Solo
+    cambia lo que leen los rótulos: la serie ajustada sigue siendo anual."""
+    otro = copy.deepcopy(detalle)
+    otro["etapa1"]["datos"]["resolucion_original"] = resolucion
+    otro["configuracion"].update(config)
+    return otro
+
+
+def _fila_cabecera_eventos(textos: list[str]) -> str:
+    return next(t for t in textos if "Prob. de no excedencia" in t)
+
+
+@pytest.mark.unit
+def test_carga_anual_rotula_t_en_anios_sin_criterio_de_anio(detalle_completo, est):
+    textos = _textos(_seccion_etapa2(detalle_completo, est))
+
+    assert _fila_cabecera_eventos(textos) == (
+        "Período de retorno T [años] | Prob. de no excedencia | Valor de diseño"
+    )
+    assert any(
+        t.startswith("La distribución se ajustó a la serie de máximos anuales")
+        and "1/T" in t
+        for t in textos
+    )
+
+
+@pytest.mark.unit
+def test_carga_mensual_explica_que_t_sigue_en_anios(detalle_completo, est):
+    detalle = _con_carga(detalle_completo, "mensual", mes_inicio_anio=7)
+    textos = _textos(_seccion_etapa2(detalle, est))
+
+    assert _fila_cabecera_eventos(textos) == (
+        "Período de retorno T [años, de julio a junio] | Prob. de no excedencia"
+        " | Valor de diseño (valor mensual máximo del año)"
+    )
+    nota = next(t for t in textos if t.startswith("Se cargó una serie mensual"))
+    assert "toma el valor mensual máximo de cada año (de julio a junio)" in nota
+    assert "T se mide en años y no en meses" in nota
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("variable", "valor", "articulado"),
+    [
+        ("pico", "pico diario máximo del año", "el pico diario máximo"),
+        ("media", "media diaria máxima del año", "la media diaria máxima"),
+        # Respuesta de Facundo (22/10/2026): lluvia acumulada de 9 a 9.
+        (
+            "acumulado",
+            "máximo diario anual, acumulado de 24 h",
+            "el acumulado diario máximo",
+        ),
+    ],
+)
+def test_carga_diaria_nombra_la_variable_diaria(
+    detalle_completo, est, variable, valor, articulado
+):
+    detalle = _con_carga(
+        detalle_completo, "diaria", mes_inicio_anio=1, variable_diaria=variable
+    )
+    textos = _textos(_seccion_etapa2(detalle, est))
+
+    assert _fila_cabecera_eventos(textos).endswith(f"Valor de diseño ({valor})")
+    assert "T [años, de enero a diciembre]" in _fila_cabecera_eventos(textos)
+    nota = next(t for t in textos if t.startswith("Se cargó una serie de"))
+    assert f"toma {articulado} de cada año (de enero a diciembre)" in nota
+    assert "T se mide en años y no en días" in nota
+
+
+@pytest.mark.unit
+def test_simulacion_rotula_t_igual_que_el_analisis(detalle_completo, est):
+    detalle = _con_carga(detalle_completo, "mensual", mes_inicio_anio=7)
+    simulacion = _simular_desde_detalle(detalle, [0])
+    textos = _textos(_seccion_simulacion(detalle, simulacion, est))
+
+    assert any(
+        t.startswith("Período de retorno T [años, de julio a junio] | Original")
+        for t in textos
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("variable", "esperado"),
+    [
+        ("pico", "Picos diarios"),
+        ("media", "Medias diarias"),
+        ("acumulado", "Acumulados diarios"),
+    ],
+)
+def test_datos_nombran_la_variable_diaria_declarada(
+    detalle_completo, est, variable, esperado
+):
+    detalle = _con_carga(detalle_completo, "diaria", variable_diaria=variable)
+    textos = _textos(_seccion_datos(detalle, None, est))
+
+    assert f"Valores diarios | {esperado}" in textos
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("resolucion", "config", "esperado"),
+    [
+        ("mensual", {"cobertura_minima_interior": 90}, "90 %"),
+        ("diaria", {"cobertura_minima_interior": 100}, "100 %"),
+        (
+            "mensual",
+            {
+                "cobertura_minima_interior": 100,
+                "cobertura_minima_interior_implicita": True,
+            },
+            "100 % (el único criterio disponible cuando se corrió el análisis)",
+        ),
+        ("anual", {"cobertura_minima_interior": 90}, None),
+    ],
+    ids=["mensual 90", "diaria 100", "análisis anterior", "anual sin fila"],
+)
+def test_datos_informan_la_cobertura_minima_interior(
+    detalle_completo, est, resolucion, config, esperado
+):
+    # DECISIÓN 081 — solo con carga mensual o diaria; con anual no hubo agregación.
+    detalle = _con_carga(detalle_completo, resolucion, **config)
+    textos = _textos(_seccion_datos(detalle, None, est))
+
+    filas = [
+        t for t in textos if t.startswith("Cobertura mínima de los años interiores")
+    ]
+    if esperado is None:
+        assert filas == []
+    else:
+        assert filas == [f"Cobertura mínima de los años interiores | {esperado}"]
+
+
+@pytest.mark.unit
+def test_pdf_con_carga_diaria_es_valido(detalle_completo):
+    detalle = _con_carga(detalle_completo, "diaria", variable_diaria="media")
+    assert _es_pdf(generar_pdf_analisis(detalle))
+
+
+# --- Varios atípicos de Chow (D-17, #139 — bloque D del plan de revisión manual) ---
+
+
+def _detalle_con_tres_atipicos() -> dict:
+    # Dos atípicos bajos y uno alto (la serie de test_persistencia.py): Chow los
+    # marca a los tres (DECISIÓN 079).
+    base = [
+        round(float(v), 2) for v in np.random.default_rng(3).lognormal(4.6, 0.15, 37)
+    ]
+    serie = base[:5] + [3.0] + base[5:20] + [2.0] + base[20:] + [9000.0]
+    return _detalle(etapas=(1,), serie=serie)
+
+
+def _marcados(fig) -> list[float]:
+    linea = next(ln for ln in fig.axes[0].get_lines() if "Chow" in str(ln.get_label()))
+    return sorted(linea.get_xdata())
+
+
+@pytest.mark.unit
+def test_pdf_marca_todos_los_atipicos_de_chow(est):
+    detalle = _detalle_con_tres_atipicos()
+    chow = detalle["etapa1"]["atipicos"][0]
+    assert len(chow["valores_atipicos"]) == 3
+
+    fig = _grafico_serie(detalle["etapa1"])
+    nota = next(
+        t for t in _textos(_seccion_etapa1(detalle, est)) if t.startswith("Chow")
+    )
+
+    assert _marcados(fig) == [1985, 2001, 2019]
+    etiquetas = [ln.get_label() for ln in fig.axes[0].get_lines()]
+    assert "Atípicos detectados (Chow)" in etiquetas
+    assert "Atípicos: 9000.0000 (2019), 2.0000 (2001), 3.0000 (1985)" in nota
+
+
+@pytest.mark.unit
+def test_pdf_de_un_analisis_anterior_a_la_079_marca_el_unico_atipico(est):
+    # Sin valores_atipicos (análisis persistido antes de la DECISIÓN 079): se
+    # vuelve a indice_atipico / valor_atipico.
+    detalle = _detalle_con_tres_atipicos()
+    del detalle["etapa1"]["atipicos"][0]["valores_atipicos"]
+
+    fig = _grafico_serie(detalle["etapa1"])
+    nota = next(
+        t for t in _textos(_seccion_etapa1(detalle, est)) if t.startswith("Chow")
+    )
+
+    assert _marcados(fig) == [2019]
+    assert "Atípico detectado (Chow)" in [
+        ln.get_label() for ln in fig.axes[0].get_lines()
+    ]
+    assert "Atípico: 9000.0000 (2019)" in nota
+
+
+@pytest.mark.unit
+def test_simulacion_nombra_todos_los_atipicos_que_quedan(est):
+    detalle = _detalle_con_tres_atipicos()
+    indice_alto = detalle["etapa1"]["datos"]["serie_efectiva"].index(9000.0)
+
+    simulacion = _simular_desde_detalle(detalle, [indice_alto])
+    textos = _textos(_seccion_simulacion(detalle, simulacion, est))
+
+    assert any(
+        "Chow marca 2 datos como atípicos: 2.0000 (2001), 3.0000 (1985)" in t
+        for t in textos
+    )

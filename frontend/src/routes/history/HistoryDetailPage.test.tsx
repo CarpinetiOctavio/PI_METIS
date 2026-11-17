@@ -1,0 +1,403 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { renderPage } from "../../test/renderPage";
+import { HistoryDetailPage } from "./HistoryDetailPage";
+import { makeEtapa2 } from "../../test/etapa2Fixtures";
+import { makeEtapa1Datos } from "../../test/etapa1Fixtures";
+import { stubFetchRouted } from "../../test/fetchStubs";
+import type { AnalysisDetail } from "../../api/types";
+
+function stubFetch(status: number, body: unknown) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: status < 400,
+      status,
+      json: () => Promise.resolve(body),
+    }),
+  );
+}
+
+function makeDetail(overrides: Partial<AnalysisDetail> = {}): AnalysisDetail {
+  return {
+    id: "an-1",
+    tipo_variable: "caudal_precipitacion",
+    modo: "experto",
+    etapas: ["1"],
+    created_at: "2026-01-15T00:00:00Z",
+    etapa1: {
+      contract: { bloqueante: false, codigo_error: null, warnings: [] },
+      descriptive: null,
+      independencia: [],
+      homogeneidad: [],
+      tendencia: [],
+      atipicos: [],
+      nivel_independencia: "independiente",
+      nivel_homogeneidad: "homogeneidad_ok",
+      nivel_confianza: "validado",
+      warnings: [],
+    },
+    etapa2: null,
+    serie: null,
+    timestamps: null,
+    configuracion: null,
+    ...overrides,
+  };
+}
+
+function renderDetail(id = "an-1") {
+  return renderPage(
+    <MemoryRouter initialEntries={[`/history/${id}`]}>
+      <Routes>
+        <Route path="/history/:id" element={<HistoryDetailPage />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe("HistoryDetailPage", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows a loading state, then the analysis result", async () => {
+    stubFetch(200, makeDetail());
+    renderDetail();
+
+    expect(screen.getByText("Cargando análisis…")).toBeInTheDocument();
+    expect(await screen.findByText("validado")).toBeInTheDocument();
+  });
+
+  it("ofrece exportar el análisis a PDF (DECISIÓN 075)", async () => {
+    stubFetch(200, makeDetail());
+    renderDetail();
+
+    expect(await screen.findByRole("button", { name: "Exportar PDF" })).toBeInTheDocument();
+  });
+
+  it("shows a legible error banner on failure", async () => {
+    stubFetch(404, { error: { codigo: "AUTH_USER_NOT_FOUND", mensaje: "..." } });
+    renderDetail();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("shows a warning when the analysis has no etapa1 recorded", async () => {
+    stubFetch(200, makeDetail({ etapa1: null }));
+    renderDetail();
+
+    expect(
+      await screen.findByText(
+        "Este análisis no tiene resultados de Etapa 1 registrados.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // PR 5 del plan de cierre de pendientes no-test (DECISIÓN 058 §4) —
+  // timestamps=null es la señal de que este registro es anterior a la
+  // migración 005, sin backfill posible.
+  it("shows an explicit empty-state banner for an analysis persisted before the migration (timestamps=null)", async () => {
+    stubFetch(200, makeDetail({ timestamps: null }));
+    renderDetail();
+
+    expect(
+      await screen.findByText(/anterior a esta versión de METIS/),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show the empty-state banner once the analysis has real timestamps", async () => {
+    stubFetch(
+      200,
+      makeDetail({ timestamps: [{ iso: "2000-01-01", anio: 2000 }] }),
+    );
+    renderDetail();
+
+    await screen.findByText("validado");
+    expect(
+      screen.queryByText(/anterior a esta versión de METIS/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("passes mes_inicio_anio from configuracion through to the criterio de año note", async () => {
+    stubFetch(
+      200,
+      makeDetail({
+        configuracion: { cramer_particion: "default", mes_inicio_anio: 7 },
+        etapa1: {
+          contract: { bloqueante: false, codigo_error: null, warnings: [] },
+          descriptive: {
+            n: 10,
+            media: 1,
+            mediana: 1,
+            desvio_estandar: 1,
+            coef_variacion: 1,
+            coef_asimetria: 1,
+            minimo: 1,
+            maximo: 1,
+          },
+          independencia: [],
+          homogeneidad: [],
+          tendencia: [],
+          atipicos: [],
+          nivel_independencia: "independiente",
+          nivel_homogeneidad: "homogeneidad_ok",
+          nivel_confianza: "validado",
+          warnings: [],
+        },
+      }),
+    );
+    renderDetail();
+
+    expect(await screen.findByText(/Criterio de año: julio/)).toBeInTheDocument();
+  });
+
+  // Bloque C3 (plan post-avance) — historial interactivo de Etapa 2.
+
+  it("C3 — muestra la elección registrada con distribución, método y períodos de retorno", async () => {
+    stubFetch(
+      200,
+      makeDetail({
+        etapa2: makeEtapa2({
+          seleccion: {
+            distribucion: "gumbel",
+            metodo: "momentos",
+            periodos_retorno: [2, 10, 100],
+            eventos_diseno: [{ periodo_retorno: 2, valor: 138.4 }],
+            curva_ajuste: [{ periodo_retorno: 1.05, valor: 61.2 }],
+          },
+        }),
+      }),
+    );
+    renderDetail();
+
+    expect(await screen.findByText("Elección registrada")).toBeInTheDocument();
+    expect(screen.getByText(/gumbel · momentos · períodos de retorno: 2, 10, 100/)).toBeInTheDocument();
+  });
+
+  it("DECISIÓN 076: rotula T y el valor de diseño según la carga persistida", async () => {
+    const base = makeDetail();
+    stubFetch(
+      200,
+      makeDetail({
+        etapa1: { ...base.etapa1!, datos: makeEtapa1Datos({ resolucion_original: "diaria" }) },
+        configuracion: { cramer_particion: "default", mes_inicio_anio: 7, variable_diaria: "media" },
+        etapa2: makeEtapa2({
+          seleccion: {
+            distribucion: "gumbel",
+            metodo: "momentos",
+            periodos_retorno: [2, 10, 100],
+            eventos_diseno: [{ periodo_retorno: 2, valor: 138.4 }],
+            curva_ajuste: [{ periodo_retorno: 1.05, valor: 61.2 }],
+          },
+        }),
+      }),
+    );
+    renderDetail();
+
+    expect(
+      await screen.findByText("Valor de diseño (media diaria máxima del año) · T = 2 años"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/toma la media diaria máxima de cada año \(de julio a junio\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Períodos de retorno T \(años, de julio a junio, separados por coma\)/)).toBeInTheDocument();
+  });
+
+  it("C3 — muestra un banner de estado vacío cuando etapa2 no tiene ninguna elección registrada", async () => {
+    stubFetch(200, makeDetail({ etapa2: makeEtapa2({ seleccion: null }) }));
+    renderDetail();
+
+    expect(
+      await screen.findByText(/no quedó registrada ninguna distribución elegida/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Elección registrada")).not.toBeInTheDocument();
+  });
+
+  it("C3 — explorar otra distribución llama al endpoint de recálculo y muestra el resultado marcado como exploración", async () => {
+    const user = userEvent.setup();
+    const detailBody = makeDetail({
+      etapa2: makeEtapa2({
+        seleccion: {
+          distribucion: "gumbel",
+          metodo: "momentos",
+          periodos_retorno: [2, 10, 100],
+          eventos_diseno: [{ periodo_retorno: 2, valor: 138.4 }],
+          curva_ajuste: [{ periodo_retorno: 1.05, valor: 61.2 }],
+        },
+      }),
+    });
+    const fetchMock = stubFetchRouted([
+      {
+        match: (url, init) => !init?.method && url.includes("/history/"),
+        status: 200,
+        body: detailBody,
+      },
+      {
+        match: (url, init) => init?.method === "POST" && url.includes("/design-events"),
+        status: 200,
+        body: {
+          eventos_diseno: [{ periodo_retorno: 2, valor: 108.4 }],
+          curva_ajuste: [{ periodo_retorno: 1.05, valor: 55.0 }],
+        },
+      },
+    ]);
+    renderDetail();
+
+    await screen.findByText("Elección registrada");
+    // "gve" es la otra distribución del ranking, distinta de la elegida.
+    const botonesExplorar = await screen.findAllByRole("button", {
+      name: "Explorar este ajuste",
+    });
+    await user.click(botonesExplorar[1]);
+
+    expect(await screen.findByText(/No es la elección registrada/)).toBeInTheDocument();
+    expect(screen.getByText(/Exploración/)).toBeInTheDocument();
+
+    // La llamada de recálculo pegó a design-events, no a distribution-decision.
+    const llamadaRecalculo = fetchMock.mock.calls.find(
+      ([, init]) => init?.method === "POST",
+    );
+    expect(String(llamadaRecalculo?.[0])).toContain("/analysis/an-1/design-events");
+
+    // La elección registrada queda junto a la exploración para poder compararlas.
+    expect(
+      screen.getByText("Elección registrada").closest(".etapa2-comparacion--doble"),
+    ).toHaveTextContent("Exploración");
+
+    // La elección registrada sigue mostrando gumbel/momentos — explorar no la cambió.
+    expect(screen.getByText(/gumbel · momentos · períodos de retorno: 2, 10, 100/)).toBeInTheDocument();
+  });
+
+  it("C3 — muestra un error legible si el recálculo falla", async () => {
+    const user = userEvent.setup();
+    stubFetchRouted([
+      {
+        match: (url, init) => !init?.method && url.includes("/history/"),
+        status: 200,
+        body: makeDetail({ etapa2: makeEtapa2({ seleccion: null }) }),
+      },
+      {
+        match: (url, init) => init?.method === "POST" && url.includes("/design-events"),
+        status: 400,
+        body: {
+          error: {
+            codigo: "DIST_METHOD_NOT_FITTED",
+            mensaje: "Esa combinación no tiene parámetros ajustados.",
+          },
+        },
+      },
+    ]);
+    renderDetail();
+
+    const boton = await screen.findAllByRole("button", { name: "Explorar este ajuste" });
+    await user.click(boton[0]);
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /no tiene parámetros ajustados/,
+      ),
+    );
+  });
+
+  // ── Bloque C1 (revisión manual 21/10/2026, D-16) — decisiones ante Chow ──
+
+  it("C1 — muestra una fila por punto decidido en la pausa de Chow y aclara que la serie es sin los rechazados", async () => {
+    stubFetch(
+      200,
+      makeDetail({
+        decisiones: {
+          chow: {
+            atipicos: [
+              { indice: 14, periodo: 1994, valor: 296.93, z: 2.91, lado: "alto", decision: "rechazar", codigo: "TEST_OUTLIER_REJECTED_BY_USER" },
+              { indice: 25, periodo: 2005, valor: 296.99, z: -2.88, lado: "bajo", decision: "aceptar", codigo: "TEST_OUTLIER_ACCEPTED_BY_USER" },
+            ],
+          },
+        },
+      }),
+    );
+    renderDetail();
+
+    const seccion = await screen.findByRole("region", { name: "Decisiones ante Chow" });
+    const filas = within(seccion).getAllByRole("row").slice(1);
+    expect(filas.map((f) => f.textContent)).toEqual([
+      expect.stringMatching(/1994.*296,93.*Alto.*2,91.*Rechazado: excluido del análisis/),
+      expect.stringMatching(/2005.*296,99.*Bajo.*2,88.*Aceptado como parte de la población/),
+    ]);
+    expect(
+      within(seccion).getByText("Los resultados guardados corresponden a la serie sin el punto rechazado."),
+    ).toBeInTheDocument();
+  });
+
+  it("C1 — sin rechazados no dice que la serie se recortó", async () => {
+    stubFetch(
+      200,
+      makeDetail({
+        decisiones: {
+          chow: {
+            atipicos: [
+              { indice: 25, periodo: 2005, valor: 296.99, z: 2.88, lado: "alto", decision: "aceptar", codigo: "TEST_OUTLIER_ACCEPTED_BY_USER" },
+            ],
+          },
+        },
+      }),
+    );
+    renderDetail();
+
+    const seccion = await screen.findByRole("region", { name: "Decisiones ante Chow" });
+    expect(within(seccion).queryByText(/serie sin/)).not.toBeInTheDocument();
+  });
+
+  it("C1 — lee la forma vieja del registro ({accion, dato})", async () => {
+    stubFetch(200, makeDetail({ decisiones: { chow: { accion: "rechazar", dato: 950 } } }));
+    renderDetail();
+
+    const seccion = await screen.findByRole("region", { name: "Decisión ante el atípico de Chow" });
+    expect(seccion).toHaveTextContent(
+      "Dato 950,00000: rechazado y excluido del análisis. Los resultados guardados corresponden a la serie sin ese dato.",
+    );
+  });
+
+  it.each([
+    ["decisiones vacías", {}],
+    ["sin decisiones (análisis viejo)", undefined],
+  ])("C1 — %s: no muestra ningún bloque de Chow", async (_, decisiones) => {
+    stubFetch(200, makeDetail({ decisiones }));
+    renderDetail();
+
+    await screen.findByText("validado");
+    expect(screen.queryByRole("region", { name: /Chow/ })).not.toBeInTheDocument();
+  });
+
+  it("D-18 — informa la partición de Cramer persistida en configuracion", async () => {
+    const base = makeDetail();
+    stubFetch(
+      200,
+      makeDetail({
+        etapa1: {
+          ...base.etapa1!,
+          homogeneidad: [
+            {
+              prueba: "cramer",
+              estadistico: 1.1,
+              valor_critico: 2.07,
+              veredicto: "aprobada",
+              warning_codigo: null,
+              warning_nivel: null,
+              n1: 28,
+              n2: 14,
+              valor_atipico: null,
+              indice_atipico: null,
+              explicacion: null,
+            },
+          ],
+        },
+        configuracion: { cramer_particion: { n1_pct: 70, n2_pct: 35 }, mes_inicio_anio: 7 },
+      }),
+    );
+    renderDetail();
+
+    expect(await screen.findByText(/Partición de Cramer/)).toHaveTextContent(
+      "personalizada: últimos 70 % y 35 % (n₁ = 28, n₂ = 14)",
+    );
+  });
+});

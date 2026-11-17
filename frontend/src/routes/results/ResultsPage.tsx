@@ -1,0 +1,308 @@
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/AuthProvider";
+import { postRecalcularDesignEvents } from "../../api/analysis";
+import { Etapa1ResultView } from "./Etapa1ResultView";
+import { Etapa2Explorador, type SimulacionExplorable } from "./Etapa2Explorador";
+import { Etapa2RankingView } from "./Etapa2RankingView";
+import { Etapa2EventosView } from "./Etapa2EventosView";
+import { ExportarPdfButton } from "./ExportarPdfButton";
+import type { ContextoSerie } from "../../i18n/periodoRetorno";
+import { textoSinAjusteSimulado } from "../../i18n/estadoMetodo";
+import type {
+  CramerParticion,
+  Etapa1Result,
+  Modo,
+  SimulateExclusionResponse,
+  TipoVariable,
+  VariableDiaria,
+} from "../../api/types";
+import { crearPedirSimulacion, crearSimular } from "./simulacion";
+import { claveSeleccion, type ExclusionesGuardables } from "./exclusiones";
+import { guardarExclusion } from "../../api/history";
+import type { Etapa2EventosState, Etapa2RankingState } from "../../api/sse";
+import "./ResultsPage.css";
+
+interface ResultsLocationState {
+  result?: Etapa1Result;
+  analysisId?: string | null;
+  modo?: Modo;
+  etapa2?: Etapa2RankingState | null;
+  eventosDiseno?: Etapa2EventosState | null;
+  // Bloque F5 (DECISIÓN 057) — solo viaja en la sesión interactiva, ver la
+  // nota de Etapa1ResultView sobre por qué no llega desde el historial.
+  mesInicioAnio?: number;
+  // DECISIÓN 076: con mesInicioAnio y la resolución de la carga, nombra qué
+  // representa el período de retorno. Solo viaja en la sesión interactiva.
+  variableDiaria?: VariableDiaria;
+  // Nombre del archivo subido — nombra el CSV de la serie sin los puntos excluidos.
+  nombreArchivo?: string;
+  // Configuración con la que se corrió el análisis — la necesita el what-if de
+  // atípicos para repetirlo sobre la serie sin los puntos excluidos.
+  tipoVariable?: TipoVariable;
+  cramerParticion?: CramerParticion;
+  etapas?: "1" | "1,2";
+}
+
+export function ResultsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthed } = useAuth();
+
+  const locationState = location.state as ResultsLocationState | null;
+  const result = locationState?.result;
+
+  // What-if de atípicos: la simulación que vale para los puntos excluidos hoy
+  // (Etapa1GraficosView avisa cuál es). Con ella, "Evento de diseño" y la
+  // exploración pueden mostrarse reajustados sin esos puntos. Al llegar una
+  // nueva se pasa a esa vista; la elección registrada no cambia (DECISIÓN 062).
+  const [simulacion, setSimulacion] = useState<SimulateExclusionResponse | null>(null);
+  const [vistaEventos, setVistaEventos] = useState<"original" | "simulada">("original");
+  // DECISIÓN 080 — selecciones ya guardadas en el historial en esta sesión.
+  const [guardadas, setGuardadas] = useState<ReadonlySet<string>>(new Set());
+  const alCambiarSimulacion = useCallback((nueva: SimulateExclusionResponse | null) => {
+    setSimulacion(nueva);
+    setVistaEventos(nueva ? "simulada" : "original");
+  }, []);
+
+  useEffect(() => {
+    if (!result) navigate("/config", { replace: true });
+  }, [result, navigate]);
+
+  if (!result) return null;
+
+  // UX-D — anónimo siempre ve la presentación Experto, sin acordeón.
+  const modoEfectivo: Modo = isAuthed ? (locationState?.modo ?? "experto") : "experto";
+
+  const etapa2 = locationState?.etapa2;
+  const eventosDiseno = locationState?.eventosDiseno;
+  // DECISIÓN 076: qué se cargó y con qué año se agregó, para rotular T.
+  const contextoSerie: ContextoSerie = {
+    resolucion: result.datos?.resolucion_original,
+    mesInicioAnio: locationState?.mesInicioAnio,
+    variableDiaria: locationState?.variableDiaria,
+  };
+  // Solo CU-01 persiste el análisis y devuelve un `analysis_id` — con él se
+  // puede explorar otra distribución contra la BD (`POST /analysis/{id}/
+  // design-events`, DECISIÓN 062). CU-02 (anónimo, sin id) sigue de solo
+  // lectura hasta que exista el endpoint de exploración sin id (plan de
+  // feedback de directores, ítem B, Tanda 2).
+  const analysisId = locationState?.analysisId ?? null;
+  // Lo que llega por el stream es el ranking en el momento de la pausa: todavía
+  // no hay elección registrada (`seleccion: null`).
+  const etapa2Resultado = etapa2
+    ? {
+        ranking: etapa2.ranking,
+        warnings: etapa2.warnings,
+        puntos_empiricos: etapa2.puntos_empiricos,
+        seleccion: null,
+      }
+    : null;
+  // Con `analysisId` el "Evento de diseño" (la elección del stream) se muestra
+  // junto a la exploración, dentro de Etapa2Explorador, para compararlas; sin
+  // él (CU-02) se muestra aparte, debajo del ranking de solo lectura.
+  const explorable = Boolean(etapa2Resultado && analysisId);
+  // Revisión de DECISIÓN 071 (18/10/2026): un único selector de vista para la
+  // elección y la exploración, solo con una simulación vigente que tenga Etapa 2.
+  const simulacionConEtapa2 = simulacion?.etapa2 ? simulacion : null;
+  const seleccionSimulada = simulacionConEtapa2?.etapa2?.seleccion ?? null;
+  const vistaSimulada = vistaEventos === "simulada" && simulacionConEtapa2 !== null;
+  const verSimulada = vistaSimulada && seleccionSimulada !== null;
+  const estadoSimulado = seleccionSimulada?.estado;
+  const aniosExcluidos = simulacion?.excluidos.map((e) => e.periodo).join(", ") ?? "";
+  const selectorVista = simulacionConEtapa2 && (
+    <div className="seg" role="group" aria-label="Ver resultados">
+      <button
+        type="button"
+        className={vistaSimulada ? "" : "on"}
+        aria-pressed={!vistaSimulada}
+        onClick={() => setVistaEventos("original")}
+      >
+        Original
+      </button>
+      <button
+        type="button"
+        className={vistaSimulada ? "on" : ""}
+        aria-pressed={vistaSimulada}
+        onClick={() => setVistaEventos("simulada")}
+      >
+        Sin los puntos excluidos
+      </button>
+    </div>
+  );
+
+  let eventosSimulados = null;
+  if (verSimulada && seleccionSimulada) {
+    eventosSimulados =
+      estadoSimulado && estadoSimulado !== "ok" ? (
+        <p className="sub">
+          {textoSinAjusteSimulado(
+            seleccionSimulada.distribucion,
+            seleccionSimulada.metodo,
+            estadoSimulado,
+            aniosExcluidos,
+          )}{" "}
+          La elección registrada no cambia.
+        </p>
+      ) : (
+        <>
+          <p className="sub">
+            Simulación: {seleccionSimulada.distribucion} · {seleccionSimulada.metodo}{" "}
+            reajustada sin {aniosExcluidos}. La elección registrada no cambia.
+          </p>
+          <Etapa2EventosView
+            key="simulada"
+            eventos={seleccionSimulada}
+            puntosEmpiricos={simulacionConEtapa2?.etapa2?.puntos_empiricos ?? []}
+            contextoSerie={contextoSerie}
+          />
+        </>
+      );
+  }
+
+  const eventoDiseno = eventosDiseno && (
+    <>
+      <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+        Evento de diseño
+      </h2>
+      {/* Con exploración, el selector va sobre la comparación (Etapa2Explorador). */}
+      {!explorable && selectorVista}
+      {simulacion && !simulacion.etapa2 && (
+        <p className="sub">
+          Sin los puntos excluidos no hay Etapa 2 que recalcular (Etapa 1 queda
+          rechazada), así que los eventos de diseño siguen siendo los del análisis original.
+        </p>
+      )}
+      {eventosSimulados ?? (
+        <Etapa2EventosView
+          key="original"
+          eventos={eventosDiseno}
+          puntosEmpiricos={etapa2?.puntos_empiricos ?? []}
+          contextoSerie={contextoSerie}
+        />
+      )}
+    </>
+  );
+
+  // What-if de atípicos (ítem A, DECISIÓN 071): solo con la configuración del
+  // análisis a mano, que viaja en el router state desde ConfigPage.
+  const tipoVariable = locationState?.tipoVariable;
+  const pedirSimulacion = crearPedirSimulacion(
+    result.datos,
+    tipoVariable
+      ? {
+          tipoVariable,
+          cramerParticion: locationState?.cramerParticion,
+          conEtapa2: locationState?.etapas === "1,2",
+          alfa: result.alfa ?? 0.05,
+        }
+      : null,
+  );
+  // Con la elección del stream, el backend recalcula también sus eventos de
+  // diseño sin los puntos excluidos.
+  const simular = crearSimular(
+    pedirSimulacion,
+    eventosDiseno && {
+      distribucion: eventosDiseno.distribucion,
+      metodo: eventosDiseno.metodo,
+      periodos_retorno: eventosDiseno.eventos_diseno.map((e) => e.periodo_retorno),
+    },
+  );
+  // DECISIÓN 080 — guardar la exclusión en el historial: solo CU-01, con el
+  // análisis persistido. CU-02 no tiene historial y el botón no aparece.
+  const exclusiones: ExclusionesGuardables | undefined =
+    isAuthed && analysisId && simular
+      ? {
+          guardar: async (indices) => {
+            await guardarExclusion(analysisId, indices);
+            setGuardadas((previas) => new Set(previas).add(claveSeleccion(indices)));
+          },
+          guardadas,
+        }
+      : undefined;
+  // Explorar otra distribución bajo la simulación vigente: el mismo endpoint, con
+  // los mismos puntos excluidos y la combinación explorada como `seleccion`.
+  const indicesSimulados = simulacionConEtapa2?.excluidos.map((e) => e.indice) ?? [];
+  const simulacionExplorable: SimulacionExplorable | null =
+    simulacionConEtapa2 && pedirSimulacion
+      ? {
+          clave: indicesSimulados.join(","),
+          aniosExcluidos,
+          puntosEmpiricos: simulacionConEtapa2.etapa2?.puntos_empiricos ?? [],
+          explorar: async (distribucion, metodo, periodosRetorno) => {
+            const respuesta = await pedirSimulacion(indicesSimulados, {
+              distribucion,
+              metodo,
+              periodos_retorno: periodosRetorno,
+            });
+            return respuesta.etapa2?.seleccion ?? null;
+          },
+        }
+      : null;
+
+  return (
+    <div className="results-page">
+      <div className="encabezado-exportable">
+        <h1 className="h">Resultados de Etapa 1</h1>
+        {/* Exportar PDF (DECISIÓN 075): solo CU-01, que tiene el análisis
+            persistido. Exporta Etapa 1 o Etapa 1 + 2 según lo que se corrió y,
+            con una simulación vigente, también los resultados sin esos puntos. */}
+        {isAuthed && analysisId && (
+          <ExportarPdfButton
+            analysisId={analysisId}
+            indicesExcluidos={simulacion?.excluidos.map((e) => e.indice)}
+          />
+        )}
+      </div>
+      <Etapa1ResultView
+        result={result}
+        modo={modoEfectivo}
+        mesInicioAnio={locationState?.mesInicioAnio}
+        nombreArchivo={locationState?.nombreArchivo}
+        tipoVariable={tipoVariable}
+        cramerParticion={locationState?.cramerParticion}
+        simular={simular}
+        exclusiones={exclusiones}
+        onSimulacionVigente={alCambiarSimulacion}
+      />
+      {/* Etapa 2 ya corrió dentro del stream (StreamPage) si el usuario la
+          pidió al configurar el análisis. Si no se pidió Etapa 2, no hay
+          nada que mostrar acá — ver DECISIÓN 052/054. Con `analysisId`
+          (CU-01) el ranking se puede explorar; sin él (CU-02) es de solo
+          lectura, sin botones "Elegir". */}
+      {etapa2Resultado && (
+        <div style={{ marginTop: 20 }}>
+          <h2 className="h" style={{ fontSize: 16, marginBottom: 0 }}>
+            Ranking de distribuciones
+          </h2>
+          {explorable && analysisId ? (
+            <Etapa2Explorador
+              etapa2={etapa2Resultado}
+              explorar={(distribucion, metodo, periodosRetorno) =>
+                postRecalcularDesignEvents(analysisId, {
+                  distribucion,
+                  metodo,
+                  periodos_retorno: periodosRetorno,
+                })
+              }
+              mediaSerie={result.descriptive?.media}
+              seleccionRegistrada={eventosDiseno}
+              eleccion={eventoDiseno}
+              contextoSerie={contextoSerie}
+              simulacion={simulacionExplorable}
+              vista={vistaSimulada ? "simulada" : "original"}
+              selectorVista={selectorVista}
+            />
+          ) : (
+            <Etapa2RankingView
+              etapa2={etapa2Resultado}
+              modo="lectura"
+              mediaSerie={result.descriptive?.media}
+            />
+          )}
+        </div>
+      )}
+      {!explorable && eventoDiseno && <div style={{ marginTop: 20 }}>{eventoDiseno}</div>}
+    </div>
+  );
+}

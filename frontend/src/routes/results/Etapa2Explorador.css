@@ -1,0 +1,50 @@
+/* Bloque C3 (plan post-avance) — resultado de "explorar" una distribución
+   distinta de la elección registrada. Borde punteado a propósito: tiene que
+   leerse distinto de la tarjeta de "Elección registrada" / "Evento de diseño"
+   (borde sólido, card soft) — DECISIÓN 062, "explorar no es decidir". Vivía en
+   HistoryDetailPage.css; se movió acá cuando el componente pasó a compartirse
+   con ResultsPage. */
+.etapa2-exploracion {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  padding: 14px;
+}
+
+/* Comparación entre la elección registrada y la exploración. Apiladas por
+   defecto (móvil y tablet); desde 1100px (el mismo corte que ConfigPage) van
+   lado a lado para compararlas de un vistazo. Solo cuando hay exploración: con
+   la elección sola se ve igual que siempre, centrada en la columna de 760px. */
+.etapa2-comparacion {
+  margin-top: 16px;
+}
+
+.etapa2-comparacion > * + * {
+  margin-top: 16px;
+}
+
+.etapa2-comparacion__eleccion,
+.etapa2-exploracion {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  /* Las páginas de resultados miden 760px y los gráficos tienen un viewBox
+     fijo de 640px: dos columnas dentro de 760px quedarían a ~340px cada una
+     (escala ~0,5) y el texto de los ejes, ilegible. Al comparar, el bloque se
+     ensancha y se centra respecto de la página. Sin `transform` (evita texto
+     borroso con anchos fraccionarios): el margen izquierdo se calcula contra
+     el ancho del contenedor (100%). */
+  .etapa2-comparacion--doble {
+    --etapa2-ancho: min(1280px, calc(100vw - 96px));
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: start;
+    width: var(--etapa2-ancho);
+    margin-left: calc((100% - var(--etapa2-ancho)) / 2);
+  }
+
+  .etapa2-comparacion--doble > * + * {
+    margin-top: 0;
+  }
+}

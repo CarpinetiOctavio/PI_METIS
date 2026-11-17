@@ -1,0 +1,10 @@
+estacion,n,metis_bloqueo,indep_metis_anderson,indep_tesis_anderson_lags_fuera,indep_samhia_anderson_pearson_lag1,indep_samhia_ww,indep_metis_ww,homog_metis_nivel,homog_samhia_mann_whitney,homog_samhia_mood,tend_metis_mk,tend_samhia_mk,atip_metis_chow,atip_samhia_kn,samhia_anderson_p,samhia_ljung_box_p
+est_01,40,,rechazada,4.0,rechaza,rechaza,rechazada,homogeneidad_critica,rechaza,no rechaza,rechazada,rechaza,aprobada,0,0.000213058605980434,4.37077318782286e-08
+est_02,24,,aprobada,1.0,rechaza,no rechaza,rechazada,homogeneidad_warning,no rechaza,no rechaza,aprobada,no rechaza,aprobada,1,0.00118559666665627,0.0724949224917242
+est_03,41,,aprobada,1.0,rechaza,no rechaza,aprobada,homogeneidad_ok,no rechaza,no rechaza,aprobada,no rechaza,aprobada,2,0.0283118423162886,0.306148126510485
+est_04,36,,aprobada,0.0,no rechaza,no rechaza,aprobada,homogeneidad_ok,no rechaza,no rechaza,aprobada,no rechaza,aprobada,1,0.0784351225028498,0.531887338078736
+est_05,39,,aprobada,0.0,no rechaza,no rechaza,aprobada,homogeneidad_ok,no rechaza,no rechaza,aprobada,no rechaza,aprobada,1,0.289821162956094,0.757115511521356
+est_06,38,,aprobada,0.0,no rechaza,no rechaza,rechazada,homogeneidad_warning,no rechaza,no rechaza,aprobada,no rechaza,aprobada,0,0.252348638473011,0.472826463680299
+est_07,19,,aprobada,0.0,no rechaza,no rechaza,aprobada,homogeneidad_ok,no rechaza,no rechaza,aprobada,no rechaza,aprobada,1,0.665037447252031,0.391175860981968
+est_08,43,,aprobada,1.0,rechaza,rechaza,rechazada,homogeneidad_critica,no rechaza,no rechaza,rechazada,rechaza,aprobada,1,0.0060739456092978,0.232836151111412
+est_09,7,CONTRACT_SERIES_TOO_SHORT,,0.0,no corre (n<12),,,,,,,,,,,

@@ -1,0 +1,94 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Feedback de verificación manual (Bloque C, 05/08/2026), tres rondas —
+     ver decisiones acumuladas en .modal-backdrop .card de abajo. Scrim de
+     oscurecimiento simple, fijo (no `--ink`, que se invierte por tema —
+     ronda 2) e igual en los dos temas.
+     Bloque F1 (pasada 5) — el blur pasa a vivir también acá: un panel de
+     vidrio desenfoca lo que hay DETRÁS SUYO (la tarjeta), pero el resto de
+     la página (timeline, TopBar, fondo animado) quedaba perfectamente
+     nítido alrededor del diálogo. Ahora el scrim mismo desenfoca todo lo
+     que hay debajo. */
+  background: rgba(9, 12, 16, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  /* A5 (plan pasada4 §3) — entrada del modal. No toca el foco ni Escape
+     (StreamPage.tsx): es únicamente presentación, misma nota que M3 dejó
+     sobre no alterar el orden de foco. */
+  animation: modal-backdrop-fade var(--t-mid) var(--ease-out);
+}
+
+.modal-backdrop .card {
+  /* DECISIÓN 079 — 380px → 560px: la pausa de Chow lista varios atípicos en
+     una tabla, con dos botones por fila. */
+  max-width: 560px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  width: 100%;
+  /* Ronda 3 (05/08/2026): el desenfoque vivía en el SCRIM de fondo, con la
+     tarjeta encima totalmente opaca (var(--surf)) — arquitectura invertida
+     respecto de lo que "glassmorphism" pide en la práctica (ej. reactbits
+     "Glass Surface"): el panel en primer plano es el que tiene que ser
+     semitransparente y desenfocar lo que hay DETRÁS SUYO, no el scrim de
+     atrás. Ahora la tarjeta misma es el panel de vidrio — semitransparente
+     con blur propio + borde e inset highlight sutiles para el filo del
+     vidrio + sombra para la elevación. `color-mix(var(--surf) ...)` se
+     adapta solo a los dos temas, igual que el resto del sistema de diseño.
+     Revisión manual 21/10/2026 (D-13, #135) — 55% → 90%: con 55% el fondo
+     efectivo de la tarjeta quedaba gris y el texto secundario (--mut) bajaba
+     a 2,9:1 con el tema claro, debajo del 4,5:1 de RNF-07. Con 90% cumple en
+     los dos temas aun con --ink detrás (contrast.test.ts lee este valor). */
+  background: color-mix(in srgb, var(--surf) 90%, transparent);
+  /* Bloque F1 (pasada 5) — 20px→10px: ahora compone sobre un scrim ya
+     desenfocado (blur(6px) arriba); mantenerlo en 20px vuelve el
+     contenido de la tarjeta lechoso sin ganar separación. */
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent);
+  animation: modal-card-in var(--t-mid) var(--ease-out);
+}
+
+@keyframes modal-backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-card-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* DECISIÓN 079 — la tabla de atípicos de la pausa de Chow. */
+.decision-atipicos {
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+
+.decision-atipicos .row {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.decision-atipicos .b[aria-pressed="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}

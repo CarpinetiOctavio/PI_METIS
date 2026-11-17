@@ -1,0 +1,1125 @@
+# Contratos de API y Catálogo de Errores
+
+## Estructura de error estándar — todos los endpoints
+
+```json
+{
+  "error": {
+    "codigo": "CODIGO_ESTANDARIZADO",
+    "mensaje": "Descripción legible para el usuario",
+    "detalle": {}
+  }
+}
+```
+
+**Cómo se garantiza (06/10/2026):** los endpoints levantan `HTTPException(detail={"error": {...}})`, y el
+manejador global `metis/api/errors.py::manejar_http_exception` (registrado en `main.py`) responde ese `detail`
+tal cual, sin envolver. Antes, FastAPI respondía `{"detail": {"error": {...}}}`, `frontend/src/api/client.ts`
+no reconocía el código y mostraba el texto genérico — por ejemplo, en el login con contraseña incorrecta. Un
+`detail` que no tiene esta forma (un str como `"No autenticado"`, el 404 de ruta inexistente) y el 422 de Pydantic
+siguen con el formato de FastAPI (`{"detail": ...}`). Test: `tests/unit/api/test_estructura_error.py`.
+
+| HTTP | Cuándo |
+|------|--------|
+| 400 | Contrato de datos inválido |
+| 401 | Sin auth donde se requiere |
+| 403 | Auth válida pero sin acceso (mail no es @ucc.edu.ar) |
+| 404 | Recurso no encontrado |
+| 422 | Validación Pydantic fallida — FastAPI lo lanza automáticamente |
+| 500 | Error interno inesperado |
+
+Para SSE: los errores son eventos `error`, no respuestas HTTP de error.
+
+---
+
+## Contratos por endpoint
+
+### POST /api/v1/auth/register
+
+**Request:** `{"email": "legajo@ucc.edu.ar", "password": "...", "nombre": "..."}`
+**Validaciones:** email debe terminar en @ucc.edu.ar, password mínimo 8 caracteres
+**Auth:** Sin auth
+**Response 201:** `{"ok": true, "mensaje": "Cuenta creada. Revisá tu mail para verificar la dirección."}`
+**Errores:** 400 AUTH_EMAIL_ALREADY_REGISTERED, 422 validación Pydantic, 500 AUTH_VERIFICATION_EMAIL_FAILED
+
+---
+
+### POST /api/v1/auth/verify
+
+**Request:** `{"token": "..."}`
+**Auth:** Sin auth
+**Response 200:** `{"ok": true}`
+**Errores:** 400 AUTH_INVALID_TOKEN, 404 AUTH_USER_NOT_FOUND
+
+---
+
+### POST /api/v1/auth/login
+
+**Request:** `{"email": "...", "password": "..."}`
+**Auth:** Sin auth
+**Response 200:** `{"ok": true}` + HttpOnly Cookie `access_token`
+**Errores:** 401 AUTH_INVALID_CREDENTIALS, 403 AUTH_EMAIL_NOT_VERIFIED
+
+---
+
+### POST /api/v1/auth/forgot-password
+
+**Request:** `{"email": "..."}`
+**Auth:** Sin auth
+**Response 200:** `{"ok": true, "mensaje": "Si el mail corresponde a una cuenta, te enviamos un link para restablecer la contraseña."}`. Es la misma respuesta exista o no la cuenta (no revela qué mails están registrados). El mail se manda en segundo plano: si el envío falla solo se registra en el log. Dentro de los `RESET_COOLDOWN_SECONDS` (60) del último pedido no se genera un token nuevo, pero la respuesta es idéntica.
+**Errores:** 422 validación Pydantic (email mal formado)
+
+---
+
+### POST /api/v1/auth/reset-password
+
+**Request:** `{"token": "...", "password": "..."}`
+**Validaciones:** password mínimo 8 caracteres (mismo criterio que register)
+**Auth:** Sin auth
+**Response 200:** `{"ok": true}`. Cambia la contraseña, marca el mail como verificado e invalida el resto de los tokens de reseteo de la cuenta. El token es de un solo uso y vale `RESET_TOKEN_TTL_MINUTES` (60). Las sesiones ya iniciadas siguen vigentes hasta que expire su JWT (DECISIÓN 085).
+**Errores:** 400 AUTH_RESET_TOKEN_INVALID (inexistente, vencido o ya usado), 404 AUTH_USER_NOT_FOUND, 422 validación Pydantic
+
+---
+
+### POST /api/v1/auth/logout
+
+**Auth:** Sin auth (borra la cookie aunque no haya sesión activa)
+**Response 200:** `{"ok": true}` + borra Cookie `access_token`
+
+---
+
+### GET /api/v1/auth/me
+
+**Auth:** JWT en HttpOnly Cookie (requerido)
+**Response 200:** `{"id": "uuid", "email": "...", "nombre": "...", "email_verified": true}`
+**Errores:** 401 sin auth
+
+---
+
+### POST /api/v1/analysis/stream
+
+**Request (multipart/form-data):**
+```json
+{
+  "archivo": "<file CSV o Excel>",
+  "columna_x": "nombre_o_indice",
+  "columna_y": "nombre_o_indice",
+  "tipo_variable": "caudal_precipitacion | otro",
+  "etapas": [1] | [1, 2],
+  "modo": "paso_a_paso | experto",
+  "cramer_particion": "default | {n1_pct: 60, n2_pct: 30}",
+  "mes_inicio_anio": 1 | 2 | ... | 12
+}
+```
+
+**Auth:** JWT en HttpOnly Cookie (opcional — sin JWT = CU-02, con JWT = CU-01)
+
+**Response:** `text/event-stream`
+
+**Comportamiento según JWT:**
+- Con JWT válido (@ucc.edu.ar): persiste análisis, habilita exportación
+- Sin JWT: sesión efímera, sin persistencia
+
+**Nota de implementación — histórico, ver "Cerrado" más abajo.** El
+contrato de arriba documenta `{n1_pct, n2_pct}` como valor válido, pero el
+endpoint real (`api/v1/analysis.py`) declara el campo como `Form(str)`.
+**Corrección 05/08/2026 (DECISIÓN 036, Bloque D):** cualquier valor distinto
+del literal `"default"` respondía 400 `CONTRACT_CRAMER_PARTICION_UNSUPPORTED`
+en el borde del endpoint, **antes** de llegar a
+`core/etapa1/homogeneity.py::calcular_cramer` — ya no producía un `TypeError`
+no manejado / 500. Eso no implementaba la partición personalizada, solo
+cerraba el 500 — ver la corrección de abajo para el estado real.
+
+**Cerrado 18/08/2026 (DECISIÓN 036, Bloque H1 del plan post-avance) —
+partición personalizada implementada de punta a punta.** `cramer_particion`
+recibe el literal `"default"` sin cambios, o un **string JSON** con
+`{n1_pct, n2_pct}` (opción 1 de la decisión — el contrato anidado ya
+documentado arriba, sin agregar campos `Form` nuevos). Se parsea y valida en
+el borde del endpoint (`api/v1/analysis.py::_parsear_cramer_particion()`,
+modelo `schemas/analysis.py::CramerParticionCustom`) antes de llegar a
+`services/`: `n1_pct`/`n2_pct` entre 1 y 100, y `n1_pct > n2_pct` (el bloque
+1 es el período largo, el 2 el corto — invertidos, Cramer no mide lo que
+dice medir). JSON malformado o fuera de estas reglas → 400
+`CONTRACT_CRAMER_PARTICION_INVALID`, que reemplaza a
+`CONTRACT_CRAMER_PARTICION_UNSUPPORTED` (retirado, ver catálogo más abajo).
+`core/etapa1/homogeneity.py::calcular_cramer()` no cambió su firma — la
+rama `else` ya sabía indexar un `dict`, el bug real siempre fue que nunca le
+llegaba uno (ver DECISIÓN 036 para el diagnóstico completo). Sí ganó un
+guard nuevo: si los tamaños resultantes de bloque dan `< 2` datos (posible
+con porcentajes chicos sobre una serie corta, algo que solo se sabe después
+de parsear el archivo, no en el borde del endpoint) la prueba responde
+`no_ejecutada` con `TEST_NOT_EXECUTED_CONDITION` — antes dependía de que
+`_cramer_bloque()` tropezara con `denom≤0` de casualidad para no seguir.
+Frontend: botón "Personalizada" habilitado en `ConfigPage`, con la misma
+validación de rango/orden mostrada inline antes de mandar el request.
+
+**Cerrado 09/08/2026 (DECISIÓN 054, Bloque A del plan de Etapa 2) —
+`etapas` cableado de punta a punta.** La nota anterior de esta sección
+afirmaba que `etapas: str = Form("1")` se recibía y se descartaba sin
+llegar nunca a `services/`. Ya no: se parsea a `list[int]` en el borde del
+endpoint (`api/v1/analysis.py`), solo se aceptan los literales `"1"` y
+`"1,2"` — cualquier otro valor responde 400 `CONTRACT_ETAPAS_INVALID`. La
+función de `services/` se renombró de `stream_etapa1()` a
+`stream_analysis()` en el mismo cambio. `schemas/analysis.py::AnalysisRequest`
+se borró — código muerto que ninguna ruta importaba, ver DECISIÓN 037
+(cerrada por DECISIÓN 054). **La orquestación real de Etapa 2** (llamar
+`ejecutar_etapa2()`, emitir `result_etapa2_ranking`, pausar) todavía no
+está implementada — `etapas` se acepta y valida, pero con `etapas=1,2` el
+stream hoy corre exactamente igual que con `etapas=1`. Queda para el
+Bloque A5 del plan de Etapa 2.
+
+**Agregado 12/08/2026 (DECISIÓN 057, Bloque F3 del plan de Etapa 2) —
+`mes_inicio_anio: int = Form(7)`.** Mes de inicio del año hidrológico,
+`[1..12]`, validado en el borde del endpoint → 400
+`CONTRACT_MES_INICIO_INVALID` fuera de rango. Default `7` (julio) — el año
+hidrológico de la región centro, conservado como default razonable, no como
+regla universal (`constraints.md` lo describía antes como una constante del
+sistema; ver la corrección en esa sección). Solo tiene efecto cuando la
+resolución temporal de la serie subida es `"mensual"`
+(`core/validacion/aggregation.py::agregar_a_maximos_anuales()`, llamado
+dentro de `ejecutar_etapa1()`); con una serie ya anual el valor se acepta y
+valida igual, pero no cambia nada. Se persiste en `analyses.configuracion`
+para CU-01 — no es opcional, dos análisis con `mes_inicio_anio` distinto
+sobre el mismo archivo dan resultados distintos.
+
+**Agregado 28/08/2026 (DECISIÓN 065, PR 2.5 / R0.2) —
+`variable_diaria: str = Form("pico")`.** Declara qué contiene la columna de
+una serie **diaria**: `"pico"` (picos o máximos diarios), `"media"`
+(medias diarias) o `"acumulado"` (acumulados del día, como la lluvia de 9 a 9 —
+revisión 22/10/2026 de la DECISIÓN 065). Validado en el borde → 400
+`CONTRACT_VARIABLE_DIARIA_INVALID` para cualquier otro valor. Solo tiene
+efecto cuando la resolución inferida es `"diaria"`: cambia el texto del
+warning `CONTRACT_DAILY_SERIES_AGGREGATED` (con `"media"` advierte que los
+máximos anuales y los eventos de diseño subestiman el pico instantáneo
+real; con `"acumulado"` dice que cada valor anual es el máximo acumulado
+diario del año, sin advertencia de sesgo). **No cambia ningún número** — el `max()` de la agregación es el
+mismo; METIS no corrige el sesgo (ver `docs/decisiones/decision066.md`,
+por qué no hay una corrección válida en software). Se persiste en
+`analyses.configuracion` igual que `mes_inicio_anio` — el historial tiene
+que registrar bajo qué supuesto se construyó la serie. R0.2 respondida por
+Facundo el 22/10/2026: la lluvia diaria es un acumulado y se arma la serie de
+máximos diarios anuales (ver la revisión de la DECISIÓN 065).
+
+**Agregado 18/10/2026 (DECISIÓN 078) — `alfa: str = Form("0.05")`.** Nivel de
+significancia de las ocho pruebas de la Etapa 1: `0.01`, `0.05` (por defecto,
+estándar en hidrología) o `0.10`. Llega como texto y se valida en el borde → 400
+`CONTRACT_ALFA_INVALID` para cualquier otro valor, también uno no numérico. Se
+pasa a la segunda pasada de la Etapa 1 tras rechazar un atípico, viaja en
+`result_etapa1.alfa` y se persiste en `analyses.configuracion.alfa`. Al leer un
+análisis anterior que no lo tiene, `GET /history/{id}` devuelve `alfa: 0.05` con
+`alfa_implicito: true` (sin backfill). Helmert y la tolerancia de Anderson
+(10 % de los coeficientes fuera de banda, regla fija confirmada por Facundo el
+21/10/2026) no dependen de α; la Etapa 2 no tiene nivel de significancia.
+
+**Agregado 22/10/2026 (DECISIÓN 081) — `cobertura_minima_interior: str =
+Form("100")`.** Cobertura mínima de los años **interiores** al agregar una
+carga mensual o diaria a máximos anuales, en porcentaje entero de **50 a
+100** (100 por defecto: el criterio estricto de antes). Llega como texto y se
+valida en el borde → 400 `CONTRACT_COBERTURA_INVALID` fuera de rango o si no
+es entero. Los años de los extremos siempre exigen 100 %. Con carga anual se
+acepta y se ignora. Viaja en `result_etapa1.datos.cobertura_minima_interior`
+(`null` con carga anual) y se persiste en
+`analyses.configuracion.cobertura_minima_interior`; al leer un análisis
+anterior, `GET /history/{id}` devuelve `100` con
+`cobertura_minima_interior_implicita: true` (sin backfill). Un año interior
+aceptado incompleto emite `CONTRACT_INCOMPLETE_YEARS_ACCEPTED`.
+
+**Errores:** 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN
+050. Excepción a la regla general de esta sección: como el archivo se lee
+completo (en chunks, con corte temprano) **antes** de construir el
+`StreamingResponse`, este código nunca llega como evento SSE — es una
+respuesta HTTP 400 estándar, igual que cualquier otro 400 de este catálogo.
+El resto de los errores de parseo/contrato sí llegan como eventos SSE
+(ver "Stream / sesión" en el catálogo, más abajo).
+
+---
+
+### POST /api/v1/analysis/outlier-decision
+
+**Cambiado 18/10/2026 (DECISIÓN 079):** una sola pausa con todos los atípicos de Chow y una decisión por
+punto. Reemplaza al cuerpo `{session_id, decision, dato_atipico}`, que decidía uno solo.
+
+**Request:**
+```json
+{
+  "session_id": "uuid-de-sesion-activa",
+  "decisiones": [
+    {"indice": 14, "decision": "rechazar"},
+    {"indice": 25, "decision": "aceptar"}
+  ]
+}
+```
+`indice` es la posición en `datos.serie_efectiva`, la misma que trae `outlier_detected.atipicos`.
+
+**Auth:** JWT opcional (mismo que el stream activo)
+
+**Response:**
+```json
+{"ok": true, "pipeline_continua": true}
+```
+
+**Errores:** 400 `OUTLIER_DECISION_INVALID` si los índices no son exactamente los de la pausa (falta uno, sobra
+uno ajeno, hay uno repetido, o la sesión no está en la pausa de Chow); 404 `SESSION_NOT_FOUND` si la sesión no
+existe o expiró. En ninguno de los dos casos se desbloquea el stream.
+
+Los rechazados se excluyen juntos, con la misma operación que `simulate-exclusion` (DECISIÓN 071), y la segunda
+pasada informa Chow sin volver a pausar. `decisiones.chow` se persiste como
+`{"atipicos": [{indice, periodo, valor, z, lado, decision, codigo}]}`, con `codigo`
+`TEST_OUTLIER_REJECTED_BY_USER` o `TEST_OUTLIER_ACCEPTED_BY_USER` por punto. Los análisis anteriores conservan
+la forma vieja `{"accion", "dato"}`, y el historial y el PDF leen las dos.
+
+**Solo para CU-01 y CU-02. CU-03 no usa este endpoint.**
+
+---
+
+### POST /api/v1/analysis/preview-columns
+
+**Agregado en DECISIÓN 047 (pasada 4, Bloque D)** — previsualización de
+columnas para poblar los dropdowns de `ConfigPage`, reusando el mismo
+parser que `POST /analysis/stream` (`core/validacion/parser.py`).
+
+**Request (multipart/form-data):**
+```json
+{"archivo": "<file CSV o Excel>"}
+```
+
+**Auth:** Sin dependencia de usuario — no hay diferencia de comportamiento
+según quién llama, así que no inspecciona la cookie en absoluto (a
+diferencia de `/analysis/stream`, que sí declara `get_optional_user`).
+
+**Completamente stateless.** No genera `session_id`, no toca
+`session_store`, no escribe en BD.
+
+**Response 200:**
+```json
+{
+  "columnas": [
+    {"nombre": "anio", "indice": 0, "muestra": ["1980", "1981", "1982"]},
+    {"nombre": "caudal", "indice": 1, "muestra": ["94.71", "89.83", "105.13"]}
+  ],
+  "filas": 40
+}
+```
+
+**Errores:** 400 `PARSE_ERROR` para cualquier archivo no parseable
+(incluido vacío — `pandas.errors.EmptyDataError` es subclase de
+`ValueError`, capturado por el mismo `except`). No hay un segundo código
+para "sin columnas utilizables": verificado que pandas no puede devolver
+un DataFrame con cero columnas sin haber lanzado antes — ver DECISIÓN 047,
+addendum. 400 `PARSE_FILE_TOO_LARGE` si `archivo` supera 10 MB — DECISIÓN 050,
+el mismo cap que `/analysis/stream`.
+
+---
+
+### GET /api/v1/history/
+
+**Agregado el parámetro `archivados` en DECISIÓN 048 (pasada 4, Bloque E)** —
+por defecto excluye los análisis archivados; `?archivados=true` los incluye.
+Cada item del array ahora expone `archivado_at` (`null` si no está archivado).
+
+**Agregados `nombre_archivo` y `serie_preview` en el PR 4 del plan de fixes
+pre-reunión (F7a/F7b, 14/08/2026)** — antes la lista solo exponía
+`tipo_variable`, indistinguible entre análisis del mismo tipo de variable.
+`nombre_archivo` vive en `analyses.configuracion` (JSONB, sin migración —
+mismo campo que `cramer_particion`/`mes_inicio_anio`), poblado desde el
+`filename` real que ya recibía `stream_analysis()`. `serie_preview` reusa
+`analyses.serie` tal cual (~40 valores típicos, no cambia el orden de
+magnitud del payload) para una sparkline decorativa en cada fila — sin
+timestamps ni ejes, ese detalle vive solo en `GET /history/{id}`.
+
+**Sin backfill** (mismo criterio que `timestamps`, DECISIÓN 058 §4):
+`nombre_archivo` es `null` para cualquier análisis persistido antes de este
+PR — el frontend degrada explícitamente a mostrar `tipo_variable` en ese
+caso, no oculta la fila ni la rompe.
+
+**Auth:** JWT en HttpOnly Cookie (requerido)
+
+**Response 200:**
+```json
+[
+  {
+    "id": "uuid",
+    "tipo_variable": "otro",
+    "modo": "experto",
+    "etapas": ["1"],
+    "created_at": "2026-07-31T01:19:27.556471",
+    "archivado_at": null,
+    "nombre_archivo": "estacion_04.csv",
+    "serie_preview": [94.71, 89.83, 105.13],
+    "alfa": 0.05,
+    "chow_rechazados": 1,
+    "exclusiones_guardadas": 0
+  }
+]
+```
+
+`alfa` (DECISIÓN 078): nivel de significancia de la Etapa 1 del análisis; `0.05` para los guardados antes de
+que fuera configurable.
+
+`chow_rechazados` (revisión manual del 21/10/2026, bloque C1): cuántos puntos rechazó el usuario en la pausa de
+Chow, contados en el backend sobre `analysis_results.decisiones.chow` (las dos formas del registro) sin mandar el
+registro completo. `0` si no hubo pausa o se aceptaron todos. La lista lo muestra como etiqueta; el detalle
+(`GET /history/{id}`) ya trae `decisiones`.
+
+`exclusiones_guardadas` (DECISIÓN 080): cuántas exclusiones de puntos tiene guardadas el análisis. Las exclusiones en
+sí viajan solo en el detalle.
+
+---
+
+### GET /api/v1/history/{id}
+
+**Documentado por primera vez en el PR 3 del plan de cierre de pendientes
+no-test (DECISIÓN 058)** — el endpoint ya existía (`history.py::get_history_item`,
+`services/analysis_service.py::get_analysis_by_id()`), esta sección nunca se
+había escrito. Al mismo tiempo gana tres campos nuevos: `serie`,
+`timestamps`, `configuracion` — cierran el hueco que el PR 9 del plan de
+Etapa 2 dejó anotado (`mes_inicio_anio` ya se persistía desde DECISIÓN 057,
+pero el endpoint no lo devolvía, así que la nota de criterio de año nunca
+llegaba a `HistoryDetailPage`).
+
+**Bloque C2 del plan post-avance (14/08/2026)** — dos campos más:
+
+- **`decisiones`** — el registro de auditoría de CU-01 ya se persistía
+  (`analysis_results.decisiones`, ver `architecture.md`) pero este endpoint
+  nunca lo devolvía. `{}` (nunca `null`) para un análisis sin ninguna pausa
+  resuelta — `_persistir()` siempre recibe al menos `{}`.
+- **`etapa2.seleccion`** — `_serializar_etapa2()` gana un bloque opcional con
+  la distribución+método elegidos y sus resultados
+  (`{distribucion, metodo, periodos_retorno, eventos_diseno, curva_ajuste}`),
+  para que el historial pueda mostrar la elección sin recalcular nada.
+  `null` cuando `etapa2` no es `null` pero no se llegó a elegir ninguna
+  distribución (stream abandonado en la pausa — ver B4, plan post-avance,
+  todavía sin resolver) — mismo criterio sin backfill que `timestamps`
+  (DECISIÓN 058 §4).
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Verifica pertenencia
+(`user_id`) — un análisis ajeno responde 404, no 403.
+
+**Response 200:**
+```json
+{
+  "id": "uuid",
+  "tipo_variable": "otro",
+  "modo": "experto",
+  "etapas": ["1"],
+  "created_at": "2026-07-31T01:19:27.556471",
+  "etapa1": { "...": "ver payload de result_etapa1 en statistical-pipeline.md" },
+  "etapa2": {
+    "ranking": ["...", "ver DECISIÓN 055 — la grilla completa, sin aplanar"],
+    "warnings": ["..."],
+    "puntos_empiricos": ["..."],
+    "seleccion": {
+      "distribucion": "gve",
+      "metodo": "ml",
+      "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500],
+      "eventos_diseno": [{"periodo_retorno": 2, "valor": 107.5625}],
+      "curva_ajuste": [{"periodo_retorno": 1.05, "valor": 61.2}]
+    }
+  },
+  "decisiones": {
+    "chow": {"atipicos": [{"indice": 20, "periodo": 2000, "valor": 950.0, "z": 3.4, "lado": "alto",
+                           "decision": "rechazar", "codigo": "TEST_OUTLIER_REJECTED_BY_USER"}]},
+    "distribucion": {"distribucion": "gve", "metodo": "ml", "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]}
+  },
+  "serie": [94.71, 89.83],
+  "timestamps": [{"iso": "1980-01-01", "anio": 1980}],
+  "configuracion": {"cramer_particion": "default", "mes_inicio_anio": 7, "alfa": 0.05, "cobertura_minima_interior": 100},
+  "exclusiones": []
+}
+```
+
+`exclusiones` (DECISIÓN 080): las exclusiones de puntos guardadas, con la forma de la respuesta de
+`POST /history/{id}/exclusiones`. `[]` si no hay ninguna (sin backfill para análisis anteriores).
+
+`etapa1` es el mismo payload de `result_etapa1` (`statistical-pipeline.md`), incluido `explicacion.desglose` de Anderson y Chow desde el addendum del 01/10/2026 a la DECISIÓN 064 (ausente en análisis anteriores, sin backfill).
+
+`serie`/`timestamps`/`configuracion` son la entrada tal como se subió y
+configuró (`analyses`, DECISIÓN 058 §1) — no el resultado del análisis, que
+ya viaja dentro de `etapa1.datos`. `timestamps` es `null` para cualquier
+análisis persistido antes de la migración `005` (sin backfill, ver
+DECISIÓN 058 §4) — el frontend degrada explícitamente para esos casos en
+vez de reconstruir datos.
+
+**Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
+### POST /api/v1/history/{id}/archive
+
+**Agregado en DECISIÓN 048 (pasada 4, Bloque E)** — soft-delete de un
+análisis: marca `archivado_at` con la fecha/hora actual. No borra la fila
+— ver `docs/decisiones/decision048.md` para la justificación (trazabilidad
+de auditoría, `constraints.md`).
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Verifica pertenencia
+(`user_id`) igual que `GET /history/{id}` — un análisis ajeno responde 404,
+no 403 (no se revela si el id existe).
+
+**Response 200:** `{"ok": true}`
+**Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
+### POST /api/v1/history/{id}/unarchive
+
+**Agregado en DECISIÓN 048 (pasada 4, Bloque E)** — inverso de `/archive`:
+limpia `archivado_at` (vuelve a `null`).
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Misma verificación de
+pertenencia que `/archive`.
+
+**Response 200:** `{"ok": true}`
+**Errores:** 404 si el análisis no existe o no pertenece al usuario
+
+---
+
+### POST /api/v1/history/{id}/exclusiones (DECISIÓN 080)
+
+**Agregado 21/10/2026** (bloque C2 de `docs/historico/planes/plan-revision-manual-21-10-2026.md`) — guarda una exclusión de puntos
+hecha después del análisis (la simulación de DECISIÓN 071), **aparte** del resultado: no toca `etapa1`, `etapa2` ni
+`decisiones` (DECISIÓN 062). Solo a pedido, desde la vista comparativa.
+
+**Request:** `{"indices_excluidos": [3, 13]}` — posiciones en `etapa1.datos.serie_efectiva`.
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Pertenencia como en `GET /history/{id}`.
+
+**Response 200:** la entrada guardada. Los años y los valores salen del análisis persistido, no del cliente; los
+índices quedan ordenados. Si la misma selección ya estaba guardada, devuelve la existente sin duplicarla.
+```json
+{
+  "id": "uuid",
+  "creado_at": "2026-10-21T13:05:12.481920",
+  "indices": [3, 13],
+  "puntos": [{"indice": 3, "periodo": 1983, "valor": 245.7}, {"indice": 13, "periodo": 1993, "valor": 98.1}],
+  "alfa": 0.05,
+  "cramer_particion": "default"
+}
+```
+No se guardan los resultados de la simulación: se recalculan con `POST /analysis/simulate-exclusion`, que es
+determinístico.
+
+**Errores** (estructura estándar `{"error": {...}}`): 404 `ANALYSIS_NOT_FOUND` (no existe o no es del usuario); 400
+`CONTRACT_EXCLUSION_INVALID` (índices vacíos, fuera de rango, repetidos o que vacían la serie, o un análisis sin la
+serie analizada registrada); 422 validación Pydantic.
+
+### DELETE /api/v1/history/{id}/exclusiones/{exclusion_id} (DECISIÓN 080)
+
+Quita una exclusión guardada. Misma autenticación y pertenencia.
+
+**Response 200:** `{"ok": true}`
+**Errores:** 404 `ANALYSIS_NOT_FOUND` (no existe o no es del usuario); 404 `ANALYSIS_EXCLUSION_NOT_FOUND` (el análisis es del
+usuario pero no tiene esa exclusión).
+
+---
+
+### POST /api/v1/analysis/design-events — REEMPLAZADO por `distribution-decision`
+
+**Reemplazado 09/08/2026 (DECISIÓN 052, Bloque A del plan de Etapa 2).**
+Este contrato se documentó pero nunca se implementó — el router real nunca
+tuvo esta ruta. Con Etapa 2 cableada al mismo stream SSE que Etapa 1
+(DECISIÓN 052), un endpoint sincrónico que devuelve los eventos calculados
+deja de tener sentido: el cliente ya tiene una conexión SSE abierta
+esperando el ranking. Se reemplaza por
+[`POST /analysis/distribution-decision`](#post-apiv1analysisdistribution-decision-decisión-052)
+— misma forma que `outlier-decision`, el cliente manda una decisión, no
+recibe un resultado en la misma respuesta. Se conserva esta entrada, sin
+borrar, por trazabilidad — no se implementa el contrato tal como está
+escrito abajo.
+
+**Request:**
+```json
+{
+  "session_id": "uuid-de-sesion-activa",
+  "distribucion": "gumbel",
+  "metodo": "momentos | mv | me | ml | mpp | mc",
+  "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]
+}
+```
+
+**Auth:** JWT opcional
+
+**Response:**
+```json
+{
+  "distribucion": "gumbel",
+  "metodo": "momentos",
+  "parametros": {"mu": 142.5, "sigma": 38.2},
+  "eventos_diseno": [
+    {"periodo_retorno": 2, "valor": 138.4},
+    {"periodo_retorno": 100, "valor": 312.7}
+  ],
+  "grafico_ajuste": "<base64 o url>",
+  "analysis_id": "uuid | null"
+}
+```
+
+---
+
+### POST /api/v1/analysis/distribution-decision (DECISIÓN 052)
+
+**Agregado 09/08/2026** — reemplaza a `design-events` (arriba). Misma forma
+que `outlier-decision`: el cliente manda la decisión, el resultado (eventos
+de diseño, evento `result_etapa2_eventos`) viaja por el stream SSE ya
+abierto, no en la respuesta de este endpoint.
+
+**Request:**
+```json
+{
+  "session_id": "uuid-de-sesion-activa",
+  "distribucion": "gumbel",
+  "metodo": "momentos",
+  "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]
+}
+```
+
+**Auth:** JWT opcional (mismo que el stream activo)
+
+**Validación en el borde** (no con restricciones Pydantic — necesita
+devolver el código propio, no un 422 genérico de FastAPI):
+`distribucion` y `metodo` no vacíos; `periodos_retorno` con entre 1 y 20
+elementos, todos `> 1` (`F = 1 - 1/T` necesita `T > 1` para caer en
+`(0,1)` — mismo guard que `cuantil()` en `core/`, duplicado acá para
+devolver un 400 legible en vez de un 500). Cualquier violación → 400
+`DIST_SELECTION_INVALID`, evaluado antes de tocar `session_store`.
+
+**Response 200:**
+```json
+{"ok": true, "pipeline_continua": true}
+```
+
+**Errores:** 404 `SESSION_NOT_FOUND` (la sesión no existe o ya expiró — a
+diferencia de `outlier-decision`, que no valida existencia de sesión, este
+endpoint sí lo hace explícitamente por mandato de DECISIÓN 052), 400
+`DIST_SELECTION_INVALID`, 400 `DIST_EXCLUDED` (la distribución está en
+`EXCLUIDAS_V1` de `core/etapa2/distributions/__init__.py` — hoy `gen_pareto` —
+y no se calcula en esta versión, addendum del 29/10/2026 a la DECISIÓN 074), 400
+`DIST_PENDING_VALIDATION` (la distribución está en `PENDIENTES_VALIDACION`, hoy
+vacío, DECISIÓN 074). Los dos se evalúan en el borde después de la forma del
+request y antes de tocar `session_store`.
+
+**Estado de implementación (09/08/2026, cierre del Bloque A1-A6 del plan de
+Etapa 2):** cableado de punta a punta y verificado. El stream pausa de
+verdad en `result_etapa2_ranking`, este endpoint la desbloquea, y el
+stream calcula los eventos de diseño reales (`core/etapa2/design_events.py`,
+Bloque A4) y persiste `analysis_results.etapa2` para CU-01 (Bloque A5).
+Verificado con `tests/integration/test_etapa2_stream_distribution_decision.py`
+(stream completo, sin red) y con un smoke test manual contra el backend real
+vía HTTP — CU-01 con `etapas=1,2`, `distribution-decision` real, y
+`psql` confirmando `analysis_results.etapa2` con todas las distribuciones (13 cuando se hizo esa prueba; 12 desde la v1, ver addendum a la DECISIÓN 074).
+Ver `.claude/rules/core/statistical-pipeline.md` para la secuencia SSE
+completa.
+
+**Solo para CU-01 y CU-02. CU-03 no usa este endpoint** — mismo alcance
+que `outlier-decision`.
+
+---
+
+### POST /api/v1/analysis/{id}/design-events (DECISIÓN 062, Bloque C2c)
+
+**Agregado 18/08/2026** — historial interactivo: recálculo **stateless** de
+eventos de diseño para una distribución+método distintos de los elegidos
+durante el stream original, sin reajustar nada. Los `parametros` de las 28
+combinaciones ya viven en `analysis_results.etapa2.ranking` (DECISIÓN 055)
+— este endpoint solo busca la fila que corresponde y llama
+`calcular_eventos_diseno()`, la misma función pura que usa el stream.
+
+No confundir con `POST /analysis/distribution-decision`: ese endpoint
+resuelve una pausa real de un stream en curso, con `session_id`; este no
+tiene ninguna sesión de por medio, opera directo sobre un análisis ya
+persistido por su `id`.
+
+**Request:**
+```json
+{
+  "distribucion": "gve",
+  "metodo": "ml",
+  "periodos_retorno": [2, 5, 10, 25, 50, 100, 200, 500]
+}
+```
+
+**Auth:** JWT en HttpOnly Cookie (requerido) — a diferencia de
+`distribution-decision` (JWT opcional, sigue al stream activo), este
+endpoint siempre requiere sesión: solo CU-01 tiene historial. Verifica
+pertenencia igual que `GET /history/{id}` — un análisis ajeno o inexistente
+responde 404 sin distinguir los dos casos.
+
+**Validación en el borde:** misma función que `distribution-decision`
+(`distribucion`/`metodo` no vacíos, `periodos_retorno` entre 1 y 20
+elementos todos `> 1`) → 400 `DIST_SELECTION_INVALID` — la forma del
+request es idéntica, el destino de la decisión es lo único que cambia.
+
+**Response 200:**
+```json
+{
+  "eventos_diseno": [
+    {"periodo_retorno": 2, "valor": 138.4},
+    {"periodo_retorno": 100, "valor": 312.7}
+  ],
+  "curva_ajuste": [
+    {"periodo_retorno": 1.05, "valor": 61.2},
+    {"periodo_retorno": 1.11, "valor": 68.9}
+  ]
+}
+```
+Mismo formato que `result_etapa2_eventos` del stream (`curva_ajuste`: 60
+puntos en escala logarítmica, no los `periodos_retorno` pedidos — ver
+`statistical-pipeline.md`). `valor` puede ser `null` para un período
+puntual si `cuantil()` falla para esa distribución+método, igual que en el
+stream.
+
+**Errores:**
+- 404 `ANALYSIS_NOT_FOUND` — el análisis no existe, no pertenece al
+  usuario, o no tiene Etapa 2 ejecutada (`analysis_results.etapa2` es
+  `null`). Los tres casos responden igual, sin revelar cuál aplica.
+- 400 `DIST_SELECTION_INVALID` — forma del request inválida (ver arriba).
+- 400 `DIST_METHOD_NOT_FITTED` — la combinación pedida no aparece en el
+  ranking persistido, o aparece con `status != "ok"` (no convergió, no
+  aplicable, deshabilitada por ceros) — no hay `parametros` de los que
+  partir. Distinto de `DIST_SELECTION_INVALID`: ese código es sobre la
+  forma del request, este es sobre si la combinación bien formada tiene
+  algo que recalcular.
+- 400 `DIST_EXCLUDED` — la distribución no se calcula en esta versión
+  (addendum del 29/10/2026 a la DECISIÓN 074, hoy `gen_pareto`): un análisis
+  guardado antes la trae en su ranking, pero no se puede explorar. 400
+  `DIST_PENDING_VALIDATION` para las pendientes de validación (DECISIÓN 074, hoy
+  ninguna). Evaluados en el borde, antes de tocar la base.
+
+**No toca `session_store`, no persiste nada, no altera
+`analysis_results.decisiones`** — DECISIÓN 062, "explorar no es decidir".
+El registro de auditoría de CU-01 sigue reflejando exactamente lo que se
+decidió durante el análisis, nunca una exploración posterior desde el
+historial.
+
+**Solo para CU-01.** CU-02 no tiene historial que explorar; CU-03 no usa
+este router.
+
+---
+
+### POST /api/v1/analysis/simulate-exclusion (DECISIÓN 071)
+
+**Agregado 01/10/2026** (PR 5 del plan de fixes post-verificación, ítem A del feedback de
+directores) — what-if de atípicos: recalcula Etapa 1 (y Etapa 2 si se pide) **sin** los puntos
+excluidos, para compararlo con el análisis original. **Política:** un punto excluido se elimina
+junto con su año, en cualquier posición (la misma operación que el rechazo de Chow); el reemplazo
+por la media quedó postergado (`tratamiento` es el punto de extensión).
+
+**Request (JSON):**
+```json
+{
+  "serie": [94.71, 89.83, 105.13],
+  "anios": [1980, 1981, 1982],
+  "tipo_variable": "caudal_precipitacion",
+  "cramer_particion": "default",
+  "indices_excluidos": [1],
+  "etapas": [1, 2],
+  "tratamiento": "eliminar",
+  "seleccion": {"distribucion": "gumbel", "metodo": "momentos", "periodos_retorno": [2, 10, 100]},
+  "alfa": 0.05
+}
+```
+`alfa` (DECISIÓN 078, opcional, `0.05` por defecto): el nivel de significancia del análisis original, que el
+frontend repite para que la simulación compare contra lo mismo. Fuera de `{0.01, 0.05, 0.10}` → 400
+`CONTRACT_ALFA_INVALID`.
+`serie`/`anios` son `datos.serie_efectiva` y los años de `datos.timestamps_efectivos`: la serie
+**ya agregada**; los índices son posiciones en ella, no en la serie cruda subida.
+`cramer_particion` llega como texto, igual que en `/analysis/stream`. `tratamiento` es opcional.
+`seleccion` también (addendum 02/10/2026 a DECISIÓN 071): la distribución+método+períodos elegidos en el
+análisis original; con ella y Etapa 2, `etapa2.seleccion` trae sus `eventos_diseno` y `curva_ajuste`
+reajustados sin los puntos excluidos (misma forma que en `GET /history/{id}`; `valor: null` y curva vacía si
+la combinación ya no ajusta). Se valida como en `distribution-decision`. La `seleccion` de la respuesta suma
+`estado` (revisión 18/10/2026 de DECISIÓN 071): el status de la combinación sobre la serie sin los puntos
+(`ok`, `no_converge`, `no_aplicable`, `disabled_zeros`, `disabled_negatives`), para explicar por qué no hay
+eventos. El frontend también la usa para explorar otra distribución bajo la simulación: manda la combinación
+explorada en `seleccion`, con los mismos índices.
+
+**Auth:** ninguna dependencia de usuario — responde igual con o sin cookie, como
+`preview-columns`. **Completamente sin estado:** no genera sesión, no toca `session_store`, no
+lee ni escribe la BD, no altera `decisiones` (DECISIÓN 062, "explorar no es decidir").
+
+**Cómo calcula:** `core/pipeline/exclusiones.py::aplicar_exclusiones()` y después
+`ejecutar_etapa1(..., resolucion_temporal="anual")` sobre la serie resultante, como la segunda
+pasada del rechazo de Chow (no se vuelve a agregar). **Chow se evalúa sin pausa:** un atípico
+nuevo se informa en `etapa1.atipicos`, no detiene nada. Con `etapas == [1, 2]` y
+`nivel_confianza != "rechazado"`, corre `ejecutar_etapa2` (con `tiene_ceros`/`tiene_negativos`
+calculados sobre la serie resultante). Si quedan menos de 10 datos, responde el bloqueante de
+siempre dentro de `etapa1.contract` (`CONTRACT_SERIES_TOO_SHORT`), con 200: no hay un error nuevo.
+
+**Response 200:**
+```json
+{
+  "etapa1": { "...": "mismo payload que result_etapa1 (statistical-pipeline.md)" },
+  "etapa2": { "ranking": ["..."], "warnings": ["..."], "puntos_empiricos": ["..."], "seleccion": "null, o la elección recalculada si se mandó seleccion" },
+  "excluidos": [{ "indice": 1, "periodo": 1981, "valor_original": 89.83 }],
+  "serie": [94.71, 105.13],
+  "anios": [1980, 1982]
+}
+```
+`etapa2` es `null` con `etapas == [1]` o si Etapa 1 quedó `rechazado`. `serie`/`anios` son la
+serie resultante, para que el frontend arme el CSV desde lo que devolvió `core/`.
+
+**Errores:** 400 `CONTRACT_SERIES_INVALID` (serie vacía, con más de 500 valores o con valores no
+finitos), 400 `CONTRACT_EXCLUSION_INVALID` (índices fuera de rango o repetidos, `anios` de otro
+largo que `serie`, `tratamiento` inexistente), 400 `CONTRACT_ETAPAS_INVALID` (`etapas` distinto
+de `[1]` o `[1, 2]`), 400 `CONTRACT_CRAMER_PARTICION_INVALID`, 400 `CONTRACT_ALFA_INVALID`, 400 `DIST_SELECTION_INVALID` /
+`DIST_EXCLUDED` / `DIST_PENDING_VALIDATION` (`seleccion` mal formada, excluida de la versión o pendiente de
+validación), 422 validación Pydantic (por
+ejemplo, `tipo_variable` fuera de las dos opciones).
+
+---
+
+### GET /api/v1/export/{id} (DECISIÓN 075)
+
+**Agregado 06/10/2026** — informe PDF de un análisis persistido de CU-01, generado en el momento y nunca
+guardado en disco. Exporta Etapa 1 o Etapa 1 + 2 según lo que se corrió, **siempre en formato Experto**
+(resultados directos, sin fórmulas ni explicaciones), sea cual sea el modo del análisis.
+
+**Auth:** JWT en HttpOnly Cookie (requerido). Verifica pertenencia igual que `GET /history/{id}`.
+
+**Response 200:** `application/pdf`, con `Content-Disposition: attachment; filename="metis_<archivo>_<fecha>.pdf"`
+(nombre en ASCII). Contenido: datos y configuración del análisis, advertencias, estadística descriptiva, las ocho
+pruebas por batería con sus niveles, decisión ante el atípico, gráficos de la serie y del correlograma de Anderson;
+con Etapa 2, el ranking de las distribuciones (12 en la v1; un análisis guardado antes puede traer 13, con la Generalizada de Pareto como "pendiente de validación"), con mejor método, EEA y EEA/media, sin marcar ganadora, la
+distribución elegida con sus parámetros y eventos de diseño, y el gráfico de ajuste.
+
+**Errores:** 401 sin sesión; 404 `ANALYSIS_NOT_FOUND` si el análisis no existe o no pertenece al usuario (body con
+la estructura estándar `{"error": {...}}`).
+
+### POST /api/v1/export/{id}/simulacion (DECISIÓN 075)
+
+El mismo PDF más, en una página aparte, los resultados **sin los puntos excluidos** comparados con el análisis
+registrado — lo mismo que muestra la vista comparativa del what-if de atípicos (DECISIÓN 071) en Resultados.
+
+**Request (JSON):** `{"indices_excluidos": [3, 17]}` — posiciones en `etapa1.datos.serie_efectiva`, como en
+`simulate-exclusion`. Del cliente llegan solo los índices: serie, años, `tipo_variable`, `cramer_particion`, `etapas`
+y la distribución elegida salen del análisis persistido, y la simulación se recalcula con `simular_exclusion()`. No
+se guarda nada ni se toca `decisiones` (DECISIÓN 062).
+
+**Auth y response 200:** iguales a `GET /export/{id}`; el nombre del archivo termina en `_simulacion.pdf`.
+
+**Errores:** 401 y 404 como arriba; 400 `CONTRACT_EXCLUSION_INVALID` si `indices_excluidos` está vacío, tiene
+índices fuera de rango o repetidos, o el análisis no tiene registrada la serie analizada (anterior a DECISIÓN 058);
+422 validación Pydantic.
+
+---
+
+### POST /api/v1/validate/ (CU-03)
+
+**Request (multipart/form-data):**
+```json
+{
+  "client_id": "identificador-sistema-externo",
+  "archivo": "<file CSV o Excel>",
+  "columna_x": "nombre_o_indice",
+  "columna_y": "nombre_o_indice",
+  "tipo_variable": "caudal_precipitacion | otro"
+}
+```
+
+**Auth:** Header `X-API-Key: <key>`
+
+**Response JSON completo:**
+```json
+{
+  "client_id": "string",
+  "nivel_confianza": "validado | con_warnings | rechazado",
+  "timestamp": "ISO8601",
+  "contrato": {
+    "estado": "aprobado | aprobado_con_warnings | rechazado",
+    "problemas": [
+      {"campo": "serie", "codigo": "CONTRACT_LENGTH_WARNING", "descripcion": "...", "accion": "continua"}
+    ]
+  },
+  "estadistica_descriptiva": {
+    "n": 35,
+    "media": 142.5,
+    "mediana": 138.2,
+    "desvio_estandar": 38.1,
+    "coef_variacion": 0.267,
+    "coef_asimetria": 0.84,
+    "minimo": 72.3,
+    "maximo": 312.7
+  },
+  "etapa_1": {
+    "independencia": {
+      "nivel": "independiente | dependiente",
+      "anderson": {"estadistico": 0.23, "valor_critico": 0.37, "veredicto": "aprobada"},
+      "wald_wolfowitz": {"estadistico": 0.37, "valor_critico": 1.96, "veredicto": "aprobada", "warning": null}
+    },
+    "homogeneidad": {
+      "nivel": "homogeneidad_ok | homogeneidad_warning | homogeneidad_critica",
+      "helmert": {"estadistico": 2.1, "valor_critico": 4.8, "veredicto": "aprobada"},
+      "t_student": {"estadistico": -1.76, "valor_critico": 2.07, "veredicto": "aprobada", "grados_libertad": 22},
+      "cramer": {"tau60": 0.183, "tau30": 0.352, "valor_critico": 2.07, "veredicto": "aprobada", "n1": 21, "n2": 11}
+    },
+    "tendencia": {
+      "mann_kendall": {"estadistico": 1.12, "valor_critico": 1.96, "veredicto": "sin_tendencia"},
+      "kolmogorov_smirnov": {"estadistico": 0.89, "valor_critico": 1.358, "veredicto": "sin_tendencia"}
+    },
+    "atipicos": {
+      "chow": {"estadistico": null, "valor_critico": null, "veredicto": "no_ejecutada", "codigo": "TEST_NOT_EXECUTED_ZEROS"}
+    },
+    "warnings": [
+      {"codigo": "CONTRACT_LENGTH_WARNING", "nivel": "normal", "descripcion": "Serie con 28 datos. La longitud mínima recomendable para que la serie sea representativa es de 30 valores; con menos, los resultados no son certificables."}
+    ]
+  }
+}
+```
+
+---
+
+## Catálogo completo de códigos estandarizados
+
+### Auth
+```
+AUTH_EMAIL_ALREADY_REGISTERED     Email ya registrado (register)
+AUTH_VERIFICATION_EMAIL_FAILED    Fallo al enviar mail de verificación (register)
+AUTH_INVALID_TOKEN                Token de verificación inválido o expirado (verify)
+AUTH_USER_NOT_FOUND               Usuario no encontrado (verify)
+AUTH_INVALID_CREDENTIALS          Email o contraseña incorrectos (login)
+AUTH_EMAIL_NOT_VERIFIED           Email sin verificar (login)
+AUTH_RESET_TOKEN_INVALID           Token de reseteo inexistente, vencido o ya usado (reset-password)
+```
+
+### Contrato — bloqueantes
+```
+CONTRACT_SERIES_TOO_SHORT        Serie con menos de 10 datos
+CONTRACT_NO_TEMPORAL_RESOLUTION  Resolución temporal no declarada
+CONTRACT_WRONG_ORDER             Timestamps fuera de orden cronológico (DECISIÓN 030, Bloque H3)
+```
+`CONTRACT_NO_TEMPORAL_RESOLUTION` — `parser.py::_inferir_resolucion()` la
+determina por la moda de los deltas entre timestamps: `>= 300` días →
+`"anual"`, `>= 25` → `"mensual"`, `== 1` → `"diaria"` (DECISIÓN 065), y
+cualquier otra cosa (semanal, quincenal, sub-diario truncado a 0 por
+`.days`) → `None`, que dispara este código bloqueante. `"diaria"` deja de
+bloquear desde DECISIÓN 065 y se agrega a máximos anuales igual que
+`"mensual"` (paso 0, ver abajo).
+`CONTRACT_WRONG_ORDER` es bloqueante desde el 18/08/2026 (DECISIÓN 030,
+Bloque H3 del plan post-avance) — antes era warning, ver "Contrato —
+warnings" más abajo para la nota completa de por qué se movió y qué código
+lo evalúa.
+
+### Contrato — warnings
+```
+CONTRACT_LENGTH_WARNING          Entre 10 y 29 datos — el texto nombra los 30 valores recomendables (Facundo, 22/10/2026)
+CONTRACT_NEGATIVE_VALUES         Valores negativos en caudal_precipitacion
+CONTRACT_MISSING_VALUES          Valores faltantes o celdas vacías
+CONTRACT_DUPLICATE_TIMESTAMPS    Duplicados temporales
+CONTRACT_IRREGULAR_SPACING       Espaciado temporal irregular
+CONTRACT_NON_NUMERIC_VALUES      Valores no numéricos mezclados
+CONTRACT_PARTIAL_YEARS_TRIMMED   Agregación mensual/diaria (Bloque F4 / R2): años parciales recortados en los extremos del registro
+CONTRACT_INCOMPLETE_YEARS_DISCARDED  Agregación mensual/diaria (Bloque F4 / R2): año incompleto descartado dentro del registro (no en un extremo)
+CONTRACT_INCOMPLETE_YEARS_ACCEPTED   Agregación mensual/diaria (R2.3): año interior aceptado con cobertura < 100% — su máximo puede estar sesgado a la baja
+CONTRACT_DAILY_SERIES_AGGREGATED     Agregación diaria (PR 2.5 / R0.2): los máximos anuales son un derivado del registro diario. Texto según variable_diaria — si "media", advierte que subestiman el pico instantáneo real; si "acumulado", nombra el máximo acumulado diario, sin sesgo
+```
+`CONTRACT_PARTIAL_YEARS_TRIMMED`, `CONTRACT_INCOMPLETE_YEARS_DISCARDED`,
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` y `CONTRACT_DAILY_SERIES_AGGREGATED` los
+emite `core/pipeline/pipeline_etapa1.py::_warnings_de_agregacion()`, no
+`core/validacion/contract.py` — son resultado de
+`core/validacion/aggregation.py::agregar_a_maximos_anuales()`, que corre
+antes de `validar_contrato()` cuando `resolucion_temporal in ("mensual",
+"diaria")` (DECISIÓN 057 para mensual; DECISIÓN 065 para diaria).
+Se agrupan acá por dominio (contrato de datos temporal), no por el módulo
+que los emite — mismo criterio que ya aplica el resto de esta sección. Si
+el usuario rechaza un atípico de Chow, la segunda ejecución de
+`ejecutar_etapa1()` (`resolucion_temporal="anual"`) no re-emite ninguno de
+estos cuatro — `services/` los arrastra desde la primera ejecución
+(`CODIGOS_WARNING_AGREGACION`), igual que `serie_original`.
+
+`CONTRACT_DAILY_SERIES_AGGREGATED` (DECISIÓN 065, PR 2.5 / R0.2) se emite en
+**toda** agregación desde carga diaria — deja constancia de que los máximos
+anuales son un derivado del registro diario. El texto del warning depende
+del parámetro de request `variable_diaria`: con `"pico"` (default) y con
+`"acumulado"` (lluvia de 9 a 9, revisión 22/10/2026 de la DECISIÓN 065) es
+informativo; con `"media"` advierte que los máximos anuales y los eventos
+de diseño de Etapa 2 pueden subestimar el pico instantáneo real, sesgo que
+METIS no corrige (ver `docs/decisiones/decision066.md`). `variable_diaria`
+se persiste en `analyses.configuracion` — dos análisis del mismo archivo
+diario con declaraciones distintas no dan números distintos hoy, pero sí un
+warning y una lectura distinta de los resultados.
+
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` (DECISIÓN 065, R2.3) solo se emite
+cuando un año **interior** se acepta con cobertura por debajo del 100% —
+posible únicamente con `cobertura_minima_interior < 100`, que el usuario
+elige desde la DECISIÓN 081 (R0.1 respondida por Facundo el 22/10/2026). Con
+el valor por defecto (100) no se emite.
+Los años de los **extremos** siempre exigen 100% (regla asimétrica) y se
+recortan con `CONTRACT_PARTIAL_YEARS_TRIMMED`.
+
+**`CONTRACT_WRONG_ORDER` — movido a bloqueante 18/08/2026 (DECISIÓN 030,
+Bloque H3 del plan post-avance), segunda excepción real al principio
+"detecta y advierte, no bloquea" (la primera es `CONTRACT_SERIES_TOO_SHORT`).**
+Ya no lo emite `validar_contrato()` — se evalúa en
+`core/pipeline/pipeline_etapa1.py::ejecutar_etapa1()`, **antes** del paso 0
+(agregación temporal), sobre los timestamps crudos tal como llegaron. Es la
+única forma de que el chequeo sirva de algo: `agregar_a_maximos_anuales()`
+construye sus timestamps con `range()`, siempre ascendentes por
+construcción, así que evaluar el orden *después* de agregar sería código
+muerto para cualquier serie mensual — y, más grave, `agregar_a_maximos_anuales()`
+usa `timestamps[0]`/`timestamps[-1]` para fijar qué períodos agregar; con
+un archivo desordenado puede excluir períodos reales del registro **en
+silencio**, sin ningún warning (verificado: 3 años completos de datos
+mensuales con dos bloques anuales invertidos entre sí agregaban solo 2
+años, con `periodos_descartados=[]` — el tercer año desaparecía sin
+rastro). Verificado antes de implementar que ninguna de las 9 series de
+referencia de la auditoría (Fase 4) tiene desorden cronológico — este
+cambio no invalida ningún resultado ya auditado.
+
+### Contrato — parámetros de request (no de la serie)
+```
+CONTRACT_CRAMER_PARTICION_INVALID      cramer_particion mal formado, fuera de rango, o
+                                        n1_pct ≤ n2_pct (DECISIÓN 036, Bloque H1)
+CONTRACT_ETAPAS_INVALID                etapas fuera de {"1", "1,2"} (DECISIÓN 054)
+CONTRACT_MES_INICIO_INVALID            mes_inicio_anio fuera de [1..12] (DECISIÓN 057)
+CONTRACT_VARIABLE_DIARIA_INVALID       variable_diaria fuera de {"pico", "media", "acumulado"} (DECISIÓN 065, PR 2.5 / R0.2;
+                                        "acumulado" desde la revisión del 22/10/2026)
+CONTRACT_ALFA_INVALID                  alfa fuera de {0.01, 0.05, 0.10} en POST /analysis/stream o en
+                                        POST /analysis/simulate-exclusion (DECISIÓN 078)
+CONTRACT_COBERTURA_INVALID             cobertura_minima_interior de POST /analysis/stream fuera de [50..100] o no
+                                        entera (DECISIÓN 081)
+CONTRACT_SERIES_INVALID                serie de POST /analysis/simulate-exclusion vacía, con más de 500 valores o con
+                                        valores no finitos (DECISIÓN 071)
+CONTRACT_EXCLUSION_INVALID             indices_excluidos fuera de rango o repetidos, anios de otro largo que serie, o
+                                        tratamiento inexistente, en POST /analysis/simulate-exclusion (DECISIÓN 071).
+                                        También POST /export/{id}/simulacion: índices vacíos, fuera de rango o
+                                        repetidos, o análisis sin la serie analizada registrada (DECISIÓN 075).
+                                        También POST /history/{id}/exclusiones: vacíos, fuera de rango,
+                                        repetidos o que vacían la serie (DECISIÓN 080)
+```
+A diferencia de los dos grupos de arriba (series de datos), estos códigos validan
+un parámetro del request en `POST /analysis/stream` antes de tocar el archivo
+subido o el pipeline — 400, no bloquean una serie válida, bloquean una opción
+inválida.
+
+**`CONTRACT_CRAMER_PARTICION_UNSUPPORTED` — retirado 18/08/2026 (Bloque H1).**
+Ya no lo emite el backend: reemplazado por `CONTRACT_CRAMER_PARTICION_INVALID`
+apenas la partición personalizada se implementó de verdad (antes, ese código
+rechazaba *cualquier* valor no-`"default"`, implementado o no — ahora
+`CONTRACT_CRAMER_PARTICION_INVALID` solo rechaza partición realmente inválida).
+Se deja documentado acá, no se borra, por trazabilidad de auditoría — mismo
+criterio que `design-events` más arriba en este archivo.
+
+### Etapa 1 — pruebas
+```
+TEST_CRITICAL_INDEPENDENCE       Anderson rechaza — CRÍTICO
+TEST_CRITICAL_HOMOGENEITY        Cramer rechaza — CRÍTICO
+TEST_WARNING_TREND               Mann-Kendall o KS detectan tendencia
+TEST_WARNING_HOMOGENEITY         Helmert o t de Student rechazan
+TEST_WARNING_SMALL_SAMPLE        Wald-Wolfowitz con n ≤ 40, o Mann-Kendall con 10 ≤ n ≤ 30 (*)
+TEST_WARNING_OUTLIER_DETECTED    Chow detecta atípico — decisión pendiente
+TEST_OUTLIER_REJECTED_BY_USER    Usuario rechazó el dato atípico
+TEST_OUTLIER_ACCEPTED_BY_USER    Usuario aceptó el dato como parte de la población
+TEST_NOT_EXECUTED_ZEROS          Chow no ejecutado por ceros en caudal_precipitacion
+TEST_NOT_EXECUTED_CONDITION      Prueba con condición no cumplida
+TEST_NOT_EXECUTED_MIN_SAMPLES    Mann-Kendall no ejecutado — serie con n < 10
+TEST_NOT_EXECUTED_NEGATIVES      Chow no ejecutado por valores negativos en la serie, con cualquier tipo de variable
+                                  (DECISIÓN 073) — antes caía en TEST_NOT_EXECUTED_CONDITION
+```
+
+(*) `core/etapa1/independence.py::determinar_warnings_independencia` promueve el
+`warning_codigo` de Wald-Wolfowitz a `result.warnings` correctamente.
+`core/etapa1/trend.py::determinar_warnings_tendencia` hace lo mismo con el de Mann-Kendall
+desde el 09/10/2026 (antes no lo hacía: gap documentado en DECISIÓN 038, defecto D-10, issue #123).
+Como los dos emiten el mismo código, `ejecutar_etapa1()` deja **un warning por código** en la lista
+agregada (`_un_warning_por_codigo`): un único `TEST_WARNING_SMALL_SAMPLE` cuya descripción nombra las
+pruebas afectadas, con el nivel más grave. El frontend usa el código como clave de cada banner.
+
+### Etapa 2 — distribuciones
+```
+DIST_NOT_APPLICABLE              Combinación sin sentido matemático para esos datos
+DIST_NOT_CONVERGED               Método iterativo sin solución estable
+DIST_HIGH_EEA                    EEA supera el 5% de la media
+DIST_DISABLED_ZEROS              Distribución deshabilitada por ceros en caudal_precipitacion
+DIST_DISABLED_NEGATIVES          Distribución no definida para valores negativos (DECISIÓN 073): lognormal2p,
+                                  logpearson3, gamma2p, exponencial_beta y gen_exponencial. Viaja como
+                                  status="disabled_negatives" en cada método; con negativos y ceros a la vez gana
+                                  este. Depende de los datos, no de tipo_variable
+DIST_ZEROS_TOLERATED             Serie con ceros, ajuste calculado igual — pendiente confirmación
+                                  de dominio con Facundo (DECISIÓN 061). Solo exponencial_x0_beta,
+                                  gen_pareto y gen_exponencial/momentos+ml — ver
+                                  TOLERA_CEROS_CON_ADVERTENCIA en distributions/__init__.py
+DIST_SELECTION_INVALID           distribucion/metodo vacíos o periodos_retorno inválido (DECISIÓN 052) —
+                                  compartido entre distribution-decision y POST /analysis/{id}/design-events
+DIST_METHOD_NOT_FITTED           La combinación distribución+método pedida en POST /analysis/{id}/design-events
+                                  no aparece en el ranking persistido, o su status != "ok" (DECISIÓN 062)
+DIST_PENDING_VALIDATION          La distribución pedida está pendiente de validación y no se puede elegir ni explorar
+                                  (DECISIÓN 074) — distribution-decision y POST /analysis/{id}/design-events. Hoy
+                                  ninguna: gen_pareto pasó a DIST_EXCLUDED el 29/10/2026
+DIST_EXCLUDED                    La distribución pedida no se calcula en esta versión (addendum del 29/10/2026 a la
+                                  DECISIÓN 074, hoy gen_pareto, EXCLUIDAS_V1) — distribution-decision,
+                                  POST /analysis/{id}/design-events y la seleccion de simulate-exclusion
+```
+`DIST_SELECTION_INVALID`, `DIST_METHOD_NOT_FITTED`, `DIST_PENDING_VALIDATION` y `DIST_EXCLUDED` no son estados de
+ajuste de una distribución como los otros cinco — son validaciones de
+request (respuesta HTTP 400, no un campo de `DistResult`). Se agrupan acá
+por prefijo/dominio, igual que `CONTRACT_ETAPAS_INVALID` se agrupa con los
+códigos de contrato pese a validar un parámetro de request y no la serie.
+
+### Stream / sesión
+```
+PARSE_ERROR                      No se pudo parsear el archivo subido (evento SSE "error")
+SESSION_TIMEOUT                  Se agotó el tiempo de espera de decisión ante un atípico (evento SSE "error")
+PARSE_FILE_TOO_LARGE             El archivo supera el límite de subida — respuesta HTTP 400, no evento SSE
+SESSION_NOT_FOUND                session_id no existe o ya expiró — respuesta HTTP 404, no evento SSE (DECISIÓN 052).
+                                  También POST /analysis/outlier-decision desde DECISIÓN 079
+OUTLIER_DECISION_INVALID         Las decisiones de POST /analysis/outlier-decision no cubren exactamente los
+                                  atípicos de la pausa — respuesta HTTP 400, no evento SSE (DECISIÓN 079)
+ANALYSIS_NOT_FOUND               El análisis de POST /analysis/{id}/design-events no existe, no es del
+                                  usuario, o no tiene Etapa 2 — respuesta HTTP 404, sin sesión de por medio (DECISIÓN 062).
+                                  También GET /export/{id}: no existe o no es del usuario (DECISIÓN 075), y
+                                  POST/DELETE /history/{id}/exclusiones (DECISIÓN 080)
+ANALYSIS_EXCLUSION_NOT_FOUND     DELETE /history/{id}/exclusiones/{exclusion_id}: el análisis es del usuario pero no
+                                  tiene esa exclusión — respuesta HTTP 404 (DECISIÓN 080)
+```
+`PARSE_ERROR` y `SESSION_TIMEOUT` son eventos SSE `error`, no respuestas HTTP
+de error — ver nota general al principio de este archivo. Emitidos por
+`services/analysis_service.py`. Agregados al catálogo en
+`docs/decisiones/decision038.md` — DECISIÓN 038, que también deja la regla:
+todo código nuevo emitido por `core/` o `services/` se agrega acá en el mismo
+commit que lo introduce.
+
+`PARSE_FILE_TOO_LARGE` también lo responde nginx, con 413 y la misma estructura, cuando el cuerpo supera su
+`client_max_body_size` (11m, por encima de los 10 MB del backend — `nginx/nginx.conf`, plan de mejoras post-despliegue
+UCC del 29/10/2026); el frontend además rechaza un archivo de más de 10 MB antes de subirlo (`ConfigPage`).
+
+`PARSE_FILE_TOO_LARGE` es la excepción del grupo: se detecta en `api/v1/analysis.py`
+**antes** de que exista un stream SSE (en `/analysis/stream`) o directamente en un
+endpoint sincrónico (`/analysis/preview-columns`), así que siempre es una respuesta
+HTTP 400 estándar — DECISIÓN 050. Se agrupa acá por dominio (falla al ingerir el
+archivo subido), no por transporte.
+
+`SESSION_NOT_FOUND` es la misma excepción por el mismo motivo: `distribution-decision`
+es un endpoint sincrónico aparte del stream (igual que `outlier-decision`), así
+que responde HTTP 404 estándar, nunca un evento SSE — DECISIÓN 052.
+
+`ANALYSIS_NOT_FOUND` se agrupa acá por dominio (identifica qué análisis no se
+pudo resolver, mismo motivo que agrupa a `SESSION_NOT_FOUND`) aunque
+`POST /analysis/{id}/design-events` no tiene ningún `session_id` ni stream
+de por medio — es un recálculo stateless sobre un análisis ya persistido
+(DECISIÓN 062).
+
+### Códigos originados en el frontend
+```
+VALIDATION_ERROR          Sintetizado por api/client.ts ante un 422 genérico de
+                           FastAPI/Pydantic sin código propio — no lo manda el backend.
+STREAM_CONNECTION_ERROR   Sintetizado por api/sse.ts::onerror ante una falla de red/
+                           conexión del stream SSE — condición client-side, el
+                           backend nunca la ve ni la emite.
+STREAM_CLOSED_EARLY       Sintetizado por api/sse.ts::onclose cuando el servidor
+                           cierra la conexión sin haber emitido `complete` antes —
+                           sin esto la fase quedaba en "streaming"/"waiting_outlier"
+                           para siempre y en silencio (F1, informe-diagnostico-ui-rota.md).
+SESSION_NOT_ESTABLISHED   Sintetizado por auth/AuthProvider.tsx::login cuando
+                           POST /auth/login respondió 200 pero el GET /auth/me
+                           posterior no pudo confirmar la sesión — antes login()
+                           resolvía igual sin lanzar, y el botón se veía "muerto"
+                           (F3, informe-diagnostico-ui-rota.md).
+```
+Estos cuatro no tienen contraparte en `core/`/`services/` porque describen condiciones
+que solo el cliente puede detectar (fallo de red, 422 sin `codigo` propio del
+backend, cierre de conexión sin `complete`, login aceptado sin sesión confirmada) — no es un gap de sincronización, es
+el catálogo reconociendo que no todo código de error se origina en el servidor.
+Los dos primeros se agregaron en el addendum del 29/07/2026 de
+`docs/decisiones/decision038.md` — DECISIÓN 038, que también deja la regla
+explícita en esta dirección: todo código nuevo que el frontend invente para una
+condición client-side se agrega acá en el mismo commit que lo introduce, igual
+que los de `core/`/`services/`.

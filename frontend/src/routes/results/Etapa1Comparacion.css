@@ -1,0 +1,18 @@
+/* Comparación original vs. sin los puntos excluidos (ítem A, A2). */
+.etapa1-comparacion__tabla {
+  margin-bottom: 8px;
+}
+
+/* La fila cuyo veredicto o nivel cambió se distingue sin depender solo del
+   color: además del fondo lleva la píldora "cambió". */
+.etapa1-comparacion__tabla tr[data-cambio] {
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+
+.etapa1-comparacion__cambio {
+  margin-left: 8px;
+}
+
+.etapa1-comparacion__etapa2 {
+  margin-top: 16px;
+}

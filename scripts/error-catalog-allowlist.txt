@@ -1,0 +1,12 @@
+# Allowlist de excepciones conocidas para scripts/check-error-catalog.sh
+# (DECISIÓN 038 — docs/decisiones/decision038.md, addendum del 29/07/2026, M2).
+#
+# Un código en este archivo es una excepción DOCUMENTADA, no un código que
+# nadie revisó. Cada línea debe tener un comentario arriba explicando por
+# qué existe la excepción y cuándo deja de aplicar. No agregar códigos acá
+# para silenciar el chequeo sin esa justificación — el objetivo es que
+# check-error-catalog.sh falle cuando aparece divergencia real.
+#
+# Formato: un código por línea, sin comillas. Líneas que empiezan con # son
+# comentario.
+

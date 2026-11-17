@@ -1,0 +1,490 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { StrictMode } from "react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
+import { renderPage } from "../../test/renderPage";
+import { StreamPage } from "./StreamPage";
+import { useAnalysisStream, type StreamState } from "../../api/sse";
+import type { AnalysisStreamForm, TestResultDetail } from "../../api/types";
+
+vi.mock("../../api/sse", () => ({
+  useAnalysisStream: vi.fn(),
+}));
+
+const mockedUseAnalysisStream = vi.mocked(useAnalysisStream);
+
+function makeForm(): AnalysisStreamForm {
+  return {
+    archivo: new File(["1,100"], "serie.csv", { type: "text/csv" }),
+    columna_x: "anio",
+    columna_y: "caudal",
+    tipo_variable: "caudal_precipitacion",
+    modo: "experto",
+    cramer_particion: "default",
+  };
+}
+
+const BASE_STATE: StreamState = {
+  fase: "streaming",
+  contractWarnings: [],
+  descriptive: null,
+  tests: {},
+  progress: { completado: 0, total: 8 },
+  outlier: null,
+  result: null,
+  etapa2: null,
+  eventosDiseno: null,
+  analysisId: null,
+  error: null,
+};
+
+function testResult(overrides: Partial<TestResultDetail> = {}): TestResultDetail {
+  return {
+    prueba: "anderson",
+    estadistico: 0.23,
+    valor_critico: 0.37,
+    veredicto: "aprobada",
+    warning_codigo: null,
+    warning_nivel: null,
+    n1: null,
+    n2: null,
+    valor_atipico: null,
+    indice_atipico: null,
+    explicacion: null,
+    ...overrides,
+  };
+}
+
+function ResultsProbe() {
+  const location = useLocation();
+  return <pre data-testid="results-state">{JSON.stringify(location.state)}</pre>;
+}
+
+function renderStreamPage(
+  stateOverrides: Partial<StreamState> = {},
+  { withForm = true }: { withForm?: boolean } = {},
+) {
+  const start = vi.fn();
+  const resolveOutlier = vi.fn().mockResolvedValue(undefined);
+  const resolveDistribution = vi.fn().mockResolvedValue(undefined);
+  const abort = vi.fn();
+  mockedUseAnalysisStream.mockReturnValue({
+    start,
+    state: { ...BASE_STATE, ...stateOverrides },
+    resolveOutlier,
+    resolveDistribution,
+    abort,
+  });
+
+  // Función, no una constante reutilizada: <Routes> de react-router memoiza
+  // internamente por identidad de referencia de sus children. Pasarle el
+  // mismo elemento de árbol dos veces a `rerender` deja el DOM viejo sin
+  // avisar — hay que construir un árbol nuevo en cada llamada. Confirmado
+  // con un repro mínimo antes de este fix, no asumido.
+  function makeTree() {
+    return (
+      <MemoryRouter
+        initialEntries={[
+          withForm
+            ? { pathname: "/stream", state: { form: makeForm() } }
+            : { pathname: "/stream" },
+        ]}
+      >
+        <Routes>
+          <Route path="/stream" element={<StreamPage />} />
+          <Route path="/config" element={<div>config screen</div>} />
+          <Route path="/results" element={<ResultsProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  const { unmount, rerender } = renderPage(makeTree());
+
+  // Para simular una transición de estado del hook mockeado (ej. el modal
+  // cerrándose) — actualiza el mock y vuelve a renderizar un árbol nuevo.
+  function rerenderWithState(nextStateOverrides: Partial<StreamState>) {
+    mockedUseAnalysisStream.mockReturnValue({
+      start,
+      state: { ...BASE_STATE, ...nextStateOverrides },
+      resolveOutlier,
+      resolveDistribution,
+      abort,
+    });
+    rerender(<StrictMode>{makeTree()}</StrictMode>);
+  }
+
+  return { start, resolveOutlier, resolveDistribution, abort, unmount, rerenderWithState };
+}
+
+const OUTLIER_UNO = {
+  session_id: "sess-1",
+  valor_atipico: 245.7,
+  atipicos: [{ indice: 7, periodo: 1987, valor: 245.7, z: 3.1, lado: "alto" as const }],
+};
+
+const OUTLIER_DOS = {
+  session_id: "sess-1",
+  valor_atipico: 296.93,
+  atipicos: [
+    { indice: 14, periodo: 1994, valor: 296.93, z: -3.52, lado: "bajo" as const },
+    { indice: 25, periodo: 2005, valor: 296.99, z: -3.44, lado: "bajo" as const },
+  ],
+};
+
+describe("StreamPage", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("redirects to /config when there is no form in location.state", () => {
+    renderStreamPage({}, { withForm: false });
+    expect(screen.getByText("config screen")).toBeInTheDocument();
+  });
+
+  // F1 (docs/historico/planes/frontend/informe-diagnostico-ui-rota.md): esta página se
+  // renderiza bajo StrictMode (renderPage, capa 1 del plan de arreglo)
+  // porque es exactamente el modo en que la app corre en desarrollo. Bajo
+  // el doble montaje de StrictMode, start() puede llamarse dos veces —
+  // costo aceptado y documentado en StreamPage.tsx, la primera pasada se
+  // aborta sola. Lo que este test protege es que, al final, quede
+  // exactamente UN stream vivo (start - abort === 1) y que el form que
+  // llegó a start() sea el correcto.
+  it("calls start() with the form from location.state, leaving exactly one stream open under StrictMode", () => {
+    const { start, abort } = renderStreamPage();
+    expect(start.mock.calls.length - abort.mock.calls.length).toBe(1);
+    expect(start.mock.calls[0][0]).toMatchObject({
+      columna_x: "anio",
+      columna_y: "caudal",
+    });
+  });
+
+  // D2 (pasada de mejora): sin esto, navegar fuera de /stream a mitad de un
+  // análisis dejaba el fetch SSE vivo y la sesión colgada hasta el timeout de
+  // 300s del backend. F1: bajo StrictMode, abort() ya se llamó una vez antes
+  // del desmontaje real (limpieza fantasma) — lo que importa es que, tras el
+  // desmontaje real, no quede ningún stream vivo sin abortar.
+  it("aborts on unmount, leaving no stream unaccounted for", () => {
+    const { start, abort, unmount } = renderStreamPage();
+    unmount();
+    expect(start.mock.calls.length - abort.mock.calls.length).toBe(0);
+  });
+
+  // F8 (informe-diagnostico-ui-rota.md): un grupo "pending" ahora muestra una
+  // pill explícita ("esperando resultados") en vez de nada — antes un paso
+  // sin resultados todavía y un botón roto se veían exactamente igual.
+  it("shows a pill once a group's tests all arrive, and an 'esperando resultados' pill while pending", () => {
+    renderStreamPage({
+      tests: {
+        anderson: testResult({ prueba: "anderson" }),
+        wald_wolfowitz: testResult({ prueba: "wald_wolfowitz", veredicto: "aprobada" }),
+      },
+    });
+
+    const independenciaStep = screen.getByText("Independencia").closest(".step");
+    expect(independenciaStep?.querySelector(".pill")).toHaveTextContent("aprobada");
+
+    const homogeneidadStep = screen.getByText("Homogeneidad").closest(".step");
+    expect(homogeneidadStep?.querySelector(".pill")).toHaveTextContent("esperando resultados");
+    expect(homogeneidadStep).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("expands a completed group's detail table on click", () => {
+    renderStreamPage({
+      tests: {
+        anderson: testResult({ prueba: "anderson", estadistico: 0.23 }),
+        wald_wolfowitz: testResult({ prueba: "wald_wolfowitz", estadistico: 0.37 }),
+      },
+    });
+
+    fireEvent.click(screen.getByText("Independencia"));
+
+    expect(screen.getByText("anderson")).toBeInTheDocument();
+    expect(screen.getByText("wald_wolfowitz")).toBeInTheDocument();
+  });
+
+  it("shows contract warnings as banners", () => {
+    renderStreamPage({
+      contractWarnings: [
+        { codigo: "CONTRACT_LENGTH_WARNING", nivel: "normal", descripcion: "Serie corta" },
+      ],
+    });
+
+    expect(screen.getByText("Serie corta")).toBeInTheDocument();
+  });
+
+  it("shows an error banner when fase=error", () => {
+    renderStreamPage({
+      fase: "error",
+      error: { codigo: "CONTRACT_SERIES_TOO_SHORT", mensaje: "La serie es muy corta." },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("La serie es muy corta.");
+  });
+
+  it("shows the outlier modal and calls resolveOutlier when Rechazar is clicked", async () => {
+    const { resolveOutlier } = renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: OUTLIER_UNO,
+    });
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Rechazar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continuar con estas decisiones" }));
+
+    await waitFor(() => expect(resolveOutlier).toHaveBeenCalledWith({ 7: "rechazar" }));
+  });
+
+  // DECISIÓN 079 — una pausa con varios atípicos, una decisión por fila.
+  it("lists every outlier and only lets you continue once each row has a decision", async () => {
+    const { resolveOutlier } = renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: OUTLIER_DOS,
+    });
+
+    expect(screen.getByRole("heading", { name: "Datos atípicos detectados" })).toBeInTheDocument();
+    const fila1994 = screen.getByRole("group", { name: /Decisión para 1994/ });
+    const fila2005 = screen.getByRole("group", { name: /Decisión para 2005/ });
+    const continuar = screen.getByRole("button", { name: "Continuar con estas decisiones" });
+    expect(continuar).toBeDisabled();
+
+    fireEvent.click(within(fila1994).getByRole("button", { name: "Rechazar" }));
+    expect(continuar).toBeDisabled();
+    expect(within(fila1994).getByRole("button", { name: "Rechazar" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(within(fila2005).getByRole("button", { name: "Aceptar" }));
+    expect(continuar).toBeEnabled();
+    fireEvent.click(continuar);
+
+    await waitFor(() =>
+      expect(resolveOutlier).toHaveBeenCalledWith({ 14: "rechazar", 25: "aceptar" }),
+    );
+  });
+
+  it("no row comes pre-selected and both buttons of a row look the same", () => {
+    renderStreamPage({ fase: "waiting_outlier", outlier: OUTLIER_DOS });
+
+    for (const fila of screen.getAllByRole("group", { name: /Decisión para/ })) {
+      const [rechazar, aceptar] = within(fila).getAllByRole("button");
+      expect(rechazar).toHaveAttribute("aria-pressed", "false");
+      expect(aceptar).toHaveAttribute("aria-pressed", "false");
+      expect(aceptar.className).toBe(rechazar.className);
+    }
+  });
+
+  // METIS no decide por el usuario: ninguno de los dos botones puede verse
+  // como la opción "por defecto" (antes Aceptar era primario y con efectos).
+  it("renders Rechazar and Aceptar with identical styling — no visual bias toward either decision", () => {
+    renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: OUTLIER_UNO,
+    });
+
+    const rechazar = screen.getByRole("button", { name: "Rechazar" });
+    const aceptar = screen.getByRole("button", { name: "Aceptar" });
+    expect(aceptar.className).toBe(rechazar.className);
+    expect(aceptar.parentElement).toBe(rechazar.parentElement);
+  });
+
+  // M3 (cierre de Fase 6, pasada de mejora 3): foco del modal de atípico.
+  it("auto-focuses the dialog container (not either button) when the outlier modal opens", async () => {
+    renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: OUTLIER_UNO,
+    });
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+  });
+
+  it("Escape does not close the modal or resolve a decision — the backend is blocked waiting for a real choice", async () => {
+    const { resolveOutlier } = renderStreamPage({
+      fase: "waiting_outlier",
+      outlier: OUTLIER_UNO,
+    });
+
+    const dialog = screen.getByRole("dialog");
+    await waitFor(() => expect(dialog).toHaveFocus());
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(resolveOutlier).not.toHaveBeenCalled();
+    expect(dialog).toHaveFocus();
+  });
+
+  it("restores focus to the previously-focused element once the outlier modal closes", async () => {
+    const { rerenderWithState } = renderStreamPage({
+      tests: { anderson: testResult({ prueba: "anderson" }) },
+    });
+
+    const independenciaStep = screen.getByText("Independencia").closest(".step") as HTMLElement;
+    independenciaStep.focus();
+    expect(independenciaStep).toHaveFocus();
+
+    rerenderWithState({
+      fase: "waiting_outlier",
+      outlier: OUTLIER_UNO,
+    });
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+
+    rerenderWithState({
+      fase: "streaming",
+      tests: { anderson: testResult({ prueba: "anderson" }) },
+    });
+
+    await waitFor(() => expect(independenciaStep).toHaveFocus());
+  });
+
+  // B1 (plan post-avance) — /stream deja de ser un destino final: navega
+  // sola con replace:true en cuanto fase="done", sin banner ni botón.
+  it("navigates to /results on its own once fase=done, without any banner or button", async () => {
+    renderStreamPage({
+      fase: "done",
+      result: {
+        contract: { bloqueante: false, codigo_error: null, warnings: [] },
+        descriptive: null,
+        independencia: [],
+        homogeneidad: [],
+        tendencia: [],
+        atipicos: [],
+        nivel_independencia: "independiente",
+        nivel_homogeneidad: "homogeneidad_ok",
+        nivel_confianza: "validado",
+        warnings: [],
+      },
+      analysisId: "an-1",
+    });
+
+    expect(
+      screen.queryByRole("button", { name: /Ver resultados/ }),
+    ).not.toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("results-state")).toHaveTextContent("an-1"),
+    );
+    // modo viaja junto al resultado — ResultsPage lo necesita para elegir
+    // presentación (acordeón paso a paso vs. tarjetas planas de experto).
+    expect(screen.getByTestId("results-state")).toHaveTextContent(
+      makeForm().modo,
+    );
+    // Y la configuración con la que se corrió, para poder repetir el análisis
+    // sin los puntos excluidos (ítem A, what-if).
+    expect(screen.getByTestId("results-state")).toHaveTextContent(
+      `"tipoVariable":"${makeForm().tipo_variable}"`,
+    );
+  });
+
+  // Segundo punto de pausa del stream (DECISIÓN 052) — hermano del test del
+  // modal de Chow arriba, pero inline en la página, no un modal: la grilla
+  // del ranking de distribuciones no cabe en un diálogo de confirmación chico, y no
+  // hay backdrop/focus-trap para esta pausa (decisión explícita, ver el PR).
+  it("shows the Etapa 2 ranking inline when paused, and calls resolveDistribution when 'Elegir' is clicked", async () => {
+    const { resolveDistribution } = renderStreamPage({
+      fase: "waiting_distribution",
+      etapa2: {
+        session_id: "sess-2",
+        ranking: [
+          {
+            distribucion: "gumbel",
+            n_parametros: 2,
+            metodos: [
+              { metodo: "momentos", parametros: { mu: 100, alpha: 20 }, eea: 12.5, status: "ok" },
+            ],
+            mejor_eea: 12.5,
+            mejor_metodo: "momentos",
+          },
+        ],
+        warnings: [],
+        puntos_empiricos: [{ valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 }],
+      },
+    });
+
+    expect(
+      screen.getByRole("heading", { name: "Elegí una distribución" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Ver los 1 método/));
+    fireEvent.click(screen.getByRole("button", { name: "Elegir" }));
+
+    await waitFor(() =>
+      expect(resolveDistribution).toHaveBeenCalledWith(
+        "gumbel",
+        "momentos",
+        [2, 5, 10, 25, 50, 100, 200, 500],
+      ),
+    );
+  });
+
+  // B2 (plan post-avance) — Etapa2EventosView ya no se muestra en /stream
+  // (los eventos llegan justo antes de complete, la pantalla los mostraría
+  // por menos de un segundo antes de que B1 navegue a /results). En su
+  // lugar, elegir una distribución colapsa la grilla completa a una línea
+  // de estado — el usuario ya decidió, no hay nada más para interactuar acá.
+  it("collapses the ranking grid to a status line once a distribution was chosen, instead of showing Etapa2EventosView", async () => {
+    const etapa2 = {
+      session_id: "sess-2",
+      ranking: [
+        {
+          distribucion: "gumbel",
+          n_parametros: 2,
+          metodos: [
+            { metodo: "momentos", parametros: { mu: 100, alpha: 20 }, eea: 12.5, status: "ok" as const },
+          ],
+          mejor_eea: 12.5,
+          mejor_metodo: "momentos",
+        },
+      ],
+      warnings: [],
+      puntos_empiricos: [{ valor: 142.5, periodo_retorno: 41, probabilidad: 0.9756 }],
+    };
+    const { resolveDistribution, rerenderWithState } = renderStreamPage({
+      fase: "waiting_distribution",
+      etapa2,
+    });
+
+    fireEvent.click(screen.getByText(/Ver los 1 método/));
+    fireEvent.click(screen.getByRole("button", { name: "Elegir" }));
+    await waitFor(() => expect(resolveDistribution).toHaveBeenCalled());
+
+    // El stream sigue avanzando tras la elección — misma etapa2, fase ya no
+    // "waiting_distribution".
+    rerenderWithState({ fase: "streaming", etapa2 });
+
+    expect(
+      screen.queryByRole("heading", { name: "Elegí una distribución" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("gumbel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Evento de diseño" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Ajustando/)).toHaveTextContent("gumbel · momentos");
+  });
+
+  it("passes etapa2 and eventosDiseno through to /results alongside the Etapa 1 result", async () => {
+    renderStreamPage({
+      fase: "done",
+      result: {
+        contract: { bloqueante: false, codigo_error: null, warnings: [] },
+        descriptive: null,
+        independencia: [],
+        homogeneidad: [],
+        tendencia: [],
+        atipicos: [],
+        nivel_independencia: "independiente",
+        nivel_homogeneidad: "homogeneidad_ok",
+        nivel_confianza: "validado",
+        warnings: [],
+      },
+      analysisId: "an-1",
+      etapa2: { session_id: "sess-2", ranking: [], warnings: [], puntos_empiricos: [] },
+      eventosDiseno: {
+        distribucion: "gumbel",
+        metodo: "momentos",
+        eventos_diseno: [],
+        curva_ajuste: [],
+      },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("results-state")).toHaveTextContent("gumbel"),
+    );
+  });
+});

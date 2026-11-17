@@ -1,0 +1,336 @@
+# Estrategia de Testing — METIS
+
+## Cuatro niveles obligatorios (comprometidos en el anteproyecto)
+
+**Estado real, no solo compromiso (verificado 09/08/2026, actualizado en el
+cierre del Bloque A del plan de Etapa 2):** de los cuatro niveles de abajo,
+**Tests unitarios** e **Integración** tienen contenido real hoy.
+`tests/integration/` estrenó su primer test en el Bloque A6 — corre
+`stream_analysis()` de punta a punta con la pausa de Etapa 2, sin BD real
+(CU-02 anónimo). `tests/e2e/` y `tests/regression/` siguen vacíos (solo
+`__init__.py`). El job `test` de CI sigue corriendo `pytest -m "unit or
+integration"` tolerando exit code 5 (ver `CLAUDE.md`, sección CI) — no se
+quitó la tolerancia en el mismo PR que agregó el primer test de
+integración, a propósito (un cambio de CI y un cambio de features no van
+juntos). Seguimiento de cuándo se cierra cada uno en
+`docs/pendientes-tecnicos.md`. Esta sección describe el compromiso
+completo de los cuatro niveles — léase como objetivo, no como inventario
+de lo que ya existe.
+
+**Corrección 12/08/2026 (Kevin, rediseño del Bloque F del plan de
+implementación de Etapa 2):** `tests/regression/` ya no forma parte de este
+plan — los tests de regresión matemática contra la tesis los lleva Octavio
+por su lado. Sigue vacío en el repo, pero no está huérfano: `docs/historico/planes/plan-etapa2-implementacion.md`
+§6 queda como insumo para ese trabajo, no como una tarea pendiente de este
+frente. `tests/integration/` sumó dos archivos más en el Bloque F3-F4
+(agregación temporal, DECISIÓN 057) — el segundo con nombre expresamente
+elegido para dejar constancia del bug real que encontró: rechazar un
+atípico de Chow sobre una serie mensual agregada requiere que el índice se
+mapee contra la serie agregada (`Etapa1Result.serie_efectiva`), no contra la
+serie mensual cruda.
+
+### 1. Tests unitarios del core estadístico
+
+Viven en `tests/unit/core/`. Testean funciones puras de `metis/core/` sin levantar la app.
+
+**Fuente de verdad:** resultados de la tesis de Facundo Ganancias Martínez (2010) sobre 9 estaciones reales de la región sur-oeste de Córdoba. Si METIS produce el mismo resultado que el Excel de Facundo para la misma serie, la implementación es correcta.
+
+```python
+# Patrón para cada prueba estadística
+def test_anderson_resultado_conocido():
+    serie = [72.3, 98.1, 142.5, ...]  # datos reales de la tesis
+    resultado = calcular_anderson(serie, alpha=0.05)
+    assert resultado.estadistico == pytest.approx(0.23, abs=1e-4)
+    assert resultado.valor_critico == pytest.approx(0.37, abs=1e-4)
+    assert resultado.veredicto == "aprobada"
+
+# Mismo patrón para: wald_wolfowitz, helmert, t_student, cramer,
+# mann_kendall, kolmogorov_smirnov, chow
+```
+
+**Criterio de aceptación:** el valor crítico calculado por METIS debe coincidir con el producido por el programa Excel de Facundo para la misma serie de prueba.
+
+**Casos de caja negra (B8 del TP de Calidad, 09/10/2026).** Valores límite, clases de equivalencia y tablas de
+decisión documentados en `docs/calidad/casos-de-prueba.md`, cada uno con el test que lo implementa. Los que no tenían
+test viven en `tests/unit/casos_dinamicos/` (también funciones del borde de `api/` y de `services/`, no solo de
+`core/`), parametrizados con el ID del caso como id: `pytest tests/unit/casos_dinamicos -v` muestra `[VL-01a n=9]`.
+
+### 2. Tests de integración del pipeline
+
+Viven en `tests/integration/`. Levantan la app completa con base de datos de test.
+
+Cubren:
+- Pipeline completo Etapa 1 con serie válida
+- Pipeline con cada código del catálogo de errores
+- Autenticación usuario/contraseña — con Mailpit como SMTP real de captura (DECISIÓN 049, `tests/integration/db/`)
+- CU-03 con API Key válida e inválida
+- Pausa ante atípico de Chow y reanudación con decisión del usuario
+- Persistencia correcta en BD para CU-01 (`tests/integration/db/`, PostgreSQL real)
+- Ausencia de persistencia para CU-02 (ídem)
+
+### 3. Tests end-to-end por CU
+
+Viven en `tests/e2e/`. Validan flujos completos desde request HTTP hasta response.
+
+**Estado (09/10/2026):** `tests/e2e/` del backend sigue vacío. Los flujos de CU-01
+y CU-02 de abajo se cubren desde la UI con Playwright (`frontend/e2e/`, Capa 3
+del frontend, más abajo), que pasa por la misma API; CU-03 no existe todavía.
+
+Flujos mínimos a cubrir:
+- CU-01: autenticación → carga serie → Etapa 1 → Etapa 2 → exportación PDF
+- CU-02: carga serie → Etapa 1 → Etapa 2 → verificar que no hay exportación
+- CU-03: POST /validate/ con serie válida → verificar estructura JSON completa
+
+### 4. Tests de regresión matemática
+
+Viven en `tests/regression/`. Son los tests más críticos del proyecto.
+
+Comparan resultados de METIS contra los resultados documentados de las 9 estaciones de la tesis. Si algún test de regresión falla, hay un error matemático en la implementación.
+
+```python
+# Fixture base — a completar con datos reales de Facundo
+ESTACIONES_REFERENCIA = [
+    {
+        "nombre": "Estacion_01",
+        "serie": [...],  # valores reales
+        "anderson_esperado": {"estadistico": X, "veredicto": "aprobada"},
+        "cramer_esperado": {"n1": X, "n2": X, "veredicto": "aprobada"},
+        # etc.
+    },
+    # ... 8 estaciones más
+]
+
+@pytest.mark.parametrize("estacion", ESTACIONES_REFERENCIA)
+def test_regresion_etapa1(estacion):
+    resultado = ejecutar_etapa1(estacion["serie"])
+    assert resultado.anderson.estadistico == pytest.approx(
+        estacion["anderson_esperado"]["estadistico"], abs=1e-4
+    )
+```
+
+**PENDIENTE:** confirmar con Facundo que los datos de las 9 estaciones están disponibles en formato digital para poblar los fixtures.
+
+---
+
+## Testing del frontend
+
+Estrategia separada de los cuatro niveles de arriba — esos son el compromiso
+del anteproyecto para el motor estadístico del backend. El frontend tiene su
+propia estrategia en capas, escrita como consecuencia directa de
+`docs/historico/planes/frontend/informe-diagnostico-ui-rota.md`: dos PRs de frontend se
+mergearon a `staging` con CI verde y 98 tests en verde, y la aplicación
+estaba rota en uso real (F1 — el stream se abortaba a sí mismo bajo
+`StrictMode`, el único modo en que la app corre de verdad en desarrollo, y
+ningún test lo ejercitaba). El plan completo de arreglo, con la
+justificación detallada de cada capa, vive en
+`docs/historico/planes/frontend/plan-arreglo-ui-rota.md` §4.
+
+### Capa 1 — unitarios, bajo StrictMode por regla
+
+`vitest` + Testing Library, un solo mecanismo de mock de red en toda la
+suite (`vi.stubGlobal("fetch", ...)` / `vi.mock("@microsoft/fetch-event-source")`
+— MSW queda reservado al navegador de dev, nunca a un test, ver DECISIÓN
+041). Todo test que renderiza una **página completa** lo hace envuelto en
+`<StrictMode>` vía el helper `frontend/src/test/renderPage.tsx` — no opcional
+por archivo, es la regla desde `fix/frontend-ui-integracion`. Antes de esto,
+`grep -rn "StrictMode" frontend/src` devolvía una sola coincidencia
+(`main.tsx`) — el modo en que la app corre en desarrollo no estaba cubierto
+por ningún test, y F1 vivía exactamente ahí.
+
+### Capa 2 — integración, componente + hook reales
+
+La capa que faltaba entre "mockeo el hook entero" (`StreamPage.test.tsx`) y
+"testeo el hook sin ningún componente" (`sse.test.ts`) — F1 vivía en esa
+franja. `StreamPage.integration.test.tsx` monta el componente y el hook
+reales, con la red interceptada únicamente en el borde
+(`@microsoft/fetch-event-source` mockeado, no MSW — logra lo mismo que el
+plan original proponía con MSW-sobre-Node sin apartarse del patrón único de
+mock de la Capa 1). `routes.navigation.test.tsx` recorre con clicks el
+array `routes` REAL (no rutas de mentira por archivo) — con ese patrón,
+"¿existe algún camino de clicks que lleve a `/history`?" pasó de ser una
+pregunta imposible de formular a un test real.
+
+### Capa 3 — E2E con Playwright contra Docker (implementada, B6)
+
+Para los defectos que solo son detectables con el sistema completo corriendo
+junto (F1, F4, F5, F6, F9 del informe de diagnóstico). Habilitada por
+[DECISIÓN 046](../../docs/decisiones/decision046.md): Playwright en
+`frontend/e2e/`, siete escenarios (E2E-0 a E2E-6) contra el build de
+producción detrás de nginx, con el registro probado contra Mailpit (DECISIÓN
+049). Corren en el job `despliegue` de CI en cada push y PR, después del smoke, y
+en local con `scripts/deploy-local.sh` + `npm run test:e2e`. Nunca contra
+`npm run dev` (StrictMode de desarrollo duplica efectos). Escenarios y
+reglas para sumar uno: `docs/calidad/despliegue-y-e2e.md`.
+
+### Capa 4 — cambio de proceso (gratis, y la que más importa)
+
+Definition of done para todo PR que toque `frontend/`: evidencia de haber
+corrido el flujo en el navegador después del último commit del PR (captura
+o log de la pestaña Network). Ninguna herramienta automática iba a avisar
+que `c27d6ac` rompió el stream después de que la verificación manual previa
+lo diera por bueno — una casilla en la plantilla de PR, sí.
+
+---
+
+## Análisis estático (también obligatorio)
+
+```bash
+# Backend — correr antes de cada commit
+ruff check metis/
+ruff format metis/
+
+# Frontend — correr antes de cada commit
+cd frontend && npm run lint
+```
+
+Ambos corren automáticamente en GitHub Actions en cada push.
+
+**Cobertura y gate propio (DECISIÓN 077, 08/10/2026).** El job `test` mide cobertura de sentencia y de
+decisión (`pytest-cov --cov-branch`) y el job `frontend` la de Vitest (`@vitest/coverage-v8`). El job
+`quality-gate` falla si la duplicación supera el 5 % (`jscpd`, configurado en `.jscpd.json`) o, en un PR, si
+la cobertura del código nuevo queda debajo del 80 % (`diff-cover`, backend y frontend por separado). Los
+números quedan en el resumen del job y en el artefacto `reporte-calidad/metricas.json`. En local:
+`scripts/test.sh backend|frontend|duplicacion|gate|all`.
+
+**Actualización B13 (DECISIÓN 077):** SonarCloud corre por CI (job `sonarcloud`, `SonarSource/sonarqube-scan-action`)
+con la cobertura de backend (`coverage.xml`) y frontend (lcov) importada, y el job espera el quality gate
+(`sonar.qualitygate.wait=true`). El Análisis Automático está desactivado y `.sonarcloud.properties` se borró: toda la
+configuración está en `sonar-project.properties`. El párrafo de abajo describe el estado anterior.
+
+**SonarCloud** corre además sobre cada PR (`carpinetioctavio/PI_METIS`), vía Análisis Automático
+de la App de GitHub de SonarCloud — no hay ningún paso de Sonar en `ci.yml`. Evalúa Reliability
+Rating, Security Rating, issues nuevos, duplicación y Security Hotspots; hoy no importa cobertura
+porque el Análisis Automático no admite reportes de cobertura (requeriría migrar al scanner
+corriendo dentro de CI con un `SONAR_TOKEN` de secret — pendiente, no es una tarea de una sesión de
+agente). Ver [DECISIÓN 044](../../docs/decisiones/decision044.md) para el detalle completo,
+y el estado del check como consultivo (no bloqueante) en el Ruleset. **Configuración:** el Análisis
+Automático lee `.sonarcloud.properties` (raíz), no `sonar-project.properties` — las exclusiones van
+en el primero (addendum del 02/10/2026 a DECISIÓN 044).
+
+---
+
+## Configuración de pytest recomendada
+
+```ini
+# pytest.ini
+[pytest]
+testpaths = tests
+asyncio_mode = auto
+markers =
+    unit: tests unitarios del core (sin BD, sin HTTP)
+    integration: tests de integración (con BD de test)
+    e2e: tests end-to-end
+    regression: tests de regresión matemática contra tesis de Facundo
+    smoke: smoke del despliegue — httpx contra nginx de un stack levantado
+```
+
+```bash
+# Correr solo tests unitarios (rápido, sin dependencias externas)
+pytest -m unit
+
+# Correr tests de regresión
+pytest -m regresion-unitaria -v
+
+# Todo
+pytest -v
+```
+
+---
+
+## Base de datos de test
+
+**Implementado 08/10/2026 (B3 del plan del TP de Calidad).** `tests/integration/db/` corre contra un PostgreSQL
+real con las migraciones aplicadas, en la `DATABASE_URL` del entorno: persistencia de CU-01, ausencia de
+persistencia de CU-02, historial con archivado y pertenencia (404 a un análisis ajeno, también por HTTP con login
+real). `test_registro_mailpit.py` prueba registro → mail → verificación → login contra Mailpit (DECISIÓN 049).
+
+- **CI:** el job `test` levanta `postgres:15` y `mailpit` como servicios, corre `alembic upgrade head` y setea
+  `METIS_REQUIRE_DB=1`/`METIS_REQUIRE_MAILPIT=1`: con un servicio caído los tests fallan, no se saltean.
+- **Local sin servicios:** se saltean con el motivo (`pytest -rs`).
+- **Aislamiento:** el rollback por test que proponía esta sección no alcanza, porque `stream_analysis()` y los
+  servicios del historial hacen `commit()` por su cuenta. Cada test crea usuarios con email único
+  (`crear_usuario` en `tests/integration/db/conftest.py`) y los borra al final; `ON DELETE CASCADE` se lleva los
+  análisis y resultados.
+- Contrato de la integración SMTP, dobles usados y contingencia: `docs/calidad/integracion-smtp.md`.
+
+---
+
+---
+
+## Fixtures de tests unitarios
+
+Los fixtures compartidos de tests unitarios viven en 
+`tests/unit/core/conftest.py`. Son series sintéticas construidas
+ad hoc para forzar comportamientos específicos del pipeline.
+
+`conftest.py` es un mecanismo nativo de pytest — sus fixtures
+están disponibles automáticamente para todos los tests del 
+directorio sin necesidad de importarlos.
+
+### Fixtures disponibles
+
+**serie_valida** — 35 valores positivos de caudal sin patrones
+de tendencia ni autocorrelación. Diseñada para que todas las
+pruebas de Etapa 1 aprueben y el pipeline produzca
+nivel_confianza="validado". Verificada con smoke test antes
+de ser incorporada como fixture.
+
+**serie_valida_corta** — 15 valores del mismo tipo. Suficiente
+para superar el mínimo de 10 datos y no ser bloqueante, pero
+menor a 30 — activa CONTRACT_LENGTH_WARNING sin detener el
+pipeline.
+
+### Criterio para agregar un fixture a conftest.py
+Solo si es reutilizado por más de un archivo de test.
+Los casos de un solo uso se construyen inline dentro del test.
+Todo fixture nuevo debe ser verificado con un smoke test antes
+de commitear — ver sección de smoke tests más abajo.
+
+## Carga y esfuerzo sostenido (B7, DECISIÓN 077)
+
+k6 (confirmado por prueba de concepto contra Locust: `docs/calidad/herramienta-carga.md`), en un contenedor dentro de
+la red del despliegue de `scripts/deploy-local.sh`, contra nginx. Recorrido de CU-02 en `carga/k6/metis.js`
+(`preview-columns` → `stream` con `etapas=1` → `simulate-exclusion` con Etapa 2), cada request con tag `endpoint`.
+
+- **Stress `quiebre`** (`scripts/carga.sh quiebre`): rampa de 10 a 120 usuarios, exploratoria; `carga/analizar.py`
+  arma la tabla por minuto. Quiebre medido entre 20 y 40 usuarios (latencia, sin errores).
+- **Stress `ci`** (job `carga` de `ci.yml`, solo en PR): 15 usuarios, umbrales congelados en `carga/umbrales.json`
+  (p95 por endpoint y tasa de error < 1 %); k6 sale con 99 y el job falla si se superan.
+- **Sostenido** (workflow `carga-sostenida.yml`, manual y semanal): 5 usuarios durante 30 min, los mismos umbrales y
+  la pendiente de memoria del backend (`docker stats` cada 15 s, umbral en MB/h).
+
+Cambiar un umbral es cambiar `carga/umbrales.json` en un PR, con la corrida que lo justifica.
+
+## Smoke del despliegue (B5) — no confundir con los de desarrollo
+
+`backend/tests/smoke/` (marker `smoke`) sí vive en `tests/` y sí corre en CI:
+quince pruebas black-box (contando las parametrizadas, entre ellas las de aislamiento entre perfiles) con httpx contra nginx de un stack levantado por
+`scripts/deploy-local.sh` (SPA, `/ping`, `preview-columns`, login, stream
+hasta `complete`, historial). No importa nada de `metis`. Sin stack se
+saltean; con `METIS_REQUIRE_SMOKE=1` fallan. Detalle en
+`docs/calidad/despliegue-y-e2e.md`. Lo que sigue es otra cosa.
+
+## Smoke tests de desarrollo
+
+Los smoke tests son verificaciones puntuales que se corren manualmente
+durante el desarrollo para validar una decisión de implementación antes
+de commitear. No son tests formales — no viven en tests/ y no corren en CI.
+
+Se ejecutan directamente desde la terminal:
+
+```bash
+cd backend && python3 -c "
+from metis.core.pipeline import ejecutar_etapa1
+# ... verificación puntual
+"
+```
+
+Casos donde corresponde correr un smoke test:
+- Antes de usar una serie sintética como fixture — verificar que produce
+  el resultado esperado
+- Después de un cambio en core/ — verificar que el pipeline sigue corriendo
+- Ante una duda sobre el comportamiento de una función específica
+
+Los smoke tests no reemplazan los tests formales. Si un smoke test revela
+un comportamiento que vale la pena preservar, se convierte en un test
+unitario con su caso documentado en el archivo correspondiente.

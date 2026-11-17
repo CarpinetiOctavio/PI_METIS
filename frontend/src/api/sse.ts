@@ -1,0 +1,406 @@
+import { fetchEventSource } from "@microsoft/fetch-event-source";
+import { useCallback, useRef, useState } from "react";
+import { postDistributionDecision, postOutlierDecision } from "./analysis";
+import { errorText } from "../i18n/errors.es";
+import type {
+  AnalysisStreamForm,
+  AtipicoDetectado,
+  DecisionAtipico,
+  DescriptiveStats,
+  DistribucionResult,
+  Etapa1Result,
+  EventoDiseno,
+  PuntoEmpirico,
+  SseEvent,
+  TestResultDetail,
+  WarningItem,
+} from "./types";
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+
+export type StreamFase =
+  | "idle"
+  | "streaming"
+  | "waiting_outlier"
+  | "waiting_distribution"
+  | "done"
+  | "error";
+
+export interface Etapa2RankingState {
+  session_id: string;
+  ranking: DistribucionResult[];
+  warnings: WarningItem[];
+  puntos_empiricos: PuntoEmpirico[];
+}
+
+export interface Etapa2EventosState {
+  distribucion: string;
+  metodo: string;
+  eventos_diseno: EventoDiseno[];
+  curva_ajuste: EventoDiseno[];
+}
+
+export interface StreamState {
+  fase: StreamFase;
+  contractWarnings: WarningItem[];
+  descriptive: DescriptiveStats | null;
+  tests: Record<string, TestResultDetail>;
+  progress: { completado: number; total: number };
+  outlier: { session_id: string; valor_atipico: number; atipicos: AtipicoDetectado[] } | null;
+  result: Etapa1Result | null;
+  etapa2: Etapa2RankingState | null;
+  eventosDiseno: Etapa2EventosState | null;
+  analysisId: string | null;
+  error: { codigo: string; mensaje: string } | null;
+}
+
+// _iteracion es contable interno del hook (detecta la re-ejecución tras
+// rechazar un atípico) — no se expone en StreamState.
+interface InternalState extends StreamState {
+  _iteracion: number;
+}
+
+const INITIAL_STATE: InternalState = {
+  fase: "idle",
+  contractWarnings: [],
+  descriptive: null,
+  tests: {},
+  progress: { completado: 0, total: 0 },
+  outlier: null,
+  result: null,
+  etapa2: null,
+  eventosDiseno: null,
+  analysisId: null,
+  error: null,
+  _iteracion: 1,
+};
+
+export interface UseAnalysisStreamResult {
+  start: (form: AnalysisStreamForm) => void;
+  state: StreamState;
+  // DECISIÓN 079 — una decisión por atípico, indexada por `indice`.
+  resolveOutlier: (decisiones: Record<number, DecisionAtipico>) => Promise<void>;
+  resolveDistribution: (
+    distribucion: string,
+    metodo: string,
+    periodosRetorno: number[],
+  ) => Promise<void>;
+  abort: () => void;
+}
+
+function buildFormData(form: AnalysisStreamForm): FormData {
+  const body = new FormData();
+  body.append("archivo", form.archivo);
+  body.append("columna_x", form.columna_x);
+  body.append("columna_y", form.columna_y);
+  body.append("tipo_variable", form.tipo_variable);
+  body.append("modo", form.modo);
+  // Bloque H1 (DECISIÓN 036) — un objeto se manda como JSON string en el
+  // mismo campo Form; "default" (o ausente) tal cual. El backend distingue
+  // los dos casos por el contenido del string, no por un campo aparte.
+  const cramerParticion = form.cramer_particion ?? "default";
+  body.append(
+    "cramer_particion",
+    typeof cramerParticion === "string" ? cramerParticion : JSON.stringify(cramerParticion),
+  );
+  body.append("etapas", form.etapas ?? "1");
+  body.append("mes_inicio_anio", String(form.mes_inicio_anio ?? 7));
+  body.append("variable_diaria", form.variable_diaria ?? "pico");
+  body.append("alfa", String(form.alfa ?? 0.05));
+  body.append("cobertura_minima_interior", String(form.cobertura_minima_interior ?? 100));
+  return body;
+}
+
+/**
+ * Corre un análisis de Etapa 1 y expone su progreso como estado React.
+ * SSE-sobre-fetch (no EventSource nativo — el stream es un POST multipart,
+ * ver docs/decisiones/decision040.md — DECISIÓN 040).
+ */
+export function useAnalysisStream(): UseAnalysisStreamResult {
+  const [internal, setInternal] = useState<InternalState>(INITIAL_STATE);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // Espejo síncrono de `internal` para lecturas fuera de un `setInternal`
+  // funcional (ej. `resolveOutlier`, que necesita `outlier` ANTES de la
+  // llamada de red, no dentro de un actualizador de estado). Evita que
+  // `resolveOutlier` dependa de `internal` completo — dependencia que
+  // recreaba el `useCallback` en cada evento SSE y arriesgaba closure
+  // obsoleta si dos actualizaciones de estado ocurrían entre renders.
+  const internalRef = useRef(internal);
+  internalRef.current = internal;
+
+  const handleEvent = useCallback((event: SseEvent) => {
+    setInternal((prev) => {
+      // Reset por nueva iteración — ver frontend-integration.md §4: tras
+      // rechazar un atípico, el server re-emite contract_warning/
+      // descriptive_stats/progress/test_result con iteracion:2. `tests` no
+      // necesita reset explícito (se sobrescribe por clave `prueba`), pero
+      // contractWarnings/progress sí, para no arrastrar la corrida anterior.
+      const base =
+        "iteracion" in event &&
+        event.iteracion !== undefined &&
+        event.iteracion > prev._iteracion
+          ? {
+              ...prev,
+              _iteracion: event.iteracion,
+              contractWarnings: [],
+              progress: { completado: 0, total: 0 },
+            }
+          : prev;
+
+      switch (event.type) {
+        case "contract_error":
+        case "error":
+          return {
+            ...base,
+            fase: "error",
+            error: { codigo: event.codigo, mensaje: errorText(event.codigo) },
+          };
+        case "contract_warning": {
+          if (base.contractWarnings.some((w) => w.codigo === event.codigo)) {
+            return base;
+          }
+          return {
+            ...base,
+            contractWarnings: [
+              ...base.contractWarnings,
+              {
+                codigo: event.codigo,
+                nivel: event.nivel,
+                descripcion: errorText(event.codigo),
+              },
+            ],
+          };
+        }
+        case "descriptive_stats":
+          // event trae de más `type`/`iteracion` — asignación estructural,
+          // no un literal, así que TS no exige despojarlos.
+          return { ...base, descriptive: event };
+        case "progress":
+          return {
+            ...base,
+            progress: { completado: event.completado, total: event.total },
+          };
+        case "test_result":
+          return { ...base, tests: { ...base.tests, [event.prueba]: event } };
+        case "outlier_detected":
+          return {
+            ...base,
+            fase: "waiting_outlier",
+            outlier: {
+              session_id: event.session_id,
+              valor_atipico: event.valor_atipico,
+              atipicos: event.atipicos ?? [],
+            },
+          };
+        case "result_etapa1":
+          return { ...base, result: event.result };
+        case "result_etapa2_ranking":
+          return {
+            ...base,
+            fase: "waiting_distribution",
+            etapa2: {
+              session_id: event.session_id,
+              ranking: event.ranking,
+              warnings: event.warnings,
+              puntos_empiricos: event.puntos_empiricos,
+            },
+          };
+        case "result_etapa2_eventos":
+          return {
+            ...base,
+            eventosDiseno: {
+              distribucion: event.distribucion,
+              metodo: event.metodo,
+              eventos_diseno: event.eventos_diseno,
+              curva_ajuste: event.curva_ajuste,
+            },
+          };
+        case "complete":
+          // `complete` SIEMPRE llega después de `contract_error` también
+          // (docs/frontend/frontend-integration.md §4: "Después de este evento el
+          // backend manda complete con analysis_id: null y cierra") — si ya
+          // estamos en fase="error" no hay que pisarla con "done".
+          return base.fase === "error"
+            ? base
+            : { ...base, fase: "done", analysisId: event.analysis_id };
+        default:
+          return base;
+      }
+    });
+  }, []);
+
+  const start = useCallback(
+    (form: AnalysisStreamForm) => {
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      setInternal({ ...INITIAL_STATE, fase: "streaming" });
+
+      fetchEventSource(`${API_BASE}/api/v1/analysis/stream`, {
+        method: "POST",
+        body: buildFormData(form),
+        credentials: "include",
+        signal: controller.signal,
+        // El server pausa hasta 300s esperando la decisión ante un atípico —
+        // no queremos que la librería cierre/reabra la conexión si la pestaña
+        // pierde foco mientras el usuario decide.
+        openWhenHidden: true,
+        async onopen(response) {
+          if (!response.ok) {
+            throw new Error(`El stream abrió con status ${response.status}`);
+          }
+        },
+        onmessage(ev) {
+          if (!ev.data) return;
+          try {
+            const payload = JSON.parse(ev.data) as Record<string, unknown>;
+            // El discriminante `type` no viaja en el JSON — lo da la línea
+            // `event:` del frame SSE (ver architecture.md, formato `_sse()`).
+            //
+            // result_etapa1 es un caso especial confirmado contra el backend
+            // real (no solo la doc): el frame trae el Etapa1Result crudo
+            // como payload — NO como `{result: {...}}` — hay que envolverlo
+            // acá. Bug real encontrado recién al probar contra Docker real;
+            // el mock sintético de sse.test.ts asumía (incorrectamente) el
+            // shape ya envuelto, por eso no lo agarró antes.
+            const event: SseEvent =
+              ev.event === "result_etapa1"
+                ? { type: "result_etapa1", result: payload as unknown as Etapa1Result }
+                : ({ type: ev.event, ...payload } as SseEvent);
+            handleEvent(event);
+          } catch {
+            setInternal((prev) => ({
+              ...prev,
+              fase: "error",
+              error: {
+                codigo: "PARSE_ERROR",
+                mensaje: errorText("PARSE_ERROR"),
+              },
+            }));
+          }
+        },
+        onclose() {
+          // Cierre normal del server tras `complete` o `contract_error` deja
+          // fase="done"/"error" ya resuelta por handleEvent — el `prev.fase`
+          // de abajo no la pisa. Pero si el server cierra la conexión SIN
+          // haber emitido `complete` (F1, informe-diagnostico-ui-rota.md
+          // §1.2), sin esto la fase quedaba en "streaming"/"waiting_outlier"
+          // para siempre y silenciosamente. "waiting_distribution" tiene el
+          // mismo problema — un cierre temprano durante esa pausa (DECISIÓN
+          // 052, mismo mecanismo de sesión que Chow) dejaba el ranking
+          // visible sin ninguna acción posible y sin ningún error explicado.
+          setInternal((prev) =>
+            prev.fase === "streaming" ||
+            prev.fase === "waiting_outlier" ||
+            prev.fase === "waiting_distribution"
+              ? {
+                  ...prev,
+                  fase: "error",
+                  error: {
+                    codigo: "STREAM_CLOSED_EARLY",
+                    mensaje: errorText("STREAM_CLOSED_EARLY"),
+                  },
+                }
+              : prev,
+          );
+        },
+        onerror(err) {
+          setInternal((prev) => ({
+            ...prev,
+            fase: "error",
+            error: {
+              codigo: "STREAM_CONNECTION_ERROR",
+              mensaje: errorText("STREAM_CONNECTION_ERROR"),
+            },
+          }));
+          // Relanzar evita el retry automático de la librería — este stream
+          // no es idempotente para reintentar solo (re-correría el pipeline).
+          throw err;
+        },
+      }).catch(() => {
+        // onerror ya dejó el estado en fase="error" — acá solo evitamos que
+        // la promesa rechazada quede sin manejar.
+      });
+    },
+    [handleEvent],
+  );
+
+  const resolveOutlier = useCallback(
+    async (decisiones: Record<number, DecisionAtipico>) => {
+      const { outlier } = internalRef.current;
+      if (!outlier) return;
+      await postOutlierDecision({
+        session_id: outlier.session_id,
+        decisiones: outlier.atipicos.map((a) => ({
+          indice: a.indice,
+          decision: decisiones[a.indice],
+        })),
+      });
+      // El stream SSE es una conexión aparte de este POST: en cuanto el
+      // servidor recibe la decisión, retoma el pipeline y puede emitir
+      // eventos (incluido result_etapa2_ranking, que ya deja fase en
+      // "waiting_distribution") ANTES de que la promesa de este POST
+      // resuelva del lado del cliente — no hay ninguna garantía de orden
+      // entre las dos. Sin el guard de abajo, este setInternal llegaba
+      // tarde y pisaba "waiting_distribution" con "streaming" otra vez,
+      // dejando el ranking visible pero sin ninguna acción posible (bug
+      // real, reproducido con logging de la secuencia real de eventos:
+      // result_etapa2_ranking procesado con prev.fase todavía
+      // "waiting_outlier", y este setInternal llegando recién después).
+      // Solo avanzar a "streaming" si seguimos en la fase que este método
+      // resuelve — si ya avanzó, dejarla como está.
+      setInternal((prev) => ({
+        ...prev,
+        fase: prev.fase === "waiting_outlier" ? "streaming" : prev.fase,
+        outlier: null,
+      }));
+    },
+    [],
+  );
+
+  const resolveDistribution = useCallback(
+    async (distribucion: string, metodo: string, periodosRetorno: number[]) => {
+      const { etapa2 } = internalRef.current;
+      if (!etapa2) return;
+      await postDistributionDecision({
+        session_id: etapa2.session_id,
+        distribucion,
+        metodo,
+        periodos_retorno: periodosRetorno,
+      });
+      // A diferencia de resolveOutlier, `etapa2` no se limpia acá — el
+      // ranking sigue siendo útil para mostrar en la pantalla de resultados
+      // junto a los eventos de diseño una vez que el stream termina.
+      //
+      // Mismo guard que resolveOutlier y por el mismo motivo: result_etapa2_eventos
+      // o incluso complete pueden llegar por la conexión SSE antes de que
+      // esta promesa resuelva, dejando fase en "done" — sin el guard este
+      // setInternal tardío revertía un análisis ya terminado de vuelta a
+      // "streaming".
+      setInternal((prev) => ({
+        ...prev,
+        fase: prev.fase === "waiting_distribution" ? "streaming" : prev.fase,
+      }));
+    },
+    [],
+  );
+
+  const abort = useCallback(() => {
+    abortControllerRef.current?.abort();
+  }, []);
+
+  const state: StreamState = {
+    fase: internal.fase,
+    contractWarnings: internal.contractWarnings,
+    descriptive: internal.descriptive,
+    tests: internal.tests,
+    progress: internal.progress,
+    outlier: internal.outlier,
+    result: internal.result,
+    etapa2: internal.etapa2,
+    eventosDiseno: internal.eventosDiseno,
+    analysisId: internal.analysisId,
+    error: internal.error,
+  };
+  return { start, state, resolveOutlier, resolveDistribution, abort };
+}

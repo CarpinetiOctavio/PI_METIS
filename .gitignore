@@ -28,6 +28,9 @@ frontend/dist/
 frontend/build/
 frontend/.next/
 frontend/.nuxt/
+# Reportes de Playwright (B6 del TP de Calidad): en CI se suben como artefacto
+frontend/playwright-report/
+frontend/test-results/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -45,3 +48,41 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+.claude/settings.local.json
+
+# Commits
+commit_msg.txt
+
+# Worktrees (superpowers:using-git-worktrees)
+.worktrees/
+
+# Subagent-driven-development progress ledger (scratch, not a deliverable)
+.superpowers/
+.scratch-local/
+
+# Bibliografia de referencia (PDFs pesados, no van al repo)
+Bibliografia/
+
+# Series de prueba grandes: se regeneran con docs/series prueba/generar_series_grandes.py
+docs/series prueba/bajo_limite.csv
+docs/series prueba/sobre_limite.csv
+docs/series prueba/serie_horaria_40anios.xlsx
+# Archivo de la UCC: no se publica hasta confirmar que se puede
+docs/series prueba/UCC-DAT-ESR-AH-001-26-00.xlsx
+
+# Documentación escrita del PI (tesis, informes, IPI) — vive fuera de GitHub
+/Proyecto Integrador/
+
+# Reportes de calidad generados por CI o por scripts/test.sh (DECISIÓN 077)
+coverage.xml
+junit-*.xml
+reports/
+
+# Resultados de las pruebas de carga (B7): se suben como artefacto en CI; lo que se cita queda en docs/calidad/
+carga/resultados/
+
+# Certificado TLS del despliegue en la UCC (DECISIÓN 083) — vive solo en el servidor
+certs/
+
+# Respaldos de la base (scripts/respaldo-db.sh)
+respaldos/

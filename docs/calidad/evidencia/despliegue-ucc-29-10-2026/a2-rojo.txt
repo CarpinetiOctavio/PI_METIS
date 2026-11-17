@@ -1,0 +1,199 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-8.2.0, pluggy-1.7.0 -- /usr/local/bin/python3.11
+rootdir: /app
+configfile: pytest.ini
+plugins: anyio-4.15.1, cov-5.0.0, asyncio-0.23.6
+asyncio: mode=Mode.AUTO
+collecting ... collected 10 items
+
+tests/unit/auth/test_router_register.py::test_register_manda_mail_antes_que_add_y_commit PASSED [ 10%]
+tests/unit/auth/test_router_register.py::test_register_ok_registra_token_solo_tras_commit_exitoso PASSED [ 20%]
+tests/unit/auth/test_router_register.py::test_register_falla_smtpexception_no_toca_bd PASSED [ 30%]
+tests/unit/auth/test_router_register.py::test_register_falla_runtimeerror_config_no_toca_bd PASSED [ 40%]
+tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[ssl-hostname-mismatch] FAILED [ 50%]
+tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[timeout] FAILED [ 60%]
+tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[conexion-rechazada] FAILED [ 70%]
+tests/unit/auth/test_router_register.py::test_register_integrityerror_en_commit_mapea_a_email_already_registered PASSED [ 80%]
+tests/unit/auth/test_router_register.py::test_register_race_concurrente_segundo_commit_falla_sin_excepcion_sin_capturar PASSED [ 90%]
+tests/unit/auth/test_router_register.py::test_register_email_ya_registrado_responde_400_sin_mandar_mail PASSED [100%]
+
+=================================== FAILURES ===================================
+_ test_register_falla_tls_o_red_responde_codigo_no_toca_bd[ssl-hostname-mismatch] _
+
+error = SSLCertVerificationError(1, 'certificate verify failed: Hostname mismatch')
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "error",
+        [
+            ssl.SSLCertVerificationError(
+                1, "certificate verify failed: Hostname mismatch"
+            ),
+            TimeoutError("timed out"),
+            ConnectionRefusedError("conexión rechazada"),
+        ],
+        ids=["ssl-hostname-mismatch", "timeout", "conexion-rechazada"],
+    )
+    async def test_register_falla_tls_o_red_responde_codigo_no_toca_bd(error):
+        # D-UCC-02: en el servidor de la UCC, SMTP_HOST con un nombre que el
+        # certificado no cubre levantaba ssl.SSLCertVerificationError sin envolver
+        # en SMTPException, y register() respondía un 500 genérico sin código.
+        db = _mock_db()
+    
+        with patch(
+            "metis.auth.router.send_verification_email",
+            new_callable=AsyncMock,
+            side_effect=error,
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+>               await register(_body(), db=db)
+
+tests/unit/auth/test_router_register.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+metis/auth/router.py:67: in register
+    await send_verification_email(body.email, token)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <AsyncMock name='send_verification_email' id='130505605195088'>
+args = ('legajo@ucc.edu.ar', 'NSU-ZvCNeJXeUq3JR4o9-HjevPeC4MUE2EmcX-heLp8')
+kwargs = {}
+_call = call('legajo@ucc.edu.ar', 'NSU-ZvCNeJXeUq3JR4o9-HjevPeC4MUE2EmcX-heLp8')
+effect = SSLCertVerificationError(1, 'certificate verify failed: Hostname mismatch')
+
+    async def _execute_mock_call(self, /, *args, **kwargs):
+        # This is nearly just like super(), except for special handling
+        # of coroutines
+    
+        _call = _Call((args, kwargs), two=True)
+        self.await_count += 1
+        self.await_args = _call
+        self.await_args_list.append(_call)
+    
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               ssl.SSLCertVerificationError: certificate verify failed: Hostname mismatch
+
+/usr/local/lib/python3.11/unittest/mock.py:2240: SSLCertVerificationError
+______ test_register_falla_tls_o_red_responde_codigo_no_toca_bd[timeout] _______
+
+error = TimeoutError('timed out')
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "error",
+        [
+            ssl.SSLCertVerificationError(
+                1, "certificate verify failed: Hostname mismatch"
+            ),
+            TimeoutError("timed out"),
+            ConnectionRefusedError("conexión rechazada"),
+        ],
+        ids=["ssl-hostname-mismatch", "timeout", "conexion-rechazada"],
+    )
+    async def test_register_falla_tls_o_red_responde_codigo_no_toca_bd(error):
+        # D-UCC-02: en el servidor de la UCC, SMTP_HOST con un nombre que el
+        # certificado no cubre levantaba ssl.SSLCertVerificationError sin envolver
+        # en SMTPException, y register() respondía un 500 genérico sin código.
+        db = _mock_db()
+    
+        with patch(
+            "metis.auth.router.send_verification_email",
+            new_callable=AsyncMock,
+            side_effect=error,
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+>               await register(_body(), db=db)
+
+tests/unit/auth/test_router_register.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+metis/auth/router.py:67: in register
+    await send_verification_email(body.email, token)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <AsyncMock name='send_verification_email' id='130505608455888'>
+args = ('legajo@ucc.edu.ar', '-oe6qam3ss--UCERUhYo5Iwe4ZdC2bjb-nmSW6nYwJc')
+kwargs = {}
+_call = call('legajo@ucc.edu.ar', '-oe6qam3ss--UCERUhYo5Iwe4ZdC2bjb-nmSW6nYwJc')
+effect = TimeoutError('timed out')
+
+    async def _execute_mock_call(self, /, *args, **kwargs):
+        # This is nearly just like super(), except for special handling
+        # of coroutines
+    
+        _call = _Call((args, kwargs), two=True)
+        self.await_count += 1
+        self.await_args = _call
+        self.await_args_list.append(_call)
+    
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               TimeoutError: timed out
+
+/usr/local/lib/python3.11/unittest/mock.py:2240: TimeoutError
+_ test_register_falla_tls_o_red_responde_codigo_no_toca_bd[conexion-rechazada] _
+
+error = ConnectionRefusedError('conexión rechazada')
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "error",
+        [
+            ssl.SSLCertVerificationError(
+                1, "certificate verify failed: Hostname mismatch"
+            ),
+            TimeoutError("timed out"),
+            ConnectionRefusedError("conexión rechazada"),
+        ],
+        ids=["ssl-hostname-mismatch", "timeout", "conexion-rechazada"],
+    )
+    async def test_register_falla_tls_o_red_responde_codigo_no_toca_bd(error):
+        # D-UCC-02: en el servidor de la UCC, SMTP_HOST con un nombre que el
+        # certificado no cubre levantaba ssl.SSLCertVerificationError sin envolver
+        # en SMTPException, y register() respondía un 500 genérico sin código.
+        db = _mock_db()
+    
+        with patch(
+            "metis.auth.router.send_verification_email",
+            new_callable=AsyncMock,
+            side_effect=error,
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+>               await register(_body(), db=db)
+
+tests/unit/auth/test_router_register.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+metis/auth/router.py:67: in register
+    await send_verification_email(body.email, token)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <AsyncMock name='send_verification_email' id='130505604626576'>
+args = ('legajo@ucc.edu.ar', 'SOOt_-IpBIUkz9qkNGRCam0AkEv-kdi50VZHf5Rw1_g')
+kwargs = {}
+_call = call('legajo@ucc.edu.ar', 'SOOt_-IpBIUkz9qkNGRCam0AkEv-kdi50VZHf5Rw1_g')
+effect = ConnectionRefusedError('conexión rechazada')
+
+    async def _execute_mock_call(self, /, *args, **kwargs):
+        # This is nearly just like super(), except for special handling
+        # of coroutines
+    
+        _call = _Call((args, kwargs), two=True)
+        self.await_count += 1
+        self.await_args = _call
+        self.await_args_list.append(_call)
+    
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               ConnectionRefusedError: conexión rechazada
+
+/usr/local/lib/python3.11/unittest/mock.py:2240: ConnectionRefusedError
+=========================== short test summary info ============================
+FAILED tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[ssl-hostname-mismatch]
+FAILED tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[timeout]
+FAILED tests/unit/auth/test_router_register.py::test_register_falla_tls_o_red_responde_codigo_no_toca_bd[conexion-rechazada]
+========================= 3 failed, 7 passed in 6.10s ==========================

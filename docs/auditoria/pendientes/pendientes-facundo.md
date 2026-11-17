@@ -1,0 +1,1227 @@
+# Pendientes para Facundo — Auditoría de Regresión METIS
+
+## Respuestas del 22/10/2026
+
+Facundo respondió el 22/10/2026 el "Consolidado de pendientes y decisiones de la auditoría del motor estadístico"
+(versión 3, 09/09/2026). Cada sección respondida lleva la marca **RESPONDIDA 22/10/2026** en el título, con la respuesta
+y su destino debajo; las que siguen abiertas, **A PRESENTAR EN REUNIÓN**. Se marcan en su lugar, como la respuesta
+del 21/10/2026 sobre Anderson, para no romper los enlaces que apuntan a cada sección. Las citas entre comillas son
+textuales; el resto es un resumen. Plan de implementación: `docs/plan-respuestas-facundo-22-10-2026.md`.
+
+| Pregunta | Destino |
+|---|---|
+| Cramer, redondeo de la partición | Cerrada: se mantiene la convención actual (revisión de la DECISIÓN 011) |
+| Una o dos colas en Cramer y t de Student | Cerrada: dos colas, sin cambios |
+| Mann-Kendall con n = 7 | Cerrada: no se alcanza; nuevo texto del aviso de longitud |
+| Causa C | Explicación reconstruida, no confirmable (sin planillas) |
+| Log-Pearson III, método directo | Cerrada: se mantiene "no aplicable" |
+| Gamma 3p con el origen por encima del mínimo | Cerrada: bloquear todo el cálculo |
+| Log-Normal 2p no aplicable | Cerrada: valores negativos (DECISIÓN 073) |
+| Log-Pearson III por MV | Cerrada: explica la Causa B |
+| Variantes de Mínimos Cuadrados; ME/MC en otras distribuciones | Versión 2 |
+| Gamma 3p por MPP | Versión 2: no tenía las ecuaciones ni las tablas; "si lo consiguen, estaría bueno que esté incluido" |
+| Momentos y MV en Normal y Log-Normal 2p | Cerrada: no se elimina ninguno, el usuario elige |
+| Cobertura de años interiores (R0.1) | Cerrada: DECISIÓN 081 |
+| Diaria, promedio o pico (R0.2) | Cerrada: opción "acumulado" (revisión de la DECISIÓN 065) |
+| Diaria a anual directo (R0.3) | Cerrada |
+| Agregación para "otro" | Versión 2 |
+| Mes de inicio en las 9 estaciones | Cerrada: julio a junio (DECISIÓN 057) |
+| Caudal y precipitación | Cerrada: no hay diferencia de tratamiento (vale también para viento, evaporación, alturas de río) |
+| Pareto por MC y Gen. Exponencial por Momentos-L (Parte C) | Cerradas: "sigan adelante con la decisión tomada" (DECISIONES 068 y 069) |
+
+## Respuestas del 29/10/2026
+
+Las cuatro preguntas que quedaban para la reunión, respondidas el 29/10/2026 (bloque C del
+[plan de mejoras post-despliegue](../../Plan%20de%20mejoras%20post-despliegue%20UCC%20y%20respuestas%20de%20Facundo.md)).
+Tres confirman lo que METIS ya hace; la cuarta saca a Pareto de la v1.
+
+| Pregunta | Respuesta | Destino |
+|---|---|---|
+| U_T con F > 0,5 | Se mantiene IV-105 (1 − F); lo más probable es un error de la planilla por arrastre de ecuaciones | Cerrada, sin cambios: [hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md) §8 |
+| Partición de t de Student con n impar | Es indistinto qué subgrupo lleva el dato de más | Cerrada, sin cambios: DECISIÓN 084 |
+| Una o dos colas en Mann-Kendall | Dos colas | Cerrada, sin cambios: `formulas-etapa1.md` §7 |
+| Generalizada de Pareto | No la recuerda; puede quedar fuera hasta conseguir mejor bibliografía | Fuera del cálculo de la v1: addendum del 29/10/2026 a la DECISIÓN 074 |
+
+
+## Decisiones implementadas que requieren confirmación
+
+### Pregunta relacionada a DECISIÓN 013 — Fórmula de asimetría (g)
+METIS usa IV-4/IV-5 (ddof=0). Facundo usó Excel SKEW() (ddof=1).
+Impacto: diferencia de ~4% en g que se propaga a LP3 Indirecto
+y LN3p Momentos. GVE Momentos tiene problema separado — ver sección
+"GVE Momentos — beta no reproducible" más abajo.
+Pregunta: ¿La implementación correcta de METIS debe usar IV-4/IV-5
+o replicar el comportamiento de Excel SKEW()?
+
+### Pregunta relacionada a DECISIÓN 011 — Partición de Cramer (n_w1, n_w2) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** "Es indistinto, seguir con el redondeo hacia abajo".
+
+**Decidido por Kevin el 22/10/2026: se mantiene la convención actual** (60 % hacia arriba, 30 % al entero más cercano),
+que reproduce los valores publicados de las estaciones 2 y 4. Pasar todo a redondeo hacia abajo no cambia ningún
+veredicto en las nueve estaciones (verificado el 22/10/2026), pero deja de reproducir esos valores, y el autor considera
+indistinta la elección. No se toca el código. Ver la revisión del 22/10/2026 de la
+[DECISIÓN 011](../../decisiones/decision011.md). **Cerrada.**
+
+METIS usa ceil(n×0.60) para n_w1 y round(n×0.30) para n_w2.
+Inferido del comportamiento numérico de la tesis. La tesis no
+explicita la regla de redondeo.
+
+Evidencia por estación:
+| n   | n×0.30 | METIS round() | Facundo | Coincide |
+|-----|--------|---------------|---------|----------|
+| 24  | 7.2    | 7             | 7       | ✓        |
+| 36  | 10.8   | 11            | 11      | ✓        |
+| 41  | 12.3   | 12            | 12      | ✓        |
+| 39  | 11.7   | 12            | 13      | ✗        |
+
+Para n=39: n×0.30=11.7 → round=12, pero Facundo usó 13 (=n/3=13.0
+exacto para este caso). No hay fórmula única consistente entre
+todas las estaciones auditadas.
+
+Pregunta: ¿Qué función usás en Excel para calcular n_w1 y n_w2?
+Para n=39 en particular, ¿por qué usaste 13 en lugar de 12?
+¿Aplicás REDONDEAR, ENTERO, o mirás n/3 directamente?
+
+**ACTUALIZACIÓN 14/07/2026 (Fase 4, est_07) — el mismo problema aparece
+en n_w1, no solo en n_w2.** DECISIÓN011 daba por confirmado que n_w1
+usa `ceil(n×0.60)`, respaldado en est_02 (n=24) y est_04 (n=36). Pero
+est_04 nunca pudo distinguir `ceil` de `round`: n×0.60=21.6, y tanto
+`ceil(21.6)` como `round(21.6)` dan 22 — coincidencia que no discrimina
+entre las dos reglas. est_07 (n=19) sí discrimina, y contradice la regla:
+
+| n  | n×0.60 | ceil() | round()/floor() | n_w1 real (Facundo) | Coincide con |
+|----|--------|--------|------------------|----------------------|---------------|
+| 24 | 14.4   | 15     | 14               | 15                   | **ceil**      |
+| 36 | 21.6   | 22     | 22               | 22                   | ambas (no discrimina) |
+| 19 | 11.4   | 12     | 11               | 11                   | **round/floor** |
+
+Verificado a mano contra la serie real de est_07: con n_w1=11,
+τ1=-0.16779 y tw1=0.82742 — coincide exacto con la tesis. Con n_w1=12
+(la regla `ceil` que usa el código hoy), τ1=-0.19317, tw1=1.07787 — no
+coincide. **No existe una única regla de redondeo (ni `ceil`, ni
+`round`, ni `floor`) que reproduzca los n_w1 confirmados de las tres
+estaciones a la vez** — est_02 necesita específicamente `ceil` (no
+`round`, que daría 14, no 15) y est_07 necesita específicamente
+`round`/`floor` (no `ceil`, que daría 12, no 11). Mismo tipo de
+inconsistencia ya documentada arriba para n_w2 (n=39), ahora confirmada
+también para n_w1 con un segundo par de estaciones contradictorias.
+
+Pregunta ampliada para Facundo: además de n_w2, ¿qué función usás para
+n_w1? Con los datos de est_02 (n=24→15) y est_07 (n=19→11), ¿qué
+fórmula de Excel reproduce las dos a la vez?
+
+**CORRECCIÓN (15/07/2026) — censo completo, no es empate 1 a 1.** El
+párrafo de arriba solo comparaba est_02 y est_07, dando la impresión de un
+empate entre `ceil` y `round`. Censo real contra las 7 series de est_01 a
+est_07 (`_cramer_bloque()` real, verificado por Code y recontrastado por
+Chat):
+
+| Estación | n | n×0.6 | ceil | round=floor | ¿Discrimina? | Reproduce tesis |
+|---|---|---|---|---|---|---|
+| est_01 | 40 | 24.00 | 24 | 24 | No | único candidato |
+| est_02 | 24 | 14.40 | 15 | 14 | **Sí** | **ceil** |
+| est_03 | 41 | 24.60 | 25 | 25 | No | — |
+| est_04 | 36 | 21.60 | 22 | 22 | No | — |
+| est_05 | 39 | 23.40 | 24 | 23 | **Sí** | **ceil** |
+| est_06 | 38 | 22.80 | 23 | 23 | No | — |
+| est_07 | 19 | 11.40 | 12 | 11 | **Sí** | **round/floor** |
+| est_08 | 43 | 25.80 | 26 | 26 | No | único candidato (frac=.8, no discrimina) |
+
+Solo 3 de 8 estaciones discriminan entre `ceil` y `round` para n_w1 (las
+demás tienen fracción ≥0.5, donde `ceil==round`, y no aportan evidencia
+entre las dos reglas). De esas 3: **2 confirman `ceil`** (est_02, est_05) y
+**1 lo contradice** (est_07) — no es un empate, es una regla mayoritaria con
+una excepción real. Dato adicional: est_02, est_05 y est_07 tienen las tres
+una fracción `n×0.6` de exactamente `.4` — y aun así 2 redondean hacia
+arriba (contra la convención estándar) y 1 hacia abajo (con la convención).
+Descarta cualquier hipótesis simple de redondeo basada solo en la fracción.
+No cambia el código (`ceil` sigue siendo la regla implementada, es la
+mayoritaria confirmada). Detalle completo en
+`regresion-e2e/est_07-e2e.md`.
+
+**ACTUALIZACIÓN (15/07/2026, est_09) — deja de ser mayoría, es empate real.**
+
+| Estación | n | n×0.6 | ceil | round=floor | ¿Discrimina? | Reproduce tesis |
+|---|---|---|---|---|---|---|
+| est_08 | 43 | 25.80 | 26 | 26 | No | único candidato (frac=.8) |
+| est_09 | 7 | 4.20 | 5 | 4 | **Sí** | **round/floor** (τ_w1=0.36220 con n_w1=4, coincide con tesis 0.36219; n_w1=5 da 0.42415, no coincide) |
+
+Con est_09 (n=7, `n×0.6=4.2`, fracción `.2` — no `.4` como las tres
+anteriores, así que tampoco es un patrón de fracción específica) el censo
+de estaciones que discriminan pasa de 3 a **4**, y el resultado queda
+**empatado 2 a 2**: est_02 y est_05 confirman `ceil`; est_07 y est_09
+contradicen con `round`/`floor`. Ya no corresponde describir esto como
+"regla mayoritaria con una excepción" — es un empate genuino entre las dos
+convenciones, sin ninguna preferencia estadística clara entre `ceil` y
+`round` para n_w1. El código sigue sin cambiar (`ceil`, la regla ya
+implementada, no tiene más respaldo que la alternativa). Pregunta para
+Facundo reforzada: con 4 estaciones de evidencia real (no 1, no 3), ¿qué
+función de Excel reproduce las 4 a la vez? Detalle completo en
+`regresion-e2e/est_09-e2e.md`.
+
+Nota: no cambia ningún veredicto de homogeneidad en ninguna de las
+estaciones auditadas — Cramer aprueba con cualquiera de las dos
+particiones en todos los casos verificados hasta ahora. Es un hallazgo
+de precisión de fórmula, no de resultado práctico.
+
+---
+
+## Fórmulas con comportamiento no reproducible
+
+### Gen. Exponencial — Método Momentos (IV-77)
+METIS produce alpha=0.625, lambda=0.0116 para est_03.
+Tesis reporta alpha=0.76, lambda=0.0023 — internamente inconsistente
+(CV(alpha=0.76)=1.131 ≠ CV_datos=1.238; lambda=0.0023 implica µ=362 ≠ 62.39).
+Presente también en est_04.
+Pregunta: ¿Qué fórmula usaste para resolver IV-77? ¿Hay una tabla
+o aproximación numérica que no figura en el capítulo?
+
+**NOTA 10/07/2026:** las referencias a "est_04" en esta sección y en
+las tres siguientes (Gen. Exp. Momentos-L, LP3 Directo, LN2p, Gamma 3p
+x0>min) no fueron cruzadas contra los datos de est_05/est_06 auditados
+en esta sesión — no coinciden los parámetros de referencia con ninguna
+de las dos series que tengo a mano, así que no puedo confirmar ni
+corregir la numeración acá. Dado que ya se encontró al menos un caso
+de rotulado cruzado dentro de este mismo archivo (ver corrección en
+la tabla de GVE Momentos, más abajo), recomiendo un repaso manual de
+la numeración de estación en estas cuatro secciones antes de
+consolidar todo para Facundo.
+
+**ACTUALIZACIÓN 13/08/2026 — repaso manual hecho para 2 de las 4
+secciones, sin rotulado cruzado.** Octavio verificó a mano, estación
+por estación, los censos de "Gen. Exponencial — Método Momentos L" y
+"Gamma 3p — parámetros calculados con x0 > min(serie)" contra la ficha
+real de la tesis — detalle en cada sección más abajo. Ninguna de las 9
+citas de esas dos secciones tenía estación mal rotulada. **LP3 Método
+Directo y Log-Normal 2p — NO_APLICABLE siguen sin este repaso**, la
+duda de numeración de esta nota sigue abierta para esas dos.
+
+**ACTUALIZACIÓN 17/08/2026 — repaso manual hecho para las 4 de 4
+secciones, sin rotulado cruzado. Nota cerrada.** Octavio verificó las
+dos secciones que quedaban pendientes — "LP3 Método Directo" (3 citas:
+est_03, est_07, est_08) y "Log-Normal 2p — NO_APLICABLE" (3 citas:
+est_03, est_04, est_06) — contra la ficha real de la tesis. Ninguna de
+las 6 citas tenía estación mal rotulada. Con esto, las cuatro secciones
+que esta nota señalaba como dudosas quedan confirmadas sin rotulado
+cruzado — la nota queda cerrada, sin repaso pendiente.
+
+**ACTUALIZACIÓN 15/07/2026 — confirmado con verificación de CV explícita en
+est_07 y est_08, sin ambigüedad de numeración.** Mismo patrón: el α de
+METIS reproduce exacto el CV real de los datos (CV=S/x̄); el α de tesis no.
+est_07: CV_datos=0.53816, CV_teórico(α_METIS=4.778)=0.53816 exacto;
+CV_teórico(α_tesis=2.69)=0.663 (diff +23.2%). est_08: CV_datos=0.56288,
+CV_teórico(α_METIS=4.200)=0.56288 exacto; CV_teórico(α_tesis=2.26)=0.70985
+(diff +26.1%, la mayor divergencia de este chequeo en las 8 estaciones
+auditadas). El método (comparar CV teórico de IV-77, vía digamma/trigamma,
+contra el CV real de la serie) es más riguroso que la nota anterior — no
+depende de qué estación es cuál, solo de la serie y el α reportado.
+
+### Gen. Exponencial — Método Momentos L (IV-83/84) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026, Parte C):** no tiene el material; "sigan adelante con la decisión tomada".
+**Cerrada:** queda la [DECISIÓN 069](../../decisiones/decision069.md).
+
+METIS produce lambda negativo (est_03: -0.013, est_04: -0.00013).
+Tesis reporta lambda negativo también en est_03 (-0.0069) pero con
+magnitud diferente.
+Pregunta: ¿Hay alguna restricción de signo o dominio en IV-84 que
+no está explicitada en el texto?
+
+**ACTUALIZACIÓN 13/08/2026 — censo completo de las 9 estaciones,
+verificado manualmente contra la tesis, sin rotulado cruzado.** El
+caso no es aislado de est_03 — la tesis reporta λ negativo en las 9 de
+9 estaciones para esta combinación distribución/método:
+
+| Estación | λ tesis (Momentos-L) | Fuente |
+|---|---|---|
+| est_01 (Alpa Corral) | -0.0031 | `regresion-unitaria/est_01_alpa_corral_rioBarrancas-unitaria.md:161` |
+| est_02 (Vado de Río Seco) | -0.0033 | `regresion-unitaria/est_02_vado_rio_seco_rioBarrancas-unitaria.md:148` |
+| est_03 (La Tapa) | -0.0069 | `regresion-unitaria/est_03_la_tapa_rioLasCanitas-unitaria.md:154` |
+| est_04 (Las Tapias, Río Las Tapias) | -0.00013 | `regresion-unitaria/est_04_las_tapias_rioLasTapias-unitaria.md:150` |
+| est_05 (Piedra Blanca) | -0.0097 | `regresion-unitaria/est_05_piedra_blanca_rioPiedraBlanca-unitaria.md:153` |
+| est_06 (Las Tapias, Río San Bartolomé) | -0.0111 | `regresion-unitaria/est_06_las_tapias_rioSanBartolome-unitaria.md:150` |
+| est_07 (Tincunaco) | -0.0095 | `regresion-unitaria/est_07_tincunaco_rioChocancharagua-unitaria.md:131` |
+| est_08 (Ume Pay) | -0.0032 | `regresion-unitaria/est_08_ume_pay_rioGrande-unitaria.md:161` |
+| est_09 (La Suela) | -0.0198 | `regresion-unitaria/est_09_la_suela_rioLaSuela-unitaria.md:130` |
+
+Octavio verificó cada uno de estos 9 valores contra la ficha real de
+la tesis — coinciden todos, ninguna estación estaba cruzada con otra
+(precedente de rotulado cruzado ya conocido en este archivo, ver NOTA
+10/07/2026 más arriba y la corrección de la tabla de GVE Momentos más
+abajo). La pregunta original sobre IV-84 sigue abierta — esto solo
+confirma que la evidencia detrás de la pregunta es sistemática en las
+9 estaciones, no un caso puntual de est_03.
+
+**ADDENDUM 09/09/2026 — CERRADO en cuanto al guard, sin escalar a
+Facundo. La pregunta original queda superada, no respondida.** No era
+un tema de nota faltante en el capítulo IV. Cross-verificado por Chat y
+por Code de forma independiente, ambos rasterizando la p.67 de la tesis
+(dos fuentes de archivo distintas): IV-83 e IV-84 están transcriptas
+verbatim en `gen_exponencial.py`, sin bug de signo ni de coeficiente. El
+bug real era un **desfasaje de índice**: el código usaba la media
+muestral donde IV-83 pide M̂(1) (IV-87), y M̂(1) donde pide M̂(2) (IV-88)
+— y **nunca calculaba M̂(2)**. Además resolvía la RHS ψ de IV-83 como
+ecuación.
+
+Con M̂(1) y M̂(2) correctos (IV-87/88) y `α̂ = M̂(2)/M̂(1)` usado directo
+(la tesis usa la LHS de IV-83 como estimador, no resuelve la RHS), se
+reproduce el α publicado con error **< 0.5% en las 9 estaciones**. Los
+M̂(1)/M̂(2) usados son los de la ficha de la tesis, ya marcados `PASS 0%`
+en la capa `regresion-unitaria/` — METIS los reproduce exacto:
+
+| Estación | M̂(1) tesis | M̂(2) tesis | α̂ = M̂(2)/M̂(1) | α tesis | diff | λ̂ (IV-84 verbatim) | λ tesis | Fuente M̂(1)/M̂(2) |
+|---|---|---|---|---|---|---|---|---|
+| est_01 | 104.751 | 83.065 | 0.7930 | 0.79 | +0.38% | -0.00284 | -0.0031 | `regresion-unitaria/est_01_alpa_corral_rioBarrancas-unitaria.md:65-66` |
+| est_02 | 99.741 | 79.402 | 0.7961 | 0.80 | -0.49% | -0.00296 | -0.0033 | `regresion-unitaria/est_02_vado_rio_seco_rioBarrancas-unitaria.md:60-61` |
+| est_03 | 47.228 | 39.513 | 0.8366 | 0.84 | -0.40% | -0.00562 | -0.0069 | `regresion-unitaria/est_03_la_tapa_rioLasCanitas-unitaria.md:64-65` |
+| est_04 | 17.088 | 13.604 | 0.7961 | 0.80 | -0.49% | -0.01727 | -0.00013 | `regresion-unitaria/est_04_las_tapias_rioLasTapias-unitaria.md:62-63` |
+| est_05 | 33.925 | 27.853 | 0.8210 | 0.82 | +0.12% | -0.00816 | -0.0097 | `regresion-unitaria/est_05_piedra_blanca_rioPiedraBlanca-unitaria.md:65-66` |
+| est_06 | 29.619 | 23.023 | 0.7773 | 0.78 | -0.35% | -0.01044 | -0.0111 | `regresion-unitaria/est_06_las_tapias_rioSanBartolome-unitaria.md:62-63` |
+| est_07 | 34.384 | 26.139 | 0.7602 | 0.76 | +0.03% | -0.00936 | -0.0095 | `regresion-unitaria/est_07_tincunaco_rioChocancharagua-unitaria.md:40-41` |
+| est_08 | 102.898 | 78.539 | 0.7633 | 0.76 | +0.43% | -0.00311 | -0.0032 | `regresion-unitaria/est_08_ume_pay_rioGrande-unitaria.md:69-70` |
+| est_09 | 16.586 | 11.805 | 0.7117 | 0.71 | +0.25% | -0.02167 | -0.0198 | `regresion-unitaria/est_09_la_suela_rioLaSuela-unitaria.md:36-37` |
+
+`λ̂ = (ψ(α̂+1) + ψ(1)) / M̂(1)`, IV-84 tal cual la imprime la tesis
+(`ψ(1) = −γ ≈ −0.5772`). Da **negativo en las 9**, igual que la tesis —
+el signo, que es lo que define la degeneración de la distribución, se
+reproduce en 9/9. La magnitud diverge 1–18% (est_04 es λ_tesis ≈ 0,
+hipersensible al % relativo; en valor absoluto ambos son ≈ 0). Sin el
+Excel de Facundo esa divergencia de magnitud no es determinable —
+candidato: redondeo del α o del M̂(1) en su cálculo. No se persigue: no
+cambia la conclusión.
+
+**λ<0 no es un caso a bloquear "por las dudas" ante la ausencia de una
+nota en el capítulo IV — es el resultado esperado del método para estos
+datos.** Con `α̂ = M̂(2)/M̂(1) < 1` para toda muestra no degenerada (el
+peso relativo de `x_(i)` en M̂(2) vs M̂(1) es `(i−2)/(n−2) ≤ 1`), el
+numerador de IV-84 es `ψ(α̂+1) − γ ≤ ψ(2) − γ = −0.1544 < 0` **siempre**.
+El guard `NO_APLICABLE` se mantiene por el mismo eje que DECISIÓN 060
+(restricción matemática forzosa: con `λ<0`, `F(x) = (1−e^{−λx})^α` no es
+real para `x>0`) — pero ahora es una **decisión de diseño propio de
+METIS**, no una inferencia por ausencia de evidencia textual. Ver
+DECISIÓN 069 (`docs/decisiones/decision069.md`; número verificado libre
+contra `origin/staging` el 09/09/2026, re-verificar antes del merge).
+Impacto en el ranking de Etapa 2: **cero** en las 9 estaciones —
+GenExp/Momentos-L era el peor método de su propia distribución en 9/9
+(EEA 54–395 vs. Momentos/MV 3–36), `mejor_eea` nunca salía de él.
+
+**Coherencia de fechas:** la salida en vivo de METIS registrada en
+`regresion-pipeline/*.md` (sección "Resultados de Regresión METIS", con
+fecha 2026-07-14) es **anterior a este fix** — muestra el α con bug
+(0.24–0.58). El fan-out documental de esta corrección está en
+`regresion/README.md` (subsección DECISIÓN 069) y en los 9
+`regresion-e2e-coreEstadistico/est_0X-e2e.md`.
+
+**Nota separada, NO cerrada — posible errata de transcripción en IV-83.**
+La ecuación ψ que imprime la RHS de IV-83 (relación entre α y β2/β1 vía
+digamma) no reproduce el cociente muestral: evaluada en el α publicado
+da ≈ 0.54, contra un `M̂(2)/M̂(1)` observado de 0.71 a 0.84; resuelta
+como ecuación con target `M̂(2)/M̂(1)` da α de 0.14 a 0.32, sin relación
+con la tesis. Esto **no bloquea nada** — se usa el cociente directo,
+validado contra las 9 estaciones — pero sugiere una divergencia de
+transcripción en la propia tesis, no en METIS. Escalado de forma no
+bloqueante en el documento de escalamiento a Facundo/Carlos (Parte C —
+no requiere respuesta para avanzar).
+
+### LP3 Método Directo — restricción B ∈ (3, 6] — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** pudo haber usado material que hoy no tiene. **Cerrada:** se mantiene
+"no aplicable" fuera de B ∈ (3, 6].
+
+METIS aplica NO_APLICABLE cuando B ∉ (3, 6] (est_03: B=2.63).
+Facundo reporta parámetros y EEA=64.37 para el mismo caso.
+Pregunta: ¿Aplicás algún guard sobre B, o calculás los parámetros
+independientemente del valor de B?
+
+**ACTUALIZACIÓN 15/07/2026 — dos estaciones más con el mismo desacuerdo.**
+est_07 (B=2.7302) y est_08 (B=2.7178), ambas fuera de (3,6], con la tesis
+reportando parámetros y EEA reales en las dos (est_07: α=0.359, β=0.158,
+y0=3.884, EEA=26.4022; est_08: α=0.036, β=157.69, y0=4.967, EEA=76.4185).
+Son ya 3 estaciones (est_03, est_07, est_08) con B fuera de rango donde la
+tesis reporta valores de todas formas — la pregunta original sigue sin
+resolver, ahora con más evidencia de que no es un caso aislado de est_03.
+
+**ACTUALIZACIÓN 17/08/2026 — verificado manualmente contra la tesis, sin
+rotulado cruzado.** Octavio confirmó las 3 citas (est_03: B=2.63,
+α=0.333, β=0.724, y0=3.840, EEA=64.3705; est_07: B=2.7302, α=0.359,
+β=0.158, y0=3.884, EEA=26.4022; est_08: B=2.7178, α=0.036, β=157.69,
+y0=4.967, EEA=76.4185) contra la ficha real de cada estación puntual —
+coinciden todas, sin cruce entre estaciones. La pregunta original sigue
+abierta — esto solo cierra la duda de numeración de la NOTA 10/07/2026.
+
+### Log-Normal 2p — NO_APLICABLE sin ceros en la serie — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** probablemente por valores negativos. **Cerrada,** coherente con la
+[DECISIÓN 073](../../decisiones/decision073.md) (`disabled_negatives`).
+
+Facundo reporta NO_APLICABLE para LN2p en est_03 y est_04 aunque
+la serie no tiene ceros. METIS calcula EEA normalmente.
+
+**NOTA 10/07/2026:** en est_06 (Las Tapias) el patrón se rompe —
+la tesis SÍ reporta EEA=7.4379 para LN2p ahí, sin marcar NO_APLICABLE.
+El criterio de Facundo para esta restricción no es universal entre
+estaciones. Ver también sección "Discrepancias en EEA — Causa C" más
+abajo, donde LN2p en est_06 queda catalogado como Causa C (params
+casi idénticos, EEA diverge) en vez de NO_APLICABLE.
+
+Pregunta: ¿Bajo qué condición marcás LN2p como no aplicable? ¿Por qué
+no se aplica en est_06 si sí se aplicó en est_03/est_04?
+
+**ACTUALIZACIÓN 17/08/2026 — verificado manualmente contra la tesis, sin
+rotulado cruzado.** Octavio confirmó las 3 citas (est_03: La Tapa —
+NO_APLICABLE sin EEA; est_04: Las Tapias, Río Las Tapias — NO_APLICABLE
+sin EEA; est_06: Las Tapias, Río San Bartolomé — EEA=7.4379 reportado)
+contra la ficha real de cada estación puntual — coinciden todas. En
+particular, el EEA=7.4379 de est_06 no está cruzado con est_04 pese a
+compartir el mismo topónimo de localidad con río distinto — el par que
+más se prestaba a confundirse. La pregunta original sigue abierta —
+esto solo cierra la duda de numeración de la NOTA 10/07/2026.
+
+### Gamma 3p — parámetros calculados con x0 > min(serie) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** de acuerdo con bloquear todo el cálculo. **Cerrada, sin cambios.**
+
+Facundo reporta parámetros para Gamma 3p Momentos y MPP en est_03
+y est_04 aunque x0 > min(serie), pero marca EEA=NO_APLICABLE.
+METIS marca NO_APLICABLE desde la estimación de parámetros.
+Pregunta: ¿Calculás los parámetros aunque x0 > min, y solo
+inhibís el EEA? ¿O es otro criterio?
+
+**ACTUALIZACIÓN 13/08/2026 — censo completo de las 9 estaciones y los
+3 métodos (Momentos, MV, MPP), verificado manualmente contra la
+tesis, sin rotulado cruzado.**
+
+| Estación | min(serie) | x0 Momentos | x0 MV | x0 MPP |
+|---|---|---|---|---|
+| est_01 (Alpa Corral) | 15.0 | -159.149 | NO_CONVERGE | -36.302 |
+| est_02 (Vado de Río Seco) | 42.0 | 3.683 | NO_CONVERGE | 35.355 |
+| est_03 (La Tapa) | 2.0 | **13.664 (>min)** | **13.664 (>min)** | **15.00 (>min)** |
+| est_04 (Las Tapias, Río Las Tapias) | 2.0 | **2.724 (>min)** | 1.740 | **2.307 (>min)** |
+| est_05 (Piedra Blanca) | 0.9 (tesis muestra 1.0, redondeo de display) | -5.387 | NO_APLICABLE (sin params) | -1.368 |
+| est_06 (Las Tapias, Río San Bartolomé) | 14.0 | -6.25 | 5.241 | 11.81 |
+| est_07 (Tincunaco) | 11.8 | -12.218 | 4.408 | 2.682 |
+| est_08 (Ume Pay) | 39.2 | -35.53 | 34.351 | 12.529 |
+| est_09 (La Suela) | 10.99 | 3.446 | 10.758 | **37.579 (>min)** |
+
+Negrita = x0 > min(serie) según la tesis. Fuentes:
+`regresion-e2e-coreEstadistico/est_03-e2e.md:118-120`,
+`est_04-e2e.md:106-109,203`, `est_09-e2e.md:194-197`, resto en su
+`est_0X-e2e.md` respectivo, fila "Gamma 3p".
+
+**3 de 9 estaciones violan, no solo est_03/est_04 como decía el
+enunciado original de esta sección:** est_03 (los 3 métodos), est_04
+(Momentos y MPP — MV no viola, x0=1.740<2.0), est_09 (solo MPP,
+x0=37.579>10.99, con α negativo además señalado como atípico en la
+ficha original). Octavio verificó los 9 valores de la tabla contra la
+ficha real de la tesis — coinciden todos, sin estación cruzada.
+
+**El criterio de la tesis frente a la violación no es consistente
+entre estaciones** — no es "params sí, EEA no" en todos los casos:
+en est_03 (los 3 métodos) la tesis publica x0/α/β completos y marca
+EEA=NO_APLICABLE; en est_04 (Momentos y MPP) y est_09 (MPP) la tesis
+publica x0/α/β **y EEA completo** pese a violar el mismo soporte —
+confirmado en detalle en `est_04-e2e.md` Hallazgo B (línea ~201):
+*"el criterio de METIS (rechazar cuando x0≥min) es matemáticamente
+consistente en las dos estaciones; el que varía es el criterio de
+tesis."* La pregunta original queda vigente con este matiz: no hay
+un único criterio de tesis para reconstruir en METIS, ni siquiera
+"bloquear solo el EEA" explica todos los casos.
+
+---
+
+## Discrepancias en EEA sin explicación (Causa C) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** no usaba funciones nativas de Excel, atribuye la divergencia a un error
+de transcripción o a un valor de la ecuación mal escrito, y no conserva las planillas. **Queda como explicación
+reconstruida** por la comparación del 08/10/2026 (U_T con F en lugar de 1 − F,
+[hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md)), no confirmable contra la planilla
+original. La pregunta puntual sobre U_T (más abajo, "Comparación con otras herramientas") se presenta en la reunión.
+
+
+**ACTUALIZADO 08/10/2026: causa identificada.** La planilla calcula U_T (IV-102) con F en lugar de
+1 − F cuando F > 0,5, contra IV-105. Con esa regla se reproducen los cuantiles impresos de la tesis
+hasta 0,004 % y el EEA de Log-Normal 3p MV de est_02 y est_05 hasta 0,4 %. Ver
+[hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md) y la pregunta al final
+de este archivo. La tabla de abajo queda como registro histórico.
+
+**ACTUALIZADO 10/07/2026:** las filas de Gamma 2p y LN3p MV ya NO son
+"sin acceso al código fuente no son verificables" — se reconstruyeron
+desde cero (serie real de est_05 y est_06 + fórmula de cuantil
+documentada, IV-135 para Gamma 2p y IV-120 para LN3p + posiciones de
+ploteo Weibull) y en ambos casos el EEA reconstruido coincide con
+METIS, no con la tesis. Esto no resuelve la discrepancia — la mueve:
+ya no es "no sabemos si es bug de METIS", es "confirmado que no es bug
+de METIS, el EEA de referencia de Facundo no sale de aplicar la
+fórmula documentada a sus propios parámetros". Ver detalle numérico
+en las dos entradas nuevas más abajo.
+
+| Distribución     | Método    | EEA METIS | EEA Tesis | Estaciones     | Estado 10/07/2026 |
+|------------------|-----------|-----------|-----------|----------------|--------------------|
+| Gamma 2p         | Momentos  | 8.958 (est_05) / 6.460 (est_06) | 12.086 (est_05) / 6.965 (est_06) | est_02, est_03, est_05, est_06 | Verificado en est_05/06 — ver abajo |
+| Gamma 2p         | MV        | distinto  | distinto  | est_02, est_03, est_05, est_06 | Sin verificar en est_02/03 |
+| Gamma 2p         | ML        | distinto  | distinto  | est_02, est_03, est_05, est_06 | Sin verificar en est_02/03 |
+| LN2p             | Momentos  | distinto  | distinto  | est_02, est_03, est_06         | Ver nota LN2p arriba (no universal) |
+| LN3p             | MV        | 8.774 (est_05) / 8.736 (est_06) | 5.784 (est_05) / 7.204 (est_06) | est_05, est_06 (antes "est_03") | Verificado — ver abajo |
+| Normal           | Momentos  | distinto  | distinto  | est_02, est_03 | Sin verificar |
+| Normal           | ML        | distinto  | distinto  | est_03         | Sin verificar |
+
+Pregunta general: ¿Podés compartir el archivo Excel con las fórmulas
+de cálculo de EEA para estas distribuciones?
+
+### Verificación Gamma 2p Momentos EEA — 10/07/2026
+Reconstruido desde cero con la serie real (est_05, n=39 y est_06, n=38),
+posiciones de ploteo Weibull (T=(n+1)/m) y cuantil Wilson-Hilferty (IV-135):
+
+| Estación | EEA con params tesis (reconstruido) | EEA con params METIS (reconstruido) | METIS reportó | Tesis reportó |
+|----------|--------------------------------------|--------------------------------------|----------------|----------------|
+| est_05   | 8.949                                | 8.957                                | 8.958          | **12.086**     |
+| est_06   | —                                    | 6.460                                | 6.460          | **6.965**      |
+
+En los dos casos la reconstrucción (con cualquiera de los dos juegos
+de parámetros — son casi idénticos) coincide con METIS, no con la
+tesis. No es Causa A (params ya casi idénticos, la diferencia de `g`
+no alcanza para explicar esta magnitud de diferencia en EEA).
+
+### Verificación LN3p MV EEA — 10/07/2026
+Misma metodología, con cuantil IV-120:
+
+| Estación | EEA con params tesis (reconstruido) | EEA con params METIS (reconstruido) | METIS reportó | Tesis reportó |
+|----------|--------------------------------------|--------------------------------------|----------------|----------------|
+| est_05   | 8.792                                | 8.775                                | 8.774          | **5.784**      |
+| est_06   | —                                    | 8.736                                | 8.736          | **7.204**      |
+
+Se probaron además posiciones de ploteo alternativas (Cunnane, Hazen,
+Gringorten) para est_05 buscando si alguna reproducía el EEA de la
+tesis — ninguna se acerca (valores de 92 a 99, claramente incorrectos
+para esa combinación). Weibull sigue siendo la posición correcta
+documentada y la única que reproduce algo coherente (que resulta ser
+el número de METIS).
+
+---
+
+## Bugs corregidos durante la auditoría (para información)
+Estos no requieren respuesta — son correcciones internas de METIS
+documentadas por si Facundo quiere revisarlas.
+
+### Informativo — DECISIÓN 014 ya resuelta — IV-202 GVE variable reducida
+El MD de fórmulas tenía IV-202 transcripta incorrectamente como
+(xi-ν)/(α·β) en lugar de β·(xi-ν)/α. Corregido contra rasterización
+de pág. 78 de la tesis a 250 DPI. Impacto: GVE MV ahora converge
+correctamente en est_03.
+
+### LP3 MV — falsa convergencia en borde de intervalo
+**ACTUALIZADO 10/07/2026 — ver DECISIÓN 019 en decisions-log.md.**
+minimize_scalar con Brent acotado reportaba success=True cuando
+el perfil de log-verosimilitud era monótono. Corregido con post-check
+de proximidad al borde inferior en su momento; el 10/07/2026 se agregó
+guard simétrico para el borde superior (aplicado y verificado contra
+6 estaciones, ver decisions-log.md DECISIÓN 019). No resuelve la
+discrepancia de est_06 — ver sección nueva "LP3 MV — est_06,
+convergencia genuina verificada" más abajo.
+
+---
+
+## Fórmulas con comportamiento no reproducible (ampliación)
+
+### LN3p MV est_05 — cuantiles no reproducibles con IV-120
+IV-120 con los parámetros reportados (x0=-2.15, µy=3.3323,
+σy=1.1137) produce xT≈371 para T=100. La referencia de la
+tesis es 268.51. La discrepancia no es atribuible a diferencia
+de parámetros — METIS con sus propios parámetros produce el
+mismo resultado (~371). Origen desconocido.
+Pregunta: ¿Podés verificar los cuantiles de LN3p MV para
+est_05 en tu planilla original?
+
+**NOTA 10/07/2026:** esta sección ya tenía la numeración correcta
+(est_05 = Piedra Blanca) — sin cambios. Confirma además el patrón de
+EEA de LN3p MV documentado arriba: mismos parámetros, resultado de
+referencia no reproducible con la fórmula documentada, en dos
+magnitudes distintas del cálculo (cuantiles y EEA) para la misma
+estación y método.
+
+---
+
+### Cuantiles est_04 — error en tabla de referencia
+La columna 'LP3 MMI' de la tesis contiene cuantiles calculados con IV-245
+y parámetros GVE MV (nu=13.995, alpha=10.610, beta=-0.312), verificado
+numéricamente al 0.05% para todos los T=2,5,10,20,25,50,100.
+La columna 'GVE MV' no es reproducible con ningún parámetro GVE de est_04.
+METIS calcula correctamente ambas distribuciones.
+Pregunta: ¿Podés verificar la tabla de cuantiles de est_04 en tu planilla
+original? Las dos columnas parecen estar intercambiadas.
+
+**NOTA 10/07/2026:** los parámetros GVE MV citados acá (nu=13.995,
+alpha=10.610, beta=-0.312) no coinciden con los de est_05 (Piedra
+Blanca: nu=19.579, alpha=21.386, beta=-0.478) ni con los de est_06
+(Las Tapias: nu=27.675, alpha=13.505, beta=-0.531). Es una tercera
+estación que no está entre las auditadas en esta sesión — no se puede
+confirmar ni corregir el rótulo "est_04" con la evidencia disponible.
+Verificar directamente contra la planilla de esa estación puntual.
+
+---
+
+### GVE Momentos — beta no reproducible (est_02, est_03, est_05)
+IV-203/IV-204 no reproducen el beta reportado por Facundo en ninguna
+estación con ninguna variante de g conocida.
+
+**CORRECCIÓN 10/07/2026:** la fila marcada "est_04" (g_tesis=1.849) se
+corrige a **est_05** (Piedra Blanca) — el valor de g coincide (con
+diferencia de redondeo de tercera cifra) con el g_tesis=1.838 verificado
+en la auditoría de est_05 de esta sesión, y la sección "LN3p MV est_05"
+más arriba, en el mismo archivo, ya usaba la numeración correcta para
+la misma estación. Es una inconsistencia interna del propio documento,
+no una corrección aportada desde afuera.
+
+| Estación | g_tesis | beta IV-204(g_tesis) | beta_tesis |
+|----------|---------|----------------------|------------|
+| est_02   | 1.565   | -0.055               | -0.278     |
+| est_03   | 3.170   | -0.188               | -0.435     |
+| est_05   | 1.838–1.849 | -0.090 a -0.091   | -0.210     |
+| est_06   | 1.104   | -0.056 (rama IV-203) | -0.416     |
+
+Hipótesis agotadas: IV-203/IV-204 con g_insesgado METIS, g_tesis,
+g_sesgado, 2g, g², g de variable reducida — ninguna reproduce beta.
+METIS implementa IV-203/IV-204 correctamente (verificado por
+rasterización de la tesis, y por auditoría de código en gve.py el
+10/07/2026 — sin bugs de fórmula). El error de EEA resultante es muy
+alto (est_02: 1144 vs 143; est_03: 530 vs NO_CONVERGE; est_05: 697.54
+vs 41.33; est_06: 45598.69 vs 26.86).
+
+**NOTA 10/07/2026 — hallazgo adicional, mismo patrón en otro método:**
+GVE Momentos-L (método cerrado, sin iteración) presenta el mismo tipo
+de discrepancia: β coincide con la tesis, pero ν y α no. Reconstruido
+desde M0/M1/M2 (mismos valores que ya pasan PASS en estadística
+descriptiva) en est_05 y est_06:
+
+| Estación | Reconstrucción manual (IV-234 a IV-241) | METIS reportó | Tesis reportó |
+|----------|-------------------------------------------|-----------------|-----------------|
+| est_05   | ν=21.686, α=25.056, β=-0.2543             | ν=21.688, α=25.057, β=-0.2543 | ν=54.129, α=33.307, β=-0.254 |
+| est_06   | ν=29.886, α=17.340, β=-0.2022             | ν=29.886, α=17.337, β=-0.2024 | ν=52.147, α=21.841, β=-0.202 |
+
+METIS coincide exacto con la reconstrucción manual (código verificado
+correcto) en las dos estaciones. La tesis no. Como el método no itera,
+esto no puede explicarse como "convergencia a un óptimo distinto" —
+es la fórmula aplicada literal, sin ambigüedad de código de por medio.
+
+Pregunta: ¿Qué fuente o tabla usaste para calcular beta en GVE por
+Momentos? ¿Hay bibliografía adicional al capítulo IV? Y para Momentos-L:
+¿qué procedimiento usaste para ν y α si no fue aplicar IV-240/241
+directo a partir de β y los M̂ ya reportados?
+
+---
+
+### Gamma 3p MV — parámetros de tesis no satisfacen IV-140/141 (est_06)
+**NUEVO 10/07/2026.** Verificado independientemente:
+
+- est_06: METIS NO_CONVERGE; tesis reporta x0=5.241, α=15.612, β=2.129.
+  IV-142 no tiene raíz en todo el dominio válido (scan de 5000 puntos).
+  Evaluando IV-140/141 directo con x0=5.241 (el de la tesis): β=2.7357,
+  α=14.2352 — no coincide con lo que la tesis reporta (β=2.129, α=15.612).
+
+**CORRECCIÓN 14/07/2026 (Fase 4, est_05-e2e.md):** la fila "est_05: mismo
+patrón — parámetros de tesis no satisfacen el sistema al evaluarlo
+directo" que estaba acá era incorrecta — se corrige, no se borra, para
+dejar registro del error. La ficha de est_05 (Sheet 3 de la tesis) marca
+Gamma 3p MV como **NO_APLICABLE**, sin ningún valor de x0/α/β reportado
+— no hay parámetros de tesis contra los cuales evaluar nada, a diferencia
+de est_06, que sí trae valores concretos. La afirmación de que "los
+parámetros de tesis no satisfacen el sistema" no podía ser cierta para un
+caso donde la tesis nunca llegó a reportar parámetros. Reverificado en
+Fase 4 con escaneo fino de 200.000 puntos sobre todo el dominio de
+búsqueda (`lo=xi_min-20S≈-915.52` hasta `hi=xi_min≈0.9`): el residuo de
+IV-142 es negativo y monótonamente decreciente en magnitud a lo largo de
+**todo** el dominio, sin un solo cambio de signo — no existe raíz
+interior para esta serie, no solo "en el escaneo actual" sino en el
+dominio completo evaluado punto por punto. Esto es consistente con — y
+explica — el NO_APLICABLE de la propia tesis: el método simplemente no
+produce una solución para esta serie, y tanto Facundo como METIS llegan
+al mismo resultado práctico (sin parámetros) por el mismo motivo
+matemático genuino, no por una falla de ninguna herramienta en particular.
+
+Pregunta: ¿posible método o tabla adicional no documentada en el
+Capítulo IV para este caso?
+
+---
+
+### LP3 MV — est_06, convergencia genuina verificada con función exacta — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** buscaba la convergencia con el Solver o a mano, y es esperable que METIS
+converja donde él no lo logró. **Cerrada** (explica la Causa B).
+
+**NUEVO 10/07/2026.** METIS converge (β=3.695, α=0.3225, y0=2.4205,
+EEA=10.9881); tesis reporta NO_CONVERGE.
+
+Se verificó el sistema **literal** IV-257/258/259 (con `scipy.special.digamma`
+exacta, sin la sustitución de Thom que usa `logpearson3.py::mv`), escaneando
+5000 puntos en el dominio válido `(yi_min - 20σy, yi_min - 1e-9)`. El
+sistema literal tiene raíz única en y0=2.42046, β=3.6939, α=0.3226 —
+coincide hasta la tercera cifra decimal con lo que reporta METIS usando
+Thom. No hay raíz espuria introducida por la sustitución: la solución
+que encuentra METIS es la solución matemáticamente correcta y única del
+sistema tal como está escrito en el Capítulo IV.
+
+No es un caso de "convergencia a óptimo distinto" (no hay ambigüedad
+entre varias soluciones válidas) — es una raíz única, verificada con la
+función exacta, que la herramienta de Facundo no encontró pese a existir.
+
+Pregunta: ¿por qué tu herramienta no convergió en est_06 si la solución
+existe y es alcanzable?
+
+(El guard simétrico de borde superior fue aplicado el 10/07/2026 de
+todas formas — ver DECISIÓN 019 en decisions-log.md — como prevención
+para otra serie donde sí ocurra una convergencia de borde real. No
+resuelve este caso puntual, que no es de esa naturaleza.)
+
+---
+
+### Generalizada Pareto — Mínimos Cuadrados (IV-153), verificación de baja confianza — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026, Parte C):** no tiene el material; "sigan adelante con la decisión tomada".
+**Cerrada:** queda la [DECISIÓN 068](../../decisiones/decision068.md). Las convenciones de signo de la Generalizada de
+Pareto (DECISIÓN 074, más abajo) son otra pregunta y siguen abiertas.
+
+**NUEVO 10/07/2026.** A diferencia del resto del capítulo, la ecuación
+IV-153 no pudo verificarse con la misma confianza que las demás —
+la tipografía de la fuente (fracción con siete cantidades entremezcladas
+en numerador y denominador) no cede ni con rasterización a 600 DPI.
+La implementación en `gen_pareto.py` tiene una forma estructuralmente
+coherente con una condición de mínimos cuadrados con zi dependiente de
+ε, pero no se pudo confirmar signo por signo contra la tesis.
+
+Dado que MC "frecuentemente no converge" según la propia tesis,
+Generalizada Pareto no está en el listado original de las 12
+distribuciones de IV.1, y en ninguna estación auditada MC apareció
+como método seleccionado ni como testigo — se marca como pendiente
+de baja prioridad, no como pregunta activa para Facundo todavía.
+Si en algún momento aparece una estación con Generalizada Pareto MC
+como referencia real, se cierra por verificación numérica directa en
+vez de seguir intentando leer la ecuación de la fuente.
+
+**Actualización 07/08/2026.** Se decide escalar de todas formas, fuera
+del criterio de baja prioridad definido arriba: se envía a Facundo y Carlos la
+fórmula IV-153 transcripta textualmente para confirmación. Carlos
+confirma la forma correcta de la ecuación. Con esto se levanta la
+incertidumbre de lectura/tipografía descripta arriba — pasa de
+verificación de baja confianza a **pendiente de implementación**:
+falta reflejar la fórmula confirmada en `gen_pareto.py`, no falta
+verificarla contra la fuente.
+
+**Actualización 04/09/2026 — CERRADO.** La fórmula confirmada por Carlos
+(07/08/2026) resultó estructuralmente distinta de la implementada: trae
+un factor ε² externo y depende directamente de z1/x1 (primer valor
+ordenado de z y de x), ninguno presente en `_iv153()` hasta esta fecha.
+No era "falta reflejar la fórmula", era una ecuación distinta —
+verificada por rasterización directa de la tesis (p.74, 600 DPI) +
+transcripción manual independiente, coincidentes término por término,
+cruzada entre Chat y Code. `_iv153()` corregida — ver
+[DECISIÓN 068](../../decisiones/decision068.md) para la fórmula, la
+genealogía completa de por qué la ecuación vieja no era arbitraria
+(resultó ser la condición de optimalidad de una regresión OLS libre
+legítima, solo que de otro modelo), y la validación por consistencia
+interna adoptada sobre las 9 estaciones reales (no hay MC de Gen. Pareto
+como método testigo en ninguna, así que no existe número de tesis
+contra el cual comparar directamente). No se escala como pregunta
+adicional a Facundo — la fórmula ya está confirmada por Carlos, y la
+pregunta de qué modelo de mínimos cuadrados exacto instancia la tesis
+para este caso no se puede formular como Sí/No.
+
+---
+
+### Gamma 3p MV — Causa D extrema en est_08, cambia el #1 del ranking
+**NUEVO 15/07/2026.** Caso más severo de "Causa C" (fórmula documentada +
+parámetros idénticos a tesis, EEA no reproducible) encontrado hasta ahora.
+En est_08 (Ume Pay), Gamma 3p MV converge con parámetros que coinciden con
+la tesis a <0.03% (x0=34.357 vs 34.351, α=72.616 vs 72.623, β=1.684 vs
+1.684), pero METIS calcula EEA=8.838 mientras la tesis reporta EEA=11.6228
+para esos mismos parámetros — diff -23.96%.
+
+Verificado por 3 vías independientes, todas dan resultados entre 8.6 y 8.8
+(ninguna cerca de 11.62): (1) función real `gamma3p.cuantil()` +
+`calcular_eea()` con parámetros propios de METIS → 8.838; (2) misma función
+real, parámetros exactos de tesis inyectados → 8.8445 (prácticamente igual
+a 1 — descarta que sea diferencia de ajuste de parámetros); (3) cuantil
+exacto de la distribución Gamma vía `scipy.stats.gamma.ppf`, sin pasar por
+la aproximación Wilson-Hilferty IV-144 → 8.6055 (descarta que sea un
+artefacto de la aproximación IV-144).
+
+**Consecuencia práctica:** en el ranking que expondría METIS para est_08,
+Gamma 3p MV queda #1 de las 13 distribuciones — por debajo incluso del
+EEA=10.599 que la tesis reporta para su propio modelo ganador (Gamma 3p
+MPP, no implementable) y del EEA=10.925 del modelo que Facundo eligió
+(Gumbel ML, que en el ranking de METIS queda recién en el puesto #6). Un
+usuario que confiara en el ranking automático vería una recomendación
+distinta de la que hizo Facundo — con el número más alejado de todos los
+casos de Causa D/C documentados en el proyecto.
+
+Pregunta para Facundo: ¿podés compartir el detalle de cómo calculaste el
+EEA de Gamma 3p MV para Ume Pay? Con los parámetros que vos mismo reportás
+(x0=34.351, α=72.623, β=1.684), la fórmula IV-144 aplicada a la serie de
+Ume Pay da un EEA de ~8.6-8.8, no 11.6228 — verificado por tres métodos de
+cálculo distintos, incluido el cuantil exacto de la Gamma sin aproximación.
+
+Detalle completo, con las tres verificaciones paso a paso, en
+`regresion-e2e/est_08-e2e.md`, Hallazgo A.
+
+---
+
+### Valor crítico de tabla — una cola vs. dos colas (est_08, Cramer/t-Student) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** dos colas; las dos estaciones con el valor de una cola fueron un error de
+transcripción de la tesis. **Cerrada, sin cambios** (METIS ya usa dos colas).
+
+**NUEVO 15/07/2026.** La tesis imprime 1.6829 como valor crítico de Cramer
+y t-Student para est_08 (GL=41). Verificado (`scipy.stats.t.ppf`) que ese
+valor es el crítico de **una cola** al 5% (`t.ppf(0.95, 41)=1.6829`), no el
+de **dos colas** a α/2=0.025 (`t.ppf(0.975, 41)=2.0195`) que exige Ec. III-8
+y que METIS aplica de forma consistente. Las 8 estaciones auditadas hasta
+ahora antes de est_08 usaban todas la convención de dos colas sin excepción
+(est_02: 2.0739 para GL=22; est_06: 2.0281 para GL=36; est_07: 2.1098 para
+GL=17 — los tres coinciden con `t.ppf(0.975, df)`). Es la primera vez que
+el valor impreso en la fuente no sigue esa convención — inconsistencia
+interna de la propia tesis entre estaciones, no de METIS. No cambia ningún
+veredicto en est_08 (ambos t_w quedan del mismo lado de los dos valores
+críticos posibles).
+
+Pregunta para Facundo: ¿usaste una tabla distinta o un criterio de una
+cola específicamente para Ume Pay, o es un error de transcripción puntual
+de esa celda?
+
+**ACTUALIZACIÓN (15/07/2026, est_09) — segunda confirmación, ya no es un
+caso aislado de est_08.** est_09 (GL=5) imprime 2.015 como crítico de
+Cramer/t-Student — verificado que `t.ppf(0.95, 5)=2.015048` (una cola)
+coincide exacto, mientras `t.ppf(0.975, 5)=2.570582` (dos colas, lo que
+usa METIS) no. Van 2 de 9 estaciones con esta desviación de convención.
+Pregunta ampliada: ¿hay algún patrón en qué estaciones usan una cola vs.
+dos colas (est_08 y est_09, las dos últimas del dataset en orden de
+auditoría, ¿coincidencia o algo compartido entre ellas — por ejemplo,
+ambas fueron procesadas en una sesión distinta del resto de la tesis)?
+
+---
+
+### Log-Normal 3p MV — causa raíz confirmada por verificación cruzada, sin fix (est_09, n=7)
+**ACTUALIZADO 15/07/2026 — diagnóstico corregido, la explicación original
+quedó refutada por evidencia, no solo pendiente.** `lognormal3p.py::mv`
+converge a `x0=-176.5565` para est_09 — un valor físicamente implausible
+(muy por debajo del mínimo de la serie, 10.99), donde la tesis reporta
+NO_CONVERGE.
+
+La primera versión de este hallazgo (Code) afirmaba que la función
+objetivo era monótona hacia `lo` y que ese era el "mínimo genuino" del
+dominio. **Esa afirmación era incorrecta — refutada por Octavio con
+evaluación directa de la función en puntos muy cercanos a `xi_min`**
+(`x0=xi_min-1e-3` hasta `xi_min-1e-13`): la función **diverge sin límite
+hacia -∞** acercándose a `xi_min` (`hi`), no hacia `lo` — es la
+degeneración clásica de verosimilitud no acotada de la log-normal de 3
+parámetros (ya advertida en DECISIÓN020), del lado opuesto al que se
+había identificado primero.
+
+Confirmado por Code, instrumentando la llamada real a `ajustar()`
+(interceptando `minimize_scalar` dentro del módulo, envolviendo la
+función objetivo real sin reimplementarla): con el dominio completo tal
+como está codeado hoy, Brent evalúa 37 puntos, **ninguno a menos de 71
+unidades de `hi`** — converge en una región donde la función es casi
+plana (varía de 15.222934 a 15.366018 en 116 unidades) por su tolerancia
+de convergencia, sin haber explorado nunca la zona donde realmente se
+derrumba. Confirmado también que forzar `minimize_scalar` con bounds
+mucho más ajustados cerca de `hi` tampoco resuelve el problema — Brent se
+conforma con puntos intermedios sin llegar al verdadero comportamiento.
+
+**Conclusión verificada por ambas partes con la función real, no
+descripción aceptada de una sola:** la función no tiene mínimo finito en
+este dominio. `x0=-176.56` no es un óptimo genuino ni una falsa
+convergencia de borde en el sentido de DECISIÓN019 (donde sí existe un
+óptimo real cerca de un borde) — es simplemente donde Brent se detiene en
+una región casi plana sin haber visto la parte relevante del dominio. Es
+un modo de falla distinto a los dos ya resueltos en el proyecto
+(DECISIÓN019 para `logpearson3.py`, DECISIÓN023 para `gamma3p.py`) — no
+corresponde calcar ninguno de esos dos guards sin pensarlo para esta
+forma específica.
+
+**Estado: causa raíz confirmada por verificación cruzada independiente.
+Sin fix propuesto** — el modo de falla es distinto a los dos precedentes
+del proyecto y amerita pensarse aparte, no copiarse. Detalle completo en
+`regresion-e2e/est_09-e2e.md`, Hallazgo B.
+
+**RESUELTO — 15 de Julio de 2026 (DECISIÓN 025, decisions-log.md).**
+Octavio aprobó el prototipo (verificación propia contra las 9 series,
+incluida inspección manual de casos con argmin cercano al borde en
+est_01/est_07). Aplicado a `lognormal3p.py::mv`: guard de "ausencia de
+óptimo finito" vía escaneo grueso (mismo mecanismo de DECISIÓN023, criterio
+distinto — el mínimo del escaneo no debe caer exactamente en el primer o
+último punto finito). Verificado sin regresión contra las 9 estaciones
+llamando a `ajustar()` real: est_01 a est_08 dan parámetros idénticos a
+los ya reportados antes del fix; est_09 ahora da `NO_CONVERGE`, coincidiendo
+con la tesis. `pytest tests/` → 109 passed, 1 failed (mismo failing
+preexistente de `gen_pareto/mc`, sin relación). Ya no queda ninguna
+pregunta abierta para Facundo sobre este caso puntual — era un problema
+de implementación de METIS, no de interpretación de la tesis, y quedó
+resuelto sin necesitar su intervención. Detalle completo en
+`decisions-log.md`, DECISIÓN 025, y en `regresion-e2e/est_09-e2e.md`.
+
+---
+### Correcciones pendientes post-auditoría (verificadas, no aplicadas) - 09/07/2026
+
+#### Anderson k_max — ceil(n/3)
+APLICADO — 9 de Julio de 2026, Auditoría Fase 1 Bloque 2.1. Ver DECISIÓN 016
+en decisions-log.md.
+
+Implementación anterior: n//3 (división entera)
+Corrección aplicada: ceil(n/3), en `metis/core/etapa1/independence.py`
+Fundamento: confirmado en dos Excels de Facundo. La tesis define
+"k = 1,2,...,n/3" y Facundo aplica ceil consistentemente cuando
+n/3 no es entero exacto (confirmado n=40 en ambos Excels).
+Casos no reproducibles con ninguna fórmula: n=24 (Facundo=9,
+ceil=8) y n=39 (Facundo=14, ceil=13) — pendiente confirmar con
+Facundo si hubo error manual en esos casos.
+Impacto: diferencia de 1 lag en k_max para algunos n. Verificado tras
+aplicar el fix: 6/6 estaciones (est_02 a est_07) mantienen el veredicto
+"aprobada" documentado por la tesis, incluidas est_03/est_06/est_07 donde
+floor(n/3)≠ceil(n/3) (ver DECISIÓN 016 para el detalle estación por
+estación).
+
+#### Wald-Wolfowitz — exclusión de valores iguales al valor de corte
+APLICADO — 9 de Julio de 2026, Auditoría Fase 1 Bloque 2.1. Ver DECISIÓN 017
+en decisions-log.md — reclasificado tras revisión puntual del Excel de
+Facundo (ver nota de fundamento más abajo, corregida).
+
+Implementación anterior: todos los valores se clasificaban como
+éxito (>media) o fracaso (<media), sin exclusión de empates.
+Corrección aplicada: excluir de n, n1, n2 y del cálculo de rachas los
+valores exactamente iguales a la media, en
+`metis/core/etapa1/independence.py::calcular_wald_wolfowitz`. Esos
+valores no clasifican como éxito ni como fracaso.
+
+Fundamento (corregido — NO es herencia confirmada de Facundo): se había
+anotado acá que esta regla estaba "confirmada en Excel de Facundo (TP1
+Estadística 2013)". Al consultar puntualmente ese Excel (dataset
+Despeñaderos, n=40, media=64.902756), se determinó que ningún valor de
+esa serie coincide con la media — el caso de empate nunca se dispara en
+los datos que Facundo proporcionó, y su Excel asigna binario estricto
+(> media → 1, < media → 0) sin manejo visible de igualdad. Eso no prueba
+una convención del autor porque el caso nunca ocurrió ahí. No existe
+evidencia, en ningún recurso de Facundo (tesis ni Excel), de que él haya
+aplicado o necesitado aplicar esta regla.
+
+Es una **decisión de diseño propia de METIS**, no una convención
+heredada del autor: se aplica por fundamento estadístico independiente
+— tratamiento estándar de "ties" en pruebas de corridas según literatura
+consolidada (Gibbons & Chakraborti, *Nonparametric Statistical
+Inference*; Wald & Wolfowitz, formulación original), donde un valor
+exactamente igual a la media no aporta información direccional y no
+debe forzarse a ninguna de las dos categorías.
+
+Nota: el caso est_03 (n=40 en lugar de n=41) NO se explica por
+este mecanismo — el valor excluido (35.0) no coincide con la
+media (62.39). Ese caso sigue siendo off-by-one en rango Excel,
+sin resolver.
+Decisión de diseño no explicitada en la fuente original: el warning
+TEST_WARNING_SMALL_SAMPLE (n≤40) ahora se evalúa sobre el n efectivo
+(tras excluir empates), no sobre len(serie) original — es el n que
+efectivamente alimenta la aproximación normal de la prueba, por lo que
+es el criterio internamente consistente. Verificado con test dedicado
+(serie con n=42 original que baja a n=40 efectivo tras excluir 2 empates
+con la media → warning se activa).
+Tests actualizados/agregados: test_wald_empates_con_media_se_excluyen_de_la_serie,
+test_wald_empates_con_media_reducen_n_bajo_umbral_small_sample
+(tests/unit/core/test_independence.py).
+
+#### LP3 MV — guard de borde superior
+APLICADO — 10 de Julio de 2026. Ver DECISIÓN 019 en decisions-log.md.
+
+El guard actual protegía únicamente contra falsa convergencia en el
+borde inferior del intervalo de búsqueda. Se agregó el guard simétrico
+para el borde superior. Verificado contra 6 estaciones sin regresiones
+(17 tests preexistentes fallando, no relacionados — propagación de
+DECISIÓN 013 en `_skewness`, documentados aparte).
+
+No resuelve la discrepancia de est_06 (ver sección "LP3 MV — est_06,
+convergencia genuina verificada con función exacta" más arriba) — ese
+caso no era de borde disfrazado, es una convergencia genuina a una
+solución que la tesis no encontró.
+
+---
+
+## Pendientes trasladados desde los archivos de implementación (18/07/2026)
+
+Movidas acá desde `core-etapa1-implementation.md` y
+`core-etapa2-implementation.md` durante la reorganización de esa sesión —
+son preguntas a Facundo, no documentación de comportamiento de código, y
+por eso viven acá en vez de en los archivos de implementación.
+
+### Mann-Kendall — Tabla A.4, valor crítico de S para n=7 — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** "No lo tengo. De todas maneras, no debiera poder analizarse una serie con tan pocos
+valores. Debería saltar un cartel de alerta indicando que la longitud mínima recomendable de la serie, para ser
+representativa, es de 30 valores." **Cerrada:** en METIS ese caso no se alcanza (menos de 10 datos bloquea), y el
+aviso `CONTRACT_LENGTH_WARNING` usa ahora esa redacción (bloque A de `docs/plan-respuestas-facundo-22-10-2026.md`).
+
+El valor crítico de S para n=7 no está confirmado por Facundo. La prueba
+retorna `no_ejecutada` con `TEST_NOT_EXECUTED_CONDITION` para n=7 hasta
+que se confirme.
+Pregunta: ¿Cuál es el valor crítico de S para n=7 en la Tabla A.4 de
+Mann-Kendall a α=5%?
+
+### Etapa 2 — ¿ME y MC = Mínimos Cuadrados Estándar y Corregidos? — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** las variantes "Estándar" y "Corregidos" de Mínimos Cuadrados, y Máxima
+Entropía o Mínimos Cuadrados en otras distribuciones, probablemente existan; él no los usó. **Pasa a trabajo futuro
+(versión 2),** en `docs/pendientes-tecnicos.md`.
+
+La tabla de métodos por distribución (IV.1) lista ME (Máxima Entropía,
+confirmado para Gumbel, IV-190 a IV-198) y MC (Mínimos Cuadrados,
+confirmado para Generalizada de Pareto, IV-153 a IV-155) sin aclarar si
+MC admite variantes (Estándar y Corregidos) o si aplican a otras
+distribuciones además de las ya confirmadas.
+Pregunta: ¿MC tiene variantes "Estándar" y "Corregidos"? ¿ME y MC aplican
+a alguna otra distribución fuera de Gumbel y Generalizada de Pareto
+respectivamente?
+
+### Etapa 2 — comportamiento ante ceros de 5 distribuciones
+Pendiente de confirmación el comportamiento ante series con ceros
+(`caudal_precipitacion`) para: Gamma 3p, Exponencial (x₀, β),
+Generalizada de Pareto, Log-Normal 3p, Generalizada Exponencial.
+Implementadas hoy con `PENDING_ZEROS_CONFIRMATION = True` visible en el
+código (ver `metis/core/etapa2/distributions/__init__.py`), tratadas
+como `disabled_zeros` hasta recibir confirmación — no se asume
+comportamiento.
+Pregunta: ¿estas 5 distribuciones deben deshabilitarse ante ceros (mismo
+tratamiento que Log-Normal 2p, Log-Pearson III, Gamma 2p y Exponencial β),
+o alguna admite un comportamiento distinto (por ejemplo, un método
+alternativo de estimación que sí tolere ceros)?
+
+### Normal y Log-Normal 2p — Tabla IV-1 solo lista MV, no Momentos — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** no eliminar ningún método aunque converjan al mismo valor; que el usuario
+elija. **Cerrada, sin cambios.**
+
+Movida acá desde `decisions-log.md` (bloque sin número de decisión,
+migración a archivos individuales, 18/07/2026) — es una pregunta abierta,
+no una decisión cerrada, por eso no correspondía vivir ahí.
+
+Tabla IV-1 de la tesis lista Normal y Log-Normal 2p solo bajo MV, no bajo
+Momentos. Pendiente confirmar con Facundo si es porque Momentos y MV
+coinciden (y por eso se listan como uno solo) o si Momentos no debe
+implementarse como método separado.
+
+Actualmente ambas distribuciones tienen `METODOS_APLICABLES = ("momentos",
+"mv")` con estimadores idénticos.
+Pregunta: si Facundo confirma que deben listarse como un solo método,
+¿corresponde eliminar "momentos" del tuple y dejar solo "mv"?
+
+## Agregación temporal — mensual (09/08/2026) y diaria (28/08/2026)
+
+Ver `docs/decisiones/decision057.md` (mensual) y `docs/decisiones/decision065.md`
+(diaria) para las decisiones de producto ya tomadas (mes de inicio del año
+configurable, recorte de extremos parciales, camino directo diaria→anual,
+regla asimétrica de cobertura). Las preguntas de abajo **no** bloquean la
+agregación en sí, ya implementada — con una excepción: **R0.2 (media diaria
+vs. pico) bloquea la exposición de la carga diaria en la UI**, no su
+implementación. `docs/decisiones/decision066.md` documenta por qué METIS no
+analiza los valores sub-anuales sin agregar (camino B).
+
+### Hueco interior — ¿se descarta siempre, o hay un umbral de meses/días? (R0.1) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** "En principio, lo dejaría a criterio del operador, porque en general las series de
+datos pueden tener muchos faltantes y no existe otra fuente de información. También existen métodos de relleno de
+series, y el operador podría usarlas por fuera del programa y cargar luego la serie completa." **Cerrada:**
+[DECISIÓN 081](../../decisiones/decision081.md) (cobertura elegible de 50 % a 100 %, 100 por defecto).
+
+Un año del medio al que le faltan meses (una estación fuera de servicio
+seis meses en 2007) no es lo mismo que un extremo parcial — recortarlo
+partiría el registro en dos. Implementado provisoriamente: se descarta
+cualquier año interior que no tenga cobertura completa (12/12 meses, o
+365/366 días con carga diaria — DECISIÓN 065), con
+`CONTRACT_INCOMPLETE_YEARS_DISCARDED`.
+Pregunta: ¿se descarta el año incompleto del medio sin excepción, o hay un
+umbral mínimo de cobertura (ej. ≥ 95 % de días, "sin huecos en la temporada
+húmeda") por debajo del cual recién corresponde descartarlo?
+**El código ya está preparado:** `agregar_a_maximos_anuales()` tiene el
+parámetro `cobertura_minima_interior` (constante `COBERTURA_MINIMA_INTERIOR`
+en `aggregation.py`), hoy en `1.0` (estricto). Bajarlo emite
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` con los días faltantes de cada año
+aceptado — el sesgo a la baja queda declarado, no oculto. Los años de los
+**extremos** siempre exigen 100 % (DECISIÓN 057), esto es solo para el
+interior.
+*Adjuntar a la respuesta el conteo de días faltantes por año de al menos un
+registro real — sin eso la respuesta es una opinión, no un criterio. El
+fixture `serie_diaria_40anios.csv` del repo NO sirve como evidencia: con
+criterio estricto da 39 años completos + 2019 recortado, sin necesidad de
+relajar nada.*
+
+**Qué hacer con el código según la respuesta (agregado 28/08/2026, hallazgo
+F2 de `docs/historico/planes/revision-resolucion-diaria.md`).** Con `COBERTURA_MINIMA_INTERIOR`
+en `1.0` para las dos resoluciones, hoy **nunca se ejecutan** en producción:
+`PeriodoAceptadoConHueco`, `AgregacionResult.periodos_incompletos_aceptados`,
+la rama de `agregar_a_maximos_anuales()` que la puebla, el warning
+`CONTRACT_INCOMPLETE_YEARS_ACCEPTED` y su string en `errors.es.ts` — unas 40
+líneas cableadas y probadas (tres tests voltean el umbral) esperando esta
+respuesta. Para que no queden como código muerto permanente por olvido:
+
+- Si la respuesta es **"hay umbral"** → bajar la constante para la resolución
+  que corresponda. El resto ya funciona, es un cambio de una línea.
+- Si la respuesta es **"estricto, sin excepción"** → **borrar esas 40 líneas
+  y el código de error**, no dejarlas. Se retira `CONTRACT_INCOMPLETE_YEARS_ACCEPTED`
+  del catálogo en las tres direcciones (regla de DECISIÓN 038), con el mismo
+  tratamiento que se le dio a `CONTRACT_CRAMER_PARTICION_UNSUPPORTED` cuando
+  quedó sin emisor.
+
+Cerrar esta pregunta sin ejecutar una de las dos ramas deja el módulo con una
+funcionalidad que no existe y que igual hay que mantener.
+
+### Media diaria vs. pico instantáneo — ¿qué variable trae un archivo diario? (R0.2, BLOQUEANTE DE EXPOSICIÓN) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** "Depende la serie de datos que estés estudiando. En el caso de registros
+pluviométricos, los valores corresponden a la lluvia acumulada de un día, desde las 9 de la mañana del día anterior
+hasta las 9 de la mañana del día que se toma la lectura. Luego el operador debería armar la serie de máximos diarios
+anuales, por año hidrológico." **Cerrada:** `variable_diaria` suma `"acumulado"` (revisión del 22/10/2026 de la
+[DECISIÓN 065](../../decisiones/decision065.md)).
+
+Un limnígrafo diario suele reportar **media diaria**, no el pico
+instantáneo del día. Si la tesis construye sus máximos anuales a partir de
+picos instantáneos, agregar la serie de máximos anuales desde medias
+diarias **subestima sistemáticamente** — y el sesgo no se corrige en
+software, hay que saber qué variable trae el archivo. Es la pregunta
+hidrológica más importante del plan de resolución diaria.
+Pregunta: ¿qué variable se espera en un archivo diario? ¿Corresponde
+advertirlo? Si la respuesta es "puede ser cualquiera de las dos", hace
+falta un campo nuevo en la configuración del análisis, persistido en
+`analyses.configuracion` junto a `mes_inicio_anio` (mismo motivo de
+auditoría: cambia el resultado, sin él el historial no es reproducible).
+**Condición de salida (DECISIÓN 065):** los PRs del plan se mergean y diaria
+funciona en el backend con tests, pero el frontend no agrega ningún selector
+ni copy que la anuncie hasta tener esta respuesta.
+
+### Diaria → anual directo, o encadenado diaria → mensual → anual (R0.3) — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026):** confirmado, directo. **Cerrada** ([DECISIÓN 065](../../decisiones/decision065.md)).
+
+Cambia el resultado cuando hay meses parcialmente faltantes: el encadenado
+descarta el mes y evalúa el año sobre 11 meses; el directo evalúa la
+cobertura del año completo de una.
+**Implementado (DECISIÓN 065, punto 1):** directo diaria → anual — preserva
+la máxima información y hace que `mes_inicio_anio` opere sobre un solo
+nivel. Con carga diaria el sistema calcula además una agregación mensual
+**solo para graficar** (payload, boxplot mensual), que NO alimenta la serie
+anual.
+Pregunta: ¿se confirma el directo, o la práctica de la tesis encadena?
+
+### Función de agregación para tipo_variable == "otro" — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** podrían analizarse medias o mínimos, aunque lo habitual son los extremos.
+**Pasa a trabajo futuro (versión 2),** en `docs/pendientes-tecnicos.md`.
+
+`core/validacion/aggregation.py::agregar_a_maximos_anuales()` agrega
+siempre por máximo anual — correcto para `caudal_precipitacion` (es lo que
+hace la tesis) y para el análisis de frecuencia de eventos extremos en
+general.
+Pregunta: ¿el máximo anual es también la agregación correcta para
+`tipo_variable == "otro"`, o una variable arbitraria podría necesitar una
+función distinta (mínimo, media, etc.)?
+
+### Las 9 estaciones de la tesis — ¿con qué mes de inicio se armaron? — RESPONDIDA 22/10/2026
+
+**Respuesta de Facundo (22/10/2026), resumida:** julio a junio en Córdoba; en el sur argentino, abril a marzo; en regiones
+muy húmedas, cercano al año calendario. **Cerrada:** confirma el valor por defecto de la
+[DECISIÓN 057](../../decisiones/decision057.md).
+
+No cambia la implementación de `aggregation.py` en sí, pero sí los fixtures
+de los tests de regresión (Bloque D, lo lleva Octavio): si las series de
+`docs/auditoria/regresion/regresion-e2e-coreEstadistico/` se armaron por
+año calendario, un test de regresión que agregue por julio no las
+reproduce.
+Pregunta: ¿con qué `mes_inicio_anio` se construyeron los máximos anuales de
+las 9 estaciones de la tesis — calendario (enero) u otro?
+
+---
+
+## Generalizada de Pareto — convenciones de signo (01/10/2026) — RESPONDIDA 29/10/2026
+
+**Respuesta de Facundo (29/10/2026):** no recuerda la distribución; puede quedar fuera de la librería hasta conseguir
+mejor bibliografía. **Destino:** sale del cálculo de la v1 (`EXCLUIDAS_V1`, addendum del 29/10/2026 a la DECISIÓN 074);
+la v2 la reincorpora con Hosking y Wallis (1987).
+
+
+Detalle completo, derivaciones y evidencia: `docs/auditoria/hallazgos/hallazgo-gen-pareto-convenciones.md`.
+En V1.0 Pareto se muestra pero no se puede elegir (DECISIÓN 074) hasta tener estas respuestas.
+
+### ¿Qué convención de signo usó para el cuantil, y la de IV-146 es la que corresponde a sus estimadores?
+Los estimadores (Momentos IV-147 a IV-149, MV IV-150, Mínimos Cuadrados con `z = (1-F)^ε`, MPP IV-168/IV-169)
+están en la convención de Hosking (con ε > 0 la distribución tiene techo). La densidad IV-145, la distribución
+IV-146 y el cuantil IV-174 están en la de Coles (con ε > 0 la cola es pesada). Evaluar el cuantil de Coles con un
+ε estimado en la convención de Hosking hace explotar los cuantiles altos (en est_09, T=500 da 992.588.509,7).
+Pregunta: ¿el cuantil que usó en su planilla es `x = µ + (σ/ε)·[1 - (1-F)^ε]` (coherente con los estimadores) o
+IV-174 tal como está impresa?
+
+### ¿IV-167 lleva "-" en el numerador?
+Despejando ε de las propias IV-168 a IV-171 sale `ε = (n·I1 - 2·I2·(n-1)) / (I2·(n-1) - I1)`; la tesis imprime
+"+" en el segundo término. Con "+" el estimador da ε ≈ 4 en cualquier serie (simulación de 400 muestras).
+Pregunta: ¿es un error de tipeo de la tesis?
+
+### ¿Cuál es la expresión correcta de IV-153 y de IV-155?
+IV-153, transcrita y confirmada en la DECISIÓN 068, tiene una sola raíz cerca de ε = 1 en cualquier serie: no
+recupera el parámetro. IV-155, `µ = x1 - (ε/µ)·(1 - z1)`, no es dimensionalmente consistente; lo coherente con
+`x = µ + (σ/ε)(1 - z)` sería `µ = x1 - (σ/ε)·(1 - z1)`. Ya había una duda abierta sobre este método en
+`Bibliografia/Facundo/Tesis de Maestria/Dudas/Pareto - Minimos Cuadrados.docx`.
+Pregunta: ¿qué ecuaciones usó realmente para Mínimos Cuadrados, y IV-155 lleva σ/ε en lugar de ε/µ?
+
+---
+
+## Comparación con otras herramientas (08/10/2026)
+
+Origen: [comparacion-herramientas/README.md](../comparacion-herramientas/README.md), pedido de Carlos
+Catalini.
+
+### U_T para F > 0,5: ¿la planilla usa F o 1 − F? (resuelve la Causa C) — RESPONDIDA 29/10/2026
+
+**Respuesta de Facundo (29/10/2026):** se mantiene IV-105 (1 − F); lo más probable es que la planilla tenga un error
+por arrastre de ecuaciones. **Cerrada, sin cambios en METIS.** Ver el hallazgo, §8.
+
+Facundo no conserva las planillas (respuesta del 22/10/2026 sobre la Causa C, más arriba): se presenta en persona la
+reconstrucción del hallazgo para ver si la reconoce.
+
+
+En su planilla, ¿cómo se calcula U_T para F > 0,5? Si la celda usa F (y no 1 − F) dentro de
+V = √ln(1/F²), los cuantiles y el EEA de Normal, Log-Normal, Gamma y Log-Pearson de la tesis quedan
+desplazados hacia abajo en la cola: con ese cálculo se reproducen los valores publicados hasta la cuarta
+cifra significativa (est_01, 02, 05 y 09; est_03 y 07 hasta el redondeo de sus parámetros). ¿Confirma
+que IV-105 (usar 1 − F) es lo correcto?
+
+**Impacto según la respuesta:** si confirma, la Causa C y la Causa D quedan cerradas como error de la
+planilla y METIS no cambia. Si la planilla usara deliberadamente otra convención, habría que documentarla:
+la tesis escrita no la menciona. Detalle: [hallazgo-ut-planilla-causa-c.md](../hallazgos/hallazgo-ut-planilla-causa-c.md).
+
+### Partición de t de Student con n impar: sí cambia un veredicto (Q16 de la fase 4) — RESPONDIDA 29/10/2026
+
+**Respuesta de Facundo (29/10/2026):** es indistinto; el subgrupo más grande puede ser el primero o el segundo.
+**Cerrada, sin cambios:** METIS mantiene `floor(n/2)` (DECISIÓN 084, test VL-12).
+
+
+La consolidación de la fase 4 (Q16) registró que la tesis toma `n1 = ceil(n/2)` con n impar, METIS
+`floor(n/2)`, y que "no cambia ningún veredicto". Corriendo la función de METIS con `ceil(n/2)` se
+reproduce exactamente la t de la tesis en las 4 estaciones con n impar (est_03, 05, 07 y 08), pero **en
+est_05 el veredicto individual cambia**: t = 2,082 > 2,0262 en la tesis (rechaza) contra t = 1,817 en
+METIS (aprueba). El nivel de homogeneidad de METIS en est_05 pasaría de `homogeneidad_ok` a
+`homogeneidad_warning`. ¿Cuál es la convención correcta para el primer subgrupo con n impar?
+
+**Impacto según la respuesta:** si es `ceil`, es un cambio de una línea en
+`core/pipeline/pipeline_etapa1.py` (`n1_t = n_total // 2`) con su decisión numerada; si es `floor`, la
+tesis tiene esa diferencia y METIS no cambia.
+
+## Nivel de significancia configurable (18/10/2026)
+
+Origen: [DECISIÓN 078](../../decisiones/decision078.md), a partir de su respuesta del 18/10 sobre Chow.
+
+### ¿La tolerancia de rezagos de Anderson acompaña a α? — RESPONDIDA 21/10/2026
+
+**Respuesta de Facundo (21/10/2026):** el 10 % es una regla fija de la prueba de Anderson; no cambia con α. Y el
+término usado en hidrología es *lag*. METIS no cambia (ya lo tenía fijo); se ajustan los textos del PDF. Ver la
+revisión del 21/10/2026 de la [DECISIÓN 078](../../decisiones/decision078.md).
+
+METIS deja elegir α entre 1 %, 5 % y 10 % en toda la Etapa 1. En Anderson eso cambia las bandas de cada rezago
+(Ec. III-3), pero la tolerancia de `⌈0,10 · k_max⌉` rezagos fuera de banda (DECISIONES 012 y 016) queda fija. ¿La
+tolerancia del 10 % de rezagos fuera de banda se mantiene fija aunque se cambie el nivel de significancia?
+
+**Impacto según la respuesta:** si se mantiene fija, METIS no cambia. Si tiene que acompañar a α, cambia una línea
+de `core/etapa1/independence.py` y se agrega una revisión a la DECISIÓN 078. Con α = 5 % no cambia nada en ningún
+caso. No bloquea.

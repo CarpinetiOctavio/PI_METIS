@@ -1,0 +1,32 @@
+/* Ver SpotlightCard.tsx para el porqué del <div> real en vez de ::before. */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+  --spot-x: 50%;
+  --spot-y: 50%;
+}
+
+.spotlight-card__glow {
+  position: absolute;
+  inset: 0;
+  /* Fix pre-reunión (F1) — "mínimo, casi transparente": la ronda de la
+     pasada 5 (12%/8%/opacity 0.55) todavía se leía como una linterna,
+     sobre todo en tema claro. Mezcla del centro bajada a la mitad. */
+  background: radial-gradient(
+    260px circle at var(--spot-x) var(--spot-y),
+    color-mix(in srgb, white 6%, var(--acc)) 0%,
+    color-mix(in srgb, var(--acc) 4%, transparent) 35%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity var(--t-mid) var(--ease-out);
+  pointer-events: none;
+}
+
+.spotlight-card:hover .spotlight-card__glow {
+  opacity: 0.22;
+}
+
+.spotlight-card__content {
+  position: relative;
+}

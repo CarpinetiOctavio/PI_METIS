@@ -1,0 +1,127 @@
+estacion,modelo_tesis,distribucion_metis,metodo_metis,T,tesis,metis,dif_pct
+est_01,Gamma 3p (MPP) [m³/s],(sin equivalente),,2.0,116.95,,
+est_01,Gamma 2p (Momentos L) [m³/s],gamma2p,ml,2.0,111.17,110.80720347611832,-0.326
+est_01,Gamma 3p (MPP) [m³/s],(sin equivalente),,5.0,230.9,,
+est_01,Gamma 2p (Momentos L) [m³/s],gamma2p,ml,5.0,223.73,225.3953528599953,0.744
+est_01,Gamma 3p (MPP) [m³/s],(sin equivalente),,10.0,304.19,,
+est_01,Gamma 2p (Momentos L) [m³/s],gamma2p,ml,10.0,300.59,308.4880613548104,2.628
+est_01,Gamma 3p (MPP) [m³/s],(sin equivalente),,20.0,368.4,,
+est_01,Gamma 2p (Momentos L) [m³/s],gamma2p,ml,20.0,369.9,390.76913332620654,5.642
+est_01,Gamma 3p (MPP) [m³/s],(sin equivalente),,25.0,387.11,,
+est_01,Gamma 2p (Momentos L) [m³/s],gamma2p,ml,25.0,390.37,417.22051668376326,6.878
+est_01,Gamma 3p (MPP) [m³/s],(sin equivalente),,50.0,438.92,,
+est_01,Gamma 2p (Momentos L) [m³/s],gamma2p,ml,50.0,447.65,499.49952551722845,11.583
+est_01,Gamma 3p (MPP) [m³/s],(sin equivalente),,100.0,481.32,,
+est_01,Gamma 2p (Momentos L) [m³/s],gamma2p,ml,100.0,495.11,582.1580712184017,17.582
+est_02,Exponencial beta [m³/s],exponencial_beta,momentos,2.0,98.83,98.83123549483888,0.001
+est_02,Log Normal 3p MV [m³/s],lognormal3p,mv,2.0,93.24,93.23701863513234,-0.003
+est_02,Exponencial beta [m³/s],exponencial_beta,momentos,5.0,229.48,229.47902234789552,-0.0
+est_02,Log Normal 3p MV [m³/s],lognormal3p,mv,5.0,198.35,201.00056632888462,1.336
+est_02,Exponencial beta [m³/s],exponencial_beta,momentos,10.0,328.31,328.3102578427344,0.0
+est_02,Log Normal 3p MV [m³/s],lognormal3p,mv,10.0,310.9,325.6234963645857,4.736
+est_02,Exponencial beta [m³/s],exponencial_beta,momentos,20.0,427.14,427.14149333757314,0.0
+est_02,Log Normal 3p MV [m³/s],lognormal3p,mv,20.0,447.78,497.85996827368393,11.184
+est_02,Exponencial beta [m³/s],exponencial_beta,momentos,25.0,458.96,458.9580446957909,-0.0
+est_02,Log Normal 3p MV [m³/s],lognormal3p,mv,25.0,495.53,565.2345348739215,14.067
+est_02,Exponencial beta [m³/s],exponencial_beta,momentos,50.0,557.79,557.7892801906297,-0.0
+est_02,Log Normal 3p MV [m³/s],lognormal3p,mv,50.0,649.1,817.9237060125679,26.009
+est_02,Exponencial beta [m³/s],exponencial_beta,momentos,100.0,656.62,656.6205156854686,0.0
+est_02,Log Normal 3p MV [m³/s],lognormal3p,mv,100.0,800.7,1147.2160711255028,43.277
+est_03,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,2.0,34.94,34.826760883705646,-0.324
+est_03,GVE MV [m³/s],gve,mv,2.0,40.09,40.09202981510669,0.005
+est_03,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,5.0,87.48,88.65132419935769,1.339
+est_03,GVE MV [m³/s],gve,mv,5.0,83.47,83.46988656942756,-0.0
+est_03,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,10.0,144.69,152.48485491214623,5.387
+est_03,GVE MV [m³/s],gve,mv,10.0,125.79,125.78602452292482,-0.003
+est_03,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,20.0,217.16,245.61270964740135,13.102
+est_03,GVE MV [m³/s],gve,mv,20.0,180.92,180.92004064329728,0.0
+est_03,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,25.0,243.23,283.61841627733475,16.605
+est_03,GVE MV [m³/s],gve,mv,25.0,202.16,202.16052820203868,0.0
+est_03,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,50.0,329.78,433.711850935101,31.516
+est_03,GVE MV [m³/s],gve,mv,50.0,281.88,281.8778448184352,-0.001
+est_03,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,100.0,419.16,646.0424954723604,54.128
+est_03,GVE MV [m³/s],gve,mv,100.0,387.86,387.85945554382386,-0.0
+est_04,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,2.0,18.11,16.437975324330658,-9.233
+est_04,GVE MV [m³/s],gve,mv,2.0,16.48,18.114934542113048,9.921
+est_04,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,5.0,34.29,35.05979929730733,2.245
+est_04,GVE MV [m³/s],gve,mv,5.0,34.68,34.28628911250258,-1.135
+est_04,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,10.0,48.61,54.06869523976314,11.23
+est_04,GVE MV [m³/s],gve,mv,10.0,51.85,48.606341194023535,-6.256
+est_04,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,20.0,65.88,78.86373756071546,19.708
+est_04,GVE MV [m³/s],gve,mv,20.0,71.55,65.87793767597968,-7.927
+est_04,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,25.0,72.22,88.3317125846963,22.309
+est_04,GVE MV [m³/s],gve,mv,25.0,78.25,72.21754281026486,-7.709
+est_04,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,50.0,94.84,123.27884283747305,29.986
+est_04,GVE MV [m³/s],gve,mv,50.0,99.44,94.84060152704663,-4.625
+est_04,Log Pearson III MMI [m³/s],logpearson3,momentos_indirecto,100.0,122.78,168.24989113347814,37.034
+est_04,GVE MV [m³/s],gve,mv,100.0,120.01,122.78014753232551,2.308
+est_05,Log Normal 3p MV [m³/s],lognormal3p,mv,2.0,25.85,25.857396197523283,0.029
+est_05,GVE MV [m³/s],gve,mv,2.0,28.14,28.145272402830756,0.019
+est_05,Log Normal 3p MV [m³/s],lognormal3p,mv,5.0,68.33,69.32845850897905,1.461
+est_05,GVE MV [m³/s],gve,mv,5.0,66.47,66.46514142013865,-0.007
+est_05,Log Normal 3p MV [m³/s],lognormal3p,mv,10.0,109.4,114.54644806483456,4.704
+est_05,GVE MV [m³/s],gve,mv,10.0,105.99,105.98288972260194,-0.007
+est_05,Log Normal 3p MV [m³/s],lognormal3p,mv,20.0,156.26,172.75620036539956,10.557
+est_05,GVE MV [m³/s],gve,mv,20.0,159.83,159.81535791444793,-0.009
+est_05,Log Normal 3p MV [m³/s],lognormal3p,mv,25.0,172.05,194.63473729061187,13.127
+est_05,GVE MV [m³/s],gve,mv,25.0,181.15,181.1375453679862,-0.007
+est_05,Log Normal 3p MV [m³/s],lognormal3p,mv,50.0,221.43,273.6194405456325,23.569
+est_05,GVE MV [m³/s],gve,mv,50.0,263.57,263.53950312414764,-0.012
+est_05,Log Normal 3p MV [m³/s],lognormal3p,mv,100.0,268.51,371.39723339602483,38.318
+est_05,GVE MV [m³/s],gve,mv,100.0,377.9,377.8499460818553,-0.013
+est_06,Exp x0β MV [m³/s],exponencial_x0_beta,mv,2.0,34.67,34.67177312367409,0.005
+est_06,Gamma 3p MPP [m³/s],(sin equivalente),,2.0,35.11,,
+est_06,Exp x0β MV [m³/s],exponencial_x0_beta,mv,5.0,63.08,63.0767858117729,-0.005
+est_06,Gamma 3p MPP [m³/s],(sin equivalente),,5.0,62.76,,
+est_06,Exp x0β MV [m³/s],exponencial_x0_beta,mv,10.0,84.56,84.56434840913121,0.005
+est_06,Gamma 3p MPP [m³/s],(sin equivalente),,10.0,82.29,,
+est_06,Exp x0β MV [m³/s],exponencial_x0_beta,mv,20.0,106.05,106.05191100648949,0.002
+est_06,Gamma 3p MPP [m³/s],(sin equivalente),,20.0,100.17,,
+est_06,Exp x0β MV [m³/s],exponencial_x0_beta,mv,25.0,112.97,112.96936109722998,-0.001
+est_06,Gamma 3p MPP [m³/s],(sin equivalente),,25.0,105.49,,
+est_06,Exp x0β MV [m³/s],exponencial_x0_beta,mv,50.0,134.46,134.45692369458828,-0.002
+est_06,Gamma 3p MPP [m³/s],(sin equivalente),,50.0,120.46,,
+est_06,Exp x0β MV [m³/s],exponencial_x0_beta,mv,100.0,155.94,155.94448629194656,0.003
+est_06,Gamma 3p MPP [m³/s],(sin equivalente),,100.0,132.94,,
+est_07,Log Normal 2 parámetros (Momentos y M. Verosimilitud) [m³/s],lognormal2p,momentos,2.0,45.56,45.5566749958824,-0.007
+est_07,Gumbel (Momentos L) [m³/s],gumbel,ml,2.0,47.81,47.808653690155,-0.003
+est_07,Log Normal 2 parámetros (Momentos y M. Verosimilitud) [m³/s],lognormal2p,momentos,5.0,73.56,74.09885483985067,0.733
+est_07,Gumbel (Momentos L) [m³/s],gumbel,ml,5.0,74.09,74.0921750667965,0.003
+est_07,Log Normal 2 parámetros (Momentos y M. Verosimilitud) [m³/s],lognormal2p,momentos,10.0,93.35,95.57580450808497,2.384
+est_07,Gumbel (Momentos L) [m³/s],gumbel,ml,10.0,91.49,91.49415322279033,0.005
+est_07,Log Normal 2 parámetros (Momentos y M. Verosimilitud) [m³/s],lognormal2p,momentos,20.0,111.99,117.92486413752984,5.299
+est_07,Gumbel (Momentos L) [m³/s],gumbel,ml,20.0,108.19,108.18654846625958,-0.003
+est_07,Log Normal 2 parámetros (Momentos y M. Verosimilitud) [m³/s],lognormal2p,momentos,25.0,117.66,125.36730771701968,6.55
+est_07,Gumbel (Momentos L) [m³/s],gumbel,ml,25.0,113.48,113.4815987546383,0.001
+est_07,Log Normal 2 parámetros (Momentos y M. Verosimilitud) [m³/s],lognormal2p,momentos,50.0,133.93,149.37737722602316,11.534
+est_07,Gumbel (Momentos L) [m³/s],gumbel,ml,50.0,129.79,129.79314189955846,0.002
+est_07,Log Normal 2 parámetros (Momentos y M. Verosimilitud) [m³/s],lognormal2p,momentos,100.0,147.89,174.8735244343605,18.246
+est_07,Gumbel (Momentos L) [m³/s],gumbel,ml,100.0,145.98,145.98424317033326,0.003
+est_08,Gumbel (Momentos L) [m³/s],gumbel,ml,2.0,141.72,141.72499709521833,0.004
+est_08,Gamma 3 parámetros (MPP) [m³/s],(sin equivalente),,2.0,136.85,,
+est_08,Gumbel (Momentos L) [m³/s],gumbel,ml,5.0,222.07,222.07805143619325,0.004
+est_08,Gamma 3 parámetros (MPP) [m³/s],(sin equivalente),,5.0,222.5,,
+est_08,Gumbel (Momentos L) [m³/s],gumbel,ml,10.0,275.27,275.2787651598772,0.003
+est_08,Gamma 3 parámetros (MPP) [m³/s],(sin equivalente),,10.0,276.84,,
+est_08,Gumbel (Momentos L) [m³/s],gumbel,ml,20.0,326.3,326.3101670355609,0.003
+est_08,Gamma 3 parámetros (MPP) [m³/s],(sin equivalente),,20.0,324.14,,
+est_08,Gumbel (Momentos L) [m³/s],gumbel,ml,25.0,342.49,342.4980079821098,0.002
+est_08,Gamma 3 parámetros (MPP) [m³/s],(sin equivalente),,25.0,337.87,,
+est_08,Gumbel (Momentos L) [m³/s],gumbel,ml,50.0,392.36,392.36508225754335,0.001
+est_08,Gamma 3 parámetros (MPP) [m³/s],(sin equivalente),,50.0,375.81,,
+est_08,Gumbel (Momentos L) [m³/s],gumbel,ml,100.0,441.85,441.86394588420393,0.003
+est_08,Gamma 3 parámetros (MPP) [m³/s],(sin equivalente),,100.0,406.77,,
+est_09,Uniforme (Momentos) [m³/s],uniforme,momentos,2.0,27.6,27.598571428571436,-0.005
+est_09,Normal (Momentos L) [m³/s],normal,ml,2.0,27.6,27.59857242636366,-0.005
+est_09,Uniforme (Momentos) [m³/s],uniforme,momentos,5.0,37.34,37.34377473217529,0.01
+est_09,Normal (Momentos L) [m³/s],normal,ml,5.0,35.78,35.91088317905161,0.366
+est_09,Uniforme (Momentos) [m³/s],uniforme,momentos,10.0,40.59,40.59217583337657,0.005
+est_09,Normal (Momentos L) [m³/s],normal,ml,10.0,39.86,40.2601008737202,1.004
+est_09,Uniforme (Momentos) [m³/s],uniforme,momentos,20.0,42.21,42.21637638397721,0.015
+est_09,Normal (Momentos L) [m³/s],normal,ml,20.0,42.97,43.85075660206722,2.05
+est_09,Uniforme (Momentos) [m³/s],uniforme,momentos,25.0,42.54,42.54121649409734,0.003
+est_09,Normal (Momentos L) [m³/s],normal,ml,25.0,43.81,44.896542584146744,2.48
+est_09,Uniforme (Momentos) [m³/s],uniforme,momentos,50.0,43.19,43.1908967143376,0.002
+est_09,Normal (Momentos L) [m³/s],normal,ml,50.0,46.02,47.89082840574875,4.065
+est_09,Uniforme (Momentos) [m³/s],uniforme,momentos,100.0,43.51,43.51573682445773,0.013
+est_09,Normal (Momentos L) [m³/s],normal,ml,100.0,47.72,50.58366936857645,6.001

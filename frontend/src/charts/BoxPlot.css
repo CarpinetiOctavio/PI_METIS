@@ -1,0 +1,67 @@
+.box-plot {
+  width: 100%;
+}
+
+.box-plot__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--surf2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.box-plot__gridline {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.box-plot__tick {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  fill: var(--mut);
+}
+
+.box-plot__axis-label {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  fill: var(--mut);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.box-plot__whisker,
+.box-plot__cap {
+  stroke: var(--acc);
+  stroke-width: 1.5;
+}
+
+.box-plot__box {
+  fill: color-mix(in srgb, var(--acc) 22%, transparent);
+  stroke: var(--acc);
+  stroke-width: 1.5;
+}
+
+.box-plot__median {
+  stroke: var(--acc2);
+  stroke-width: 2;
+}
+
+.box-plot__hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.box-plot__tooltip-box {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--surf);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 4px 6px;
+  pointer-events: none;
+  white-space: nowrap;
+  width: fit-content;
+}

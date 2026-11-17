@@ -1,0 +1,35 @@
+Verificación del despliegue con HTTPS autofirmado en el servidor de la UCC
+Servidor 172.16.168.14, usuario metis, directorio ~/metis-app, rama deploy/ucc
+Fecha: 07/11/2026, entre las 10:50 y las 11:01 (hora de Argentina)
+Origen: transcripción de las capturas de pantalla de la terminal, sin secretos (el .env no figura).
+Los resultados no son una salida de consola completa: se anotan los comandos y lo que mostró cada uno.
+
+1. docker compose ps
+   metis-backend-1    metis-backend   Up (recién recreado)   8000/tcp
+   metis-frontend-1   metis-frontend  Up (recién recreado)   3000/tcp, 8080/tcp
+   metis-nginx-1      nginx:alpine    Up (recién recreado)   0.0.0.0:80->80/tcp y 0.0.0.0:4443->(443 del contenedor)
+   metis-postgres-1   postgres:15     Up 3 days (healthy)    5432/tcp, sin recrear
+
+2. docker compose exec backend alembic upgrade head
+   INFO  Running upgrade 006 -> 007, add_auth_tokens
+   docker compose exec backend alembic current
+   007 (head)
+
+3. docker compose exec nginx nginx -t
+   nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+   nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+4. curl -sk -o /dev/null -w '%{http_code}\n' https://localhost:4443/ping   ->  200
+   curl -s  -o /dev/null -w '%{http_code}\n' http://localhost/ping          ->  200
+   (con curl -I las dos dan 405: /ping solo acepta GET)
+
+5. echo | openssl s_client -connect localhost:4443 -servername localhost | openssl x509 -noout -subject -ext subjectAltName
+   subject=O = METIS, CN = 172.16.168.14
+   X509v3 Subject Alternative Name:
+       IP Address:172.16.168.14, DNS:metis.local, DNS:metis.ucc.edu.ar
+
+6. docker compose logs --tail 20 backend | grep -i -E "error|traceback"   ->  sin errores
+   ip route | grep 10.250.0.0   ->   10.250.0.0/24 dev br-3974ca50f5c8 proto kernel scope link src 10.250.0.1
+
+Pendiente de esta verificación: METIS_URL en el .env, la prueba por https://metis.ucc.edu.ar, la pausa de Etapa 2 abierta
+3 minutos a través de Cloudflare, el repunte del proxy al 4443 por parte de IT y la sonda desde UCC-Free.

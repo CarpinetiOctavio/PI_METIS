@@ -1,0 +1,23 @@
+/* Encabezado de página con el botón de exportar a la derecha del título;
+   en pantallas angostas el botón baja debajo del título. */
+.encabezado-exportable {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 14px;
+}
+
+.exportar-pdf {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.exportar-pdf__botones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}

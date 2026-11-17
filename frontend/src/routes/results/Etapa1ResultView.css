@@ -1,0 +1,122 @@
+.results-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.results-group summary {
+  cursor: pointer;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--mut);
+  font-weight: 700;
+}
+
+.results-group[open] summary {
+  margin-bottom: 10px;
+}
+
+/* Bloque F (plan post-avance) — el motivo de una prueba no_ejecutada, en
+   la tabla compacta de modo experto. Bloque propio para que una oración
+   completa no quede apretada contra "no_ejecutada (n1=…)" en la misma
+   línea. */
+.results-test__motivo {
+  display: block;
+  margin-top: 2px;
+}
+
+/* S2 (limpieza SonarCloud): la tabla de descriptivos usa <th scope="row">
+   para el rótulo de cada fila (accesibilidad — antes era un <td>, un
+   lector de pantalla no podía asociar "40" con "n"). `table.t th` en
+   components.css está pensado para encabezados de columna (mayúsculas,
+   chico, mut, borde fuerte) — sin este override el rótulo de fila se
+   vería como un header, no como el <td> que reemplaza. Selector con
+   especificidad igual o mayor a `table.t th` para ganar sin depender del
+   orden de carga de los CSS. */
+.card table.t th[scope="row"] {
+  text-align: left;
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink);
+  font-weight: 400;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Bloque D del plan post-avance (DECISIÓN 064) — modo paso a paso: un
+   bloque por prueba con la fórmula sustituida (HTML plano) + interpretación,
+   en vez de la tabla compacta de modo experto. */
+.results-explicacion {
+  gap: 12px;
+}
+
+.results-test {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.results-test:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.results-test__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.results-test__formula {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+  overflow-x: auto;
+}
+
+.results-test__formula code {
+  font-size: 12px;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+/* F3 (feedback Facundo 02/09, addendum DECISIÓN 064) — KaTeX en bloque, un
+   paso por línea (simbólica → sustitución → resultado). KaTeX centra y
+   deja 1em de margen a .katex-display por default; para una sustitución
+   paso a paso conviene alinear a la izquierda y juntar los pasos. */
+.results-test__math .katex-display {
+  margin: 0;
+  text-align: left;
+}
+
+.results-test__math .katex {
+  font-size: 1.05em;
+  color: var(--ink);
+}
+
+/* Fallback si KaTeX no puede parsear el LaTeX — el texto plano de
+   formatearFormula(), mismo aspecto que tenía antes de este cambio. */
+.results-test__formula-fallback {
+  font-size: 12px;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.results-test__ecuacion {
+  display: block;
+}
+
+.results-test__interpretacion {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--mut);
+}
+
+.results-group__regla {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-strong);
+}

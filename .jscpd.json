@@ -1,0 +1,9 @@
+{
+  "threshold": 5,
+  "minTokens": 70,
+  "reporters": ["console", "json", "markdown"],
+  "output": "reports/jscpd",
+  "ignore": ["**/*.test.ts", "**/*.test.tsx", "**/test/**", "**/__pycache__/**"],
+  "gitignore": true,
+  "absolute": false
+}

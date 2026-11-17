@@ -1,0 +1,18 @@
+# D-07 — corrida verde
+# Commit: b24eaaa (fix, PR #106)
+# Fecha de la corrida: 09/10/2026 10:23
+# Comando: pytest tests/unit/api/test_estructura_error.py -v (imagen backend, python 3.11)
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-8.2.0, pluggy-1.6.0 -- /usr/local/bin/python3.11
+rootdir: /app
+configfile: pytest.ini
+plugins: anyio-4.15.1, cov-5.0.0, asyncio-0.23.6
+asyncio: mode=Mode.AUTO
+collecting ... collected 4 items
+tests/unit/api/test_estructura_error.py::test_error_con_codigo_responde_la_estructura_estandar PASSED [ 25%]
+tests/unit/api/test_estructura_error.py::test_detail_de_texto_sigue_igual PASSED [ 50%]
+tests/unit/api/test_estructura_error.py::test_ruta_inexistente_sigue_igual PASSED [ 75%]
+tests/unit/api/test_estructura_error.py::test_validacion_pydantic_sigue_siendo_422_con_detail PASSED [100%]
+=============================== warnings summary ===============================
+======================== 4 passed, 1 warning in 11.49s =========================

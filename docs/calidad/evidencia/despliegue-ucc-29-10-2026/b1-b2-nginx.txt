@@ -1,0 +1,54 @@
+# Verificación B1/B2 contra scripts/deploy-local.sh (rama feature/nginx-endurecimiento), 2026-10-29T21:45:50-03:00
+
+## GET / (cabeceras)
+HTTP/1.1 200 OK
+Server: nginx
+Date: Fri, 30 Oct 2026 00:45:51 GMT
+Content-Type: text/html
+Content-Length: 427
+Connection: keep-alive
+Last-Modified: Fri, 30 Oct 2026 00:45:07 GMT
+ETag: "6ae3e893-1ab"
+Cache-Control: no-cache
+Accept-Ranges: bytes
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: same-origin
+Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+## GET /assets/index-BxrbIO34.js con Accept-Encoding: gzip
+HTTP/1.1 200 OK
+Server: nginx
+Cache-Control: public, max-age=31536000, immutable
+Content-Encoding: gzip
+
+## /ping
+HTTP/1.1 405 Method Not Allowed
+Server: nginx
+X-Content-Type-Options: nosniff
+
+## Subida de 11 MB a /api/v1/analysis/preview-columns
+<html>
+<head><title>413 Request Entity Too Large</title></head>
+<body>
+<center><h1>413 Request Entity Too Large</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+HTTP 413
+
+## Tras sumar error_page 413 JSON — subida de 11 MiB (por encima del tope de nginx)
+{"error":{"codigo":"PARSE_FILE_TOO_LARGE","mensaje":"El archivo supera el límite de 10 MB."}}
+HTTP 413
+
+## Subida de 10,3 MiB (entre el tope del backend y el de nginx)
+{"error":{"codigo":"PARSE_FILE_TOO_LARGE","mensaje":"El archivo supera el límite de 10 MB."}}
+HTTP 400
+
+## SSE sin comprimir: Content-Type/Content-Encoding de /api/v1/analysis/stream con Accept-Encoding: gzip
+HTTP/1.1 200 OK
+Content-Type: text/event-stream; charset=utf-8
+X-Content-Type-Options: nosniff
+eventos recibidos: 19
+event: complete

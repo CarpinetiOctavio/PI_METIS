@@ -1,0 +1,235 @@
+# Casos de prueba dinámicos
+
+TP integrador de Calidad de Software, bloque B8 (`docs/plan-tp-calidad-software.md`, §2.5). Casos diseñados con tres
+técnicas de caja negra: valores límite (VL), clases de equivalencia (CE) y tablas de decisión (TD). Cada caso apunta al
+test que lo implementa. Todos pasan en `feature/tp-calidad-b8` (09/10/2026).
+
+**Cómo leer las tablas.**
+- **Test:** ruta relativa a `backend/`. Los tests nuevos de este bloque viven en `tests/unit/casos_dinamicos/` y llevan
+  el ID del caso en el id de `parametrize`, así que `pytest -v` muestra, por ejemplo, `[VL-01a n=9]`. Para un caso que
+  ya cubría otro test, se nombra ese test y no se lo duplicó.
+- **Regla:** de dónde sale el resultado esperado: una decisión, un documento de reglas o el catálogo de errores
+  (`.claude/rules/architecture/api-contracts.md`). Los IDs del Manual de Requerimientos (RF-…) se citan solo cuando ya
+  están en el repo (RF-GEN-P-03 y RF-GEN-P-06). El resto de la trazabilidad a RF la cierra `trazabilidad.md` (B9).
+
+Para correr solo estos casos: `pytest tests/unit/casos_dinamicos -v` (con `backend/` como directorio de trabajo, o vía
+`docker exec`).
+
+---
+
+## 1. Valores límite
+
+Cada borde se prueba de los dos lados: el último valor válido y el primero inválido.
+
+| ID | Parámetro | Entrada | Esperado | Regla | Test |
+|---|---|---|---|---|---|
+| VL-01a | Longitud de la serie | n = 9 | Bloqueante, `CONTRACT_SERIES_TOO_SHORT` | `CLAUDE.md`, "Principio de negocio central" | `casos_dinamicos/test_valores_limite.py::test_longitud_de_la_serie[VL-01a n=9]` |
+| VL-01b | | n = 10 | Continúa con `CONTRACT_LENGTH_WARNING` | ídem | `…::test_longitud_de_la_serie[VL-01b n=10]` |
+| VL-01c | | n = 29 | Continúa con `CONTRACT_LENGTH_WARNING` | ídem | `…::test_longitud_de_la_serie[VL-01c n=29]` |
+| VL-01d | | n = 30 | Continúa sin warning de longitud | ídem | `…::test_longitud_de_la_serie[VL-01d n=30]` |
+| VL-02a | Tamaño del archivo | Exactamente 10 MB | Se lee completo | DECISIÓN 050 | `tests/unit/api/test_upload_limits.py::test_leer_archivo_limitado_exactamente_en_el_limite_pasa` |
+| VL-02b | | 10 MB + 1 byte | 400 `PARSE_FILE_TOO_LARGE` | ídem | `casos_dinamicos/test_valores_limite.py::test_archivo_un_byte_sobre_el_limite_da_400` |
+| VL-03a | `mes_inicio_anio` | 0 | 400 `CONTRACT_MES_INICIO_INVALID` | DECISIÓN 057 | `…::test_mes_inicio_fuera_del_rango[VL-03a mes=0]` |
+| VL-03b | | 1 | Válido (año calendario) | ídem | `…::test_mes_inicio_en_el_rango[VL-03b mes=1]` |
+| VL-03c | | 12 | Válido | ídem | `…::test_mes_inicio_en_el_rango[VL-03c mes=12]` |
+| VL-03d | | 13 | 400 `CONTRACT_MES_INICIO_INVALID` | ídem | `…::test_mes_inicio_fuera_del_rango[VL-03d mes=13]` |
+| VL-04a | Período de retorno T | T = 1 | 400 `DIST_SELECTION_INVALID` (F = 1 − 1/T necesita T > 1) | DECISIÓN 052 | `…::test_periodos_retorno_invalidos[VL-04a T=1]` |
+| VL-04b | | T = 1,0001 | Válido | ídem | `…::test_periodos_retorno_validos[VL-04b T=1.0001]` |
+| VL-05a | Cantidad de períodos | 0 | 400 `DIST_SELECTION_INVALID` | ídem | `…::test_periodos_retorno_invalidos[VL-05a 0 elementos]` |
+| VL-05b | | 1 | Válido | ídem | `…::test_periodos_retorno_validos[VL-05b 1 elemento]` |
+| VL-05c | | 20 | Válido | ídem | `…::test_periodos_retorno_validos[VL-05c 20 elementos]` |
+| VL-05d | | 21 | 400 `DIST_SELECTION_INVALID` | ídem | `…::test_periodos_retorno_invalidos[VL-05d 21 elementos]` |
+| VL-06a | Partición de Cramer | `n1_pct` = 0 o 101 | 400 `CONTRACT_CRAMER_PARTICION_INVALID` | DECISIÓN 036 | `tests/unit/api/test_stream_cramer_particion.py::test_parsear_forma_o_rango_invalido_da_400` |
+| VL-06b | | `n1_pct` = 100, `n2_pct` = 99 | Válida | ídem | `casos_dinamicos/test_valores_limite.py::test_cramer_particion_en_los_bordes_validos[VL-06b n1=100 n2=99]` |
+| VL-06c | | `n1_pct` = 2, `n2_pct` = 1 | Válida | ídem | `…::test_cramer_particion_en_los_bordes_validos[VL-06c n1=2 n2=1]` |
+| VL-06d | | `n1_pct` = `n2_pct` = 100 | 400 (n1 tiene que ser estrictamente mayor) | ídem | `…::test_cramer_particion_en_los_bordes_invalidos[VL-06d n1=n2=100]` |
+| VL-06e | | `n1_pct` = `n2_pct` = 1 | 400 | ídem | `…::test_cramer_particion_en_los_bordes_invalidos[VL-06e n1=n2=1]` |
+| VL-06f | | `n2_pct` = 0 | 400 | ídem | `…::test_cramer_particion_en_los_bordes_invalidos[VL-06f n2=0]` |
+| VL-07a | Wald-Wolfowitz | n = 40 | Ejecuta con `TEST_WARNING_SMALL_SAMPLE` | `constraints.md`, "Wald-Wolfowitz con n ≤ 40" | `tests/unit/core/etapa1/test_independence.py::test_wald_n_igual_40_emite_small_sample` |
+| VL-07b | | n = 41 | Ejecuta sin warning de muestra chica | ídem | `tests/unit/core/etapa1/test_independence.py::test_wald_n_mayor_40_sin_small_sample` |
+| VL-08a | Mann-Kendall | n = 9 | `no_ejecutada`, `TEST_NOT_EXECUTED_MIN_SAMPLES` | `formulas-etapa1.md` §7 | `casos_dinamicos/test_valores_limite.py::test_mann_kendall_umbrales_de_n[VL-08a n=9]` |
+| VL-08b | | n = 10 | Ejecuta con `TEST_WARNING_SMALL_SAMPLE` | ídem | `…::test_mann_kendall_umbrales_de_n[VL-08b n=10]` |
+| VL-08c | | n = 30 | Ejecuta con `TEST_WARNING_SMALL_SAMPLE` | ídem | `…::test_mann_kendall_umbrales_de_n[VL-08c n=30]` |
+| VL-08d | | n = 31 | Ejecuta sin warning | ídem | `…::test_mann_kendall_umbrales_de_n[VL-08d n=31]` |
+| VL-09a | Índice de una exclusión guardada (serie de n = 50) | −1 | 400 `CONTRACT_EXCLUSION_INVALID` | DECISIÓN 080 | `tests/integration/db/test_exclusiones_guardadas.py::test_indices_invalidos[VL-09a índice -1]` |
+| VL-09b | | 0 | Se guarda | ídem | `…::test_indices_en_el_borde_validos[VL-09b índice 0]` |
+| VL-09c | | n − 1 = 49 | Se guarda | ídem | `…::test_indices_en_el_borde_validos[VL-09c índice n-1]` |
+| VL-09d | | n = 50 | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-09d índice n]` |
+| VL-09e | | Repetido `[3, 3]` | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-09e repetido]` |
+| VL-10a | Cantidad de puntos excluidos | 0 | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-10a ninguno]` |
+| VL-10b | | n − 1 (queda un dato) | Se guarda | ídem | `…::test_indices_en_el_borde_validos[VL-10b n-1 puntos (queda uno)]` |
+| VL-10c | | n (vacía la serie) | 400 `CONTRACT_EXCLUSION_INVALID` | ídem | `…::test_indices_invalidos[VL-10c los n (vacía la serie)]` |
+| VL-11a | `cobertura_minima_interior` (%) | 49 | 400 `CONTRACT_COBERTURA_INVALID` | DECISIÓN 081 | `casos_dinamicos/test_cobertura_minima_interior.py::test_cobertura_fuera_del_rango_o_no_entera_da_400[VL-11a 49]` |
+| VL-11b | | 50 | Válido (el piso) | ídem | `…::test_cobertura_en_el_rango[VL-11b 50]` |
+| VL-11c | | 100 | Válido (el valor por defecto) | ídem | `…::test_cobertura_en_el_rango[VL-11c 100]` |
+| VL-11d | | 101 | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…::test_cobertura_fuera_del_rango_o_no_entera_da_400[VL-11d 101]` |
+| VL-11e | | 90 | Válido | ídem | `…::test_cobertura_en_el_rango[VL-11e 90]` |
+| VL-12a | n de la partición de t de Student | 39 (impar, est_05) | 19 + 20: el dato del medio va al segundo subgrupo | DECISIÓN 084 | `casos_dinamicos/test_valores_limite.py::test_t_student_con_n_impar_el_dato_del_medio_va_al_segundo_subgrupo[VL-12a n=39 (est_05)]` |
+| VL-12b | | 40 (par) | 20 + 20 | ídem | `…[VL-12b n=40]` |
+| VL-12c | | 25 (impar) | 12 + 13 | ídem | `…[VL-12c n=25]` |
+
+---
+
+## 2. Clases de equivalencia
+
+Un representante por clase, válida o inválida.
+
+| ID | Variable | Clase | Representante | Esperado | Regla | Test |
+|---|---|---|---|---|---|---|
+| CE-01a | Resolución temporal | Anual | Columna de años | `anual` | `api-contracts.md`, `CONTRACT_NO_TEMPORAL_RESOLUTION` | `tests/unit/core/validacion/test_parser.py::test_columna_de_anio_puro_infiere_resolucion_anual` |
+| CE-01b | | Mensual | Fechas año-mes | `mensual`, se agrega a máximos anuales | DECISIÓN 057 | `…/test_parser.py::test_columna_de_anio_y_mes_como_fecha_sigue_siendo_mensual` |
+| CE-01c | | Diaria | Fechas diarias | `diaria`, se agrega a máximos anuales | DECISIÓN 065 | `…/test_parser.py::test_columna_de_fechas_diarias_infiere_resolucion_diaria` |
+| CE-01d | | Otra (semanal, quincenal) | Fechas cada 7 y 15 días | `None` → bloqueante | ídem | `…/test_parser.py::test_serie_semanal_y_quincenal_no_se_confunden_con_diaria` |
+| CE-01e | | Otra (sub-diaria) | Fechas horarias | `None` → bloqueante | ídem | `…/test_parser.py::test_serie_horaria_cae_en_none_por_el_truncamiento_de_days` |
+| CE-01f | | Sin resolución | `resolucion_temporal=None` | Bloqueante, `CONTRACT_NO_TEMPORAL_RESOLUTION` | ídem | `tests/unit/core/validacion/test_contract.py::test_sin_resolucion_temporal_es_bloqueante` |
+| CE-02a | `tipo_variable` × signo, en Chow | Positivos | Serie sin ceros | Ejecuta | `formulas-etapa1.md` §9 | `tests/unit/core/etapa1/test_outliers.py::test_sin_atipico_aprobada` |
+| CE-02b | | Cero en `caudal_precipitacion` | `[0, 10, …]` | `no_ejecutada`, `TEST_NOT_EXECUTED_ZEROS` | ídem | `…/test_outliers.py::test_cero_en_caudal_no_ejecutada` |
+| CE-02c | | Cero en `otro` | `[0, 10, …]` | `no_ejecutada`, `TEST_NOT_EXECUTED_CONDITION` | ídem | `…/test_outliers.py::test_cero_en_otro_no_ejecutada` |
+| CE-02d | | Negativos, cualquier tipo, con o sin cero | `[-5, …]`, `[-5, 0, …]` | `no_ejecutada`, `TEST_NOT_EXECUTED_NEGATIVES` | DECISIÓN 073 | `…/test_outliers.py::test_negativo_no_ejecutada_con_codigo_propio` (4 ids) |
+| CE-02e | `tipo_variable` × signo, en el contrato | Negativos en `caudal_precipitacion` | | Warning `CONTRACT_NEGATIVE_VALUES` | `api-contracts.md` | `tests/unit/core/validacion/test_contract.py::test_negativos_en_caudal_activa_warning` |
+| CE-02f | | Negativos en `otro` | | Sin warning | ídem | `…/test_contract.py::test_negativos_en_tipo_otro_sin_warning` |
+| CE-03a | Formato del archivo | CSV válido | 3 filas | Columnas y muestra | DECISIÓN 047 | `casos_dinamicos/test_clases_equivalencia.py::test_formatos_validos_dan_las_mismas_columnas[CE-03a CSV válido]` |
+| CE-03b | | Excel válido | El mismo contenido en `.xlsx` | Las mismas columnas y muestra que el CSV | ídem | `…::test_formatos_validos_dan_las_mismas_columnas[CE-03b Excel válido]` |
+| CE-03c | | Ilegible | Bytes binarios | 400 `PARSE_ERROR` | ídem | `tests/unit/api/test_analysis_preview_columns.py::test_preview_columns_archivo_no_parseable_da_400_parse_error` |
+| CE-03d | | Ilegible: extensión que no coincide | CSV con nombre `.xlsx` | Excepción del lector, el endpoint responde `PARSE_ERROR` | ídem | `casos_dinamicos/test_clases_equivalencia.py::test_excel_con_extension_pero_contenido_csv_no_se_parsea` |
+| CE-03e | | Vacío | 0 bytes | 400 `PARSE_ERROR` | ídem | `tests/unit/api/test_analysis_preview_columns.py::test_preview_columns_archivo_vacio_da_400_parse_error` |
+| CE-04a | `etapas` | `"1"` | | Termina en `result_etapa1`, sin pausa de Etapa 2 | DECISIÓN 054 | `tests/integration/test_etapa2_stream_distribution_decision.py::test_etapas_1_solo_no_pausa_en_etapa_2` |
+| CE-04b | | `"1,2"` | | Válido | ídem | `tests/unit/api/test_stream_etapas_validacion.py::test_etapas_uno_dos_no_lanza` |
+| CE-04c | | Inválido | `"3"`, `"2,1"`, … | 400 `CONTRACT_ETAPAS_INVALID` | ídem | `…/test_stream_etapas_validacion.py::test_etapas_invalida_da_400_no_500`, `::test_etapas_vacia_da_400` |
+| CE-05a | `variable_diaria` | `pico`, `media`, `acumulado` | | Válido | DECISIÓN 065 (revisión 22/10/2026) | `tests/unit/api/test_stream_variable_diaria_validacion.py::test_valores_validos_no_lanzan` (3 ids) |
+| CE-05b | | Otro valor | `acumulada`, `suma`, `PICO`, vacío, … | 400 `CONTRACT_VARIABLE_DIARIA_INVALID` | ídem | `…/test_stream_variable_diaria_validacion.py::test_valor_invalido_da_400` |
+| CE-05c | | `acumulado` con carga diaria | 12 años diarios | Los mismos máximos anuales que `pico`; `CONTRACT_DAILY_SERIES_AGGREGATED` sin advertencia de sesgo; valor de diseño rotulado "máximo diario anual, acumulado de 24 h" | Respuesta de Facundo, 22/10/2026 | `tests/unit/core/pipeline/test_pipeline_etapa1.py::test_carga_diaria_acumulado_no_advierte_sesgo_y_da_los_mismos_numeros`, `tests/unit/reportes/test_pdf.py::test_carga_diaria_nombra_la_variable_diaria[acumulado-…]` |
+| CE-06a | `alfa` (nivel de significancia) | Uno de los tres niveles | `0.01`, `0.05`, `0.10` | Válido | DECISIÓN 078 | `casos_dinamicos/test_clases_equivalencia.py::test_alfa_de_los_tres_niveles_es_valido` (3 ids) |
+| CE-06b | | Numérico fuera del conjunto | `0.2`, `0.025` | 400 `CONTRACT_ALFA_INVALID` | ídem | `…::test_alfa_fuera_del_conjunto_da_400[CE-06b …]` |
+| CE-06c | | No numérico | `abc`, vacío | 400 `CONTRACT_ALFA_INVALID` (no un 422 genérico) | ídem | `…::test_alfa_fuera_del_conjunto_da_400[CE-06c …]` |
+| CE-07a | Celda de la serie | Vacía | `None`, `NaN` | Solo `CONTRACT_MISSING_VALUES`, con su conteo | `api-contracts.md`; revisión manual 21/10/2026 (bloque H) | `casos_dinamicos/test_clases_equivalencia.py::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07a …]` |
+| CE-07b | | No numérica | `"x"` | Solo `CONTRACT_NON_NUMERIC_VALUES`, con su conteo | ídem | `…::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07b …]` |
+| CE-07c | | Las dos | `None`, `"x"`, `"y"` | Las dos advertencias, cada una con su conteo (1 y 2) | ídem | `…::test_celda_vacia_y_no_numerico_son_clases_distintas[CE-07c …]` |
+| CE-08a | `cobertura_minima_interior` | No numérico | `abc` | 400 `CONTRACT_COBERTURA_INVALID` (no un 422 genérico) | DECISIÓN 081 | `casos_dinamicos/test_cobertura_minima_interior.py::test_cobertura_fuera_del_rango_o_no_entera_da_400[CE-08a abc]` |
+| CE-08b | | Numérico no entero | `90.5` | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…[CE-08b 90.5]` |
+| CE-08c | | Vacío | `""` | 400 `CONTRACT_COBERTURA_INVALID` | ídem | `…[CE-08c vacío]` |
+| CE-10a | Token de `reset-password` | Vigente y sin usar | Token emitido hace instantes | 200; la contraseña nueva entra y la vieja no | DECISIÓN 085 | `tests/integration/db/test_recuperacion_contrasena.py::test_flujo_completo_con_mail_real` |
+| CE-10b | | Ya usado | El mismo link por segunda vez | 400 `AUTH_RESET_TOKEN_INVALID` | ídem | `…::test_flujo_completo_con_mail_real` (segundo `reset`), `…::test_un_pedido_nuevo_invalida_el_link_anterior` |
+| CE-10c | | Vencido | `expires_at` un minuto en el pasado | 400 `AUTH_RESET_TOKEN_INVALID`; la contraseña no cambia | ídem | `…::test_token_vencido_no_sirve` |
+| CE-10d | | Inexistente | Texto que nunca se emitió | 400 `AUTH_RESET_TOKEN_INVALID` | ídem | `…::test_token_inexistente_responde_400` |
+| CE-10e | Contraseña nueva | Menos de 8 caracteres | `corta` | 422 de validación, sin gastar el token | ídem | `…::test_clave_corta_responde_422_y_no_gasta_el_token` |
+| CE-10f | Email de `forgot-password` | Con cuenta / sin cuenta | Un mail registrado y uno que no | Misma respuesta 200 y mismo cuerpo; solo la cuenta real guarda un token | ídem | `…::test_forgot_responde_lo_mismo_exista_o_no_la_cuenta_y_sin_cuenta_no_guarda_nada` |
+| CE-10g | Pedidos de `forgot-password` | Dos seguidos para la misma cuenta | Dentro de los 60 s | Misma respuesta; un solo token en la base | ídem | `…::test_dos_pedidos_seguidos_no_crean_un_segundo_token` |
+| CE-10h | Estado de la cuenta | Sin verificar | Registrada y nunca verificada (H8) | Login 403 antes del reseteo; 200 después | DECISIÓN 085 y 034 | `…::test_restablecer_verifica_una_cuenta_que_quedo_sin_verificar` |
+
+---
+
+## 3. Tablas de decisión
+
+Una columna por combinación de condiciones. **A** = aprobada, **R** = rechazada.
+
+### TD-01. Nivel de independencia
+
+Anderson manda; Wald-Wolfowitz verifica y no decide (`constraints.md`, "Anderson acepta, Wald-Wolfowitz rechaza").
+
+| | c1 | c2 | c3 | c4 |
+|---|---|---|---|---|
+| Anderson | A | A | R | R |
+| Wald-Wolfowitz | A | R | A | R |
+| **Nivel** | independiente | independiente | dependiente | dependiente |
+| **Warning crítico** | no | no | sí | sí |
+
+Test: `casos_dinamicos/test_tablas_decision.py::test_tabla_independencia[TD-01 c1 … c4]`.
+
+### TD-02. Nivel de homogeneidad
+
+Cramer manda; Helmert o t de Student solo degradan a warning normal (RF-GEN-P-06, `statistical-pipeline.md`).
+
+| | c1 | c2 | c3 | c4 | c5 | c6 | c7 | c8 |
+|---|---|---|---|---|---|---|---|---|
+| Cramer | A | A | A | A | R | R | R | R |
+| Helmert | A | R | A | R | A | R | A | R |
+| t de Student | A | A | R | R | A | A | R | R |
+| **Nivel** | ok | warning | warning | warning | crítica | crítica | crítica | crítica |
+| **Código** | — | `TEST_WARNING_HOMOGENEITY` | ídem | ídem | `TEST_CRITICAL_HOMOGENEITY` | ídem | ídem | ídem |
+
+Test: `casos_dinamicos/test_tablas_decision.py::test_tabla_homogeneidad[TD-02 c1 … c8]`.
+
+### TD-03. Nivel de confianza global
+
+| | c1 | c2 | c3 | c4 |
+|---|---|---|---|---|
+| Bloqueante del contrato | sí | no | no | no |
+| Algún warning crítico | — | sí | no | no |
+| Algún warning normal | — | — | sí | no |
+| **`nivel_confianza`** | `rechazado` | `con_warnings` | `con_warnings` | `validado` |
+| **Test** | `tests/unit/core/pipeline/test_pipeline_etapa1.py::test_serie_bloqueante_detiene_pipeline` | `…/test_pipeline_etapa1.py::test_warning_critico_produce_con_warnings` | `casos_dinamicos/test_tablas_decision.py::test_tabla_confianza_c3_solo_warnings_normales_da_con_warnings` | `…/test_pipeline_etapa1.py::test_serie_valida_nivel_confianza_validado` |
+
+### TD-04. Entrada a Etapa 2
+
+Etapa 2 corre solo si se pidió y Etapa 1 no quedó rechazada; con warnings, incluso críticos, corre igual (RF-GEN-P-03,
+`statistical-pipeline.md`, "Condiciones para entrar a Etapa 2").
+
+| | c1 | c2 | c3 | c4 |
+|---|---|---|---|---|
+| `etapas` | `[1]` | `[1, 2]` | `[1]` | `[1, 2]` |
+| Etapa 1 `rechazado` | no | no | sí | sí |
+| **Corre Etapa 2** | no | sí | no | no |
+
+Test: `casos_dinamicos/test_tablas_decision.py::test_tabla_entrada_a_etapa2[TD-04 c1 … c4]`, sobre
+`simular_exclusion()`, que aplica la misma condición que el stream. El rechazo se provoca excluyendo 3 de 12 datos (quedan
+9). El stream lo cubre además `tests/integration/test_etapa2_stream_distribution_decision.py`.
+
+### TD-05. Estado de las distribuciones deshabilitables
+
+Las cinco de `DISABLED_WITH_NEGATIVES` y las cuatro de `DISABLED_WITH_ZEROS` (`core/etapa2/distributions/__init__.py`).
+
+| | c1 | c2 | c3 | c4 |
+|---|---|---|---|---|
+| Ceros | no | sí | no | sí |
+| Negativos | no | no | sí | sí |
+| **Estado** | se ajustan | `disabled_zeros` (las de ceros) | `disabled_negatives` (las de negativos) | `disabled_negatives` (gana sobre ceros) |
+| **Regla** | — | DECISIÓN 061 | DECISIÓN 073 | DECISIÓN 073 |
+| **Test** | `casos_dinamicos/test_tablas_decision.py::test_tabla_distribuciones_c1_sin_ceros_ni_negativos_no_deshabilita_ninguna` | `tests/unit/core/pipeline/test_disabled_negatives.py::test_solo_ceros_no_cambia` | `…/test_disabled_negatives.py::test_las_cinco_quedan_en_disabled_negatives_en_todos_sus_metodos` | `…/test_disabled_negatives.py::test_con_negativos_y_ceros_gana_disabled_negatives` |
+
+Las que toleran ceros con advertencia (`DIST_ZEROS_TOLERATED`, DECISIÓN 061) se prueban distribución por distribución en
+`tests/unit/core/etapa2/distributions/` (por ejemplo `test_gen_exponencial.py`, donde el método MV sí queda en
+`disabled_zeros`).
+
+### TD-06. Año incompleto al agregar, según la cobertura elegida (DECISIÓN 081)
+
+Serie de 12 años con un año incompleto. Mensual: falta un mes (11 de 12, 91,7 %). Diaria: faltan 10 días (355 de 365,
+97,3 %).
+
+| | a | b | c | d | e | f | g |
+|---|---|---|---|---|---|---|---|
+| Carga | mensual | mensual | mensual | diaria | diaria | mensual | anual |
+| Año incompleto | interior | interior | interior | interior | interior | extremo | — |
+| Cobertura elegida | sin indicar | 100 % | 90 % | 100 % | 95 % | 50 % | 50 % |
+| **Resultado** | se descarta, `CONTRACT_INCOMPLETE_YEARS_DISCARDED` | ídem | se conserva, `CONTRACT_INCOMPLETE_YEARS_ACCEPTED` ("faltan 1 de 12 meses") | se descarta | se conserva ("faltan 10 de 365 días") | se recorta, `CONTRACT_PARTIAL_YEARS_TRIMMED` (los extremos exigen 100 %) | sin cambios respecto del valor por defecto |
+
+Test: `casos_dinamicos/test_cobertura_minima_interior.py::test_anio_interior_incompleto_segun_la_cobertura[TD-06a … TD-06e]`,
+`::test_td06f_extremo_incompleto_se_recorta_aunque_la_cobertura_sea_baja` y
+`::test_td06g_con_carga_anual_la_cobertura_no_cambia_nada`. De punta a punta por el stream, con el rechazo de un atípico
+de Chow y la vista calendario: `tests/integration/test_stream_agregacion_mensual.py::test_cobertura_elegida_se_aplica_y_su_aviso_sobrevive_al_rechazo_de_chow`.
+
+---
+
+## 4. Resultado
+
+- **74 casos:** 28 de valores límite, 22 de clases de equivalencia y 24 columnas de cinco tablas de decisión. 45 tests
+  nuevos en `tests/unit/casos_dinamicos/` (contando cada id de `parametrize`); el resto ya existía.
+- **Agregados después de B8:** CE-07a–c (revisión manual del 21/10/2026, bloque H del
+  `docs/historico/planes/plan-revision-manual-21-10-2026.md`): tres casos y tres tests más en `casos_dinamicos/`. VL-09a–e y
+  VL-10a–c (bloque C2, DECISIÓN 080): ocho casos en `tests/integration/db/test_exclusiones_guardadas.py`, contra
+  PostgreSQL, porque la validación necesita el análisis persistido. CE-05c, VL-11a–e, CE-08a–c y TD-06a–g (respuestas
+  de Facundo del 22/10/2026, `docs/plan-respuestas-facundo-22-10-2026.md`, bloques B y C): 16 casos; los de la
+  DECISIÓN 081 en `casos_dinamicos/test_cobertura_minima_interior.py`.
+- **Agregados el 02/11/2026:** CE-10a–h (recuperación de contraseña, DECISIÓN 085): ocho casos contra PostgreSQL real
+  en `tests/integration/db/test_recuperacion_contrasena.py`; los de borde del token y del enfriamiento no necesitan
+  Mailpit, solo CE-10a y CE-10b lo usan para leer el mail.
+- **Total al 22/10/2026: 104 casos.** 41 de valores límite, 32 de clases de equivalencia (también CE-06a–c, del α
+  configurable de la DECISIÓN 078) y 31 columnas de seis tablas de decisión.
+- **Agregados el 29/10/2026:** CE-09a–b (Generalizada de Pareto fuera de la v1, addendum a la DECISIÓN 074), con
+  tests que ya existían ajustados al código nuevo, y VL-12a–c (partición de t de Student con n impar, DECISIÓN 084),
+  tres tests nuevos en `casos_dinamicos/`. **Total: 109 casos**, 44 de valores límite y 34 de clases de equivalencia.
+- **Ningún caso encontró un defecto.** Si uno lo hubiera encontrado, se registraría con la plantilla de
+  `registro-defectos.md`.
+- **Bordes que no se probaban en el borde:** antes de este bloque, la longitud se probaba con n = 8, 15 y 30 (no con
+  9, 10 y 29); el tamaño de archivo, con 5 MB de más (no con 1 byte); Mann-Kendall, con n < 10 genérico; y
+  `mes_inicio_anio` no tenía ningún test del rango en el endpoint.

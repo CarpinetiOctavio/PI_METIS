@@ -1,0 +1,635 @@
+// Interfaces 1:1 con el contrato real documentado en docs/frontend/frontend-integration.md
+// (no con metis/schemas/analysis.py — desconectado de los endpoints reales, ver
+// ese documento §5/§6). Alcance actual: solo Auth (Fase 1 del frontend).
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  nombre?: string | null;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface VerifyRequest {
+  token: string;
+}
+
+export interface UserMe {
+  id: string;
+  email: string;
+  nombre: string | null;
+  email_verified: boolean;
+}
+
+export interface RegisterResponse {
+  ok: true;
+  mensaje: string;
+}
+
+export interface OkResponse {
+  ok: true;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  password: string;
+}
+
+// --- Análisis — shapes reales, ver docs/frontend/frontend-integration.md §3-4.
+// NO usar metis/schemas/analysis.py como referencia: desconectado de los
+// endpoints reales (ver ese documento §5/§6).
+
+export type TipoVariable = "caudal_precipitacion" | "otro";
+export type Modo = "paso_a_paso" | "experto";
+
+// Bloque H1 (plan post-avance, DECISIÓN 036) — "default" o un objeto con
+// los dos porcentajes. api/sse.ts::buildFormData() manda el objeto como
+// JSON string en el mismo campo Form — el contrato multipart no ganó un
+// campo nuevo, solo lo que viaja adentro del que ya existía.
+export type CramerParticion = "default" | { n1_pct: number; n2_pct: number };
+
+export interface AnalysisStreamForm {
+  archivo: File;
+  columna_x: string;
+  columna_y: string;
+  tipo_variable: TipoVariable;
+  modo: Modo;
+  cramer_particion?: CramerParticion;
+  // DECISIÓN 054 — solo "1" y "1,2" son valores válidos para el backend.
+  // Sin selector de alcance todavía en ConfigPage (eso es Bloque B4 del plan
+  // de Etapa 2) — default "1" mantiene el comportamiento actual sin cambios.
+  etapas?: "1" | "1,2";
+  // DECISIÓN 057 — mes de inicio del año hidrológico, [1..12]. Sin selector
+  // todavía en ConfigPage (eso es el Bloque F5 del plan de Etapa 2) —
+  // default 7 (julio) mantiene el comportamiento actual sin cambios; solo
+  // tiene efecto cuando la serie subida es de resolución mensual o diaria.
+  mes_inicio_anio?: number;
+  // DECISIÓN 065 (PR 2.5 / R0.2) — qué contiene la columna de una serie
+  // DIARIA (ver VariableDiaria). Solo tiene efecto con carga diaria: cambia el
+  // texto del warning CONTRACT_DAILY_SERIES_AGGREGATED, no los números.
+  // Default "pico".
+  variable_diaria?: VariableDiaria;
+  // DECISIÓN 078 — nivel de significancia de la Etapa 1. Default 0.05.
+  alfa?: Alfa;
+  // DECISIÓN 081 — cobertura mínima de los años interiores al agregar, en
+  // porcentaje entero de 50 a 100. Default 100. Solo tiene efecto con carga
+  // mensual o diaria.
+  cobertura_minima_interior?: number;
+}
+
+// DECISIÓN 078 — los tres niveles de significancia que acepta el backend.
+export type Alfa = 0.01 | 0.05 | 0.1;
+
+// DECISIÓN 065 — qué contiene la columna de una serie diaria: "pico" (picos o
+// máximos diarios), "media" (medias diarias) o "acumulado" (acumulados del día,
+// como la lluvia de 9 a 9 — respuesta de Facundo del 22/10/2026).
+export type VariableDiaria = "pico" | "media" | "acumulado";
+
+export type DecisionAtipico = "rechazar" | "aceptar";
+
+// DECISIÓN 079 — un atípico de Chow: un valor fuera de los umbrales de Bulletin
+// 17B. `indice` es la posición en datos.serie_efectiva; `z`, la distancia a la
+// media de los logaritmos en desvíos, con signo.
+export interface AtipicoChow {
+  indice: number;
+  valor: number;
+  z: number;
+  lado: "alto" | "bajo";
+}
+
+// El mismo atípico en la pausa del stream, con su año.
+export interface AtipicoDetectado extends AtipicoChow {
+  periodo: number | null;
+}
+
+// Lo que queda registrado en analysis_results.decisiones.chow. DECISIÓN 079:
+// una decisión por punto, con su año, valor, lado y desvío. Los análisis
+// anteriores conservan la forma vieja `{accion, dato}` (un solo dato).
+export interface DecisionChowRegistrada extends AtipicoDetectado {
+  decision: DecisionAtipico;
+  codigo: string;
+}
+
+export type DecisionesChow =
+  | { atipicos: DecisionChowRegistrada[] }
+  | { accion: DecisionAtipico; dato: number | null };
+
+// analysis_results.decisiones — `{}` si no hubo ninguna pausa resuelta.
+export interface DecisionesRegistradas {
+  chow?: DecisionesChow;
+  distribucion?: { distribucion: string; metodo: string; periodos_retorno: number[] };
+}
+
+// DECISIÓN 079 — una decisión por cada atípico de la pausa, todas juntas.
+export interface OutlierDecisionRequest {
+  session_id: string;
+  decisiones: { indice: number; decision: DecisionAtipico }[];
+}
+
+export interface OutlierDecisionResponse {
+  ok: boolean;
+  pipeline_continua: boolean;
+}
+
+// DECISIÓN 047 — POST /analysis/preview-columns
+export interface ColumnaPreview {
+  nombre: string;
+  indice: number;
+  muestra: string[];
+}
+
+export interface PreviewColumnsResponse {
+  columnas: ColumnaPreview[];
+  filas: number;
+}
+
+export type Veredicto = "aprobada" | "rechazada" | "no_ejecutada";
+export type WarningNivel = "critico" | "normal";
+
+export interface WarningItem {
+  codigo: string;
+  nivel: WarningNivel;
+  descripcion: string;
+}
+
+// Bloque D del plan post-avance (DECISIÓN 064) — términos intermedios que
+// la prueba ya calculó, para reconstruir la fórmula sustituida en modo
+// paso a paso. `terminos` es heterogéneo por prueba (Anderson expone
+// numerador/denominador, Cramer expone los dos bloques 60%/30%…) — el
+// backend no fuerza una forma común, así que acá tampoco. `i18n/explicaciones.ts`
+// sabe qué claves esperar según `TestResultDetail.prueba`.
+export interface Explicacion {
+  ecuacion: string;
+  terminos: Record<string, number | null>;
+  // Plan de feedback de directores, ítem E — un renglón por paso de la prueba
+  // (Anderson: uno por lag k; Chow: uno por observación). Es el detalle que
+  // `core/` ya calcula para decidir; el frontend solo lo renderiza (DECISIÓN
+  // 064). Lo emiten Anderson y Chow desde el 01/10/2026 (addendum a la 064);
+  // null en las demás pruebas y ausente en cualquier análisis persistido antes
+  // de eso — sin backfill, mismo criterio que DECISIÓN 058 §4. Quien lo consume
+  // degrada a la vista sin desglose si falta.
+  desglose?: DesgloseFila[] | null;
+}
+
+/** Un renglón del desglose. Las claves dependen de la prueba (ver
+ * `routes/results/Etapa1Desglose.tsx`), igual que `terminos`. */
+export type DesgloseFila = Record<string, number | boolean | null>;
+
+export interface TestResultDetail {
+  prueba: string;
+  estadistico: number | null;
+  valor_critico: number | null;
+  veredicto: Veredicto | null;
+  warning_codigo: string | null;
+  warning_nivel: WarningNivel | null;
+  n1: number | null;
+  n2: number | null;
+  valor_atipico: number | null;
+  // PR 3 del plan de cierre de pendientes no-test (DECISIÓN 058) — ya
+  // existía en el backend (TestResult), nunca se serializaba.
+  indice_atipico: number | null;
+  explicacion: Explicacion | null;
+  // DECISIÓN 079 — Chow: todos los valores fuera de los umbrales, ordenados por
+  // |z|. Ausente en las demás pruebas y en los análisis anteriores.
+  valores_atipicos?: AtipicoChow[] | null;
+  // Revisión 19/10/2026 de la DECISIÓN 073 — Chow no ejecutada: los valores
+  // (negativos o ceros) que impidieron la prueba. Ausente en las demás pruebas
+  // y en los análisis anteriores.
+  valores_no_validos?: ValorNoValido[] | null;
+}
+
+export interface ValorNoValido {
+  indice: number;
+  valor: number;
+}
+
+// Timestamp normalizado — PR 3 (DECISIÓN 058 §4.4): siempre ISO-8601 str +
+// `anio` propio, sin importar si el dato de origen era str/int/pd.Timestamp
+// (sin agregación) o list[int] de año-etiqueta (con agregación).
+export interface TimestampNormalizado {
+  iso: string;
+  anio: number;
+}
+
+// Segunda agregación (mes_inicio=1), con sus PROPIOS timestamps — PR 4,
+// corrección sobre DECISIÓN 058: puede tener más o menos puntos que
+// serie_efectiva (otro mes_inicio, otro criterio de qué período queda
+// completo), nunca se puede asumir el mismo eje X.
+export interface SerieCalendario {
+  serie: number[];
+  timestamps: TimestampNormalizado[];
+}
+
+// Bloque "datos" de result_etapa1 — PR 3 del plan de cierre de pendientes
+// no-test (DECISIÓN 058). Ver .claude/rules/core/statistical-pipeline.md
+// para el detalle completo de cada campo.
+export interface Etapa1Datos {
+  resolucion_original: "anual" | "mensual" | "diaria" | null;
+  // R3.3 opción 2 (docs/historico/planes/plan-resolucion-diaria.md) — a qué resolución está
+  // `serie_original` en ESTE payload, distinto de `resolucion_original` (la
+  // del archivo subido): con carga diaria el backend serializa la agregación
+  // MENSUAL (~480 ítems), no la serie diaria cruda (~14.600). "anual" (o
+  // null, sin timestamps) cuando serie_original es null.
+  resolucion_serie_original: "anual" | "mensual" | "diaria" | null;
+  serie_efectiva: number[];
+  timestamps_efectivos: TimestampNormalizado[] | null;
+  // Presentes con carga mensual o diaria (para el boxplot y la serie
+  // temporal). Con carga anual son idénticos a los _efectiva y el backend
+  // no los duplica (null). Con carga diaria son la agregación a máximos
+  // mensuales — resolucion_serie_original === "mensual", aunque el archivo
+  // fuera diario.
+  serie_original: number[] | null;
+  timestamps_originales: TimestampNormalizado[] | null;
+  // Ya mapeado a posición en serie_efectiva — null si no hay atípico (o si
+  // el usuario ya lo rechazó en una iteración anterior del stream).
+  indice_atipico: number | null;
+  // null si no hubo agregación real o si mes_inicio_anio ya era 1
+  // (DECISIÓN 058 §3, solo para presentación).
+  serie_calendario: SerieCalendario | null;
+  // DECISIÓN 081 — cobertura mínima de los años interiores con que se agregó
+  // (porcentaje). null con carga anual; ausente en análisis anteriores.
+  cobertura_minima_interior?: number | null;
+}
+
+export interface DescriptiveStats {
+  n: number;
+  media: number;
+  mediana: number;
+  desvio_estandar: number;
+  coef_variacion: number;
+  coef_asimetria: number;
+  minimo: number;
+  maximo: number;
+}
+
+export interface Etapa1Result {
+  contract: {
+    bloqueante: boolean;
+    codigo_error: string | null;
+    warnings: WarningItem[];
+  };
+  descriptive: DescriptiveStats | null;
+  independencia: TestResultDetail[];
+  homogeneidad: TestResultDetail[];
+  tendencia: TestResultDetail[];
+  atipicos: TestResultDetail[];
+  nivel_independencia: "independiente" | "dependiente" | null;
+  nivel_homogeneidad:
+    | "homogeneidad_ok"
+    | "homogeneidad_warning"
+    | "homogeneidad_critica"
+    | null;
+  // "rechazado" nunca llega en este evento — ver frontend-integration.md §4,
+  // nota sobre result_etapa1 (el stream corta antes en contract_error).
+  nivel_confianza: "validado" | "con_warnings" | "rechazado";
+  warnings: WarningItem[];
+  // Opcional — el historial persistido antes de la migración 005 no lo
+  // trae (sin backfill, DECISIÓN 058 §4). Sin este campo, la sección de
+  // gráficos de Etapa1ResultView no se renderiza.
+  datos?: Etapa1Datos;
+  // DECISIÓN 078 — con qué α corrió la batería. Ausente en los análisis
+  // guardados antes de que fuera configurable (corrieron con 0.05).
+  alfa?: Alfa;
+}
+
+// --- Eventos SSE — union discriminada por `type`. Todos llevan `iteracion`
+// salvo outlier_detected/result_etapa1/complete/error (ver frontend-integration.md §4).
+
+export interface SseContractErrorEvent {
+  type: "contract_error";
+  codigo: string;
+  iteracion: number;
+}
+
+export interface SseContractWarningEvent {
+  type: "contract_warning";
+  codigo: string;
+  nivel: "normal";
+  iteracion: number;
+}
+
+export interface SseDescriptiveStatsEvent extends DescriptiveStats {
+  type: "descriptive_stats";
+  iteracion: number;
+}
+
+export interface SseProgressEvent {
+  type: "progress";
+  paso: string;
+  etapa: 1 | 2;
+  completado: number;
+  total: number;
+  // Los eventos de progreso de Etapa 1 llevan iteracion (re-ejecución tras
+  // Chow); el único progress de Etapa 2 (DECISIÓN 052) no re-ejecuta nada,
+  // así que no lo lleva.
+  iteracion?: number;
+}
+
+export interface SseTestResultEvent extends TestResultDetail {
+  type: "test_result";
+  iteracion: number;
+}
+
+export interface SseOutlierDetectedEvent {
+  type: "outlier_detected";
+  session_id: string;
+  // DECISIÓN 079 — todos los atípicos, para decidir uno por uno.
+  atipicos: AtipicoDetectado[];
+  // El más extremo; se conserva por compatibilidad.
+  valor_atipico: number;
+}
+
+export interface SseResultEtapa1Event {
+  type: "result_etapa1";
+  result: Etapa1Result;
+}
+
+export interface SseCompleteEvent {
+  type: "complete";
+  analysis_id: string | null;
+}
+
+export interface SseErrorEvent {
+  type: "error";
+  codigo: "PARSE_ERROR" | "SESSION_TIMEOUT";
+  mensaje: string;
+}
+
+// DECISIÓN 052 — pausa de Etapa 2, misma forma que outlier_detected/
+// result_etapa1: result_etapa2_ranking trae la grilla completa serializada
+// por _serializar_etapa2() (12 distribuciones en la v1, 13 en análisis guardados
+// antes del 29/10/2026; sin aplanar a top-3) y pausa
+// el stream hasta POST /analysis/distribution-decision.
+export interface SseResultEtapa2RankingEvent {
+  type: "result_etapa2_ranking";
+  session_id: string;
+  ranking: DistribucionResult[];
+  warnings: WarningItem[];
+  // Bloque C — insumo del gráfico de ajuste (puntos empíricos vs. curva).
+  // Independiente de la distribución que se elija después.
+  puntos_empiricos: PuntoEmpirico[];
+}
+
+export interface SseResultEtapa2EventosEvent {
+  type: "result_etapa2_eventos";
+  distribucion: string;
+  metodo: string;
+  eventos_diseno: EventoDiseno[];
+  // Bloque C — muestreo denso (60 puntos, escala log) de la curva de la
+  // distribución elegida, distinto de eventos_diseno (los T puntuales que
+  // pidió el usuario). Insumo del gráfico de ajuste.
+  curva_ajuste: EventoDiseno[];
+}
+
+export type SseEvent =
+  | SseContractErrorEvent
+  | SseContractWarningEvent
+  | SseDescriptiveStatsEvent
+  | SseProgressEvent
+  | SseTestResultEvent
+  | SseOutlierDetectedEvent
+  | SseResultEtapa1Event
+  | SseResultEtapa2RankingEvent
+  | SseResultEtapa2EventosEvent
+  | SseCompleteEvent
+  | SseErrorEvent;
+
+// --- Historial (CU-01) — ver frontend-integration.md §3. Array plano, sin
+// envoltura ni paginación de parte del backend (paginación client-side).
+
+// archivado_at (DECISIÓN 048) — null si el análisis no está archivado.
+export interface HistoryItem {
+  id: string;
+  tipo_variable: string;
+  modo: string | null;
+  etapas: string[] | null;
+  created_at: string;
+  archivado_at: string | null;
+  // F7a/F7b (plan de fixes pre-reunión) — null para cualquier análisis
+  // persistido antes de este fix (sin backfill, mismo criterio que
+  // timestamps/DECISIÓN 058 §4). El frontend degrada a tipo_variable
+  // cuando nombre_archivo es null.
+  nombre_archivo: string | null;
+  serie_preview: number[];
+  // DECISIÓN 078 — 0.05 para los análisis anteriores.
+  alfa: Alfa;
+  // Revisión manual 21/10/2026 (bloque C1) — puntos rechazados en la pausa de
+  // Chow, contados en el backend sin traer el registro completo.
+  chow_rechazados: number;
+  // DECISIÓN 080 — cuántas exclusiones guardadas tiene (las exclusiones, en el detalle).
+  exclusiones_guardadas: number;
+}
+
+// DECISIÓN 080 — una exclusión de puntos guardada a pedido sobre un análisis.
+// `indices` son posiciones en etapa1.datos.serie_efectiva, ordenadas; `puntos`
+// trae el año y el valor de cada uno, tomados del análisis persistido.
+export interface ExclusionGuardada {
+  id: string;
+  creado_at: string;
+  indices: number[];
+  puntos: { indice: number; periodo: number | null; valor: number }[];
+  alfa: Alfa;
+  cramer_particion: CramerParticion;
+}
+
+// PR 3/5 del plan de cierre de pendientes no-test (DECISIÓN 058) —
+// mes_inicio_anio ya se persistía desde DECISIÓN 057, esto solo tipa la
+// forma real de analyses.configuracion tal como GET /history/{id} la
+// devuelve.
+export interface AnalysisConfiguracion {
+  // "default" o el objeto {n1_pct, n2_pct} tal como se persistió (D-18).
+  cramer_particion: CramerParticion;
+  mes_inicio_anio: number;
+  // Nombre del archivo subido (F7, plan de fixes pre-reunión); null/ausente en
+  // análisis anteriores a ese cambio. Lo usa la descarga de la serie sin
+  // atípicos para nombrar el CSV.
+  nombre_archivo?: string | null;
+  // DECISIÓN 065 (PR 2.5) — presente en análisis persistidos desde esa
+  // fecha; opcional para no romper la lectura de análisis anteriores.
+  variable_diaria?: VariableDiaria;
+  // DECISIÓN 078 — siempre presente en GET /history/{id}: un análisis anterior
+  // llega con 0.05 y `alfa_implicito: true` (corrió con 5 % sin registrarlo).
+  alfa?: Alfa;
+  alfa_implicito?: boolean;
+  // DECISIÓN 081 — siempre presente en GET /history/{id}: un análisis anterior
+  // llega con 100 y `cobertura_minima_interior_implicita: true`.
+  cobertura_minima_interior?: number;
+  cobertura_minima_interior_implicita?: boolean;
+}
+
+export interface AnalysisDetail {
+  id: string;
+  tipo_variable: string;
+  modo: string | null;
+  etapas: string[] | null;
+  created_at: string;
+  etapa1: Etapa1Result | null;
+  etapa2: Etapa2Result | null;
+  // Entrada tal como se subió y configuró (analyses, DECISIÓN 058 §1) —
+  // no el resultado, que ya viaja dentro de etapa1.datos. `timestamps` es
+  // `null` para cualquier análisis persistido antes de la migración 005
+  // (sin backfill, DECISIÓN 058 §4) — es la señal que usa HistoryDetailPage
+  // para el estado vacío explícito.
+  serie: number[] | null;
+  timestamps: TimestampNormalizado[] | null;
+  configuracion: AnalysisConfiguracion | null;
+  // Registro de auditoría de CU-01 (C2b del plan post-avance). Bloque C1 de la
+  // revisión manual del 21/10/2026: el detalle muestra las decisiones ante Chow.
+  decisiones?: DecisionesRegistradas | null;
+  // DECISIÓN 080 — `[]` si no hay ninguna (sin backfill).
+  exclusiones?: ExclusionGuardada[];
+}
+
+// --- Etapa 2 — shapes reales, cableada de punta a punta (Bloque A del plan
+// de implementación de Etapa 2, DECISIÓN 052/055). Espejo 1:1 de
+// _serializar_etapa2() (analysis_service.py) — grilla completa, sin aplanar
+// a un top-3: los métodos que no convergen o no aplican son información
+// docente, no un error a esconder (constraints.md, "METIS no sugiere
+// distribución ganadora").
+
+// `disabled_negatives` (ítem C del plan de feedback de directores): la distribución
+// no admite valores negativos y la serie los tiene. El backend todavía no lo emite
+// (hoy esas combinaciones vuelven como `no_aplicable`, indistinguibles de un fallo
+// numérico); el frontend ya lo sabe mostrar.
+export type MetodoStatus =
+  | "ok"
+  | "no_converge"
+  | "no_aplicable"
+  | "disabled_zeros"
+  | "disabled_negatives";
+
+export interface MetodoResultDetail {
+  metodo: string;
+  parametros: Record<string, number> | null;
+  eea: number | null;
+  status: MetodoStatus;
+}
+
+export interface DistribucionResult {
+  distribucion: string;
+  n_parametros: number;
+  metodos: MetodoResultDetail[];
+  mejor_eea: number | null;
+  mejor_metodo: string | null;
+  // DECISIÓN 074 — se calcula y se muestra, pero no se puede elegir y va al
+  // final del ranking. Opcional: los análisis persistidos antes de esa decisión
+  // no lo traen (sin backfill); Etapa2RankingView usa un respaldo local.
+  pendiente_validacion?: boolean;
+}
+
+// Bloque C2a (plan post-avance) — la elección de distribución+método hecha
+// durante el stream original y sus resultados, persistidos junto al
+// ranking para que el historial la muestre sin recalcular nada. `null`
+// cuando no se llegó a elegir ninguna (stream abandonado en la pausa) —
+// mismo criterio sin backfill que `timestamps` (DECISIÓN 058 §4).
+export interface SeleccionEtapa2 {
+  distribucion: string;
+  metodo: string;
+  periodos_retorno: number[];
+  eventos_diseno: EventoDiseno[];
+  curva_ajuste: EventoDiseno[];
+  // Solo en POST /analysis/simulate-exclusion (revisión de DECISIÓN 071,
+  // 18/10/2026): el status de la combinación sobre la serie sin los puntos
+  // excluidos. Lo persistido en el historial no lo trae.
+  estado?: MetodoStatus;
+}
+
+export interface Etapa2Result {
+  ranking: DistribucionResult[];
+  warnings: WarningItem[];
+  puntos_empiricos: PuntoEmpirico[];
+  seleccion: SeleccionEtapa2 | null;
+}
+
+// Posición de ploteo Weibull de un dato observado (empirical.py::
+// probabilidades_weibull) — propiedad de la muestra, no del ajuste.
+export interface PuntoEmpirico {
+  valor: number;
+  periodo_retorno: number;
+  probabilidad: number;
+}
+
+export interface EventoDiseno {
+  periodo_retorno: number;
+  // null si cuantil() falló para este período puntual — core/etapa2/
+  // design_events.py, un T inválido para una distribución no tumba el
+  // resto de los eventos.
+  valor: number | null;
+}
+
+export interface DistributionDecisionRequest {
+  session_id: string;
+  distribucion: string;
+  metodo: string;
+  periodos_retorno: number[];
+}
+
+// Bloque C2c (plan post-avance) — POST /analysis/{id}/design-events,
+// recálculo stateless desde el historial (DECISIÓN 062). Misma forma que
+// DistributionDecisionRequest sin session_id: no hay ningún stream de por
+// medio, se pega directo sobre un análisis ya persistido.
+export interface DesignEventsRecalcRequest {
+  distribucion: string;
+  metodo: string;
+  periodos_retorno: number[];
+}
+
+export interface DesignEventsRecalcResponse {
+  eventos_diseno: EventoDiseno[];
+  curva_ajuste: EventoDiseno[];
+}
+
+export interface DistributionDecisionResponse {
+  ok: boolean;
+  pipeline_continua: boolean;
+}
+
+// Ítem A del plan de feedback de directores (20/09/2026) — what-if de
+// atípicos: POST /analysis/simulate-exclusion (DECISIÓN 071). Sin sesión, sin
+// BD: "explorar no es decidir" (DECISIÓN 062), no persiste nada.
+export interface SimulateExclusionRequest {
+  // = datos.serie_efectiva y los años de datos.timestamps_efectivos: la serie
+  // YA agregada, y los índices son posiciones en ella (no en la serie cruda).
+  serie: number[];
+  anios: number[];
+  tipo_variable: TipoVariable;
+  // "default" o el objeto {n1_pct, n2_pct} serializado como JSON — igual que en
+  // POST /analysis/stream.
+  cramer_particion: string;
+  indices_excluidos: number[];
+  etapas: (1 | 2)[];
+  tratamiento?: "eliminar";
+  // DECISIÓN 078 — el α del análisis original.
+  alfa?: Alfa;
+  // La elección del análisis original. Con ella y Etapa 2, la respuesta trae en
+  // `etapa2.seleccion` los eventos de diseño de esa elección reajustada sin los
+  // puntos excluidos.
+  seleccion?: {
+    distribucion: string;
+    metodo: string;
+    periodos_retorno: number[];
+  };
+}
+
+export interface ExcluidoSimulado {
+  indice: number;
+  periodo: number;
+  valor_original: number;
+}
+
+export interface SimulateExclusionResponse {
+  // Mismo payload que `result_etapa1` del stream.
+  etapa1: Etapa1Result;
+  etapa2: Etapa2Result | null;
+  excluidos: ExcluidoSimulado[];
+  // La serie resultante, tal como la devolvió `core/`.
+  serie: number[];
+  anios: number[];
+}

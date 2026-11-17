@@ -1,11 +1,19 @@
 services:
   backend:
     build: ./backend
+    command: uvicorn metis.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+    # Solo desarrollo: la imagen corre sin privilegios, pero con el bind mount los archivos son del usuario del
+    # host y pytest/coverage escriben en /app. docker-compose.ci.yml lo resetea (configuración de producción).
+    user: root
     depends_on:
       - postgres
     env_file: .env
     expose:
       - "8000"
+    ports:
+      - "8000:8000"
 
   frontend:
     build: ./frontend
@@ -21,6 +29,21 @@ services:
       - postgres_data:/var/lib/postgresql/data
     expose:
       - "5432"
+    ports:
+      - "5432:5432"
+
+  # Servidor SMTP de captura (DECISIÓN 049): recibe los mails de verificación sin mandarlos
+  # afuera. Interfaz web y API en http://localhost:8025. El backend lo usa solo si el .env
+  # apunta a él (ver .env.example, "Desarrollo sin relay real").
+  mailpit:
+    image: axllent/mailpit:v1.20.0
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    expose:
+      - "1025"
+    ports:
+      - "8025:8025"
 
   nginx:
     image: nginx:alpine
@@ -29,6 +52,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/metis-comun.conf:/etc/nginx/metis-comun.conf:ro
     depends_on:
       - backend
       - frontend
